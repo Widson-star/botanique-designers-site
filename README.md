@@ -1,16 +1,72 @@
-# React + Vite
+# Botanique Designers Website 🌿
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, AI-assisted landscaping and environmental design website built for **Botanique Designers**.
 
-Currently, two official plugins are available:
+This project represents my first complete end-to-end frontend deployment using modern web tooling, version control, and static hosting.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🌱 Project Overview
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The Botanique Designers website showcases:
+- Professional landscaping and garden design services
+- An interactive **“Ask Botanique”** assistant concept
+- A quote request and client inquiry flow
+- Clean, nature-inspired UI aligned with the brand
 
-## Expanding the ESLint configuration
+The site is deployed publicly and maintained as a finished product (v1.0).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 🛠 Tech Stack
+
+- **React** (component-based UI)
+- **Vite** (fast development & build tool)
+- **JavaScript (ES6+)**
+- **CSS**
+- **Git & GitHub**
+- **GitHub Pages** (deployment)
+
+---
+
+## 🚀 Deployment
+
+The site is deployed using GitHub Pages.
+
+Build output is generated via Vite and published as a static site.
+Source code is maintained separately from build artifacts.
+
+---
+
+## 📌 Project Status
+
+- **Version:** v1.0
+- **Status:** Complete & deployed
+- **Maintenance:** Bug fixes and incremental improvements only
+
+---
+
+## 🧠 Key Learnings
+
+- React project structuring
+- Asset handling and deployment constraints
+- Git-based version control workflows
+- Debugging static hosting issues
+- Bridging design thinking with frontend development
+
+---
+
+## 🔮 Future Improvements
+
+- Make **Ask Botanique** more autonomous (AI-powered)
+- Backend/API integration
+- Performance optimization (images & loading)
+- Improved accessibility and UX
+
+---
+
+## 👤 Author
+
+**Widson Ambaisi**  
+Founder, Botanique Designers  
+Landscape Designer | Environmentalist | Frontend Learner
