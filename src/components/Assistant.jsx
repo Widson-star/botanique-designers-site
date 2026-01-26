@@ -6,7 +6,7 @@ export default function Assistant() {
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      text: "👋 Hi, I’m Botanique AI. Ask me about services, pricing, or how to get started.",
+      text: "👋 Hi, I'm Botanique AI. Ask me about services, pricing, or how to get started.",
     },
   ]);
 
@@ -40,7 +40,7 @@ export default function Assistant() {
     }
 
     // --- DEFAULT ---
-    return "✅ Got it. Tell me a bit more — location, size, or what you’d like to achieve.";
+    return "✅ Got it. Tell me a bit more – location, size, or what you'd like to achieve.";
   }
 
   function sendMessage() {
@@ -65,11 +65,11 @@ export default function Assistant() {
       {/* Floating Button */}
       <button
         onClick={() => setOpen(!open)}
-          className="flex items-center gap-2 px-5 py-3 rounded-full
-             bg-white text-botanique-green font-medium
-             shadow-lg hover:shadow-xl
-             hover:scale-105 transition
-             cursor-pointer"
+        className="flex items-center gap-2 px-5 py-3 rounded-full
+           bg-white text-botanique-green font-medium
+           shadow-lg hover:shadow-xl
+           hover:scale-105 transition
+           cursor-pointer"
       >
         🌿 Ask Botanique
       </button>
@@ -77,11 +77,17 @@ export default function Assistant() {
       {/* Chat Window */}
       {open && (
         <div className="fixed bottom-20 right-6 w-80 bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden">
-          <div className="bg-botanique-green text-white px-4 py-3 font-semibold">
+          <div className="bg-botanique-green text-white px-4 py-3 font-semibold flex justify-between items-center">
             Botanique AI Assistant
+            <button
+              onClick={() => setOpen(false)}
+              className="text-white hover:opacity-70"
+            >
+              ✕
+            </button>
           </div>
 
-          <div className="flex-1 p-3 space-y-2 overflow-y-auto text-sm">
+          <div className="flex-1 p-3 space-y-2 overflow-y-auto text-sm max-h-96">
             {messages.map((m, i) => (
               <div
                 key={i}
@@ -103,12 +109,12 @@ export default function Assistant() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask about services, pricing..."
-              className="flex-1 border rounded-lg px-2 py-1 text-sm resize-none focus:outline-none"
+              className="flex-1 border rounded-lg px-2 py-1 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
               rows={1}
             />
             <button
               onClick={sendMessage}
-              className="bg-botanique-green text-white px-3 rounded-lg text-sm"
+              className="bg-botanique-green text-white px-3 rounded-lg text-sm hover:opacity-90 transition"
             >
               Send
             </button>

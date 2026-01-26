@@ -12,17 +12,16 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
 
   return (
     <div 
-    className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
-    onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        const btn = document.getElementById("view-payment-btn");
-        if (btn) btn.click();
-      }
-    }}
-    
-    tabIndex={0}   // <-- REQUIRED so div can detect keyboard
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          const btn = document.getElementById("view-payment-btn");
+          if (btn) btn.click();
+        }
+      }}
+      tabIndex={0}
     >
-        <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
         <h3 className="text-xl font-semibold mb-2">
           Consultancy & Site Visit
         </h3>
@@ -36,16 +35,17 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
             Distance from Nairobi CBD (km)
           </label>
           <input
-  type="number"
-  className="..."
-  value={distanceKm}
-  onChange={(e) => setDistanceKm(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      setDistanceKm(distanceKm); // just ensure state updates
-    }
-  }}
-/>
+            type="number"
+            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+            value={inputKm}
+            onChange={(e) => setInputKm(Number(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                setInputKm(inputKm);
+              }
+            }}
+            min="0"
+          />
         </div>
 
         <div className="bg-gray-50 p-4 rounded-lg text-sm space-y-2">
@@ -57,42 +57,42 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
         </div>
 
         <div className="bg-green-50 px-4 py-3 rounded-lg mt-4 text-left shadow-inner">
-  <p className="text-sm font-semibold text-gray-800 mb-1">
-    Pay using:
-  </p>
+          <p className="text-sm font-semibold text-gray-800 mb-1">
+            Pay using:
+          </p>
 
-  <p className="text-sm text-gray-700 leading-relaxed">
-    <strong>M-Pesa Till Number:</strong> {PAYMENT.till}<br/>
-    <strong>Bank:</strong> {PAYMENT.accountName}<br/>
-    <strong>Bank Name:</strong> {PAYMENT.bank}<br/>
-    <strong>Branch:</strong> {PAYMENT.branch}<br/>
-    <strong>Account No:</strong> {PAYMENT.accountNo}<br/>
-  </p>
+          <p className="text-sm text-gray-700 leading-relaxed">
+            <strong>M-Pesa Till Number:</strong> {PAYMENT.till}<br/>
+            <strong>Bank:</strong> {PAYMENT.accountName}<br/>
+            <strong>Bank Name:</strong> {PAYMENT.bank}<br/>
+            <strong>Branch:</strong> {PAYMENT.branch}<br/>
+            <strong>Account No:</strong> {PAYMENT.accountNo}<br/>
+          </p>
 
-  <p className="text-xs text-gray-500 mt-2">
-    Use your <strong>full name</strong> as the payment reference.
-  </p>
-</div>
+          <p className="text-xs text-gray-500 mt-2">
+            Use your <strong>full name</strong> as the payment reference.
+          </p>
+        </div>
 
-    <button
-  id="view-payment-btn"
-  className="mt-6 w-full bg-botanique-green text-white py-3 rounded-xl hover:scale-105 transition"
-  onClick={() => {
-    alert(`Thank you...`);
-    onClose();
-  }}
->
-  View Payment Details
-</button>
+        <button
+          id="view-payment-btn"
+          className="mt-6 w-full bg-botanique-green text-white py-3 rounded-xl hover:scale-105 transition"
+          onClick={() => {
+            alert(`Thank you! Total amount: Ksh ${total.toLocaleString()}`);
+            onClose();
+          }}
+        >
+          View Payment Details
+        </button>
 
-  <a
-  href="https://wa.me/254720861592?text=Hi%20Botanique!%20I%20have%20paid%20for%20the%20consultancy%20visit.%20Here%20is%20my%20proof."
-  className="block text-center text-botanique-green underline mt-3"
-  target="_blank"
-  rel="noopener noreferrer"
->
-  Send Proof on WhatsApp 📸
-</a>
+        <a
+          href="https://wa.me/254720861592?text=Hi%20Botanique!%20I%20have%20paid%20for%20the%20consultancy%20visit.%20Here%20is%20my%20proof."
+          className="block text-center text-botanique-green underline mt-3"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Send Proof on WhatsApp 📸
+        </a>
 
         <button
           className="mt-3 w-full text-sm text-gray-500 hover:underline"
