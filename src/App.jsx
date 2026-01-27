@@ -148,7 +148,7 @@ const projects = [
       >
         <h2 className="text-3xl font-semibold mb-4">Instant Quote</h2>
         <p className="text-gray-600 mb-10">
-          Describe your project briefly and we’ll guide you to the right solution.
+          Describe your project briefly and we'll guide you to the right solution.
         </p>
 
         <div className="relative z-10 max-w-3xl mx-auto bg-white rounded-2xl shadow-md p-10">
@@ -225,7 +225,7 @@ const projects = [
       },
       {
         image: "/project-commercial.jpg",
-        title: "  Garden Redesign",
+        title: "Garden Inspiration",
         location: "Reference Style",
         category:"inspiration",
       },
@@ -291,7 +291,7 @@ const projects = [
 >
         <h2 className="text-4xl font-semibold mb-4">Contact Us</h2>
         <p className="text-gray-600 mb-10">
-          Reach out and let’s shape your outdoor vision.
+          Reach out and let's shape your outdoor vision.
         </p>
 
 <div className="bg-white rounded-2xl shadow-md p-10 max-w-3xl mx-auto">
