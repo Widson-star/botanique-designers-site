@@ -17,31 +17,31 @@ export default function App() {
 
 const projects = [
   {
-    image: "/projects/project-1.jpg",
+    image: "/project-residential.jpg",
     title: "Residential Landscaping",
     location: "Nyahururu, Nyandarua",
     category: "residential",
   },
   {
-    image: "/projects/project-2.jpg",
+    image: "/project-residential.jpg",
     title: "Lawn Care",
     location: "Runda, Nairobi",
     category: "residential",
   },
   {
-    image: "/projects/project-3.jpg",
+    image: "/project-residential.jpg",
     title: "Garden Redesign",
     location: "Runda, Nairobi",
     category: "estate",
   },
   {
-    image: "/projects/project-4.jpg",
+    image: "/project-commercial.jpg",
     title: "Garden Inspiration",
     location: "Reference Style",
     category: "inspiration",
   },
   {
-    image: "/projects/project-5.jpg",
+    image: "/project-public.jpg",
     title: "Estate Landscaping",
     location: "Karen, Nairobi",
     category: "estate",
@@ -206,37 +206,37 @@ const projects = [
 
     {[
       {
-        image: "/projects/project-1.jpg",
+        image: "/project-residential.jpg",
         title: "Residential Landscaping",
         location: "Nyahururu, Nyandarua",
         category:"residential",
       },
       {
-        image: "/projects/project-2.jpg",
+        image: "/project-residential.jpg",
         title: "Lawn care",
         location: "Runda, Nairobi",
         category:"residential",
       },
       {
-        image: "/projects/project-3.jpg",
+        image: "/project-residential.jpg",
         title: "Garden Redesign",
         location: "Runda, Nairobi",
         category:"residential",
       },
       {
-        image: "/projects/project-4.jpg",
+        image: "/project-commercial.jpg",
         title: "  Garden Redesign",
         location: "Reference Style",
         category:"inspiration",
       },
       {
-        image: "/projects/project-5.jpg",
+        image: "/project-public.jpg",
         title: "Lawn & Garden Makeover",
         location: "Reference Style",
         category:"inspiration",
       },
       {
-        image: "/projects/project-6.jpg",
+        image: "/project-residential.jpg",
         title: "Estate Landscaping",
         location: "Muthithi, Kiambu",
         category:"residential",
