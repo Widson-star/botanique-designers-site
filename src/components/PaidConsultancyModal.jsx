@@ -36,22 +36,23 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
           </label>
           <input
             type="number"
-            className="w-full border p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border border-gray-300 p-3 rounded focus:outline-none focus:ring-2 focus:ring-green-500"
             value={inputKm}
-            onChange={(e) => setInputKm(Number(e.target.value))}
+            onChange={(e) => setInputKm(Number(e.target.value) || 0)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                setInputKm(inputKm);
+                // Just keep the value
               }
             }}
             min="0"
+            step="1"
           />
         </div>
 
         <div className="bg-gray-50 p-4 rounded-lg text-sm space-y-2">
           <p>Base (within 5km): <strong>Ksh 3,500</strong></p>
-          <p>Extra distance: <strong>{extraKm} km × 60</strong></p>
-          <p className="border-t pt-2 font-semibold">
+          <p>Extra distance: <strong>{extraKm} km × 60 = Ksh {extraKm * 60}</strong></p>
+          <p className="border-t pt-2 font-semibold text-lg">
             Total: Ksh {total.toLocaleString()}
           </p>
         </div>
@@ -76,9 +77,9 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
 
         <button
           id="view-payment-btn"
-          className="mt-6 w-full bg-botanique-green text-white py-3 rounded-xl hover:scale-105 transition"
+          className="mt-6 w-full bg-green-700 text-white py-3 rounded-xl hover:bg-green-800 transition"
           onClick={() => {
-            alert(`Thank you! Total amount: Ksh ${total.toLocaleString()}`);
+            alert(`Total Amount: Ksh ${total.toLocaleString()}\n\nPlease proceed with payment using the details above.`);
             onClose();
           }}
         >
@@ -87,7 +88,7 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
 
         <a
           href="https://wa.me/254720861592?text=Hi%20Botanique!%20I%20have%20paid%20for%20the%20consultancy%20visit.%20Here%20is%20my%20proof."
-          className="block text-center text-botanique-green underline mt-3"
+          className="block text-center text-green-700 underline mt-3 hover:text-green-800"
           target="_blank"
           rel="noopener noreferrer"
         >
