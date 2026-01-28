@@ -5,6 +5,13 @@ import QuoteWizard from "./components/QuoteWizard";
 import PaymentConfirmationModal from "./components/PaymentConfirmationModal";
 import PaidConsultancyModal from "./components/PaidConsultancyModal";
 
+// Import images from public folder - Vite will process these correctly with base path
+import heroBotaniqueSrc from '/hero-botanique.jpg?url';
+import botaniqueLogoSrc from '/botanique.png?url';
+import projectResidentialSrc from '/project-residential.jpg?url';
+import projectCommercialSrc from '/project-commercial.jpg?url';
+import projectPublicSrc from '/project-public.jpg?url';
+
 export default function App() {
   const [prefilledService, setPrefilledService] = useState("");
   const [selectedProject, setSelectedProject] = useState(null);
@@ -17,31 +24,31 @@ export default function App() {
 
 const projects = [
   {
-    image: "/project-residential.jpg",
+    image: projectResidentialSrc,
     title: "Residential Landscaping",
     location: "Nyahururu, Nyandarua",
     category: "residential",
   },
   {
-    image: "/project-residential.jpg",
+    image: projectResidentialSrc,
     title: "Lawn Care",
     location: "Runda, Nairobi",
     category: "residential",
   },
   {
-    image: "/project-residential.jpg",
+    image: projectResidentialSrc,
     title: "Garden Redesign",
     location: "Runda, Nairobi",
     category: "estate",
   },
   {
-    image: "/project-commercial.jpg",
+    image: projectCommercialSrc,
     title: "Garden Inspiration",
     location: "Reference Style",
     category: "inspiration",
   },
   {
-    image: "/project-public.jpg",
+    image: projectPublicSrc,
     title: "Estate Landscaping",
     location: "Karen, Nairobi",
     category: "estate",
@@ -54,7 +61,7 @@ const projects = [
       <header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src="/botanique.png" alt="Botanique Designers Logo" className="h-10" />
+            <img src={botaniqueLogoSrc} alt="Botanique Designers Logo" className="h-10" />
             <span className="font-semibold text-lg">Botanique Designers</span>
           </div>
           <nav className="space-x-6 text-sm">
@@ -73,7 +80,7 @@ const projects = [
 >
         {/* ORIGINAL HERO IMAGE */}
         <img
-  src="/hero-botanique.jpg"
+  src={heroBotaniqueSrc}
   alt="Botanique Designers Landscape"
   className="absolute inset-0 w-full h-full object-cover -z-10"
 />
@@ -206,37 +213,37 @@ const projects = [
 
     {[
       {
-        image: "/project-residential.jpg",
+        image: projectResidentialSrc,
         title: "Residential Landscaping",
         location: "Nyahururu, Nyandarua",
         category:"residential",
       },
       {
-        image: "/project-residential.jpg",
+        image: projectResidentialSrc,
         title: "Lawn care",
         location: "Runda, Nairobi",
         category:"residential",
       },
       {
-        image: "/project-residential.jpg",
+        image: projectResidentialSrc,
         title: "Garden Redesign",
         location: "Runda, Nairobi",
         category:"residential",
       },
       {
-        image: "/project-commercial.jpg",
+        image: projectCommercialSrc,
         title: "Garden Inspiration",
         location: "Reference Style",
         category:"inspiration",
       },
       {
-        image: "/project-public.jpg",
+        image: projectPublicSrc,
         title: "Lawn & Garden Makeover",
         location: "Reference Style",
         category:"inspiration",
       },
       {
-        image: "/project-residential.jpg",
+        image: projectResidentialSrc,
         title: "Estate Landscaping",
         location: "Muthithi, Kiambu",
         category:"residential",
@@ -382,7 +389,7 @@ const projects = [
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <img
-          src="/botanique.png"
+          src={botaniqueLogoSrc}
           alt="Botanique Designers Logo"
           className="h-10"
         />
