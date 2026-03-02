@@ -1,0 +1,187 @@
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+
+const services = [
+  { label: "Landscape Architecture", path: "/services/landscape-architecture" },
+  { label: "EIA Studies", path: "/services/eia-studies" },
+  { label: "Project Implementation", path: "/services/implementation" },
+  { label: "Garden Maintenance", path: "/services/maintenance" },
+];
+
+const areas = [
+  { label: "Karen", path: "/areas/karen" },
+  { label: "Runda", path: "/areas/runda" },
+  { label: "Kiambu", path: "/areas/kiambu" },
+  { label: "Westlands", path: "/areas/westlands" },
+  { label: "Nairobi CBD", path: "/areas/nairobi" },
+];
+
+export default function Header() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [areasOpen, setAreasOpen] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+
+  return (
+    <header className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-3">
+          <img src="/botanique.png" alt="Botanique Designers Logo" className="h-10" />
+          <span className="font-semibold text-lg text-botanique-charcoal hidden sm:block">
+            Botanique Designers
+          </span>
+        </Link>
+
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700">
+          {isHome ? (
+            <a href="#home" className="hover:text-botanique-green transition">Home</a>
+          ) : (
+            <Link to="/" className="hover:text-botanique-green transition">Home</Link>
+          )}
+
+          {/* Services dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setServicesOpen(true)}
+            onMouseLeave={() => setServicesOpen(false)}
+          >
+            <button className="flex items-center gap-1 hover:text-botanique-green transition">
+              Services
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {servicesOpen && (
+              <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                {services.map((s) => (
+                  <Link
+                    key={s.path}
+                    to={s.path}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green transition"
+                  >
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Areas dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setAreasOpen(true)}
+            onMouseLeave={() => setAreasOpen(false)}
+          >
+            <button className="flex items-center gap-1 hover:text-botanique-green transition">
+              Areas We Serve
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {areasOpen && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                {areas.map((a) => (
+                  <Link
+                    key={a.path}
+                    to={a.path}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green transition"
+                  >
+                    {a.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {isHome ? (
+            <a href="#projects" className="hover:text-botanique-green transition">Projects</a>
+          ) : (
+            <Link to="/#projects" className="hover:text-botanique-green transition">Projects</Link>
+          )}
+
+          {isHome ? (
+            <a href="#contact" className="hover:text-botanique-green transition">Contact</a>
+          ) : (
+            <Link to="/#contact" className="hover:text-botanique-green transition">Contact</Link>
+          )}
+
+          <a
+            href="#instant-quote"
+            onClick={(e) => {
+              if (!isHome) {
+                e.preventDefault();
+                window.location.href = "/#instant-quote";
+              }
+            }}
+            className="px-5 py-2 rounded-full bg-botanique-green text-white text-sm hover:scale-105 transition"
+          >
+            Get a Quote
+          </a>
+        </nav>
+
+        {/* Mobile hamburger */}
+        <button
+          className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Toggle menu"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {mobileOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-3 text-sm">
+          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Home</Link>
+
+          <div>
+            <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">Services</p>
+            {services.map((s) => (
+              <Link
+                key={s.path}
+                to={s.path}
+                className="block py-1.5 pl-3 text-gray-700 hover:text-botanique-green"
+                onClick={() => setMobileOpen(false)}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
+
+          <div>
+            <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">Areas We Serve</p>
+            {areas.map((a) => (
+              <Link
+                key={a.path}
+                to={a.path}
+                className="block py-1.5 pl-3 text-gray-700 hover:text-botanique-green"
+                onClick={() => setMobileOpen(false)}
+              >
+                {a.label}
+              </Link>
+            ))}
+          </div>
+
+          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Projects</Link>
+          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Contact</Link>
+          <a
+            href="/#instant-quote"
+            className="block mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center"
+            onClick={() => setMobileOpen(false)}
+          >
+            Get a Quote
+          </a>
+        </div>
+      )}
+    </header>
+  );
+}

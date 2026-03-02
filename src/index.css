@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes softPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(63, 95, 88, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(63, 95, 88, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(63, 95, 88, 0);
+  }
+}
+
+.pulse-soft {
+  animation: softPulse 3s infinite;
+}

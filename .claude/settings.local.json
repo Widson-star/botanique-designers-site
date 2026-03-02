@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install react-router-dom --save)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm install @google/generative-ai)",
+      "Bash(ls /Users/widsonambaisi/Desktop/botanique-designers-site/.env*)",
+      "Bash(npm install concurrently --save-dev)",
+      "Bash(git init)",
+      "Bash(git remote add origin https://github.com/Widson-star/botanique-designers-site.git)",
+      "Bash(git fetch origin)",
+      "Bash(git checkout -b main --track origin/main)",
+      "Bash(git checkout main)",
+      "Bash(git branch -m master main)",
+      "Bash(git add .)"
+    ]
+  }
+}
