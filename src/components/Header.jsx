@@ -136,17 +136,16 @@ export default function Header() {
             )}
           </div>
 
-          {isHome ? (
-            <a href="#projects" className="hover:text-botanique-green transition">Projects</a>
-          ) : (
-            <Link to="/#projects" className="hover:text-botanique-green transition">Projects</Link>
-          )}
+          <Link to="/projects" className="hover:text-botanique-green transition">Projects</Link>
 
-          {isHome ? (
-            <a href="#contact" className="hover:text-botanique-green transition">Contact</a>
-          ) : (
-            <Link to="/#contact" className="hover:text-botanique-green transition">Contact</Link>
-          )}
+          <a
+            href="https://wa.me/254720861592"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-botanique-green transition"
+          >
+            Contact
+          </a>
 
           <a
             href="#instant-quote"
@@ -252,8 +251,8 @@ export default function Header() {
             )}
           </div>
 
-          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Projects</Link>
-          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Contact</Link>
+          <Link to="/projects" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Projects</Link>
+          <a href="https://wa.me/254720861592" target="_blank" rel="noopener noreferrer" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Contact</a>
           <a
             href="/#instant-quote"
             className="block mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center"

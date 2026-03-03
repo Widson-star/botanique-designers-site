@@ -11,6 +11,7 @@ import PaidConsultancyModal from "./components/PaidConsultancyModal";
 
 // Pages
 import Home from "./pages/Home";
+import Projects from "./pages/Projects";
 import LandscapeArchitecture from "./pages/services/LandscapeArchitecture";
 import EIAStudies from "./pages/services/EIAStudies";
 import Implementation from "./pages/services/Implementation";
@@ -71,6 +72,7 @@ function AppInner() {
           <Route path="/areas/kisumu" element={<Kisumu />} />
           <Route path="/areas/nakuru" element={<Nakuru />} />
           <Route path="/areas/eldoret" element={<Eldoret />} />
+          <Route path="/projects" element={<Projects />} />
         </Routes>
       </main>
 
