@@ -8,18 +8,27 @@ const services = [
   { label: "Garden Maintenance", path: "/services/maintenance" },
 ];
 
-const areas = [
+const nairobiSuburbs = [
   { label: "Karen", path: "/areas/karen" },
   { label: "Runda", path: "/areas/runda" },
-  { label: "Kiambu", path: "/areas/kiambu" },
+  { label: "Kiambu County", path: "/areas/kiambu" },
   { label: "Westlands", path: "/areas/westlands" },
-  { label: "Nairobi CBD", path: "/areas/nairobi" },
+];
+
+const majorCities = [
+  { label: "Nairobi", path: "/areas/nairobi" },
+  { label: "Mombasa & Coast", path: "/areas/mombasa" },
+  { label: "Kisumu & Nyanza", path: "/areas/kisumu" },
+  { label: "Nakuru & Rift Valley", path: "/areas/nakuru" },
+  { label: "Eldoret & North Rift", path: "/areas/eldoret" },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
   const [areasOpen, setAreasOpen] = useState(false);
+  const [mobileAreasOpen, setMobileAreasOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
 
@@ -69,7 +78,7 @@ export default function Header() {
             )}
           </div>
 
-          {/* Areas dropdown */}
+          {/* Areas dropdown — two grouped columns */}
           <div
             className="relative"
             onMouseEnter={() => setAreasOpen(true)}
@@ -82,16 +91,46 @@ export default function Header() {
               </svg>
             </button>
             {areasOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-                {areas.map((a) => (
-                  <Link
-                    key={a.path}
-                    to={a.path}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green transition"
-                  >
-                    {a.label}
-                  </Link>
-                ))}
+              <div className="absolute top-full left-0 mt-1 w-[420px] bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50">
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Nairobi Region */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                      Nairobi Suburbs
+                    </p>
+                    {nairobiSuburbs.map((a) => (
+                      <Link
+                        key={a.path}
+                        to={a.path}
+                        className="block px-2 py-1.5 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green rounded-lg transition"
+                      >
+                        {a.label}
+                      </Link>
+                    ))}
+                  </div>
+                  {/* Major Cities */}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
+                      Major Cities
+                    </p>
+                    {majorCities.map((a) => (
+                      <Link
+                        key={a.path}
+                        to={a.path}
+                        className="block px-2 py-1.5 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green rounded-lg transition"
+                      >
+                        {a.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+                {/* Coverage note */}
+                <div className="mt-3 pt-3 border-t border-gray-100 px-1">
+                  <p className="text-xs text-gray-500">
+                    <span className="text-botanique-green font-medium">Nationwide coverage</span>
+                    {" "}— Nyeri, Thika, Machakos, Malindi, Lamu, Nanyuki, Nandi, Kitale and anywhere across Kenya & East Africa.
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -143,32 +182,73 @@ export default function Header() {
         <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-3 text-sm">
           <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Home</Link>
 
+          {/* Services accordion */}
           <div>
-            <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">Services</p>
-            {services.map((s) => (
-              <Link
-                key={s.path}
-                to={s.path}
-                className="block py-1.5 pl-3 text-gray-700 hover:text-botanique-green"
-                onClick={() => setMobileOpen(false)}
-              >
-                {s.label}
-              </Link>
-            ))}
+            <button
+              className="w-full flex justify-between items-center py-2 font-semibold text-gray-500 text-xs uppercase tracking-wide"
+              onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
+            >
+              Services
+              <svg className={`w-4 h-4 transition-transform ${mobileServicesOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {mobileServicesOpen && (
+              <div className="pl-3 space-y-0.5">
+                {services.map((s) => (
+                  <Link
+                    key={s.path}
+                    to={s.path}
+                    className="block py-1.5 text-gray-700 hover:text-botanique-green"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {s.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Areas accordion */}
           <div>
-            <p className="font-semibold text-gray-500 text-xs uppercase tracking-wide mb-1">Areas We Serve</p>
-            {areas.map((a) => (
-              <Link
-                key={a.path}
-                to={a.path}
-                className="block py-1.5 pl-3 text-gray-700 hover:text-botanique-green"
-                onClick={() => setMobileOpen(false)}
-              >
-                {a.label}
-              </Link>
-            ))}
+            <button
+              className="w-full flex justify-between items-center py-2 font-semibold text-gray-500 text-xs uppercase tracking-wide"
+              onClick={() => setMobileAreasOpen(!mobileAreasOpen)}
+            >
+              Areas We Serve
+              <svg className={`w-4 h-4 transition-transform ${mobileAreasOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {mobileAreasOpen && (
+              <div className="pl-3 space-y-0.5">
+                <p className="text-xs text-gray-400 uppercase tracking-wide pt-1 pb-0.5">Nairobi Suburbs</p>
+                {nairobiSuburbs.map((a) => (
+                  <Link
+                    key={a.path}
+                    to={a.path}
+                    className="block py-1.5 text-gray-700 hover:text-botanique-green"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {a.label}
+                  </Link>
+                ))}
+                <p className="text-xs text-gray-400 uppercase tracking-wide pt-2 pb-0.5">Major Cities</p>
+                {majorCities.map((a) => (
+                  <Link
+                    key={a.path}
+                    to={a.path}
+                    className="block py-1.5 text-gray-700 hover:text-botanique-green"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {a.label}
+                  </Link>
+                ))}
+                <p className="text-xs text-botanique-green pt-2 pb-1">
+                  + All of Kenya & East Africa
+                </p>
+              </div>
+            )}
           </div>
 
           <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Projects</Link>

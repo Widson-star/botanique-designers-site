@@ -62,7 +62,7 @@ export default function Home() {
 
         <div className="relative z-10 max-w-3xl px-6">
           <p className="text-white/80 uppercase tracking-widest text-sm font-medium mb-4">
-            Nairobi's Premier Landscape Design Studio
+            Kenya's Premier Landscape Design Studio
           </p>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
             Transforming Outdoor Spaces
@@ -123,20 +123,28 @@ export default function Home() {
       </section>
 
       {/* ====== AREAS STRIP ====== */}
-      <section className="bg-botanique-green py-12 text-white text-center">
+      <section className="bg-botanique-green py-14 text-white text-center">
         <p className="text-sm uppercase tracking-widest text-white/70 mb-3">
-          We work across
+          Serving clients across
         </p>
-        <h2 className="text-2xl font-bold mb-6">
-          Nairobi, Karen, Runda, Kiambu, Westlands & Beyond
+        <h2 className="text-2xl font-bold mb-2">
+          All of Kenya & East Africa
         </h2>
-        <div className="flex flex-wrap justify-center gap-3">
+        <p className="text-white/75 text-sm mb-7 max-w-xl mx-auto">
+          From Mombasa to Eldoret, Nairobi to Kisumu — no project is too far. We work
+          nationwide and take on international projects across East Africa.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto px-6">
           {[
+            { label: "Nairobi", path: "/areas/nairobi" },
+            { label: "Mombasa & Coast", path: "/areas/mombasa" },
+            { label: "Kisumu", path: "/areas/kisumu" },
+            { label: "Nakuru", path: "/areas/nakuru" },
+            { label: "Eldoret", path: "/areas/eldoret" },
             { label: "Karen", path: "/areas/karen" },
             { label: "Runda", path: "/areas/runda" },
             { label: "Kiambu", path: "/areas/kiambu" },
             { label: "Westlands", path: "/areas/westlands" },
-            { label: "Nairobi CBD", path: "/areas/nairobi" },
           ].map((area) => (
             <Link
               key={area.path}
@@ -146,6 +154,9 @@ export default function Home() {
               {area.label}
             </Link>
           ))}
+          <span className="px-5 py-2 rounded-full bg-white/10 border border-white/25 text-sm text-white/70 cursor-default">
+            + Nyeri · Thika · Nanyuki · Lamu · Machakos & more
+          </span>
         </div>
       </section>
 

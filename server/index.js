@@ -87,7 +87,15 @@ SERVICES:
 6. Horticultural Services — specialist planting and aftercare
 7. Consultation & Site Assessment — paid site visits to assess and advise on outdoor spaces
 
-AREAS SERVED: Nairobi, Karen, Runda, Kiambu, Westlands, Lavington, Kilimani, Hurlingham, Langata, Spring Valley, Parklands, Thika, Ruiru, Limuru, Tigoni and surrounding areas.
+AREAS SERVED: We serve the whole of Kenya and take on international projects across East Africa. Our primary hubs include:
+- Nairobi & suburbs: Karen, Runda, Kiambu, Westlands, Lavington, Kilimani, Langata, Spring Valley, Parklands, Hurlingham
+- Coast: Mombasa, Diani, Malindi, Kilifi, Lamu, North Coast
+- Western Kenya: Kisumu, Kakamega, Bungoma, Kisii, Homa Bay
+- Rift Valley: Nakuru, Eldoret, Nanyuki, Kericho, Bomet, Kitale
+- Central & Mt Kenya: Nyeri, Thika, Ruiru, Limuru, Tigoni, Muranga, Embu, Meru
+- Eastern & North Eastern: Machakos, Kitui, Garissa, Isiolo
+- International: Uganda, Tanzania, Rwanda and wider East Africa on enquiry
+No client should feel their location is too remote — we travel for the right project.
 
 PRICING GUIDANCE:
 - Consultation/site visit: Ksh 3,500 base fee (within 5km of Nairobi CBD), plus Ksh 60 per km beyond 5km

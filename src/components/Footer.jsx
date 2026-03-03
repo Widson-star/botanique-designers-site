@@ -13,7 +13,7 @@ export default function Footer() {
           </div>
           <p className="text-sm text-gray-300">
             Transforming outdoor spaces through landscape architecture,
-            horticulture, and environmental stewardship across Kenya.
+            horticulture, and environmental stewardship — anywhere in Kenya and East Africa.
           </p>
         </div>
 
@@ -32,11 +32,17 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold mb-4">Areas We Serve</h4>
           <ul className="space-y-2 text-sm text-gray-300">
-            <li><Link to="/areas/karen" className="hover:text-white transition">Karen, Nairobi</Link></li>
-            <li><Link to="/areas/runda" className="hover:text-white transition">Runda, Nairobi</Link></li>
-            <li><Link to="/areas/kiambu" className="hover:text-white transition">Kiambu County</Link></li>
-            <li><Link to="/areas/westlands" className="hover:text-white transition">Westlands, Nairobi</Link></li>
-            <li><Link to="/areas/nairobi" className="hover:text-white transition">Nairobi CBD</Link></li>
+            <li><Link to="/areas/nairobi" className="hover:text-white transition">Nairobi</Link></li>
+            <li><Link to="/areas/mombasa" className="hover:text-white transition">Mombasa & Coast</Link></li>
+            <li><Link to="/areas/kisumu" className="hover:text-white transition">Kisumu & Nyanza</Link></li>
+            <li><Link to="/areas/nakuru" className="hover:text-white transition">Nakuru & Rift Valley</Link></li>
+            <li><Link to="/areas/eldoret" className="hover:text-white transition">Eldoret & North Rift</Link></li>
+            <li><Link to="/areas/karen" className="hover:text-white transition">Karen, Runda & Westlands</Link></li>
+            <li>
+              <span className="text-botanique-green text-xs font-medium">
+                + Nyeri, Thika, Machakos, Lamu, Nanyuki & all of Kenya
+              </span>
+            </li>
           </ul>
         </div>
 

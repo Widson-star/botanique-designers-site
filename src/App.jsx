@@ -20,6 +20,10 @@ import Runda from "./pages/areas/Runda";
 import Kiambu from "./pages/areas/Kiambu";
 import Westlands from "./pages/areas/Westlands";
 import NairobiCBD from "./pages/areas/Nairobi";
+import Mombasa from "./pages/areas/Mombasa";
+import Kisumu from "./pages/areas/Kisumu";
+import Nakuru from "./pages/areas/Nakuru";
+import Eldoret from "./pages/areas/Eldoret";
 
 // Scroll to top on route change
 function ScrollToTop() {
@@ -63,6 +67,10 @@ function AppInner() {
           <Route path="/areas/kiambu" element={<Kiambu />} />
           <Route path="/areas/westlands" element={<Westlands />} />
           <Route path="/areas/nairobi" element={<NairobiCBD />} />
+          <Route path="/areas/mombasa" element={<Mombasa />} />
+          <Route path="/areas/kisumu" element={<Kisumu />} />
+          <Route path="/areas/nakuru" element={<Nakuru />} />
+          <Route path="/areas/eldoret" element={<Eldoret />} />
         </Routes>
       </main>
 
