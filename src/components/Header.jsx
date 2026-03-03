@@ -36,11 +36,12 @@ export default function Header() {
     <header className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm">
       <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3">
-          <img src="/botanique.png" alt="Botanique Designers Logo" className="h-10" />
-          <span className="font-semibold text-lg text-botanique-charcoal hidden sm:block">
-            Botanique Designers
-          </span>
+        <Link to="/" className="flex items-center">
+          <img
+            src="/botanique.png"
+            alt="Botanique Designers"
+            className="h-12 w-auto object-contain"
+          />
         </Link>
 
         {/* Desktop Nav */}

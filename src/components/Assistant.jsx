@@ -5,7 +5,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 const QUICK_REPLIES = [
   "What services do you offer?",
   "How much does a garden design cost?",
-  "Do you cover Karen / Runda?",
+  "Do you work anywhere in Kenya?",
   "What is an EIA study?",
 ];
 
@@ -43,7 +43,7 @@ export default function Assistant() {
     setInput("");
     setLoading(true);
 
-    // Build history for Gemini (exclude the initial bot greeting from API history)
+    // Build history for Groq (exclude the initial bot greeting from API history)
     const history = updatedMessages.slice(1, -1).map((m) => ({
       role: m.role === "user" ? "user" : "model",
       text: m.text,

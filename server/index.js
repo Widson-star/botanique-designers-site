@@ -26,8 +26,27 @@ async function generateAccessToken() {
   return data.access_token;
 }
 
+// Format any Kenyan phone number to 254XXXXXXXXX
+function formatPhone(phone) {
+  const digits = String(phone).replace(/\D/g, "");
+  if (digits.startsWith("254") && digits.length === 12) return digits;
+  if (digits.startsWith("0") && digits.length === 10) return "254" + digits.slice(1);
+  if (digits.length === 9) return "254" + digits;
+  return digits;
+}
+
 app.post("/api/stkpush", async (req, res) => {
   try {
+    const { amount, phone } = req.body;
+    if (!amount || !phone) {
+      return res.status(400).json({ error: "Amount and phone are required." });
+    }
+
+    const formattedPhone = formatPhone(phone);
+    if (formattedPhone.length !== 12) {
+      return res.status(400).json({ error: "Invalid phone number. Use format 07XXXXXXXX." });
+    }
+
     const token = await generateAccessToken();
     const timestamp = new Date()
       .toISOString()
@@ -43,13 +62,13 @@ app.post("/api/stkpush", async (req, res) => {
       Password: password,
       Timestamp: timestamp,
       TransactionType: "CustomerPayBillOnline",
-      Amount: req.body.amount,
-      PartyA: req.body.phone,
+      Amount: Math.ceil(amount),
+      PartyA: formattedPhone,
       PartyB: process.env.MPESA_SHORTCODE,
-      PhoneNumber: req.body.phone,
+      PhoneNumber: formattedPhone,
       CallBackURL: process.env.CALLBACK_URL,
-      AccountReference: "Botanique",
-      TransactionDesc: "Site Visit Payment",
+      AccountReference: "BotaniqueVisit",
+      TransactionDesc: "Botanique Site Visit",
     };
 
     const { data } = await axios.post(
@@ -60,9 +79,28 @@ app.post("/api/stkpush", async (req, res) => {
 
     res.json(data);
   } catch (err) {
-    console.error(err.response?.data || err.message);
-    res.status(500).send("STK Push failed");
+    console.error("STK push error:", err.response?.data || err.message);
+    res.status(500).json({ error: "M-Pesa request failed. Please pay manually using the Till number." });
   }
+});
+
+// M-Pesa callback — Safaricom posts payment confirmation here
+app.post("/api/mpesa/callback", (req, res) => {
+  const body = req.body?.Body?.stkCallback;
+  if (body) {
+    const { ResultCode, ResultDesc, CallbackMetadata } = body;
+    console.log("M-Pesa callback:", ResultCode, ResultDesc);
+    if (ResultCode === 0 && CallbackMetadata) {
+      const items = CallbackMetadata.Item || [];
+      const get = (name) => items.find((i) => i.Name === name)?.Value;
+      console.log("Payment confirmed:", {
+        amount: get("Amount"),
+        receipt: get("MpesaReceiptNumber"),
+        phone: get("PhoneNumber"),
+      });
+    }
+  }
+  res.json({ ResultCode: 0, ResultDesc: "Accepted" });
 });
 
 // ─── GROQ AI CHAT ENDPOINT ──────────────────────────────────────────────────
