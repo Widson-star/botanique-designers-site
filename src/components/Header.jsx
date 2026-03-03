@@ -40,7 +40,7 @@ export default function Header() {
           <img
             src="/botanique.png"
             alt="Botanique Designers"
-            className="h-16 w-auto object-contain drop-shadow-sm"
+            className="h-16 w-auto object-contain mix-blend-multiply"
           />
         </Link>
 
