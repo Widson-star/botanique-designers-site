@@ -7,11 +7,13 @@ export default function Footer() {
 
         {/* Brand */}
         <div className="space-y-4">
-          <img
-            src="/botanique.png"
-            alt="Botanique Designers"
-            className="h-20 w-auto object-contain brightness-0 invert"
-          />
+          <div className="inline-block bg-white rounded-2xl p-3 shadow-md">
+            <img
+              src="/botanique.png"
+              alt="Botanique Designers"
+              className="h-20 w-20 object-contain"
+            />
+          </div>
           <p className="text-sm text-gray-300">
             Transforming outdoor spaces through landscape architecture,
             horticulture, and environmental stewardship — anywhere in Kenya and East Africa.
