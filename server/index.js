@@ -3,7 +3,7 @@ import axios from "axios";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 
 dotenv.config();
 
@@ -65,7 +65,7 @@ app.post("/api/stkpush", async (req, res) => {
   }
 });
 
-// ─── GEMINI AI CHAT ENDPOINT ────────────────────────────────────────────────
+// ─── GROQ AI CHAT ENDPOINT ──────────────────────────────────────────────────
 
 const BOTANIQUE_SYSTEM_PROMPT = `You are Botanique AI, the friendly and knowledgeable assistant for Botanique Designers — a premier landscape design and environmental consultancy firm based in Nairobi, Kenya.
 
@@ -114,7 +114,7 @@ TONE: Warm, expert, Kenyan context-aware. Avoid being overly formal. Use plain E
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
       return res.status(503).json({ error: "AI service not configured. Please contact us directly." });
     }
@@ -124,26 +124,27 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ error: "Message is required." });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-lite",
-      systemInstruction: BOTANIQUE_SYSTEM_PROMPT,
+    const groq = new Groq({ apiKey });
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: BOTANIQUE_SYSTEM_PROMPT },
+        ...history.map((msg) => ({
+          role: msg.role === "user" ? "user" : "assistant",
+          content: msg.text,
+        })),
+        { role: "user", content: message.trim() },
+      ],
+      model: "llama-3.1-8b-instant",
+      temperature: 0.7,
+      max_tokens: 512,
     });
 
-    // Build chat history for context
-    const chat = model.startChat({
-      history: history.map((msg) => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.text }],
-      })),
-    });
-
-    const result = await chat.sendMessage(message.trim());
-    const reply = result.response.text();
+    const reply = completion.choices[0]?.message?.content || "I couldn't get a response. Please try again.";
 
     res.json({ reply });
   } catch (err) {
-    console.error("Gemini error:", err.message);
+    console.error("Groq error:", err.message);
     res.status(500).json({ error: "Something went wrong. Please try again or contact us directly." });
   }
 });
