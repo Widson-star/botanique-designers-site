@@ -80,10 +80,12 @@ export default function Home() {
               Request a Quote
             </button>
             <a
-              href="mailto:botaniquedesigners@gmail.com?subject=Landscape Inquiry"
+              href="https://wa.me/254720861592?text=Hi%20Botanique!%20I%27d%20like%20to%20discuss%20a%20landscape%20project."
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-8 py-3 rounded-full bg-white/15 border border-white text-white font-medium hover:bg-white hover:text-botanique-green transition backdrop-blur"
             >
-              Email Us
+              WhatsApp Us
             </a>
           </div>
         </div>
