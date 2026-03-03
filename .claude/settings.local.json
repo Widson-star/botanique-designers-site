@@ -12,7 +12,22 @@
       "Bash(git checkout -b main --track origin/main)",
       "Bash(git checkout main)",
       "Bash(git branch -m master main)",
-      "Bash(git add .)"
+      "Bash(git add .)",
+      "Bash(git commit:*)",
+      "Bash(git push --force-with-lease origin main)",
+      "Bash(git add src/App.jsx src/components/Footer.jsx src/components/Header.jsx src/pages/Home.jsx src/pages/areas/Eldoret.jsx src/pages/areas/Kisumu.jsx src/pages/areas/Mombasa.jsx src/pages/areas/Nakuru.jsx server/index.js)",
+      "Bash(git push origin main)",
+      "WebFetch(domain:www.botaniquedesigners.com)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(npx vite build)",
+      "Bash(git add server/index.js)",
+      "Bash(npm install groq-sdk)",
+      "Bash(git add package.json package-lock.json)",
+      "Bash(git add src/components/Assistant.jsx src/components/PaidConsultancyModal.jsx src/components/Header.jsx index.html server/index.js)",
+      "Bash(git add src/pages/Projects.jsx src/App.jsx src/components/Header.jsx)",
+      "Bash(git add src/components/Header.jsx src/components/Footer.jsx)",
+      "Bash(git add src/components/Header.jsx src/pages/Home.jsx)",
+      "Bash(git add src/components/Assistant.jsx src/pages/Projects.jsx src/data/projects.js)"
     ]
   }
 }
