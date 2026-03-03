@@ -4,6 +4,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import Groq from "groq-sdk";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 
@@ -181,6 +182,53 @@ app.post("/api/chat", async (req, res) => {
   } catch (err) {
     console.error("Groq error:", err.message);
     res.status(500).json({ error: "Something went wrong. Please try again or contact us directly." });
+  }
+});
+
+// ─── CONTACT FORM ────────────────────────────────────────────────────────────
+// Requires in server/.env:
+//   EMAIL_USER=botaniquedesigners@gmail.com
+//   EMAIL_PASS=<Gmail App Password from Google Account > Security > App Passwords>
+
+app.post("/api/contact", async (req, res) => {
+  const { name, email, phone, service, message } = req.body;
+  if (!name || !email || !message) {
+    return res.status(400).json({ error: "Name, email and message are required." });
+  }
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn("EMAIL_USER / EMAIL_PASS not set — skipping nodemailer send");
+    return res.json({ ok: true, note: "Email not configured on server; message received." });
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  });
+
+  const bodyHtml = `
+    <h2>New enquiry from botaniquedesigners.com</h2>
+    <table cellpadding="8" style="border-collapse:collapse;font-family:sans-serif;font-size:14px">
+      <tr><td><strong>Name</strong></td><td>${name}</td></tr>
+      <tr><td><strong>Email</strong></td><td><a href="mailto:${email}">${email}</a></td></tr>
+      <tr><td><strong>Phone</strong></td><td>${phone || "—"}</td></tr>
+      <tr><td><strong>Service</strong></td><td>${service || "—"}</td></tr>
+      <tr><td><strong>Message</strong></td><td style="white-space:pre-wrap">${message}</td></tr>
+    </table>
+  `;
+
+  try {
+    await transporter.sendMail({
+      from: `"Botanique Website" <${process.env.EMAIL_USER}>`,
+      to: "botaniquedesigners@gmail.com",
+      replyTo: email,
+      subject: `Website enquiry — ${name}`,
+      html: bodyHtml,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Nodemailer error:", err.message);
+    res.status(500).json({ error: "Failed to send email. Please contact us directly." });
   }
 });
 

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects";
 
-const FILTERS = ["all", "residential", "estate", "commercial", "inspiration"];
+const HOME_FILTERS = ["all", "residential", "estate", "design"];
 
 const services = [
   {
@@ -36,14 +36,76 @@ const services = [
   },
 ];
 
+const testimonials = [
+  {
+    quote:
+      "Botanique completely transformed our compound. The team was professional, on time, and the result was beyond what we imagined. Our neighbours keep asking who did it.",
+    name: "C. Wanjiku",
+    area: "Runda, Nairobi",
+    service: "Garden Design & Implementation",
+  },
+  {
+    quote:
+      "We needed an EIA done quickly without cutting corners — they delivered a thorough, NEMA-compliant report well within our timeline. Highly dependable.",
+    name: "M. Odhiambo",
+    area: "Kiambu County",
+    service: "EIA Study",
+  },
+  {
+    quote:
+      "From the 3D concept to the final planting, every detail was considered. The palm corridor they installed at our farm entrance is simply stunning.",
+    name: "P. Kamau",
+    area: "Muranga County",
+    service: "Landscape Architecture",
+  },
+];
+
+const SERVICES_LIST = [
+  "Landscape Architecture & Design",
+  "EIA Study",
+  "Project Implementation",
+  "Garden Maintenance",
+  "Irrigation Design & Installation",
+  "Site Consultation",
+  "Other",
+];
+
+const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
+
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("all");
   const { openQuoteWizard } = useApp();
+
+  // Contact form state
+  const [form, setForm] = useState({ name: "", email: "", phone: "", service: "", message: "" });
+  const [formStatus, setFormStatus] = useState(null); // null | "sending" | "success" | "error"
 
   const filtered =
     activeFilter === "all"
       ? projects
       : projects.filter((p) => p.category === activeFilter);
+
+  function handleInput(e) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setFormStatus("sending");
+    try {
+      const res = await fetch(`${BACKEND}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setFormStatus("success");
+      setForm({ name: "", email: "", phone: "", service: "", message: "" });
+    } catch {
+      setFormStatus("error");
+    }
+  }
 
   return (
     <div className="font-sans text-botanique-charcoal pt-24">
@@ -204,7 +266,7 @@ export default function Home() {
 
           {/* Filter pills */}
           <div className="flex flex-wrap justify-center gap-3 mb-10">
-            {FILTERS.map((f) => (
+            {HOME_FILTERS.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
@@ -214,14 +276,14 @@ export default function Home() {
                     : "bg-white text-gray-600 border-gray-200 hover:border-botanique-green hover:text-botanique-green"
                 }`}
               >
-                {f.charAt(0).toUpperCase() + f.slice(1)}
+                {f === "all" ? "All" : f === "design" ? "3D Designs" : f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
             ))}
           </div>
 
           {/* Grid */}
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((project, index) => (
+            {filtered.slice(0, 6).map((project, index) => (
               <div
                 key={index}
                 className="group relative overflow-hidden rounded-2xl shadow-md cursor-pointer"
@@ -248,54 +310,231 @@ export default function Home() {
               </div>
             ))}
           </div>
+
+          <Link
+            to="/projects"
+            className="inline-block mt-10 px-8 py-3 rounded-full border-2 border-botanique-green text-botanique-green font-semibold hover:bg-botanique-green hover:text-white transition"
+          >
+            View all {projects.length} projects →
+          </Link>
+        </div>
+      </section>
+
+      {/* ====== TESTIMONIALS ====== */}
+      <section className="py-24 bg-botanique-dark text-white">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+            Client Stories
+          </p>
+          <h2 className="text-4xl font-bold mb-14">What Our Clients Say</h2>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {testimonials.map((t, i) => (
+              <div
+                key={i}
+                className="bg-white/8 border border-white/10 rounded-2xl p-8 text-left flex flex-col"
+              >
+                {/* Stars */}
+                <div className="flex gap-1 mb-5">
+                  {[...Array(5)].map((_, s) => (
+                    <svg key={s} className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+
+                <p className="text-white/80 text-sm leading-relaxed flex-1 italic mb-6">
+                  "{t.quote}"
+                </p>
+
+                <div>
+                  <p className="font-semibold text-white">{t.name}</p>
+                  <p className="text-white/50 text-xs mt-0.5">{t.area}</p>
+                  <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full bg-botanique-green/20 text-botanique-green text-xs font-medium">
+                    {t.service}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ====== CONTACT ====== */}
-      <section
-        id="contact"
-        className="py-28 bg-botanique-beige text-center"
-      >
-        <div className="max-w-3xl mx-auto px-6">
-          <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
-            Get in Touch
-          </p>
-          <h2 className="text-4xl font-bold mb-4">Contact Us</h2>
-          <p className="text-gray-500 mb-10">
-            Reach out and let's shape your outdoor vision together.
-          </p>
+      <section id="contact" className="scroll-mt-24 py-24 bg-botanique-beige">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+              Get in Touch
+            </p>
+            <h2 className="text-4xl font-bold mb-4">Contact Us</h2>
+            <p className="text-gray-500 max-w-md mx-auto">
+              Have a project in mind? Send us a message and we'll get back to you within one business day.
+            </p>
+          </div>
 
-          <div className="bg-white rounded-2xl shadow-md p-10">
-            <div className="grid md:grid-cols-2 gap-10 items-center">
-              <div className="space-y-5 text-left text-gray-700">
-                <p className="flex items-center gap-3">
-                  <span className="text-2xl">📍</span>
-                  <span>Nairobi, Kenya</span>
-                </p>
-                <p className="flex items-center gap-3">
-                  <span className="text-2xl">📧</span>
-                  <a href="mailto:botaniquedesigners@gmail.com" className="hover:text-botanique-green transition">
-                    botaniquedesigners@gmail.com
-                  </a>
-                </p>
-                <p className="flex items-center gap-3">
-                  <span className="text-2xl">📞</span>
-                  <a href="tel:+254720861592" className="hover:text-botanique-green transition">
-                    +254 720 861 592
-                  </a>
-                </p>
+          <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+            <div className="grid md:grid-cols-2">
+
+              {/* Left — info */}
+              <div className="bg-botanique-dark text-white p-10 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-xl font-bold mb-8">Our Details</h3>
+                  <div className="space-y-6 text-white/80 text-sm">
+                    <div className="flex items-start gap-4">
+                      <span className="text-xl mt-0.5">📍</span>
+                      <div>
+                        <p className="font-semibold text-white">Location</p>
+                        <p>Nairobi, Kenya</p>
+                        <p className="text-white/50 text-xs mt-1">Serving all of Kenya & East Africa</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <span className="text-xl mt-0.5">📧</span>
+                      <div>
+                        <p className="font-semibold text-white">Email</p>
+                        <a href="mailto:botaniquedesigners@gmail.com" className="hover:text-botanique-green transition">
+                          botaniquedesigners@gmail.com
+                        </a>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <span className="text-xl mt-0.5">📞</span>
+                      <div>
+                        <p className="font-semibold text-white">Phone / WhatsApp</p>
+                        <a href="tel:+254720861592" className="hover:text-botanique-green transition">
+                          +254 720 861 592
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-10">
+                  <p className="text-white/50 text-xs uppercase tracking-widest mb-4">Follow us</p>
+                  <div className="flex gap-5">
+                    <a href="https://www.instagram.com/botaniquedesigners/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
+                       className="opacity-60 hover:opacity-100 transition">
+                      <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/instagram.svg" alt="Instagram" className="h-6 w-6 invert" />
+                    </a>
+                    <a href="https://www.facebook.com/botaniquedesigners" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
+                       className="opacity-60 hover:opacity-100 transition">
+                      <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/facebook.svg" alt="Facebook" className="h-6 w-6 invert" />
+                    </a>
+                    <a href="https://x.com/widson_ambaisi" target="_blank" rel="noopener noreferrer" aria-label="X"
+                       className="opacity-60 hover:opacity-100 transition">
+                      <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/x.svg" alt="X" className="h-6 w-6 invert" />
+                    </a>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-center md:justify-end gap-6">
-                <a href="https://www.instagram.com/botaniquedesigners/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                  <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/instagram.svg" alt="Instagram" className="h-8 w-8 hover:opacity-60 transition" />
-                </a>
-                <a href="https://www.facebook.com/botaniquedesigners" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                  <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/facebook.svg" alt="Facebook" className="h-8 w-8 hover:opacity-60 transition" />
-                </a>
-                <a href="https://x.com/widson_ambaisi" target="_blank" rel="noopener noreferrer" aria-label="X">
-                  <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/x.svg" alt="X" className="h-8 w-8 hover:opacity-60 transition" />
-                </a>
+
+              {/* Right — form */}
+              <div className="p-10">
+                {formStatus === "success" ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-8">
+                    <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-5">
+                      <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-botanique-charcoal mb-2">Message sent</h3>
+                    <p className="text-gray-500 text-sm mb-6">We'll be in touch within one business day.</p>
+                    <button
+                      onClick={() => setFormStatus(null)}
+                      className="text-botanique-green text-sm font-medium hover:underline"
+                    >
+                      Send another message
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Name *</label>
+                        <input
+                          name="name"
+                          value={form.name}
+                          onChange={handleInput}
+                          required
+                          placeholder="Your full name"
+                          className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30 focus:border-botanique-green transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email *</label>
+                        <input
+                          name="email"
+                          type="email"
+                          value={form.email}
+                          onChange={handleInput}
+                          required
+                          placeholder="you@example.com"
+                          className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30 focus:border-botanique-green transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone <span className="text-gray-400 font-normal">(optional)</span></label>
+                        <input
+                          name="phone"
+                          value={form.phone}
+                          onChange={handleInput}
+                          placeholder="+254 7XX XXX XXX"
+                          className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30 focus:border-botanique-green transition"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Service interested in</label>
+                        <select
+                          name="service"
+                          value={form.service}
+                          onChange={handleInput}
+                          className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-botanique-green/30 focus:border-botanique-green transition bg-white"
+                        >
+                          <option value="">Select a service…</option>
+                          {SERVICES_LIST.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Message *</label>
+                      <textarea
+                        name="message"
+                        value={form.message}
+                        onChange={handleInput}
+                        required
+                        rows={4}
+                        placeholder="Tell us about your project — location, size, what you have in mind…"
+                        className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30 focus:border-botanique-green transition resize-none"
+                      />
+                    </div>
+
+                    {formStatus === "error" && (
+                      <p className="text-red-600 text-sm">
+                        Something went wrong. Please email us directly at{" "}
+                        <a href="mailto:botaniquedesigners@gmail.com" className="underline">
+                          botaniquedesigners@gmail.com
+                        </a>
+                      </p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={formStatus === "sending"}
+                      className="w-full py-3 rounded-lg bg-botanique-green text-white font-semibold text-sm hover:opacity-90 transition disabled:opacity-60"
+                    >
+                      {formStatus === "sending" ? "Sending…" : "Send Message"}
+                    </button>
+                  </form>
+                )}
               </div>
+
             </div>
           </div>
         </div>
