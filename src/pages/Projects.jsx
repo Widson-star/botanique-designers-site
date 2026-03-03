@@ -2,17 +2,22 @@ import { useState, useEffect, useCallback } from "react";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects.js";
 
-const FILTERS = ["All", "Residential", "Commercial", "Estate"];
+const filters = [
+  { value: "all", label: "All Projects" },
+  { value: "residential", label: "Residential" },
+  { value: "estate", label: "Estate" },
+  { value: "design", label: "3D Designs" },
+];
 
 export default function Projects() {
-  const [active, setActive] = useState("All");
+  const [active, setActive] = useState("all");
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const { setQuoteWizardOpen } = useApp();
 
   const filtered =
-    active === "All"
+    active === "all"
       ? projects
-      : projects.filter((p) => p.category.toLowerCase() === active.toLowerCase());
+      : projects.filter((p) => p.category === active);
 
   // Map filtered index back to open the right lightbox item
   function openLightbox(filteredIdx) {
@@ -69,17 +74,17 @@ export default function Projects() {
       {/* Filter tabs */}
       <section className="sticky top-16 z-30 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-3 flex gap-2 overflow-x-auto">
-          {FILTERS.map((f) => (
+          {filters.map((f) => (
             <button
-              key={f}
-              onClick={() => { setActive(f); setLightboxIndex(null); }}
+              key={f.value}
+              onClick={() => { setActive(f.value); setLightboxIndex(null); }}
               className={`px-5 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                active === f
+                active === f.value
                   ? "bg-botanique-green text-white shadow-sm"
                   : "bg-botanique-beige text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {f}
+              {f.label}
             </button>
           ))}
           <span className="ml-auto text-xs text-gray-400 self-center whitespace-nowrap">
@@ -153,16 +158,14 @@ function ProjectCard({ project, onClick }) {
 
   const categoryColor = {
     residential: "bg-emerald-100 text-emerald-700",
-    commercial:  "bg-blue-100 text-blue-700",
     estate:      "bg-amber-100 text-amber-700",
-    inspiration: "bg-purple-100 text-purple-700",
+    design:      "bg-purple-100 text-purple-700",
   }[project.category] || "bg-gray-100 text-gray-600";
 
   const categoryLabel = {
     residential: "Residential",
-    commercial:  "Commercial",
     estate:      "Estate",
-    inspiration: "Inspiration",
+    design:      "3D Design",
   }[project.category] || project.category;
 
   return (
@@ -217,16 +220,14 @@ function ProjectCard({ project, onClick }) {
 function Lightbox({ project, index, total, onClose, onNext, onPrev }) {
   const categoryColor = {
     residential: "bg-emerald-100 text-emerald-700",
-    commercial:  "bg-blue-100 text-blue-700",
     estate:      "bg-amber-100 text-amber-700",
-    inspiration: "bg-purple-100 text-purple-700",
+    design:      "bg-purple-100 text-purple-700",
   }[project.category] || "bg-gray-100 text-gray-600";
 
   const categoryLabel = {
     residential: "Residential",
-    commercial:  "Commercial",
     estate:      "Estate",
-    inspiration: "Inspiration",
+    design:      "3D Design",
   }[project.category] || project.category;
 
   return (

@@ -1,73 +1,30 @@
-// ─── HOW TO ADD A NEW PROJECT ────────────────────────────────────────────────
-// 1. Drop the image into /public/projects/ (e.g. project-10.jpg)
-// 2. Add a new object below following the same structure
-// 3. category options: "residential" | "commercial" | "estate" | "inspiration"
-// ─────────────────────────────────────────────────────────────────────────────
-
 const projects = [
-  {
-    image: "/project-residential.jpg",
-    title: "Residential Landscaping",
-    location: "Nyahururu, Nyandarua",
-    category: "residential",
-    description: "Full residential garden transformation featuring indigenous planting, lawn establishment, and natural stone pathways designed to complement the highland climate.",
-  },
-  {
-    image: "/projects/project-9.jpg",
-    title: "Lawn Care & Maintenance",
-    location: "Runda, Nairobi",
-    category: "residential",
-    description: "Ongoing premium maintenance programme for a private residence in Runda — lawn care, hedge trimming, irrigation checks, and seasonal planting.",
-  },
-  {
-    image: "/projects/project-2.jpg",
-    title: "Garden Redesign",
-    location: "Karen, Nairobi",
-    category: "estate",
-    description: "Complete garden redesign for an estate property in Karen, incorporating tropical specimen trees, curved lawn edges, and a custom water feature.",
-  },
-  {
-    image: "/project-commercial.jpg",
-    title: "Commercial Landscaping",
-    location: "Westlands, Nairobi",
-    category: "commercial",
-    description: "Designed and implemented exterior landscaping for a commercial building in Westlands — planters, screening hedges, and a welcoming entrance green.",
-  },
-  {
-    image: "/projects/project-4.jpg",
-    title: "Estate Landscaping",
-    location: "Runda, Nairobi",
-    category: "estate",
-    description: "Expansive estate landscaping covering over 2 acres — master-planned with distinct garden zones, specimen palms, and a fully automated irrigation system.",
-  },
-  {
-    image: "/projects/project-5.jpg",
-    title: "Garden Inspiration",
-    location: "Reference Style",
-    category: "inspiration",
-    description: "A curated reference design showcasing lush tropical layering, specimen planting, and sculptural hardscape elements — used as a client mood board.",
-  },
-  {
-    image: "/projects/project-6.jpg",
-    title: "Lawn & Garden Makeover",
-    location: "Kiambu, Kenya",
-    category: "residential",
-    description: "Transformation of a tired garden into a vibrant outdoor living space — new lawn, raised planting beds, gravel paths, and a shade pergola.",
-  },
-  {
-    image: "/project-public.jpg",
-    title: "Public Space Landscaping",
-    location: "Nairobi CBD",
-    category: "commercial",
-    description: "Landscape design and implementation for a public urban space in Nairobi CBD — robust species selection, low-maintenance planting, and durable hardscape.",
-  },
-  {
-    image: "/projects/project-7.jpg",
-    title: "Horticultural Installation",
-    location: "Karen, Nairobi",
-    category: "estate",
-    description: "Specialist horticultural installation featuring rare tropical species, soil improvement works, and a custom drip irrigation network for a Karen estate.",
-  },
+  { image: "/projects/project-23.jpg", title: "Munuga Corridor — Royal Palm Installation", location: "Munuga, Muranga County", category: "residential", description: "Royal Palm colonnade installation along a 75m boundary corridor with Arabica grass." },
+  { image: "/projects/project-30.jpg", title: "Munuga Corridor — Grass Establishment", location: "Munuga, Muranga County", category: "residential", description: "Arabica grass splits establishing on red volcanic soil alongside newly planted palms." },
+  { image: "/projects/project-31.jpg", title: "Munuga Corridor — Planting Crew", location: "Munuga, Muranga County", category: "residential", description: "Installation team planting Arabica grass splits with palms positioned at intervals." },
+  { image: "/projects/project-22.jpg", title: "Munuga Residence — Perimeter Container Planting", location: "Munuga, Muranga County", category: "residential", description: "Stone-clad boundary wall with grey container pots holding Syzygium shrubs and establishing lawn." },
+  { image: "/projects/project-12.jpg", title: "Munuga Residence — Entrance Planter Bed", location: "Munuga, Muranga County", category: "residential", description: "Entrance planter with Cupressus goldcrest, Dracaena, and variegated groundcovers against stone cladding." },
+  { image: "/projects/project-10.jpg", title: "Munuga Residence — Plant Staging", location: "Munuga, Muranga County", category: "residential", description: "Nursery stock staged on-site before installation. Cupressus, spider plant, and ornamental shrubs." },
+  { image: "/projects/project-16.jpg", title: "Residential Garden — Patio & Lawn", location: "Nairobi Region", category: "residential", description: "Completed garden with PVC gutter planter, palms, Dusty Miller accents, and manicured lawn." },
+  { image: "/projects/project-18.jpg", title: "Residential Garden — Wide Lawn View", location: "Nairobi Region", category: "residential", description: "Sweeping lawn with tropical perimeter borders and boundary wall planting." },
+  { image: "/projects/project-27.jpg", title: "Residential Garden — Aerial View", location: "Nairobi Region", category: "residential", description: "Elevated view showing border planting, integrated service covers, and specimen trees." },
+  { image: "/projects/project-15.jpg", title: "Residential Garden — Early Installation", location: "Nairobi Region", category: "residential", description: "Border installation in progress with young shrubs, Coleus, and Syzygium hedge forming." },
+  { image: "/projects/project-24.jpg", title: "Backyard Garden — Tropical Mixed Borders", location: "Nairobi Region", category: "residential", description: "Layered tropical borders with banana, bird of paradise, and fountain grass around a central lawn." },
+  { image: "/projects/project-14.jpg", title: "Tropical Border — Planting Detail", location: "Nairobi Region", category: "residential", description: "Close-up of Strelitzia, Pentas, ornamental grasses, and banana in freshly planted borders." },
+  { image: "/projects/project-13.jpg", title: "Residential Border — Installation Phase", location: "Nairobi Region", category: "residential", description: "Tropical border installation with banana, roses, and specimen trees alongside a lawn." },
+  { image: "/projects/project-25.jpg", title: "Highland Residence — Palm Garden & Pathways", location: "Nairobi Region", category: "residential", description: "Phoenix palm focal point with Pennisetum grass accents and natural stone stepping paths." },
+  { image: "/projects/project-26.jpg", title: "Residential Lawn Maintenance", location: "Nairobi Region", category: "residential", description: "Lawn mowing and maintenance on a property with established tropical border planting." },
+  { image: "/projects/project-28.jpg", title: "Residential Garden — Copper Leaf Screen", location: "Nairobi Region", category: "residential", description: "Acalypha wilkesiana foliage screen along boundary wall with mixed tropical understory." },
+  { image: "/projects/project-29.jpg", title: "Tropical Foliage — Ornamental Banana", location: "Nairobi Region", category: "residential", description: "Variegated Ensete with yellow-orange-pink foliage in a mixed tropical garden border." },
+  { image: "/projects/project-19.jpg", title: "Residential Border — Tropical Species Mix", location: "Nairobi Region", category: "residential", description: "Newly planted Strelitzia, Areca palm, Ensete, and Croton along a textured boundary wall." },
+  { image: "/projects/project-17.jpg", title: "Interior Container — Spherical Planter", location: "Nairobi Region", category: "residential", description: "Dark grey textured spherical planter at the base of an interior staircase." },
+  { image: "/projects/project-32.jpg", title: "Rural Property — Site Survey", location: "Highland Kenya", category: "estate", description: "Pre-design site assessment showing existing fencing, scattered trees, and surrounding plantation." },
+  { image: "/projects/project-34.jpg", title: "Estate Boundary Wall — Completed Stonework", location: "Highland Kenya", category: "estate", description: "Finished laterite stone boundary wall with consistent coursework along the property perimeter." },
+  { image: "/projects/project-33.jpg", title: "Estate Boundary Wall — Stone Masonry", location: "Highland Kenya", category: "estate", description: "Laterite stone boundary wall construction using locally sourced blocks and cement mortar." },
+  { image: "/projects/project-35.jpg", title: "Estate Boundary Wall — Construction Progress", location: "Highland Kenya", category: "estate", description: "Masons building laterite stone courses along the property line in a rural highland setting." },
+  { image: "/projects/project-11.jpg", title: "Hillside Residence — Night Lighting Design (3D)", location: "Design Phase", category: "design", description: "3D night render with terraced retaining walls, pathway lighting, gazebo, and palm accents." },
+  { image: "/projects/project-36.jpg", title: "Residential Landscape — 3D Concept", location: "Design Phase", category: "design", description: "3D visualisation with formal driveway, low hedges, specimen trees, and manicured lawn." },
+  { image: "/projects/project-37.jpg", title: "Estate Entrance — 3D Gate Design", location: "Design Phase", category: "design", description: "3D render of estate entry with swing gates, agapanthus borders, and tropical planting." },
+  { image: "/projects/project-38.jpg", title: "Estate Approach — 3D Avenue Design", location: "Design Phase", category: "design", description: "3D render of formal tree avenue, Bougainvillea canopy, and vehicular entry infrastructure." },
 ];
-
 export default projects;
