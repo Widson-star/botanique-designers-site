@@ -70,6 +70,9 @@ export default function Footer() {
             <a href="https://www.facebook.com/botaniquedesigners" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
               <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/facebook.svg" alt="Facebook" className="h-6 w-6 invert hover:opacity-70 transition" />
             </a>
+            <a href="https://www.youtube.com/@Botaniquedesigners" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+              <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/youtube.svg" alt="YouTube" className="h-6 w-6 invert hover:opacity-70 transition" />
+            </a>
             <a href="https://x.com/widson_ambaisi" target="_blank" rel="noopener noreferrer" aria-label="X">
               <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/x.svg" alt="X" className="h-6 w-6 invert hover:opacity-70 transition" />
             </a>
