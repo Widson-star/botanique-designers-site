@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects";
+import FadeIn from "../components/FadeIn";
 
 const HOME_FILTERS = ["all", "residential", "estate", "design"];
 
@@ -39,24 +40,45 @@ const services = [
 const testimonials = [
   {
     quote:
-      "Botanique completely transformed our compound. The team was professional, on time, and the result was beyond what we imagined. Our neighbours keep asking who did it.",
-    name: "C. Wanjiku",
-    area: "Runda, Nairobi",
+      "The Botanique team transformed our Tatu City garden completely. Their crew was incredibly disciplined on site — punctual every day, tidy throughout, and the quality of work was outstanding.",
+    name: "Caroline N.",
+    area: "Tatu City",
     service: "Garden Design & Implementation",
   },
   {
     quote:
-      "We needed an EIA done quickly without cutting corners — they delivered a thorough, NEMA-compliant report well within our timeline. Highly dependable.",
-    name: "M. Odhiambo",
-    area: "Kiambu County",
-    service: "EIA Study",
+      "I was impressed by how professional and well-organised the team was. They showed up on time, worked methodically, and delivered a beautifully landscaped compound that all our visitors admire.",
+    name: "Victor N.",
+    area: "South C, Nairobi",
+    service: "Landscape Implementation",
   },
   {
     quote:
-      "From the 3D concept to the final planting, every detail was considered. The palm corridor they installed at our farm entrance is simply stunning.",
-    name: "P. Kamau",
-    area: "Muranga County",
+      "From concept to completion, every detail was handled with precision. The planting design suited our home perfectly and the team's commitment on site was something else — very dedicated people.",
+    name: "Stephen W.",
+    area: "Membley",
     service: "Landscape Architecture",
+  },
+  {
+    quote:
+      "Botanique handled our Nanyuki garden and we couldn't be happier. They travelled far and still delivered exceptional work. Disciplined, respectful, and the results speak for themselves.",
+    name: "Lucy N.",
+    area: "Nanyuki",
+    service: "Garden Design & Implementation",
+  },
+  {
+    quote:
+      "Our Runda compound had a lot of potential and Botanique unlocked all of it. The team was always on time, worked with great care, and the final garden exceeded our expectations entirely.",
+    name: "Joyce N.",
+    area: "Runda, Nairobi",
+    service: "Landscape Design",
+  },
+  {
+    quote:
+      "I've had contractors let me down before, but the Botanique team was different — disciplined, hard-working, and genuinely proud of their craft. The Karen garden is absolutely beautiful.",
+    name: "Walter N.",
+    area: "Karen, Nairobi",
+    service: "Garden Implementation",
   },
 ];
 
@@ -75,6 +97,14 @@ const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState("all");
   const { openQuoteWizard } = useApp();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.scrollTo) {
+      const el = document.getElementById(location.state.scrollTo);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
+    }
+  }, [location.state]);
 
   // Contact form state
   const [form, setForm] = useState({ name: "", email: "", phone: "", service: "", message: "" });
@@ -156,31 +186,32 @@ export default function Home() {
       {/* ====== SERVICES ====== */}
       <section id="services" className="scroll-mt-24 py-24 bg-botanique-beige">
         <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
-            What We Do
-          </p>
-          <h2 className="text-4xl font-bold mb-4">Our Services</h2>
-          <p className="text-gray-500 mb-14 max-w-xl mx-auto">
-            End-to-end landscape design, environmental compliance, and
-            hands-on project delivery across Kenya.
-          </p>
+          <FadeIn>
+            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+              What We Do
+            </p>
+            <h2 className="text-4xl font-bold mb-4">Our Services</h2>
+            <p className="text-gray-500 mb-14 max-w-xl mx-auto">
+              End-to-end landscape design, environmental compliance, and
+              hands-on project delivery across Kenya.
+            </p>
+          </FadeIn>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {services.map((svc) => (
-              <div
-                key={svc.path}
-                className="bg-white rounded-2xl p-7 shadow-sm hover:shadow-md transition flex flex-col"
-              >
-                <span className="text-3xl mb-4">{svc.icon}</span>
-                <h3 className="font-semibold text-lg mb-2">{svc.title}</h3>
-                <p className="text-gray-500 text-sm flex-1 mb-5">{svc.description}</p>
-                <Link
-                  to={svc.path}
-                  className="text-botanique-green text-sm font-medium hover:underline"
-                >
-                  Learn more →
-                </Link>
-              </div>
+            {services.map((svc, i) => (
+              <FadeIn key={svc.path} delay={i * 100}>
+                <div className="bg-white rounded-2xl p-7 shadow-sm hover:shadow-md transition flex flex-col h-full">
+                  <span className="text-3xl mb-4">{svc.icon}</span>
+                  <h3 className="font-semibold text-lg mb-2">{svc.title}</h3>
+                  <p className="text-gray-500 text-sm flex-1 mb-5">{svc.description}</p>
+                  <Link
+                    to={svc.path}
+                    className="text-botanique-green text-sm font-medium hover:underline"
+                  >
+                    Learn more →
+                  </Link>
+                </div>
+              </FadeIn>
             ))}
           </div>
         </div>
@@ -188,6 +219,7 @@ export default function Home() {
 
       {/* ====== AREAS STRIP ====== */}
       <section className="bg-botanique-green py-14 text-white text-center">
+        <FadeIn>
         <p className="text-sm uppercase tracking-widest text-white/70 mb-3">
           Serving clients across
         </p>
@@ -198,6 +230,7 @@ export default function Home() {
           From Mombasa to Eldoret, Nairobi to Kisumu — no project is too far. We work
           nationwide and take on international projects across East Africa.
         </p>
+        </FadeIn>
         <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto px-6">
           {[
             { label: "Nairobi", path: "/areas/nairobi" },
@@ -230,39 +263,45 @@ export default function Home() {
         className="scroll-mt-24 py-24 bg-botanique-beige text-center"
       >
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
-            Quick & Easy
-          </p>
-          <h2 className="text-4xl font-bold mb-4">Get an Instant Quote</h2>
-          <p className="text-gray-500 mb-10">
-            Describe your project briefly and we'll guide you to the right
-            solution — usually within 24 hours.
-          </p>
-
-          <div className="bg-white rounded-2xl shadow-md p-10">
-            <button
-              onClick={() => openQuoteWizard()}
-              className="px-8 py-4 rounded-full bg-botanique-green text-white font-medium hover:scale-105 transition text-lg"
-            >
-              💬 Start Instant Quote
-            </button>
-            <p className="text-gray-400 text-sm mt-4">
-              Takes less than 2 minutes · No commitment required
+          <FadeIn>
+            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+              Quick & Easy
             </p>
-          </div>
+            <h2 className="text-4xl font-bold mb-4">Get an Instant Quote</h2>
+            <p className="text-gray-500 mb-10">
+              Describe your project briefly and we'll guide you to the right
+              solution — usually within 24 hours.
+            </p>
+          </FadeIn>
+
+          <FadeIn delay={150}>
+            <div className="bg-white rounded-2xl shadow-md p-10">
+              <button
+                onClick={() => openQuoteWizard()}
+                className="px-8 py-4 rounded-full bg-botanique-green text-white font-medium hover:scale-105 transition text-lg"
+              >
+                💬 Start Instant Quote
+              </button>
+              <p className="text-gray-400 text-sm mt-4">
+                Takes less than 2 minutes · No commitment required
+              </p>
+            </div>
+          </FadeIn>
         </div>
       </section>
 
       {/* ====== PROJECTS / GALLERY ====== */}
       <section id="projects" className="py-28 bg-white text-center">
         <div className="max-w-6xl mx-auto px-6">
-          <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
-            Our Work
-          </p>
-          <h2 className="text-4xl font-bold mb-4">Completed Projects</h2>
-          <p className="text-gray-500 mb-10 max-w-xl mx-auto">
-            A selection of landscape and horticultural projects across Kenya.
-          </p>
+          <FadeIn>
+            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+              Our Work
+            </p>
+            <h2 className="text-4xl font-bold mb-4">Completed Projects</h2>
+            <p className="text-gray-500 mb-10 max-w-xl mx-auto">
+              A selection of landscape and horticultural projects across Kenya.
+            </p>
+          </FadeIn>
 
           {/* Filter pills */}
           <div className="flex flex-wrap justify-center gap-3 mb-10">
@@ -284,8 +323,8 @@ export default function Home() {
           {/* Grid */}
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.slice(0, 6).map((project, index) => (
+              <FadeIn key={index} delay={index * 80}>
               <div
-                key={index}
                 className="group relative overflow-hidden rounded-2xl shadow-md cursor-pointer"
               >
                 <img
@@ -308,6 +347,7 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+              </FadeIn>
             ))}
           </div>
 
@@ -323,16 +363,18 @@ export default function Home() {
       {/* ====== TESTIMONIALS ====== */}
       <section className="py-24 bg-botanique-dark text-white">
         <div className="max-w-6xl mx-auto px-6 text-center">
-          <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
-            Client Stories
-          </p>
-          <h2 className="text-4xl font-bold mb-14">What Our Clients Say</h2>
+          <FadeIn>
+            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+              Client Stories
+            </p>
+            <h2 className="text-4xl font-bold mb-14">What Our Clients Say</h2>
+          </FadeIn>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {testimonials.map((t, i) => (
+              <FadeIn key={i} delay={i * 100}>
               <div
-                key={i}
-                className="bg-white/8 border border-white/10 rounded-2xl p-8 text-left flex flex-col"
+                className="bg-white/8 border border-white/10 rounded-2xl p-8 text-left flex flex-col h-full"
               >
                 {/* Stars */}
                 <div className="flex gap-1 mb-5">
@@ -355,6 +397,7 @@ export default function Home() {
                   </span>
                 </div>
               </div>
+              </FadeIn>
             ))}
           </div>
         </div>
@@ -363,16 +406,19 @@ export default function Home() {
       {/* ====== CONTACT ====== */}
       <section id="contact" className="scroll-mt-24 py-24 bg-botanique-beige">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
-              Get in Touch
-            </p>
-            <h2 className="text-4xl font-bold mb-4">Contact Us</h2>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Have a project in mind? Send us a message and we'll get back to you within one business day.
-            </p>
-          </div>
+          <FadeIn>
+            <div className="text-center mb-12">
+              <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+                Get in Touch
+              </p>
+              <h2 className="text-4xl font-bold mb-4">Contact Us</h2>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Have a project in mind? Send us a message and we'll get back to you within one business day.
+              </p>
+            </div>
+          </FadeIn>
 
+          <FadeIn delay={100}>
           <div className="bg-white rounded-2xl shadow-md overflow-hidden">
             <div className="grid md:grid-cols-2">
 
@@ -420,6 +466,10 @@ export default function Home() {
                     <a href="https://www.facebook.com/botaniquedesigners" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
                        className="opacity-60 hover:opacity-100 transition">
                       <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/facebook.svg" alt="Facebook" className="h-6 w-6 invert" />
+                    </a>
+                    <a href="https://www.youtube.com/@Botaniquedesigners" target="_blank" rel="noopener noreferrer" aria-label="YouTube"
+                       className="opacity-60 hover:opacity-100 transition">
+                      <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/youtube.svg" alt="YouTube" className="h-6 w-6 invert" />
                     </a>
                     <a href="https://x.com/widson_ambaisi" target="_blank" rel="noopener noreferrer" aria-label="X"
                        className="opacity-60 hover:opacity-100 transition">
@@ -537,6 +587,7 @@ export default function Home() {
 
             </div>
           </div>
+          </FadeIn>
         </div>
       </section>
     </div>
