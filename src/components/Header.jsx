@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useApp } from "../context/AppContext";
 
 const services = [
   { label: "Landscape Architecture", path: "/services/landscape-architecture" },
@@ -30,7 +31,19 @@ export default function Header() {
   const [mobileAreasOpen, setMobileAreasOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { openQuoteWizard } = useApp();
   const isHome = location.pathname === "/";
+
+  function handleContactClick(e) {
+    e.preventDefault();
+    setMobileOpen(false);
+    if (isHome) {
+      document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/", { state: { scrollTo: "contact" } });
+    }
+  }
 
   return (
     <header className="fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-gray-100 shadow-sm">
@@ -138,27 +151,19 @@ export default function Header() {
 
           <Link to="/projects" className="hover:text-botanique-green transition">Projects</Link>
 
-          <a
-            href="https://wa.me/254720861592"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={handleContactClick}
             className="hover:text-botanique-green transition"
           >
             Contact
-          </a>
+          </button>
 
-          <a
-            href="#instant-quote"
-            onClick={(e) => {
-              if (!isHome) {
-                e.preventDefault();
-                window.location.href = "/#instant-quote";
-              }
-            }}
+          <button
+            onClick={() => openQuoteWizard()}
             className="px-5 py-2 rounded-full bg-botanique-green text-white text-sm hover:scale-105 transition"
           >
             Get a Quote
-          </a>
+          </button>
         </nav>
 
         {/* Mobile hamburger */}
@@ -252,14 +257,13 @@ export default function Header() {
           </div>
 
           <Link to="/projects" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Projects</Link>
-          <a href="https://wa.me/254720861592" target="_blank" rel="noopener noreferrer" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Contact</a>
-          <a
-            href="/#instant-quote"
-            className="block mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center"
-            onClick={() => setMobileOpen(false)}
+          <button onClick={handleContactClick} className="block w-full text-left py-2 hover:text-botanique-green">Contact</button>
+          <button
+            onClick={() => { openQuoteWizard(); setMobileOpen(false); }}
+            className="block w-full mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center"
           >
             Get a Quote
-          </a>
+          </button>
         </div>
       )}
     </header>
