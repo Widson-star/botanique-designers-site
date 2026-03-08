@@ -7,6 +7,7 @@ const filters = [
   { value: "residential", label: "Residential" },
   { value: "estate", label: "Estate" },
   { value: "design", label: "3D Designs" },
+  { value: "international", label: "International" },
 ];
 
 export default function Projects() {
@@ -157,15 +158,17 @@ function ProjectCard({ project, onClick }) {
   const [loaded, setLoaded] = useState(false);
 
   const categoryColor = {
-    residential: "bg-emerald-100 text-emerald-700",
-    estate:      "bg-amber-100 text-amber-700",
-    design:      "bg-purple-100 text-purple-700",
+    residential:    "bg-emerald-100 text-emerald-700",
+    estate:         "bg-amber-100 text-amber-700",
+    design:         "bg-purple-100 text-purple-700",
+    international:  "bg-blue-100 text-blue-700",
   }[project.category] || "bg-gray-100 text-gray-600";
 
   const categoryLabel = {
-    residential: "Residential",
-    estate:      "Estate",
-    design:      "3D Design",
+    residential:    "Residential",
+    estate:         "Estate",
+    design:         "3D Design",
+    international:  "International",
   }[project.category] || project.category;
 
   return (
@@ -219,15 +222,17 @@ function ProjectCard({ project, onClick }) {
 
 function Lightbox({ project, index, total, onClose, onNext, onPrev }) {
   const categoryColor = {
-    residential: "bg-emerald-100 text-emerald-700",
-    estate:      "bg-amber-100 text-amber-700",
-    design:      "bg-purple-100 text-purple-700",
+    residential:    "bg-emerald-100 text-emerald-700",
+    estate:         "bg-amber-100 text-amber-700",
+    design:         "bg-purple-100 text-purple-700",
+    international:  "bg-blue-100 text-blue-700",
   }[project.category] || "bg-gray-100 text-gray-600";
 
   const categoryLabel = {
-    residential: "Residential",
-    estate:      "Estate",
-    design:      "3D Design",
+    residential:    "Residential",
+    estate:         "Estate",
+    design:         "3D Design",
+    international:  "International",
   }[project.category] || project.category;
 
   return (

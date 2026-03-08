@@ -2,33 +2,44 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 
-const services = [
-  { label: "Landscape Architecture", path: "/services/landscape-architecture" },
-  { label: "EIA Studies", path: "/services/eia-studies" },
-  { label: "Project Implementation", path: "/services/implementation" },
-  { label: "Garden Maintenance", path: "/services/maintenance" },
-];
-
-const nairobiSuburbs = [
-  { label: "Karen", path: "/areas/karen" },
-  { label: "Runda", path: "/areas/runda" },
-  { label: "Kiambu County", path: "/areas/kiambu" },
-  { label: "Westlands", path: "/areas/westlands" },
-];
-
-const majorCities = [
-  { label: "Nairobi", path: "/areas/nairobi" },
-  { label: "Mombasa & Coast", path: "/areas/mombasa" },
-  { label: "Kisumu & Nyanza", path: "/areas/kisumu" },
-  { label: "Nakuru & Rift Valley", path: "/areas/nakuru" },
-  { label: "Eldoret & North Rift", path: "/areas/eldoret" },
+const serviceCategories = [
+  {
+    title: "Design & Planning",
+    items: [
+      { label: "Landscape Design", path: "/services/landscape-design" },
+      { label: "Landscape Architecture", path: "/services/landscape-architecture" },
+    ],
+  },
+  {
+    title: "Plant Science & Advisory",
+    items: [
+      { label: "Plant Taxonomy & Botanical Labelling", path: "/services/plant-taxonomy" },
+      { label: "Plant Health Care", path: "/services/plant-health-care" },
+      { label: "Soil Analysis", path: "/services/soil-analysis" },
+      { label: "Potted & Indoor Plants", path: "/services/potted-indoor-plants" },
+    ],
+  },
+  {
+    title: "Implementation & Construction",
+    items: [
+      { label: "Garden Implementation", path: "/services/garden-implementation" },
+      { label: "Irrigation Systems", path: "/services/irrigation-systems" },
+      { label: "Garden Lighting", path: "/services/garden-lighting" },
+      { label: "Property Fencing", path: "/services/property-fencing" },
+    ],
+  },
+  {
+    title: "Ongoing Care",
+    items: [
+      { label: "Garden Maintenance", path: "/services/garden-maintenance" },
+      { label: "Lawn Care", path: "/services/lawn-care" },
+    ],
+  },
 ];
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [servicesOpen, setServicesOpen] = useState(false);
-  const [areasOpen, setAreasOpen] = useState(false);
-  const [mobileAreasOpen, setMobileAreasOpen] = useState(false);
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,6 +54,10 @@ export default function Header() {
     } else {
       navigate("/", { state: { scrollTo: "contact" } });
     }
+  }
+
+  function closeMobile() {
+    setMobileOpen(false);
   }
 
   return (
@@ -65,102 +80,69 @@ export default function Header() {
             <Link to="/" className="hover:text-botanique-green transition">Home</Link>
           )}
 
-          {/* Services dropdown */}
+          <Link to="/about" className="hover:text-botanique-green transition">About</Link>
+
+          {/* Services mega dropdown */}
           <div
             className="relative"
             onMouseEnter={() => setServicesOpen(true)}
             onMouseLeave={() => setServicesOpen(false)}
           >
-            <button className="flex items-center gap-1 hover:text-botanique-green transition">
+            <Link
+              to="/services"
+              className="flex items-center gap-1 hover:text-botanique-green transition"
+            >
               Services
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </button>
+            </Link>
             {servicesOpen && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
-                {services.map((s) => (
-                  <Link
-                    key={s.path}
-                    to={s.path}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green transition"
-                  >
-                    {s.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Areas dropdown — two grouped columns */}
-          <div
-            className="relative"
-            onMouseEnter={() => setAreasOpen(true)}
-            onMouseLeave={() => setAreasOpen(false)}
-          >
-            <button className="flex items-center gap-1 hover:text-botanique-green transition">
-              Areas We Serve
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {areasOpen && (
-              <div className="absolute top-full left-0 mt-1 w-[420px] bg-white rounded-xl shadow-lg border border-gray-100 p-4 z-50">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Nairobi Region */}
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
-                      Nairobi Suburbs
-                    </p>
-                    {nairobiSuburbs.map((a) => (
-                      <Link
-                        key={a.path}
-                        to={a.path}
-                        className="block px-2 py-1.5 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green rounded-lg transition"
-                      >
-                        {a.label}
-                      </Link>
-                    ))}
-                  </div>
-                  {/* Major Cities */}
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
-                      Major Cities
-                    </p>
-                    {majorCities.map((a) => (
-                      <Link
-                        key={a.path}
-                        to={a.path}
-                        className="block px-2 py-1.5 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green rounded-lg transition"
-                      >
-                        {a.label}
-                      </Link>
-                    ))}
-                  </div>
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-[560px] bg-white rounded-xl shadow-lg border border-gray-100 p-5 z-50">
+                <div className="grid grid-cols-2 gap-6">
+                  {serviceCategories.map((cat) => (
+                    <div key={cat.title}>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        {cat.title}
+                      </p>
+                      {cat.items.map((s) => (
+                        <Link
+                          key={s.path}
+                          to={s.path}
+                          className="block px-2 py-1.5 text-sm text-gray-700 hover:bg-botanique-beige hover:text-botanique-green rounded-lg transition"
+                        >
+                          {s.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-                {/* Coverage note */}
-                <div className="mt-3 pt-3 border-t border-gray-100 px-1">
-                  <p className="text-xs text-gray-500">
-                    <span className="text-botanique-green font-medium">Nationwide coverage</span>
-                    {" "}— Nyeri, Thika, Machakos, Malindi, Lamu, Nanyuki, Nandi, Kitale and anywhere across Kenya & East Africa.
-                  </p>
+                <div className="mt-4 pt-3 border-t border-gray-100">
+                  <Link
+                    to="/services"
+                    className="text-xs text-botanique-green font-medium hover:underline"
+                  >
+                    View all services →
+                  </Link>
                 </div>
               </div>
             )}
           </div>
 
           <Link to="/projects" className="hover:text-botanique-green transition">Projects</Link>
+          <Link to="/blog" className="hover:text-botanique-green transition">Blog</Link>
+          <Link to="/faq" className="hover:text-botanique-green transition">FAQ</Link>
 
           <button
             onClick={handleContactClick}
-            className="hover:text-botanique-green transition"
+            className="hover:text-botanique-green transition cursor-pointer"
           >
             Contact
           </button>
 
           <button
             onClick={() => openQuoteWizard()}
-            className="px-5 py-2 rounded-full bg-botanique-green text-white text-sm hover:scale-105 transition"
+            className="px-5 py-2 rounded-full bg-botanique-green text-white text-sm hover:scale-105 transition cursor-pointer"
           >
             Get a Quote
           </button>
@@ -184,13 +166,14 @@ export default function Header() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-3 text-sm">
-          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Home</Link>
+        <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-3 text-sm max-h-[80vh] overflow-y-auto">
+          <Link to="/" className="block py-2 hover:text-botanique-green" onClick={closeMobile}>Home</Link>
+          <Link to="/about" className="block py-2 hover:text-botanique-green" onClick={closeMobile}>About</Link>
 
           {/* Services accordion */}
           <div>
             <button
-              className="w-full flex justify-between items-center py-2 font-semibold text-gray-500 text-xs uppercase tracking-wide"
+              className="w-full flex justify-between items-center py-2 font-semibold text-gray-500 text-xs uppercase tracking-wide cursor-pointer"
               onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
             >
               Services
@@ -199,68 +182,42 @@ export default function Header() {
               </svg>
             </button>
             {mobileServicesOpen && (
-              <div className="pl-3 space-y-0.5">
-                {services.map((s) => (
-                  <Link
-                    key={s.path}
-                    to={s.path}
-                    className="block py-1.5 text-gray-700 hover:text-botanique-green"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {s.label}
-                  </Link>
+              <div className="pl-3 space-y-2 pb-2">
+                <Link
+                  to="/services"
+                  className="block py-1.5 text-botanique-green font-medium"
+                  onClick={closeMobile}
+                >
+                  All Services →
+                </Link>
+                {serviceCategories.map((cat) => (
+                  <div key={cat.title}>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide pt-2 pb-0.5">
+                      {cat.title}
+                    </p>
+                    {cat.items.map((s) => (
+                      <Link
+                        key={s.path}
+                        to={s.path}
+                        className="block py-1.5 text-gray-700 hover:text-botanique-green"
+                        onClick={closeMobile}
+                      >
+                        {s.label}
+                      </Link>
+                    ))}
+                  </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Areas accordion */}
-          <div>
-            <button
-              className="w-full flex justify-between items-center py-2 font-semibold text-gray-500 text-xs uppercase tracking-wide"
-              onClick={() => setMobileAreasOpen(!mobileAreasOpen)}
-            >
-              Areas We Serve
-              <svg className={`w-4 h-4 transition-transform ${mobileAreasOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            {mobileAreasOpen && (
-              <div className="pl-3 space-y-0.5">
-                <p className="text-xs text-gray-400 uppercase tracking-wide pt-1 pb-0.5">Nairobi Suburbs</p>
-                {nairobiSuburbs.map((a) => (
-                  <Link
-                    key={a.path}
-                    to={a.path}
-                    className="block py-1.5 text-gray-700 hover:text-botanique-green"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {a.label}
-                  </Link>
-                ))}
-                <p className="text-xs text-gray-400 uppercase tracking-wide pt-2 pb-0.5">Major Cities</p>
-                {majorCities.map((a) => (
-                  <Link
-                    key={a.path}
-                    to={a.path}
-                    className="block py-1.5 text-gray-700 hover:text-botanique-green"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {a.label}
-                  </Link>
-                ))}
-                <p className="text-xs text-botanique-green pt-2 pb-1">
-                  + All of Kenya & East Africa
-                </p>
-              </div>
-            )}
-          </div>
-
-          <Link to="/projects" className="block py-2 hover:text-botanique-green" onClick={() => setMobileOpen(false)}>Projects</Link>
-          <button onClick={handleContactClick} className="block w-full text-left py-2 hover:text-botanique-green">Contact</button>
+          <Link to="/projects" className="block py-2 hover:text-botanique-green" onClick={closeMobile}>Projects</Link>
+          <Link to="/blog" className="block py-2 hover:text-botanique-green" onClick={closeMobile}>Blog</Link>
+          <Link to="/faq" className="block py-2 hover:text-botanique-green" onClick={closeMobile}>FAQ</Link>
+          <button onClick={handleContactClick} className="block w-full text-left py-2 hover:text-botanique-green cursor-pointer">Contact</button>
           <button
-            onClick={() => { openQuoteWizard(); setMobileOpen(false); }}
-            className="block w-full mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center"
+            onClick={() => { openQuoteWizard(); closeMobile(); }}
+            className="block w-full mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center cursor-pointer"
           >
             Get a Quote
           </button>

@@ -13,8 +13,9 @@ export default function Footer() {
             className="h-20 w-auto object-contain brightness-0 invert"
           />
           <p className="text-sm text-gray-300">
-            Transforming outdoor spaces through landscape architecture,
-            horticulture, and environmental stewardship — anywhere in Kenya and East Africa.
+            East Africa's botanical-led landscape practice. Garden design,
+            landscape architecture, plant taxonomy, and garden maintenance
+            across Kenya, Tanzania, Uganda, Rwanda, and Somalia.
           </p>
         </div>
 
@@ -22,26 +23,35 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold mb-4">Services</h4>
           <ul className="space-y-2 text-sm text-gray-300">
+            <li><Link to="/services/landscape-design" className="hover:text-white transition">Landscape Design</Link></li>
             <li><Link to="/services/landscape-architecture" className="hover:text-white transition">Landscape Architecture</Link></li>
-            <li><Link to="/services/eia-studies" className="hover:text-white transition">EIA Studies</Link></li>
-            <li><Link to="/services/implementation" className="hover:text-white transition">Project Implementation</Link></li>
-            <li><Link to="/services/maintenance" className="hover:text-white transition">Garden Maintenance</Link></li>
+            <li><Link to="/services/plant-taxonomy" className="hover:text-white transition">Plant Taxonomy</Link></li>
+            <li><Link to="/services/garden-implementation" className="hover:text-white transition">Garden Implementation</Link></li>
+            <li><Link to="/services/garden-maintenance" className="hover:text-white transition">Garden Maintenance</Link></li>
+            <li><Link to="/services/lawn-care" className="hover:text-white transition">Lawn Care</Link></li>
+            <li><Link to="/services" className="text-botanique-green hover:text-white transition text-xs font-medium">View all services →</Link></li>
           </ul>
         </div>
 
-        {/* Areas */}
+        {/* Quick Links */}
         <div>
-          <h4 className="font-semibold mb-4">Areas We Serve</h4>
+          <h4 className="font-semibold mb-4">Quick Links</h4>
           <ul className="space-y-2 text-sm text-gray-300">
+            <li><Link to="/about" className="hover:text-white transition">About Us</Link></li>
+            <li><Link to="/projects" className="hover:text-white transition">Projects</Link></li>
+            <li><Link to="/blog" className="hover:text-white transition">Blog</Link></li>
+            <li><Link to="/faq" className="hover:text-white transition">FAQ</Link></li>
+          </ul>
+
+          <h4 className="font-semibold mb-3 mt-6">Areas We Serve</h4>
+          <ul className="space-y-1.5 text-sm text-gray-300">
             <li><Link to="/areas/nairobi" className="hover:text-white transition">Nairobi</Link></li>
-            <li><Link to="/areas/mombasa" className="hover:text-white transition">Mombasa & Coast</Link></li>
-            <li><Link to="/areas/kisumu" className="hover:text-white transition">Kisumu & Nyanza</Link></li>
-            <li><Link to="/areas/nakuru" className="hover:text-white transition">Nakuru & Rift Valley</Link></li>
-            <li><Link to="/areas/eldoret" className="hover:text-white transition">Eldoret & North Rift</Link></li>
-            <li><Link to="/areas/karen" className="hover:text-white transition">Karen, Runda & Westlands</Link></li>
+            <li><Link to="/areas/mombasa" className="hover:text-white transition">Mombasa</Link></li>
+            <li><Link to="/areas/kisumu" className="hover:text-white transition">Kisumu</Link></li>
+            <li><Link to="/areas/karen" className="hover:text-white transition">Karen & Runda</Link></li>
             <li>
               <span className="text-botanique-green text-xs font-medium">
-                + Nyeri, Thika, Machakos, Lamu, Nanyuki & all of Kenya
+                + Kenya, Tanzania, Uganda, Rwanda, Somalia
               </span>
             </li>
           </ul>
@@ -51,15 +61,20 @@ export default function Footer() {
         <div>
           <h4 className="font-semibold mb-4">Contact</h4>
           <ul className="space-y-2 text-sm text-gray-300 mb-6">
-            <li>📍 Nairobi, Kenya</li>
+            <li className="flex items-center gap-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              Nairobi, Kenya
+            </li>
             <li>
-              <a href="mailto:botaniquedesigners@gmail.com" className="hover:text-white transition">
-                📧 botaniquedesigners@gmail.com
+              <a href="mailto:botaniquedesigners@gmail.com" className="hover:text-white transition flex items-center gap-2">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                botaniquedesigners@gmail.com
               </a>
             </li>
             <li>
-              <a href="tel:+254720861592" className="hover:text-white transition">
-                📞 +254 720 861 592
+              <a href="tel:+254720861592" className="hover:text-white transition flex items-center gap-2">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                +254 720 861 592
               </a>
             </li>
           </ul>

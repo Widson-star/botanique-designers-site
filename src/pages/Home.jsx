@@ -4,7 +4,7 @@ import { useApp } from "../context/AppContext";
 import projects from "../data/projects";
 import FadeIn from "../components/FadeIn";
 
-const HOME_FILTERS = ["all", "residential", "estate", "design"];
+const HOME_FILTERS = ["all", "residential", "estate", "design", "international"];
 
 const services = [
   {

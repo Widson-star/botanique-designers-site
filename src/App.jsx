@@ -11,11 +11,21 @@ import PaidConsultancyModal from "./components/PaidConsultancyModal";
 
 // Pages
 import Home from "./pages/Home";
+import About from "./pages/About";
+import ServicesPage from "./pages/Services";
+import ServicePage from "./pages/services/ServicePage";
 import Projects from "./pages/Projects";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import FAQ from "./pages/FAQ";
+
+// Legacy service pages (keep for any existing links)
 import LandscapeArchitecture from "./pages/services/LandscapeArchitecture";
 import EIAStudies from "./pages/services/EIAStudies";
 import Implementation from "./pages/services/Implementation";
 import Maintenance from "./pages/services/Maintenance";
+
+// Area pages
 import Karen from "./pages/areas/Karen";
 import Runda from "./pages/areas/Runda";
 import Kiambu from "./pages/areas/Kiambu";
@@ -59,10 +69,26 @@ function AppInner() {
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/services/landscape-architecture" element={<LandscapeArchitecture />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/services" element={<ServicesPage />} />
+
+          {/* Dynamic service pages (handles all 12 services + landscape-architecture) */}
+          <Route path="/services/:slug" element={<ServicePage />} />
           <Route path="/services/eia-studies" element={<EIAStudies />} />
           <Route path="/services/implementation" element={<Implementation />} />
           <Route path="/services/maintenance" element={<Maintenance />} />
+
+          {/* Projects */}
+          <Route path="/projects" element={<Projects />} />
+
+          {/* Blog */}
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
+
+          {/* FAQ */}
+          <Route path="/faq" element={<FAQ />} />
+
+          {/* Area pages */}
           <Route path="/areas/karen" element={<Karen />} />
           <Route path="/areas/runda" element={<Runda />} />
           <Route path="/areas/kiambu" element={<Kiambu />} />
@@ -72,7 +98,6 @@ function AppInner() {
           <Route path="/areas/kisumu" element={<Kisumu />} />
           <Route path="/areas/nakuru" element={<Nakuru />} />
           <Route path="/areas/eldoret" element={<Eldoret />} />
-          <Route path="/projects" element={<Projects />} />
         </Routes>
       </main>
 
