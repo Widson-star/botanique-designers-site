@@ -371,7 +371,7 @@ export default function Home() {
 
             {/* Google Reviews badge */}
             <a
-              href="https://www.google.com/maps/search/Botanique+Designers+Nairobi"
+              href="https://search.google.com/local/reviews?placeid=ChIJMdQW3N4QLxgR4utu-Njgw5I"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-3 bg-white/10 border border-white/15 rounded-full px-6 py-3 mb-14 hover:bg-white/15 transition group"
@@ -439,7 +439,7 @@ export default function Home() {
           <FadeIn delay={600}>
             <div className="mt-14 flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
-                href="https://search.google.com/local/writereview?placeid=ChIJOwg_06VPwokRYv534QaPC8g"
+                href="https://search.google.com/local/writereview?placeid=ChIJMdQW3N4QLxgR4utu-Njgw5I"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2.5 px-7 py-3 rounded-full bg-white text-botanique-charcoal font-semibold text-sm hover:shadow-lg hover:scale-105 transition"
