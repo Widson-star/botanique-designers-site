@@ -123,42 +123,50 @@ export default function About() {
               {team.map((member) => (
                 <div
                   key={member.name}
-                  className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100"
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden"
                 >
-                  <div className="relative">
-                    <div className="aspect-[3/4] bg-botanique-dark/5">
-                      <img
-                        src={member.image}
-                        alt={member.name}
-                        className="w-full h-full object-cover object-top"
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                          e.target.parentElement.innerHTML = `<div class="flex items-center justify-center h-full"><span class="text-6xl font-bold text-botanique-green/30">${member.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}</span></div>`;
-                        }}
-                      />
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent p-6 pt-16">
-                      <h3 className="text-xl font-bold text-white">
+                  {/* Green accent top bar */}
+                  <div className="h-2 bg-botanique-green" />
+
+                  {/* Portrait + info layout */}
+                  <div className="p-8 md:p-10">
+                    <div className="flex flex-col items-center mb-6">
+                      {/* Circular portrait with ring */}
+                      <div className="w-40 h-40 md:w-48 md:h-48 rounded-full ring-4 ring-botanique-green/20 ring-offset-4 overflow-hidden mb-5">
+                        <img
+                          src={member.image}
+                          alt={member.name}
+                          className="w-full h-full object-cover object-top"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.parentElement.innerHTML = `<div class="flex items-center justify-center h-full bg-botanique-beige"><span class="text-5xl font-bold text-botanique-green/40">${member.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}</span></div>`;
+                          }}
+                        />
+                      </div>
+                      <h3 className="text-xl font-bold text-botanique-charcoal text-center">
                         {member.name}
                       </h3>
-                      <p className="text-white/80 font-medium text-sm">
+                      <p className="text-botanique-green font-semibold text-sm mt-1">
                         {member.title}
                       </p>
                     </div>
-                  </div>
-                  <div className="p-6 md:p-8">
-                    <ul className="space-y-2">
+
+                    {/* Divider */}
+                    <div className="w-12 h-0.5 bg-botanique-green/30 mx-auto mb-6" />
+
+                    {/* Credentials */}
+                    <ul className="space-y-3">
                       {member.credentials.map((cred, i) => (
                         <li
                           key={i}
-                          className="text-sm text-gray-600 flex items-start gap-2"
+                          className="text-sm text-gray-600 flex items-start gap-3"
                         >
-                          <span className="text-botanique-green mt-1 flex-shrink-0">
+                          <span className="w-5 h-5 bg-botanique-green/10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                             <svg
-                              className="w-4 h-4"
+                              className="w-3 h-3 text-botanique-green"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -166,7 +174,7 @@ export default function About() {
                               <path
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                strokeWidth={2}
+                                strokeWidth={3}
                                 d="M5 13l4 4L19 7"
                               />
                             </svg>

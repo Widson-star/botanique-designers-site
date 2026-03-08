@@ -160,8 +160,8 @@ export default function Home() {
             Transforming Outdoor Spaces
           </h1>
           <p className="text-lg md:text-xl text-white/85 mb-10 max-w-xl mx-auto">
-            Landscape architecture, environmental impact assessments, and
-            premium outdoor solutions — designed with nature in mind.
+            Landscape design & architecture, garden design, and expert
+            maintenance — across Kenya and East Africa.
           </p>
 
           <div className="flex flex-wrap justify-center gap-4">
