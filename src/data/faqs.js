@@ -22,6 +22,10 @@ const faqs = [
         q: "What's the difference between a landscape designer and a landscape architect?",
         a: "Landscape design focuses on what grows — plant selection, garden layout, planting schemes, and the relationship between plants, soil, and climate. Landscape architecture focuses on what's built — site grading, drainage, retaining walls, paving, and the technical drawings that contractors need to build from. At Botanique Designers, both disciplines work on every project.",
       },
+      {
+        q: "Do you work on commercial properties, offices, and public spaces?",
+        a: "Yes. We design and implement landscapes for offices, hotels, restaurants, schools, hospitals, and public parks — not just residential gardens. Commercial projects often require different plant selections (low-maintenance, high-impact species), irrigation planning for larger areas, and compliance with county regulations. Our 2024 Zaara Park project in Mogadishu and institutional botanical labelling work are examples of our non-residential portfolio.",
+      },
     ],
   },
   {
@@ -43,6 +47,10 @@ const faqs = [
         q: "Can I get just a design without implementation?",
         a: "Absolutely. Many clients hire us for design only and use their own team or contractor for the build. We produce detailed planting plans and specifications that any competent contractor can follow. We can also do periodic site visits during construction to verify the work matches the design.",
       },
+      {
+        q: "Do you install irrigation systems?",
+        a: "Yes. We design and install drip irrigation, sprinkler systems, and micro-irrigation setups tailored to your garden's plant types and water source. Every system is zoned to match different water needs — lawns, flower beds, and established trees don't need the same watering schedule. We also retrofit and repair existing systems. Installation typically takes 1-3 days for a residential garden.",
+      },
     ],
   },
   {
@@ -59,6 +67,14 @@ const faqs = [
       {
         q: "Can you help with indoor plants for offices?",
         a: "Yes. Indoor plant success depends on matching species to actual light levels — not what looks good in a catalogue. We assess your space, select species that will genuinely thrive (not just survive for two months), specify containers, and provide care schedules. We also offer ongoing maintenance visits for commercial interiors.",
+      },
+      {
+        q: "Can you design a water-efficient or drought-resistant garden?",
+        a: "Yes. We design water-wise gardens using species that are naturally adapted to your local rainfall — native grasses, succulents, indigenous shrubs, and drought-tolerant ground covers. Combined with proper soil preparation, mulching, and efficient drip irrigation, a well-designed garden can thrive on significantly less water than a conventional lawn-heavy landscape. This is especially relevant for properties in Nairobi's drier months or in semi-arid areas like Naivasha and parts of Laikipia.",
+      },
+      {
+        q: "What is plant taxonomy and botanical labelling?",
+        a: "Plant taxonomy is the science of identifying, naming, and classifying plants. Botanical labelling involves creating accurate identification labels for trees and plants — typically at schools, universities, botanic gardens, and institutional campuses. Each label includes the species' botanical name, family, common names, and origin. We verify identification using herbarium standards and our own Ask Botanique database of 110+ East African species.",
       },
     ],
   },
