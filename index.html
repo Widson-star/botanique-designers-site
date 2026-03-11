@@ -37,41 +37,213 @@
     <meta name="twitter:description" content="East Africa's botanical-led landscape practice. Garden design, landscape architecture, plant taxonomy, lawn care and garden maintenance. Founded on plant science." />
     <meta name="twitter:image" content="https://www.botaniquedesigners.com/hero-botanique.jpg" />
 
-    <!-- Local Business structured data (Google) -->
+    <!-- Structured data: LocalBusiness + FAQPage (Google / Bing / "near me") -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "LocalBusiness",
-      "name": "Botanique Designers",
-      "description": "East Africa's botanical-led landscape practice. Garden design, landscape architecture, plant taxonomy, lawn care and garden maintenance across Kenya, Tanzania, Uganda, Rwanda and Somalia. Founded on plant science.",
-      "url": "https://www.botaniquedesigners.com",
-      "logo": "https://www.botaniquedesigners.com/botanique.png",
-      "image": "https://www.botaniquedesigners.com/hero-botanique.jpg",
-      "telephone": "+254720861592",
-      "email": "botaniquedesigners@gmail.com",
-      "address": {
-        "@type": "PostalAddress",
-        "addressLocality": "Nairobi",
-        "addressCountry": "KE"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": -1.286389,
-        "longitude": 36.817223
-      },
-      "areaServed": [
-        "Kenya", "Tanzania", "Uganda", "Rwanda", "Somalia",
-        "Nairobi", "Karen", "Runda", "Westlands", "Kiambu",
-        "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Mogadishu"
-      ],
-      "sameAs": [
-        "https://www.instagram.com/botaniquedesigners",
-        "https://www.facebook.com/botaniquedesigners",
-        "https://www.youtube.com/@Botaniquedesigners",
-        "https://x.com/widson_ambaisi"
-      ],
-      "priceRange": "KSh 3,500 – KSh 500,000+",
-      "openingHours": "Mo-Fr 08:00-17:00"
+      "@graph": [
+        {
+          "@type": "LandscapingBusiness",
+          "@id": "https://www.botaniquedesigners.com/#business",
+          "name": "Botanique Designers",
+          "alternateName": "Botanique Designers Kenya",
+          "description": "East Africa's botanical-led landscape practice. Garden design, landscape architecture, plant taxonomy, lawn care and garden maintenance across Kenya, Tanzania, Uganda, Rwanda and Somalia. Founded on plant science.",
+          "url": "https://www.botaniquedesigners.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.botaniquedesigners.com/botanique.png",
+            "width": 512,
+            "height": 512
+          },
+          "image": "https://www.botaniquedesigners.com/hero-botanique.jpg",
+          "telephone": "+254720861592",
+          "email": "botaniquedesigners@gmail.com",
+          "founder": {
+            "@type": "Person",
+            "name": "Widson Ambaisi",
+            "jobTitle": "Principal Landscape Designer"
+          },
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Nairobi",
+            "addressRegion": "Nairobi County",
+            "addressCountry": "KE"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -1.286389,
+            "longitude": 36.817223
+          },
+          "areaServed": [
+            { "@type": "City", "name": "Nairobi", "geo": { "@type": "GeoCoordinates", "latitude": -1.2921, "longitude": 36.8219 } },
+            { "@type": "AdministrativeArea", "name": "Karen, Nairobi" },
+            { "@type": "AdministrativeArea", "name": "Runda, Nairobi" },
+            { "@type": "AdministrativeArea", "name": "Westlands, Nairobi" },
+            { "@type": "AdministrativeArea", "name": "Kiambu" },
+            { "@type": "City", "name": "Mombasa", "geo": { "@type": "GeoCoordinates", "latitude": -4.0435, "longitude": 39.6682 } },
+            { "@type": "AdministrativeArea", "name": "Diani Beach" },
+            { "@type": "AdministrativeArea", "name": "Malindi" },
+            { "@type": "AdministrativeArea", "name": "Watamu" },
+            { "@type": "AdministrativeArea", "name": "Lamu Island" },
+            { "@type": "City", "name": "Kisumu", "geo": { "@type": "GeoCoordinates", "latitude": -0.1022, "longitude": 34.7617 } },
+            { "@type": "City", "name": "Nakuru", "geo": { "@type": "GeoCoordinates", "latitude": -0.3031, "longitude": 36.0800 } },
+            { "@type": "AdministrativeArea", "name": "Naivasha" },
+            { "@type": "City", "name": "Eldoret", "geo": { "@type": "GeoCoordinates", "latitude": 0.5143, "longitude": 35.2698 } },
+            { "@type": "AdministrativeArea", "name": "Nanyuki" },
+            { "@type": "AdministrativeArea", "name": "Laikipia" },
+            { "@type": "City", "name": "Dar es Salaam", "geo": { "@type": "GeoCoordinates", "latitude": -6.7924, "longitude": 39.2083 } },
+            { "@type": "City", "name": "Zanzibar City", "geo": { "@type": "GeoCoordinates", "latitude": -6.1659, "longitude": 39.2026 } },
+            { "@type": "City", "name": "Kampala", "geo": { "@type": "GeoCoordinates", "latitude": 0.3476, "longitude": 32.5825 } },
+            { "@type": "City", "name": "Kigali", "geo": { "@type": "GeoCoordinates", "latitude": -1.9403, "longitude": 29.8739 } },
+            { "@type": "City", "name": "Mogadishu", "geo": { "@type": "GeoCoordinates", "latitude": 2.0469, "longitude": 45.3182 } },
+            { "@type": "Country", "name": "Kenya" },
+            { "@type": "Country", "name": "Tanzania" },
+            { "@type": "Country", "name": "Uganda" },
+            { "@type": "Country", "name": "Rwanda" },
+            { "@type": "Country", "name": "Somalia" }
+          ],
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Landscape Design & Garden Services",
+            "itemListElement": [
+              { "@type": "OfferCatalog", "name": "Design & Planning", "itemListElement": [
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Landscape Design", "description": "Site analysis, concept development, planting plans, and material selection for residential, commercial, and hospitality projects." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Landscape Architecture", "description": "Master planning, grading and drainage design, hardscape detailing, and construction documentation." } }
+              ]},
+              { "@type": "OfferCatalog", "name": "Plant Science & Advisory", "itemListElement": [
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Plant Taxonomy & Botanical Labelling", "description": "Species identification and botanical name tagging for schools, universities, and botanic gardens." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Plant Health Care", "description": "Diagnosis of plant diseases, pest identification, nutrient deficiency assessment, and treatment plans." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Soil Analysis", "description": "Soil sampling, pH and nutrient testing, drainage assessment, and amendment recommendations." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Potted & Indoor Plants Care", "description": "Species selection for interior environments, container specification, and ongoing care plans." } }
+              ]},
+              { "@type": "OfferCatalog", "name": "Implementation & Construction", "itemListElement": [
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Garden Implementation", "description": "Full installation of designed landscapes including earthworks, planting, mulching, and site management." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Irrigation Systems", "description": "Design and installation of drip, sprinkler, and micro-irrigation systems." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Garden Lighting", "description": "Landscape lighting design and installation including path lights, uplighting, and solar options." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Property Fencing", "description": "Perimeter fencing specification and installation — chain link, wooden, live fencing, and gabion walls." } }
+              ]},
+              { "@type": "OfferCatalog", "name": "Ongoing Care", "itemListElement": [
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Garden Maintenance", "description": "Scheduled pruning, weeding, fertilisation, pest monitoring, and seasonal planting rotation." } },
+                { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Lawn Care", "description": "Mowing, aeration, top-dressing, weed control, and lawn renovation with species-specific programs." } }
+              ]}
+            ]
+          },
+          "knowsAbout": [
+            "Landscape Design",
+            "Landscape Architecture",
+            "Plant Taxonomy",
+            "Garden Maintenance",
+            "Irrigation Systems",
+            "Plant Health Care",
+            "Soil Analysis",
+            "Botanical Labelling",
+            "Environmental Impact Assessment"
+          ],
+          "sameAs": [
+            "https://www.instagram.com/botaniquedesigners",
+            "https://www.facebook.com/botaniquedesigners",
+            "https://www.youtube.com/@Botaniquedesigners",
+            "https://x.com/widson_ambaisi"
+          ],
+          "priceRange": "KSh 3,500 – KSh 500,000+",
+          "currenciesAccepted": "KES",
+          "paymentAccepted": "Cash, Bank Transfer, M-Pesa",
+          "openingHoursSpecification": [
+            {
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+              "opens": "08:00",
+              "closes": "17:00"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://www.botaniquedesigners.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What's the process for starting a landscape design project?",
+              "acceptedAnswer": { "@type": "Answer", "text": "It starts with a site visit. We assess your property — soil type, drainage, sun exposure, existing vegetation — and discuss how you use the space. From there, we develop 2-3 concept options with preliminary plant palettes and cost estimates. Once you pick a direction, we produce detailed planting plans and specifications." }
+            },
+            {
+              "@type": "Question",
+              "name": "How long does a typical project take?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Design takes 2-4 weeks. A residential garden implementation typically takes 2-6 weeks depending on size and complexity. Estate-scale projects can run 2-3 months." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do you handle both design and implementation?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. We have a landscape designer (Widson Ambaisi) and a landscape architect (Martine Lotom) in-house, so we cover everything from the initial concept through to construction supervision. You can also hire us for design only." }
+            },
+            {
+              "@type": "Question",
+              "name": "What areas do you cover?",
+              "acceptedAnswer": { "@type": "Answer", "text": "We work across Kenya — Nairobi and its suburbs (Karen, Runda, Kiambu, Westlands), Mombasa, Kisumu, Nakuru, Eldoret, and other regions. We also operate in Tanzania, Uganda, Rwanda, and Somalia." }
+            },
+            {
+              "@type": "Question",
+              "name": "What's the difference between a landscape designer and a landscape architect?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Landscape design focuses on what grows — plant selection, garden layout, and planting schemes. Landscape architecture focuses on what's built — site grading, drainage, retaining walls, paving, and construction drawings. At Botanique Designers, both disciplines work on every project." }
+            },
+            {
+              "@type": "Question",
+              "name": "How much does landscaping cost in Kenya?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A small residential garden design starts around KES 50,000-100,000 for design fees. Implementation costs vary widely — a typical residential garden might cost KES 200,000-1,000,000+ to build. We provide detailed cost estimates before any work begins." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do you offer free consultations?",
+              "acceptedAnswer": { "@type": "Answer", "text": "We offer a brief initial phone or WhatsApp conversation at no charge. Site visits and detailed consultations are charged because they involve professional time, travel, and site assessment work." }
+            },
+            {
+              "@type": "Question",
+              "name": "What's included in your maintenance packages?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Monthly packages typically include lawn mowing, hedge trimming, bed weeding, fertilisation, pest monitoring, and general cleanup. Quarterly packages add aeration, top-dressing, seasonal planting changes, and irrigation checks." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I get just a design without implementation?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. Many clients hire us for design only. We produce detailed planting plans and specifications that any competent contractor can follow." }
+            },
+            {
+              "@type": "Question",
+              "name": "How do you choose the right plants for my property?",
+              "acceptedAnswer": { "@type": "Answer", "text": "We start with your site conditions: altitude, rainfall zone, soil type, sun/shade patterns, and drainage. A garden in Karen (1,800m altitude) gets a completely different plant palette from one in Mombasa (sea level, sandy soil)." }
+            },
+            {
+              "@type": "Question",
+              "name": "What grass species work best in Nairobi?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Kikuyu grass is the most common and hardy choice for Nairobi. For a finer lawn, Paspalum or Cape Royal work well but need more water. Bermuda grass suits drier, sunnier spots. We recommend based on your soil, shade, and maintenance capacity." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can you help with indoor plants for offices?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. We assess your space, select species that will thrive based on actual light levels, specify containers, and provide care schedules. We also offer ongoing maintenance visits for commercial interiors." }
+            },
+            {
+              "@type": "Question",
+              "name": "How often should my garden be maintained?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Most residential gardens in Nairobi need weekly or fortnightly mowing and monthly comprehensive maintenance. We recommend a frequency based on your garden's size, complexity, and plant types." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do you offer monthly maintenance plans?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. Monthly is better for gardens needing regular mowing and active bed management. Quarterly works for lower-maintenance landscapes with established trees and ground covers." }
+            },
+            {
+              "@type": "Question",
+              "name": "What does a maintenance visit include?",
+              "acceptedAnswer": { "@type": "Answer", "text": "A typical monthly visit includes lawn mowing, hedge and shrub pruning, bed weeding, deadheading, fertiliser application, pest and disease inspection, irrigation system check, and general cleanup." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can you take over maintenance of a garden designed by someone else?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes. We start with an assessment visit to document your plants and assess their condition, then write a maintenance plan based on what's in your garden. If we spot issues, we'll flag them and recommend solutions." }
+            }
+          ]
+        }
+      ]
     }
     </script>
   </head>
