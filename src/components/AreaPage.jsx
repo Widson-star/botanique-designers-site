@@ -10,6 +10,7 @@ export default function AreaPage({
   heroImage,
   tagline,
   intro,
+  extraIntro,
   services,
   whyUs,
   nearbyAreas,
@@ -54,6 +55,9 @@ export default function AreaPage({
             Botanique Designers in {areaName}
           </h2>
           <p className="text-gray-600 leading-relaxed">{intro}</p>
+          {extraIntro && (
+            <p className="text-gray-600 leading-relaxed mt-5">{extraIntro}</p>
+          )}
         </div>
       </section>
 

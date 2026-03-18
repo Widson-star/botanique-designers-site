@@ -7,6 +7,7 @@ export default function Karen() {
       heroImage="/projects/project-2.jpg"
       tagline="Premium landscape design for Karen's leafy residential estates — crafted to complement the area's natural character."
       intro="Karen is one of Nairobi's most prestigious and verdant suburbs, with spacious properties and a strong tradition of well-maintained gardens. Botanique Designers has worked on numerous Karen residences, from intimate garden redesigns to large-scale estate landscaping. We understand the soil conditions, rainfall patterns and the aesthetic expectations of Karen homeowners — and we design accordingly."
+      extraIntro="Karen sits at approximately 1,750m above sea level with red volcanic soil, reliable rainfall, and cool temperatures year-round. These conditions suit a wide range of species — Nandi Flame (Spathodea campanulata), Cape Chestnut (Calodendrum capense), Plumbago, Agapanthus, and indigenous fig species all perform well here. Gardens in Karen can support year-round colour with the right plant selection — something we specify for every project."
       services={[
         {
           icon: "🌿",
