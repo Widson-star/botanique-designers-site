@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -138,10 +138,10 @@ function AppInner() {
 
 export default function App() {
   return (
-    <HashRouter>
+    <BrowserRouter>
       <AppProvider>
         <AppInner />
       </AppProvider>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
