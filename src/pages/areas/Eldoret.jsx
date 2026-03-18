@@ -7,6 +7,7 @@ export default function Eldoret() {
       heroImage="/projects/project-7.jpg"
       tagline="Cool-climate landscape design for Eldoret's residences, institutions and large agricultural estates in Kenya's North Rift."
       intro="Eldoret is Kenya's fifth-largest city, set at 2,100m above sea level with a cool, highland climate ideal for a wide range of ornamental and productive planting. Botanique Designers serves homeowners, school and university campuses, hospitals, hotels and agricultural estates across Eldoret, Uasin Gishu County and the broader North Rift region including Trans-Nzoia, West Pokot and Baringo. Our expertise in cool-climate planting, large-scale estate landscaping and NEMA Environmental Impact Assessments makes us the right partner for outdoor projects in this region — regardless of scale."
+      extraIntro="At 2,100m, Eldoret's climate suits species that struggle at Nairobi's lower altitude — hybrid roses, Grevillea robusta, Cupressus lusitanica, Eucalyptus species, and flowering perennials like Delphinium and Lupin. The cool nights and well-distributed rainfall support dense, lush planting. Institutional campuses in the region — universities, hospitals, schools — benefit from low-maintenance indigenous species like Markhamia lutea and Croton megalocarpus alongside formal avenue planting."
       services={[
         {
           icon: "🌿",
@@ -14,9 +15,9 @@ export default function Eldoret() {
           desc: "Garden and estate design for Eldoret properties — cool-climate planting schemes, institutional grounds design and master planning for large plots.",
         },
         {
-          icon: "📄",
-          title: "EIA Studies",
-          desc: "NEMA-compliant Environmental Impact Assessments for North Rift developments — including agricultural, industrial and residential projects.",
+          icon: "🌿",
+          title: "Plant Taxonomy & Botanical Labelling",
+          desc: "Identification, labelling and tagging of trees and plants for institutional campuses and botanic gardens across the North Rift region.",
         },
         {
           icon: "🛠️",
