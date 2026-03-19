@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 
@@ -14,6 +15,11 @@ export default function Implementation() {
   const { openQuoteWizard } = useApp();
 
   return (
+    <>
+      <Helmet>
+        <title>Project Implementation Services | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services/implementation" />
+      </Helmet>
     <div className="pt-24 font-sans text-botanique-charcoal">
 
       {/* Hero */}
@@ -127,5 +133,6 @@ export default function Implementation() {
         </div>
       </section>
     </div>
+    </>
   );
 }

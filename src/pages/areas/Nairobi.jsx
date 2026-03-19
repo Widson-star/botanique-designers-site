@@ -43,6 +43,7 @@ export default function NairobiCBD() {
         { label: "Kiambu", path: "/areas/kiambu" },
         { label: "Westlands", path: "/areas/westlands" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/nairobi"
     />
   );
 }

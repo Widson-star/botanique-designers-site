@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import FadeIn from "../components/FadeIn";
 import faqs from "../data/faqs";
@@ -33,6 +34,7 @@ function AccordionItem({ question, answer, isOpen, onToggle }) {
         <p className="text-gray-600 leading-relaxed px-1">{answer}</p>
       </div>
     </div>
+    </>
   );
 }
 
@@ -44,7 +46,12 @@ export default function FAQ() {
   };
 
   return (
-    <div className="pt-20">
+    <>
+      <Helmet>
+        <title>FAQ | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/faq" />
+      </Helmet>
+      <div className="pt-20">
       {/* Hero */}
       <section className="relative h-[35vh] min-h-[260px] flex items-center justify-center bg-botanique-dark">
         <div

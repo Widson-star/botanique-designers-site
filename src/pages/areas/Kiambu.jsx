@@ -42,6 +42,7 @@ export default function Kiambu() {
         { label: "Karen", path: "/areas/karen" },
         { label: "Nairobi CBD", path: "/areas/nairobi" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/kiambu"
     />
   );
 }

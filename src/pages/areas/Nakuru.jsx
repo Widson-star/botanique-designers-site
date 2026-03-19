@@ -43,6 +43,7 @@ export default function Nakuru() {
         { label: "Kisumu", path: "/areas/kisumu" },
         { label: "Kiambu County", path: "/areas/kiambu" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/nakuru"
     />
   );
 }

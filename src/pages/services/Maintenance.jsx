@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 
@@ -51,6 +52,11 @@ export default function Maintenance() {
   const { openQuoteWizard } = useApp();
 
   return (
+    <>
+      <Helmet>
+        <title>Garden Maintenance Services Kenya | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services/maintenance" />
+      </Helmet>
     <div className="pt-24 font-sans text-botanique-charcoal">
 
       {/* Hero */}
@@ -186,5 +192,6 @@ export default function Maintenance() {
         </div>
       </section>
     </div>
+    </>
   );
 }

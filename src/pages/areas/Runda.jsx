@@ -42,6 +42,7 @@ export default function Runda() {
         { label: "Kiambu", path: "/areas/kiambu" },
         { label: "Westlands", path: "/areas/westlands" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/runda"
     />
   );
 }

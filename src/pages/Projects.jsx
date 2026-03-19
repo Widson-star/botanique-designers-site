@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects.js";
 
@@ -56,7 +57,12 @@ export default function Projects() {
   }, [lightboxIndex]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <Helmet>
+        <title>Our Projects | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/projects" />
+      </Helmet>
+      <div className="min-h-screen bg-white">
 
       {/* Hero */}
       <section className="bg-botanique-dark pt-28 pb-16 px-6 text-white text-center">
@@ -151,6 +157,7 @@ export default function Projects() {
         />
       )}
     </div>
+    </>
   );
 }
 

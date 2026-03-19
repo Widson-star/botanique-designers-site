@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 
 /**
@@ -10,14 +11,23 @@ export default function AreaPage({
   heroImage,
   tagline,
   intro,
+  extraIntro,
   services,
   whyUs,
   nearbyAreas,
+  canonical,
 }) {
   const { openQuoteWizard } = useApp();
 
   return (
-    <div className="pt-24 font-sans text-botanique-charcoal">
+    <>
+      {canonical && (
+        <Helmet>
+          <title>Landscape Design in {areaName} | Botanique Designers</title>
+          <link rel="canonical" href={canonical} />
+        </Helmet>
+      )}
+      <div className="pt-24 font-sans text-botanique-charcoal">
 
       {/* Hero */}
       <section className="relative min-h-[50vh] flex items-center justify-center text-center">
@@ -54,6 +64,9 @@ export default function AreaPage({
             Botanique Designers in {areaName}
           </h2>
           <p className="text-gray-600 leading-relaxed">{intro}</p>
+          {extraIntro && (
+            <p className="text-gray-600 leading-relaxed mt-5">{extraIntro}</p>
+          )}
         </div>
       </section>
 
@@ -129,5 +142,6 @@ export default function AreaPage({
         </section>
       )}
     </div>
+    </>
   );
 }

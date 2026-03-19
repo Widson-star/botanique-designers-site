@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import services from "../data/services";
 
@@ -28,7 +29,12 @@ const categoryIcons = {
 
 export default function ServicesPage() {
   return (
-    <div className="pt-20">
+    <>
+      <Helmet>
+        <title>Our Services | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services" />
+      </Helmet>
+      <div className="pt-20">
       {/* Hero */}
       <section className="relative h-[40vh] min-h-[300px] flex items-center justify-center bg-botanique-dark">
         <div
@@ -143,5 +149,6 @@ export default function ServicesPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link, useLocation } from "react-router-dom";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects";
@@ -138,7 +139,12 @@ export default function Home() {
   }
 
   return (
-    <div className="font-sans text-botanique-charcoal pt-24">
+    <>
+      <Helmet>
+        <title>Landscape Design Kenya | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/" />
+      </Helmet>
+      <div className="font-sans text-botanique-charcoal pt-24">
 
       {/* ====== HERO ====== */}
       <section
@@ -648,5 +654,6 @@ export default function Home() {
         </div>
       </section>
     </div>
+    </>
   );
 }

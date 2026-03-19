@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 
 const team = [
@@ -48,7 +49,12 @@ const countries = [
 
 export default function About() {
   return (
-    <div className="pt-20">
+    <>
+      <Helmet>
+        <title>About Us | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/about" />
+      </Helmet>
+      <div className="pt-20">
       {/* Hero */}
       <section className="relative h-[40vh] min-h-[300px] flex items-center justify-center bg-botanique-dark">
         <div
@@ -355,5 +361,6 @@ export default function About() {
         </div>
       </section>
     </div>
+    </>
   );
 }

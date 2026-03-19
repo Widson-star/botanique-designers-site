@@ -42,6 +42,7 @@ export default function Westlands() {
         { label: "Runda", path: "/areas/runda" },
         { label: "Nairobi CBD", path: "/areas/nairobi" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/westlands"
     />
   );
 }

@@ -1,5 +1,6 @@
-import { HashRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { HelmetProvider } from "react-helmet-async";
 import { AppProvider, useApp } from "./context/AppContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Header from "./components/Header";
@@ -138,10 +139,12 @@ function AppInner() {
 
 export default function App() {
   return (
-    <HashRouter>
-      <AppProvider>
-        <AppInner />
-      </AppProvider>
-    </HashRouter>
+    <HelmetProvider>
+      <BrowserRouter>
+        <AppProvider>
+          <AppInner />
+        </AppProvider>
+      </BrowserRouter>
+    </HelmetProvider>
   );
 }

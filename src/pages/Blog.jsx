@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import FadeIn from "../components/FadeIn";
 import blogPosts from "../data/blog-posts";
@@ -12,7 +13,12 @@ export default function Blog() {
     filter === "All" ? blogPosts : blogPosts.filter((p) => p.category === filter);
 
   return (
-    <div className="pt-20">
+    <>
+      <Helmet>
+        <title>Blog | Botanique Designers</title>
+        <link rel="canonical" href="https://www.botaniquedesigners.com/blog" />
+      </Helmet>
+      <div className="pt-20">
       {/* Hero */}
       <section className="relative h-[35vh] min-h-[260px] flex items-center justify-center bg-botanique-dark">
         <div
@@ -102,5 +108,6 @@ export default function Blog() {
         </div>
       </section>
     </div>
+    </>
   );
 }

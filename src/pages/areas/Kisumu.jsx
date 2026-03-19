@@ -43,6 +43,7 @@ export default function Kisumu() {
         { label: "Eldoret", path: "/areas/eldoret" },
         { label: "Mombasa & Coast", path: "/areas/mombasa" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/kisumu"
     />
   );
 }
