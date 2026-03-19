@@ -43,6 +43,7 @@ export default function NairobiCBD() {
         { label: "Kiambu", path: "/areas/kiambu" },
         { label: "Westlands", path: "/areas/westlands" },
       ]}
+      extraIntro="Nairobi sits at 1,680m with red-brown clay soils, a bimodal rainfall pattern (long rains March–May, short rains October–December), and temperatures that rarely exceed 26°C. These conditions suit a broad plant palette. Bougainvillea spectabilis thrives on boundary walls and pergolas; Tecoma stans provides reliable yellow colour in median strips and garden borders; Lantana camara works well as a low maintenance groundcover where foot traffic is minimal. For shade trees, Jacaranda mimosifolia and Croton megalocarpus are both well-established in Nairobi gardens and perform consistently in clay-heavy soils."
     canonical="https://www.botaniquedesigners.com/areas/nairobi"
     />
   );

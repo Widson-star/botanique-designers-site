@@ -42,6 +42,7 @@ export default function Runda() {
         { label: "Kiambu", path: "/areas/kiambu" },
         { label: "Westlands", path: "/areas/westlands" },
       ]}
+      extraIntro="Runda's large-plot character, mature tree canopy, and proximity to Karura Forest give it a microclimate slightly cooler and more sheltered than much of Nairobi. Deep loam soils and good drainage support a wide range of species. Podocarpus falcatus works as a specimen tree where height is needed without aggressive root spread; Gardenia jasminoides performs well in semi-shaded borders; Strelitzia reginae adds architectural form near entrances and pool surrounds. The proximity to indigenous forest also means that Croton megalocarpus, Cordia africana, and Acacia xanthophloea all establish readily and support local bird populations."
     canonical="https://www.botaniquedesigners.com/areas/runda"
     />
   );

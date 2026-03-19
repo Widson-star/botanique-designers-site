@@ -42,6 +42,7 @@ export default function Kiambu() {
         { label: "Karen", path: "/areas/karen" },
         { label: "Nairobi CBD", path: "/areas/nairobi" },
       ]}
+      extraIntro="Kiambu County sits at elevations ranging from 1,500m to over 2,000m, with fertile red volcanic soils and reliable rainfall supporting some of the most productive agricultural land in Kenya. In residential and estate landscapes, this fertility translates to fast-establishing gardens. Grevillea robusta is widely used as a windbreak and boundary tree; Callistemon citrinus (Bottlebrush) performs well along driveways; Plumbago auriculata covers fences and retaining walls quickly. At higher elevations toward Limuru, Cussonia spicata and Podocarpus latifolius — both indigenous highland species — suit formal estate gardens and provide year-round structure."
     canonical="https://www.botaniquedesigners.com/areas/kiambu"
     />
   );

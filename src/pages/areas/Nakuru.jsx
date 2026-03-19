@@ -43,6 +43,7 @@ export default function Nakuru() {
         { label: "Kisumu", path: "/areas/kisumu" },
         { label: "Kiambu County", path: "/areas/kiambu" },
       ]}
+      extraIntro="Nakuru sits at approximately 1,850m on the floor of the Rift Valley, with black cotton and alluvial soils in lower areas and red volcanic soils on the escarpment. The climate is warm and dry by highland standards, with a single pronounced wet season. Acacia tortilis and Acacia xanthophloea are native to the Rift Valley floor and anchor larger landscape schemes; Caesalpinia pulcherrima adds intense orange-red flower colour in dry-tolerant borders; Tecoma stans is reliable in the warmer valley conditions. On escarpment properties with better rainfall and deeper soils, Spathodea campanulata and Calodendrum capense both perform well and add seasonal flower impact."
     canonical="https://www.botaniquedesigners.com/areas/nakuru"
     />
   );

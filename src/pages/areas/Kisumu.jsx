@@ -43,6 +43,7 @@ export default function Kisumu() {
         { label: "Eldoret", path: "/areas/eldoret" },
         { label: "Mombasa & Coast", path: "/areas/mombasa" },
       ]}
+      extraIntro="Kisumu sits at 1,131m on the shores of Lake Victoria, with high humidity, temperatures averaging 23–29°C, and rainfall distributed across most of the year. This climate supports lush tropical planting that would not be viable at higher elevations. Ravenala madagascariensis (Traveller's Palm) makes a strong structural statement in larger gardens; Alpinia purpurata and Heliconia psittacorum thrive in humid borders; Frangipani (Plumeria rubra) establishes well near the lake and performs consistently in the warm, moist conditions. For shade, Terminalia mantaly clips into a formal canopy layer and handles Kisumu's heat without the water stress that affects some highland species planted at altitude."
     canonical="https://www.botaniquedesigners.com/areas/kisumu"
     />
   );
