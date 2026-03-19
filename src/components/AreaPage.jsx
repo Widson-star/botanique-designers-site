@@ -23,7 +23,7 @@ export default function AreaPage({
     <>
       {canonical && (
         <Helmet>
-          <title>Landscape Design in {areaName} | Botanique Designers</title>
+          <title>{`Landscape Design in ${areaName} | Botanique Designers`}</title>
           <link rel="canonical" href={canonical} />
         </Helmet>
       )}

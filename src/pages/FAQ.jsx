@@ -34,7 +34,6 @@ function AccordionItem({ question, answer, isOpen, onToggle }) {
         <p className="text-gray-600 leading-relaxed px-1">{answer}</p>
       </div>
     </div>
-    </>
   );
 }
 
@@ -132,5 +131,6 @@ export default function FAQ() {
         </div>
       </section>
     </div>
+    </>
   );
 }
