@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../../context/AppContext";
 import FadeIn from "../../components/FadeIn";
 import services from "../../data/services";
@@ -35,6 +36,12 @@ export default function ServicePage() {
 
   return (
     <div className="pt-20">
+      <Helmet>
+        <title>{`${svc.title} · Landscape Services Kenya | Botanique Designers`}</title>
+        <meta name="description" content={svc.shortDescription} />
+        <link rel="canonical" href={`https://www.botaniquedesigners.com/services/${svc.slug}`} />
+      </Helmet>
+
       {/* Hero */}
       <section className="relative h-[45vh] min-h-[320px] flex items-center justify-center">
         <div

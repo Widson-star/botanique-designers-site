@@ -20,7 +20,6 @@ import BlogPost from "./pages/BlogPost";
 import FAQ from "./pages/FAQ";
 
 // Legacy service pages (keep for any existing links)
-import LandscapeArchitecture from "./pages/services/LandscapeArchitecture";
 import EIAStudies from "./pages/services/EIAStudies";
 import Implementation from "./pages/services/Implementation";
 import Maintenance from "./pages/services/Maintenance";
