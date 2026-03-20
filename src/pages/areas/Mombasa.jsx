@@ -44,6 +44,7 @@ export default function Mombasa() {
         { label: "Nakuru", path: "/areas/nakuru" },
         { label: "Karen", path: "/areas/karen" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/mombasa"
     />
   );
 }

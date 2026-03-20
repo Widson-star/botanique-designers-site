@@ -43,6 +43,7 @@ export default function Karen() {
         { label: "Westlands", path: "/areas/westlands" },
         { label: "Nairobi CBD", path: "/areas/nairobi" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/karen"
     />
   );
 }

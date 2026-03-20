@@ -44,6 +44,7 @@ export default function Eldoret() {
         { label: "Nairobi CBD", path: "/areas/nairobi" },
         { label: "Kiambu County", path: "/areas/kiambu" },
       ]}
+    canonical="https://www.botaniquedesigners.com/areas/eldoret"
     />
   );
 }
