@@ -1,27 +1,21 @@
 /**
- * Pre-renders all site routes to static HTML after the Vite build.
- * Run via: node scripts/prerender.mjs
- * Triggered automatically by the "postbuild" npm script.
+ * Static pre-render script — runs after `vite build` as part of `npm run build`.
  *
- * Uses @prerenderer/prerenderer + @prerenderer/renderer-puppeteer (puppeteer >= 2).
+ * Uses Vite's ssrLoadModule() to transform JSX/ESM in Node.js (no browser/Chrome
+ * needed), renders each route with react-dom/server + StaticRouter, captures
+ * react-helmet-async head tags, then writes per-route index.html files into dist/.
+ *
+ * Works on Vercel's build environment because it is pure Node.js.
  */
 
-import { createRequire } from 'module'
+import { createServer } from 'vite'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const require = createRequire(import.meta.url)
-
-const Prerenderer = require(
-  path.resolve(__dirname, '../node_modules/@prerenderer/prerenderer/dist/cjs.js')
-)
-const PuppeteerRenderer = require(
-  path.resolve(__dirname, '../node_modules/@prerenderer/renderer-puppeteer/dist/cjs.js')
-)
-
-const DIST = path.resolve(__dirname, '../dist')
+const ROOT = path.resolve(__dirname, '..')
+const DIST = path.resolve(ROOT, 'dist')
 
 const ROUTES = [
   '/',
@@ -44,46 +38,61 @@ const ROUTES = [
   '/areas/kisumu',
 ]
 
-async function run() {
-  console.log('🌿 Botanique Prerender: starting…')
+// Read the Vite-built HTML template (has correct asset hashes)
+const template = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8')
 
-  const prerenderer = new Prerenderer({
-    staticDir: DIST,
-    renderer: new PuppeteerRenderer({
-      headless: true,
-      // Wait 3 s after page load so React + react-helmet-async can finish rendering.
-      // renderAfterElementExists triggers a Chrome 120+ Promise-GC bug, so we use time instead.
-      renderAfterTime: 3000,
-      timeout: 30000,
-      launchOptions: {
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      },
-    }),
-  })
+// Start a Vite dev server in middleware mode so we can call ssrLoadModule.
+// ssrLoadModule transforms JSX/TSX/ESM on the fly — no separate SSR build needed.
+const vite = await createServer({
+  root: ROOT,
+  server: { middlewareMode: true },
+  appType: 'custom',
+  logLevel: 'warn', // suppress routine output
+})
 
-  try {
-    await prerenderer.initialize()
+try {
+  console.log('🌿 Botanique SSR Pre-render: starting…')
 
-    const renderedRoutes = await prerenderer.renderRoutes(ROUTES)
+  // Load the server entry through Vite's transform pipeline
+  const { render } = await vite.ssrLoadModule('/src/entry-server.jsx')
 
-    for (const rendered of renderedRoutes) {
-      // Build output path: /about → dist/about/index.html
-      const routePath = rendered.route === '/' ? '' : rendered.route
-      const outputDir = path.join(DIST, routePath)
-      const outputFile = path.join(outputDir, 'index.html')
+  let ok = 0
+  let fail = 0
 
+  for (const route of ROUTES) {
+    try {
+      const { html: bodyHtml, helmet } = await render(route)
+
+      // Build <head> injection from react-helmet-async output
+      const headTags = [
+        helmet?.title?.toString() ?? '',
+        helmet?.meta?.toString() ?? '',
+        helmet?.link?.toString() ?? '',
+      ]
+        .filter(Boolean)
+        .join('\n    ')
+
+      // Inject head tags before </head> and body HTML into #root
+      const page = template
+        .replace('</head>', `    ${headTags}\n  </head>`)
+        .replace('<div id="root"></div>', `<div id="root">${bodyHtml}</div>`)
+
+      // Write dist/{route}/index.html  (root → dist/index.html directly)
+      const routeDir = route === '/' ? '' : route.replace(/^\//, '')
+      const outputDir = path.join(DIST, routeDir)
       fs.mkdirSync(outputDir, { recursive: true })
-      fs.writeFileSync(outputFile, rendered.html.trim())
-      console.log(`  ✓ ${rendered.route}`)
+      fs.writeFileSync(path.join(outputDir, 'index.html'), page)
+
+      console.log(`  ✓ ${route}`)
+      ok++
+    } catch (err) {
+      console.error(`  ✗ ${route}: ${err.message}`)
+      fail++
     }
-
-    console.log(`\n✅ Pre-rendered ${renderedRoutes.length} routes into ${DIST}`)
-  } catch (err) {
-    console.error('❌ Prerender failed:', err)
-    process.exit(1)
-  } finally {
-    await prerenderer.destroy()
   }
-}
 
-run()
+  console.log(`\n✅ Pre-rendered ${ok} routes into ${DIST}${fail ? `  (${fail} failed)` : ''}`)
+  if (fail > 0) process.exit(1)
+} finally {
+  await vite.close()
+}

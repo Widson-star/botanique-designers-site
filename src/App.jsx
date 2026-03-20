@@ -136,12 +136,20 @@ function AppInner() {
   );
 }
 
+// Named export used by the SSR prerender script (router is supplied externally)
+export function AppRoutes() {
+  return (
+    <AppProvider>
+      <AppInner />
+    </AppProvider>
+  );
+}
+
+// Default export for the client bundle — includes BrowserRouter
 export default function App() {
   return (
     <BrowserRouter>
-      <AppProvider>
-        <AppInner />
-      </AppProvider>
+      <AppRoutes />
     </BrowserRouter>
   );
 }
