@@ -1,4 +1,5 @@
 import { useParams, Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import blogPosts from "../data/blog-posts";
 
@@ -23,6 +24,12 @@ export default function BlogPost() {
 
   return (
     <div className="pt-20">
+      <Helmet>
+        <title>{`${post.title} | Botanique Designers`}</title>
+        <meta name="description" content={post.excerpt} />
+        <link rel="canonical" href={`https://www.botaniquedesigners.com/blog/${post.slug}`} />
+      </Helmet>
+
       {/* Breadcrumb */}
       <div className="bg-botanique-beige py-3 px-4">
         <div className="max-w-4xl mx-auto text-sm text-gray-500">
