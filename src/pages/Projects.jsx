@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects.js";
 
@@ -57,6 +58,11 @@ export default function Projects() {
 
   return (
     <div className="min-h-screen bg-white">
+      <Helmet>
+        <title>Our Projects · Landscape Portfolio Kenya | Botanique Designers</title>
+        <meta name="description" content="Browse Botanique Designers' portfolio of completed landscape projects across Kenya — residential gardens, estate landscaping, commercial properties and more." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/projects" />
+      </Helmet>
 
       {/* Hero */}
       <section className="bg-botanique-dark pt-28 pb-16 px-6 text-white text-center">

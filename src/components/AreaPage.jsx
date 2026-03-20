@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 
 /**
@@ -16,9 +17,16 @@ export default function AreaPage({
   nearbyAreas,
 }) {
   const { openQuoteWizard } = useApp();
+  const { pathname } = useLocation();
+  const canonicalUrl = `https://www.botaniquedesigners.com${pathname}`;
 
   return (
     <div className="pt-24 font-sans text-botanique-charcoal">
+      <Helmet>
+        <title>{`Landscape Design in ${areaName} · Garden Design & Maintenance | Botanique Designers`}</title>
+        <meta name="description" content={`Botanique Designers provides professional landscape design, garden maintenance and project implementation in ${areaName}. Local expertise, trusted results.`} />
+        <link rel="canonical" href={canonicalUrl} />
+      </Helmet>
 
       {/* Hero */}
       <section className="relative min-h-[50vh] flex items-center justify-center text-center">

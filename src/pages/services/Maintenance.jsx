@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../../context/AppContext";
 
 const plans = [
@@ -52,6 +53,11 @@ export default function Maintenance() {
 
   return (
     <div className="pt-24 font-sans text-botanique-charcoal">
+      <Helmet>
+        <title>Garden Maintenance Services Kenya · Monthly &amp; Bi-Weekly Plans | Botanique Designers</title>
+        <meta name="description" content="Professional garden maintenance in Kenya — lawn mowing, pruning, fertilisation, irrigation checks and seasonal planting. Monthly and bi-weekly plans for residential and commercial properties." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services/maintenance" />
+      </Helmet>
 
       {/* Hero */}
       <section className="relative min-h-[50vh] flex items-center justify-center text-center">

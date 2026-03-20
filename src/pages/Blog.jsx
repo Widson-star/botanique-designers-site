@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import blogPosts from "../data/blog-posts";
 
@@ -13,6 +14,11 @@ export default function Blog() {
 
   return (
     <div className="pt-20">
+      <Helmet>
+        <title>Blog · Landscape &amp; Garden Tips Kenya | Botanique Designers</title>
+        <meta name="description" content="Landscape design tips, plant guides, garden maintenance advice and project insights from Botanique Designers — Kenya's botanical-led landscape practice." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/blog" />
+      </Helmet>
       {/* Hero */}
       <section className="relative h-[35vh] min-h-[260px] flex items-center justify-center bg-botanique-dark">
         <div

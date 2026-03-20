@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../../context/AppContext";
 
 const deliverables = [
@@ -15,6 +16,11 @@ export default function EIAStudies() {
 
   return (
     <div className="pt-24 font-sans text-botanique-charcoal">
+      <Helmet>
+        <title>Environmental Impact Assessment Studies Kenya · NEMA Compliance | Botanique Designers</title>
+        <meta name="description" content="NEMA-compliant Environmental Impact Assessment (EIA) studies in Kenya. Botanique Designers prepares full EIA reports, baseline studies, impact mitigation plans and NEMA submission packages." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services/eia-studies" />
+      </Helmet>
 
       {/* Hero */}
       <section className="relative min-h-[50vh] flex items-center justify-center text-center">

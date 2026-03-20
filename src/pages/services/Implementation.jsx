@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../../context/AppContext";
 
 const scope = [
@@ -15,6 +16,11 @@ export default function Implementation() {
 
   return (
     <div className="pt-24 font-sans text-botanique-charcoal">
+      <Helmet>
+        <title>Landscape Implementation · Garden Construction &amp; Build-Out Kenya | Botanique Designers</title>
+        <meta name="description" content="Full landscape implementation services in Kenya — planting, irrigation installation, hardscape construction, outdoor lighting, soil preparation and project management." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services/implementation" />
+      </Helmet>
 
       {/* Hero */}
       <section className="relative min-h-[50vh] flex items-center justify-center text-center">

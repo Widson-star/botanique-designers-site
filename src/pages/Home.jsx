@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects";
 import FadeIn from "../components/FadeIn";
@@ -139,6 +140,11 @@ export default function Home() {
 
   return (
     <div className="font-sans text-botanique-charcoal pt-24">
+      <Helmet>
+        <title>Botanique Designers · Landscape Design &amp; Architecture · Garden Design &amp; Maintenance Kenya</title>
+        <meta name="description" content="East Africa's botanical-led landscape practice. Garden design, landscape architecture, plant taxonomy, lawn care and garden maintenance across Kenya, Tanzania, Uganda, Rwanda and Somalia." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/" />
+      </Helmet>
 
       {/* ====== HERO ====== */}
       <section

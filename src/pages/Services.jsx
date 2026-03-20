@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import services from "../data/services";
 
@@ -29,6 +30,11 @@ const categoryIcons = {
 export default function ServicesPage() {
   return (
     <div className="pt-20">
+      <Helmet>
+        <title>Our Services · Landscape Design, Implementation &amp; Maintenance Kenya | Botanique Designers</title>
+        <meta name="description" content="Explore Botanique Designers' full range of services: landscape architecture, garden design, project implementation, EIA studies, irrigation, lighting, plant taxonomy and garden maintenance across Kenya." />
+        <link rel="canonical" href="https://www.botaniquedesigners.com/services" />
+      </Helmet>
       {/* Hero */}
       <section className="relative h-[40vh] min-h-[300px] flex items-center justify-center bg-botanique-dark">
         <div
