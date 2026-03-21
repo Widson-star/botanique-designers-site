@@ -91,6 +91,17 @@ export default function BlogPost() {
               <p className="text-gray-500 mt-4">{post.excerpt}</p>
             </div>
 
+            {/* Hero image (optional) */}
+            {post.image && (
+              <div className="mb-10 -mx-4 sm:mx-0">
+                <img
+                  src={post.image}
+                  alt={post.imageAlt || post.title}
+                  className="w-full sm:rounded-2xl object-cover max-h-[480px]"
+                />
+              </div>
+            )}
+
             {/* Content */}
             <div className="prose prose-gray max-w-none">
               {post.content.split("\n\n").map((para, i) => {

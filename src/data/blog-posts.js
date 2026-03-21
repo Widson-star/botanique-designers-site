@@ -6,6 +6,8 @@ const blogPosts = [
     category: "Design & Planning",
     readTime: "4 min read",
     author: "Widson Ambaisi",
+    image: "/projects/project-18.jpg",
+    imageAlt: "Landscape design styles in Kenya — Botanique Designers",
     excerpt:
       "Tropical, formal, naturalistic, Mediterranean — Nairobi and Kenyan properties suit different landscape styles. Here's how to tell them apart and choose the right one.",
     content: `Most people know they want a beautiful garden. Fewer know what style they're actually describing when they say it. Words like "tropical," "manicured," or "natural" get used interchangeably, but they refer to distinct design philosophies with different plant choices, maintenance demands, and costs. This post breaks them down.
