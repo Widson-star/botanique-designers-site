@@ -1,5 +1,54 @@
 const blogPosts = [
   {
+    slug: "landscaping-styles-explained",
+    title: "Landscaping Styles Explained: Which One Is Right for Your Property?",
+    date: "2026-03-21",
+    category: "Design & Planning",
+    readTime: "4 min read",
+    author: "Widson Ambaisi",
+    excerpt:
+      "Tropical, formal, naturalistic, Mediterranean — Nairobi and Kenyan properties suit different landscape styles. Here's how to tell them apart and choose the right one.",
+    content: `Most people know they want a beautiful garden. Fewer know what style they're actually describing when they say it. Words like "tropical," "manicured," or "natural" get used interchangeably, but they refer to distinct design philosophies with different plant choices, maintenance demands, and costs. This post breaks them down.
+
+**Tropical**
+
+The style most associated with East African landscaping — and with good reason. Kenya's altitude range and rainfall patterns support genuine tropical planting in many zones. Tropical gardens prioritise bold foliage, layered canopy, and year-round colour. Think Heliconia, Strelitzia, Ravenala, large-leafed Philodendrons, and Bismarck Palms. The aesthetic is lush and immersive.
+
+It works well in Kisumu, coastal Mombasa, and sheltered Nairobi gardens with good irrigation. It demands more water and more maintenance than other styles — hedges need trimming, fallen leaves are constant, and some species are temperamental outside their ideal rainfall zone.
+
+**Formal / Architectural**
+
+Formal gardens are defined by geometry. Clipped hedges, symmetrical layouts, defined axes, and repeating plant masses. The plants themselves are often secondary — what matters is the structure they create. Common in corporate campuses, gated community entrances, and colonial-era Nairobi properties.
+
+Species used in formal East African gardens include Ficus benjamina (clipped into walls or standards), Duranta erecta, and Podocarpus latifolius for tall screening. High maintenance: the geometry only works if the clipping schedule is consistent.
+
+**Naturalistic / Indigenous**
+
+Growing in popularity, and arguably the most ecologically appropriate for Kenya. Naturalistic gardens are modelled on how plants actually grow in the wild — informal drifts, mixed heights, textural contrast, with indigenous species at the core. The result looks relaxed and unforced.
+
+Nairobi naturalistic gardens often draw on Karura-adjacent species: Croton megalocarpus, Cordia africana, Acacia xanthophloea, Cussonia spicata. These attract birds, require less irrigation once established, and reduce long-term maintenance costs significantly. Karen and Runda properties are particularly well-suited to this approach given their proximity to indigenous forest.
+
+**Mediterranean / Dry Garden**
+
+Underused in Kenya but well-suited to drier areas — Nakuru, parts of the Rift Valley, and coastal properties with sandy soils and salt exposure. Mediterranean gardens favour drought-tolerant species: Lavender, Rosemary, Agave, Bougainvillea, Olive trees, and ornamental grasses. Gravel mulch replaces lawn. Water demand is minimal.
+
+The aesthetic is warm, textural, and low-maintenance once established. It suits property owners who spend time away or want a garden that functions without daily attention.
+
+**Contemporary / Minimalist**
+
+Common in modern Nairobi architecture — clean lines, limited plant palette, hard landscaping elements like concrete, steel, and timber used prominently. Plants are chosen for architectural form rather than abundance: single specimen trees, mass plantings of one grass species, succulents in geometric beds.
+
+Terminalia mantaly clipped into a flat canopy layer, Agave americana as a focal point, or a single row of Royal Palms along a driveway. Everything deliberate, nothing incidental. Lower plant count means lower maintenance, but the hardscape investment is higher.
+
+**Which style is right for your property?**
+
+The honest answer depends on four things: your site's rainfall and soil, how much maintenance you're willing to sustain, your budget (installation vs. ongoing), and the architectural character of the building. A tropical garden in front of a minimalist concrete house creates visual conflict. A formal garden on a naturalistic half-acre hillside fights the land rather than working with it.
+
+At Botanique Designers, the first conversation we have with any client is about their site conditions — not their aesthetic preferences. Style follows site. Once we understand the soil, the drainage, the altitude, and the sun exposure, the appropriate style options become clear, and the choice becomes genuinely informed rather than aspirational.
+
+If you're unsure which direction suits your property, [contact us](/contact) and we'll walk through it with you.`,
+  },
+  {
     slug: "building-ask-botanique",
     title: "Building Ask Botanique: A Plant Intelligence Platform for East Africa",
     date: "2024-11-15",

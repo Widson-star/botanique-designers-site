@@ -38,6 +38,7 @@ const ROUTES = [
   '/services/lawn-care',
   '/faq',
   '/blog',
+  '/blog/landscaping-styles-explained',
   '/blog/building-ask-botanique',
   '/blog/africa-climate-summit-2023',
   '/blog/aiph-world-green-city-awards-2024',

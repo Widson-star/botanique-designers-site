@@ -3,6 +3,35 @@ import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import blogPosts from "../data/blog-posts";
 
+// Render inline text that may contain [text](url) markdown links
+function renderInline(text, key) {
+  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts = [];
+  let last = 0;
+  let match;
+  let i = 0;
+  while ((match = linkPattern.exec(text)) !== null) {
+    if (match.index > last) parts.push(text.slice(last, match.index));
+    const [, label, href] = match;
+    const isInternal = href.startsWith("/");
+    parts.push(
+      isInternal ? (
+        <Link key={`${key}-l${i}`} to={href} className="text-botanique-green underline hover:opacity-80">
+          {label}
+        </Link>
+      ) : (
+        <a key={`${key}-l${i}`} href={href} target="_blank" rel="noopener noreferrer" className="text-botanique-green underline hover:opacity-80">
+          {label}
+        </a>
+      )
+    );
+    last = match.index + match[0].length;
+    i++;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return parts.length === 1 && typeof parts[0] === "string" ? parts[0] : parts;
+}
+
 export default function BlogPost() {
   const { slug } = useParams();
   const post = blogPosts.find((p) => p.slug === slug);
@@ -85,7 +114,7 @@ export default function BlogPost() {
                             {part}
                           </strong>
                         ) : (
-                          part
+                          renderInline(part, `${i}-${j}`)
                         )
                       )}
                     </p>
@@ -93,7 +122,7 @@ export default function BlogPost() {
                 }
                 return (
                   <p key={i} className="text-gray-600 leading-relaxed mb-4">
-                    {para}
+                    {renderInline(para, i)}
                   </p>
                 );
               })}
