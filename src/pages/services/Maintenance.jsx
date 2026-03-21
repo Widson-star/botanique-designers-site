@@ -70,7 +70,7 @@ export default function Maintenance() {
         <div className="relative z-10 px-6 max-w-3xl">
           <p className="text-white/70 uppercase tracking-widest text-sm mb-3">Our Services</p>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Garden Maintenance
+            Professional Garden Maintenance
           </h1>
           <p className="text-white/80 text-lg">
             Ongoing care programmes that keep your landscape thriving season
