@@ -38,6 +38,7 @@ const ROUTES = [
   '/services/lawn-care',
   '/faq',
   '/blog',
+  '/blog/choosing-the-right-grass-kenya',
   '/blog/landscaping-styles-explained',
   '/blog/building-ask-botanique',
   '/blog/africa-climate-summit-2023',

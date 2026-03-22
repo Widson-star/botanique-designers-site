@@ -1,5 +1,38 @@
 const blogPosts = [
   {
+    slug: "choosing-the-right-grass-kenya",
+    title: "How to Choose the Right Grass for Your Kenyan Lawn",
+    date: "2026-03-22",
+    category: "Plant Science & Advisory",
+    readTime: "5 min read",
+    author: "Widson Ambaisi",
+    image: "/projects/karen-garden.jpg",
+    imageAlt: "Lawn grass types in Kenya — Botanique Designers",
+    excerpt:
+      "Bermuda, Kikuyu, Pemba, LM — the grass you choose affects maintenance, water use, and how your lawn holds up. Here's how to decide for your Kenyan property.",
+    content: `Not all grass is the same, and in Kenya the difference matters more than most homeowners realise. The wrong choice means a lawn that browns out in dry season, struggles under foot traffic, or demands constant irrigation. The right choice largely takes care of itself.
+
+**Kikuyu (Pennisetum clandestinum)**
+
+The most widely used lawn grass in highland Kenya. Kikuyu is aggressive, fast-spreading, and tolerant of both drought and heavy use. It recovers quickly from damage, handles Nairobi's bimodal rainfall well, and performs reliably at altitudes between 1,500m and 2,500m. The drawback is that it's difficult to contain — it will spread into flower beds, paths, and neighbouring plots if not edged regularly. It also goes brown in prolonged dry periods, though it recovers once rain returns. For large lawns where coverage speed and resilience matter more than precision, Kikuyu is usually the right call.
+
+**Bermuda Grass (Cynodon dactylon)**
+
+Common in coastal and lower-altitude properties. Bermuda is finer-textured than Kikuyu, handles heat and salt air well, and produces a dense, carpet-like surface. It's the grass most often used in formal lawns, golf courses, and estate entrances where appearance is the priority. It requires more water than Kikuyu in dry conditions and doesn't perform as well above 1,800m. In Mombasa and Diani, it's often the default choice for residential properties.
+
+**Pemba Grass (Digitaria didactyla)**
+
+A finer, softer grass used primarily in premium residential projects in Nairobi and on the coast. Pemba is slower to establish than Kikuyu but produces a noticeably more refined surface — closer in appearance to what you'd see in a well-maintained hotel garden. It handles moderate foot traffic and is less invasive than Kikuyu, making it easier to manage around planting beds and hard landscaping edges. The tradeoff is establishment cost and time — Pemba takes longer to cover ground and is more expensive to lay.
+
+**LM Grass (Dactyloctenium australe)**
+
+Used in warmer, coastal, and semi-arid zones. LM is drought-tolerant, spreads by runners, and handles sandy soils well. You'll find it in coastal holiday homes and lower-altitude Rift Valley properties where water availability is limited. It's not the right choice for Nairobi highlands — it doesn't perform well in cool, wet conditions.
+
+**Which one is right for your property?**
+
+The decision comes down to three factors: altitude and temperature, water availability, and how the lawn will be used. For highland Nairobi — Kikuyu for large lawns, Pemba where appearance is the priority. For coastal properties — Bermuda or LM depending on rainfall and soil. For dry or semi-arid sites — LM. If you're unsure, a brief site assessment tells us everything we need. [Contact us](/contact) and we'll advise before you spend anything on laying.`,
+  },
+  {
     slug: "landscaping-styles-explained",
     title: "Landscaping Styles Explained: Which One Is Right for Your Property?",
     date: "2026-03-21",
