@@ -6,8 +6,8 @@ const blogPosts = [
     category: "Plant Science & Advisory",
     readTime: "5 min read",
     author: "Widson Ambaisi",
-    image: "/projects/karen-garden.jpg",
-    imageAlt: "Lawn grass types in Kenya — Botanique Designers",
+    image: "/projects/project-30.jpg",
+    imageAlt: "Lawn grass establishment in Kenya — Botanique Designers",
     excerpt:
       "Bermuda, Kikuyu, Pemba, LM — the grass you choose affects maintenance, water use, and how your lawn holds up. Here's how to decide for your Kenyan property.",
     content: `Not all grass is the same, and in Kenya the difference matters more than most homeowners realise. The wrong choice means a lawn that browns out in dry season, struggles under foot traffic, or demands constant irrigation. The right choice largely takes care of itself.
