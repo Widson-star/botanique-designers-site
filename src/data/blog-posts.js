@@ -60,7 +60,7 @@ From there, we produce a brief that summarises findings and sets the design dire
 
 If you're planning a new garden, renovating an existing one, or dealing with a recurring problem that landscaping work hasn't resolved, that's where the conversation starts.
 
-[Contact us to book a site consultation.](/contact)`,
+[Contact us to book a site consultation.](/#contact)`,
   },
   {
     slug: "choosing-the-right-grass-kenya",
@@ -93,7 +93,7 @@ Used in warmer, coastal, and semi-arid zones. LM is drought-tolerant, spreads by
 
 **Which one is right for your property?**
 
-The decision comes down to three factors: altitude and temperature, water availability, and how the lawn will be used. For highland Nairobi — Kikuyu for large lawns, Pemba where appearance is the priority. For coastal properties — Bermuda or LM depending on rainfall and soil. For dry or semi-arid sites — LM. If you're unsure, a brief site assessment tells us everything we need. [Contact us](/contact) and we'll advise before you spend anything on laying.`,
+The decision comes down to three factors: altitude and temperature, water availability, and how the lawn will be used. For highland Nairobi — Kikuyu for large lawns, Pemba where appearance is the priority. For coastal properties — Bermuda or LM depending on rainfall and soil. For dry or semi-arid sites — LM. If you're unsure, a brief site assessment tells us everything we need. [Contact us](/#contact) and we'll advise before you spend anything on laying.`,
   },
   {
     slug: "landscaping-styles-explained",
@@ -144,7 +144,7 @@ The honest answer depends on four things: your site's rainfall and soil, how muc
 
 At Botanique Designers, the first conversation we have with any client is about their site conditions — not their aesthetic preferences. Style follows site. Once we understand the soil, the drainage, the altitude, and the sun exposure, the appropriate style options become clear, and the choice becomes genuinely informed rather than aspirational.
 
-If you're unsure which direction suits your property, [contact us](/contact) and we'll walk through it with you.`,
+If you're unsure which direction suits your property, [contact us](/#contact) and we'll walk through it with you.`,
   },
   {
     slug: "building-ask-botanique",
