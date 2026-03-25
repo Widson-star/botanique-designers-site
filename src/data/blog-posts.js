@@ -1,5 +1,68 @@
 const blogPosts = [
   {
+    slug: "what-does-a-landscape-designer-do",
+    title: "What Does a Landscape Designer Actually Do?",
+    date: "2026-03-25",
+    category: "Design & Planning",
+    readTime: "6 min read",
+    author: "Widson Ambaisi",
+    image: "/projects/karen-garden.jpg",
+    imageAlt: "Landscape designer reviewing a planting plan on site in Nairobi",
+    excerpt:
+      "A landscape designer does more than plant trees. Here's what the work actually involves — from site analysis to plant selection — and why it matters for your property in Kenya.",
+    content: `Most people call us when something has already gone wrong. A lawn that won't establish. A driveway that floods after rain. A garden that looked fine in photos from South Africa but died within a season in Nairobi. By the time we arrive, there's usually more to fix than if we'd been involved from the start.
+
+So here is a straightforward answer to what a landscape designer actually does — and why it's not the same as hiring a general contractor to plant a few trees.
+
+**We start with the site, not the design**
+
+Before anything gets drawn, we spend time reading the land. Slope and drainage tell us where water will go when it rains. Soil type tells us what can grow and what will struggle. Sun angles change through the seasons and affect which plants will thrive on which side of a wall.
+
+In Kenya, this step is more consequential than people expect. A site in Karen behaves differently from one in Kilimani, and both differ from coastal Mombasa. Altitude, rainfall pattern, soil composition, and proximity to structures all shape what's possible. A designer who skips site analysis and jumps straight to a planting list is guessing.
+
+**We select plants based on your specific conditions**
+
+This is where landscape design diverges sharply from general gardening advice. At Botanique, we work with a plant database being built specifically for East African conditions — currently scaling toward 5,000 species, cross-referenced against rainfall, soil type, sunlight exposure, and maintenance requirements.
+
+When we recommend Dietes iridioides as a border plant, it's because it handles Nairobi's dry spells without irrigation support, doesn't spread aggressively into paved surfaces, and maintains form with minimal cutting. When we advise against certain ornamental grasses on a shaded Runda plot, it's because the species fails below a certain light threshold in highland conditions, not because we have a preference.
+
+Plant selection also involves full botanical identification — genus, species, variety — so there's no ambiguity about what's being planted, what it will do, and how large it will get. This matters when a tree is going in next to a water line or a boundary wall.
+
+**We manage the relationship between hard and soft elements**
+
+Landscape design covers more than plants. Paving, retaining walls, drainage channels, irrigation lines, lighting positions, and fencing all interact with planting. A poorly placed retaining wall causes erosion somewhere else. A paved surface without a permeable edge forces water to find its own exit.
+
+On a recent project in Karen Hills, the client's main problem was soil eroding from a higher-elevation private garden onto a cabro driveway below. The fix wasn't just planting — it required understanding the slope gradient, the edge detail at the cabro boundary, and the right ground cover to hold soil while allowing water to drain without pooling. That's a design problem before it's a planting problem.
+
+**We produce documentation that contractors can follow**
+
+A landscape designer's output isn't just a mood board. It's a set of documents: a planting plan with plant positions and quantities, a specification sheet with botanical names and sourcing notes, contractor briefing notes with installation sequence, and in some cases a phased timeline so work can be split across budget cycles.
+
+Without this, contractors plant what's available at the nursery that week, at spacing they decide on the day, in positions that may not account for mature plant size or root competition. The result is a garden that looks fine at installation and becomes a problem two rainy seasons later.
+
+**We supervise installation**
+
+Design without supervision is a hand-off. We stay involved through implementation — checking that plants are going in at the right depth, that spacing matches the plan, that soil preparation has actually happened. On larger projects, this falls to our landscape architect on the ground. On smaller residential projects, it may be the designer directly.
+
+This is not distrust of contractors. It's quality control. A plant installed too shallow will fail in a dry spell. One planted too close to a wall will eventually damage it. Catching these things during installation costs nothing. Fixing them afterwards costs significantly more.
+
+**We're not the same as a nursery or a general contractor**
+
+A nursery sells plants. A general contractor executes earthworks and construction. A landscape designer sits at the intersection — specifying what goes where and why, then making sure the execution matches the specification.
+
+In practice, we work with nurseries and contractors regularly. The distinction matters because it determines who is accountable for the design outcome, not just the installation.
+
+**What you should expect from a first consultation**
+
+We'll ask about how you use the space, what you find difficult about it, and what you'd like it to look like and feel like. We'll look at drainage, sun exposure, existing plants, and any structures that constrain the design. We'll ask about maintenance — who does it, how often, and with what resources.
+
+From there, we produce a brief that summarises findings and sets the design direction before any drawing begins. You should know what you're getting and why before we start.
+
+If you're planning a new garden, renovating an existing one, or dealing with a recurring problem that landscaping work hasn't resolved, that's where the conversation starts.
+
+[Contact us to book a site consultation.](/contact)`,
+  },
+  {
     slug: "choosing-the-right-grass-kenya",
     title: "How to Choose the Right Grass for Your Kenyan Lawn",
     date: "2026-03-22",
