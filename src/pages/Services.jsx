@@ -32,7 +32,7 @@ export default function ServicesPage() {
     <div className="pt-20">
       <Helmet>
         <title>Our Services · Landscape Design, Implementation &amp; Maintenance Kenya | Botanique Designers</title>
-        <meta name="description" content="Explore Botanique Designers' full range of services: landscape architecture, garden design, project implementation, EIA studies, irrigation, lighting, plant taxonomy and garden maintenance across Kenya." />
+        <meta name="description" content="Landscape architecture, garden design, plant taxonomy, irrigation, lighting and garden maintenance across Kenya — Botanique Designers." />
         <link rel="canonical" href="https://www.botaniquedesigners.com/services" />
       </Helmet>
       {/* Hero */}

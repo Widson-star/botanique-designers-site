@@ -142,7 +142,7 @@ export default function Home() {
     <div className="font-sans text-botanique-charcoal pt-24">
       <Helmet>
         <title>Botanique Designers · Landscape Design &amp; Architecture · Garden Design &amp; Maintenance Kenya</title>
-        <meta name="description" content="East Africa's botanical-led landscape practice. Garden design, landscape architecture, plant taxonomy, lawn care and garden maintenance across Kenya, Tanzania, Uganda, Rwanda and Somalia." />
+        <meta name="description" content="Botanical-led landscape design, plant taxonomy, lawn care and garden maintenance across Kenya, Tanzania, Uganda, Rwanda and Somalia. Founded on plant science." />
         <link rel="canonical" href="https://www.botaniquedesigners.com/" />
       </Helmet>
 

@@ -9,7 +9,7 @@ const blogPosts = [
     image: "/projects/karen-garden.jpg",
     imageAlt: "Landscape designer reviewing a planting plan on site in Nairobi",
     excerpt:
-      "A landscape designer does more than plant trees. Here's what the work actually involves — from site analysis to plant selection — and why it matters for your property in Kenya.",
+      "A landscape designer does more than plant trees. Here's what the work actually involves — site analysis, plant selection — and why it matters in Kenya.",
     content: `Most people call us when something has already gone wrong. A lawn that won't establish. A driveway that floods after rain. A garden that looked fine in photos from South Africa but died within a season in Nairobi. By the time we arrive, there's usually more to fix than if we'd been involved from the start.
 
 So here is a straightforward answer to what a landscape designer actually does — and why it's not the same as hiring a general contractor to plant a few trees.
@@ -105,7 +105,7 @@ The decision comes down to three factors: altitude and temperature, water availa
     image: "/projects/project-18.jpg",
     imageAlt: "Landscape design styles in Kenya — Botanique Designers",
     excerpt:
-      "Tropical, formal, naturalistic, Mediterranean — Nairobi and Kenyan properties suit different landscape styles. Here's how to tell them apart and choose the right one.",
+      "Tropical, formal, naturalistic, Mediterranean — Kenyan properties suit different landscape styles. Here's how to tell them apart and choose the right one.",
     content: `Most people know they want a beautiful garden. Fewer know what style they're actually describing when they say it. Words like "tropical," "manicured," or "natural" get used interchangeably, but they refer to distinct design philosophies with different plant choices, maintenance demands, and costs. This post breaks them down.
 
 **Tropical**

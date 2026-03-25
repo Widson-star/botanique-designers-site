@@ -55,7 +55,7 @@ export default function Maintenance() {
     <div className="pt-24 font-sans text-botanique-charcoal">
       <Helmet>
         <title>Garden Maintenance Services Kenya · Monthly &amp; Bi-Weekly Plans | Botanique Designers</title>
-        <meta name="description" content="Professional garden maintenance in Kenya — lawn mowing, pruning, fertilisation, irrigation checks and seasonal planting. Monthly and bi-weekly plans for residential and commercial properties." />
+        <meta name="description" content="Garden maintenance in Kenya — mowing, pruning, fertilisation and seasonal planting. Monthly and bi-weekly schedules for residential and commercial properties." />
         <link rel="canonical" href="https://www.botaniquedesigners.com/services/maintenance" />
       </Helmet>
 

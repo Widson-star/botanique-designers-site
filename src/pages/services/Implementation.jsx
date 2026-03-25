@@ -18,7 +18,7 @@ export default function Implementation() {
     <div className="pt-24 font-sans text-botanique-charcoal">
       <Helmet>
         <title>Landscape Implementation · Garden Construction &amp; Build-Out Kenya | Botanique Designers</title>
-        <meta name="description" content="Full landscape implementation services in Kenya — planting, irrigation installation, hardscape construction, outdoor lighting, soil preparation and project management." />
+        <meta name="description" content="Full landscape implementation in Kenya — planting, irrigation, hardscape construction, outdoor lighting, soil preparation and project management." />
         <link rel="canonical" href="https://www.botaniquedesigners.com/services/implementation" />
       </Helmet>
 

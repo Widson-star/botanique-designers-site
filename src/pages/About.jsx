@@ -52,7 +52,7 @@ export default function About() {
     <div className="pt-20">
       <Helmet>
         <title>About Botanique Designers · Our Team &amp; Story · Nairobi Landscape Practice</title>
-        <meta name="description" content="Meet the team behind Botanique Designers — Kenya's botanical-led landscape practice. Our principal designer and landscape architect bring expertise in plant science, garden design and implementation." />
+        <meta name="description" content="Botanique Designers — Kenya's botanical-led landscape practice. Our team brings expertise in plant science, garden design and landscape architecture." />
         <link rel="canonical" href="https://www.botaniquedesigners.com/about" />
       </Helmet>
       {/* Hero */}

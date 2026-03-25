@@ -18,7 +18,7 @@ export default function EIAStudies() {
     <div className="pt-24 font-sans text-botanique-charcoal">
       <Helmet>
         <title>Environmental Impact Assessment Studies Kenya · NEMA Compliance | Botanique Designers</title>
-        <meta name="description" content="NEMA-compliant Environmental Impact Assessment (EIA) studies in Kenya. Botanique Designers prepares full EIA reports, baseline studies, impact mitigation plans and NEMA submission packages." />
+        <meta name="description" content="NEMA-compliant EIA studies in Kenya. Botanique Designers prepares full EIA reports, baseline studies, impact mitigation plans and NEMA submission packages." />
         <link rel="canonical" href="https://www.botaniquedesigners.com/services/eia-studies" />
       </Helmet>
 
