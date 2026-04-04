@@ -3,28 +3,38 @@ import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import blogPosts from "../data/blog-posts";
 
-// Render inline text that may contain [text](url) markdown links
+// Render inline text that may contain [text](url) markdown links and **bold** markers
 function renderInline(text, key) {
-  const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const tokenPattern = /\[([^\]]+)\]\(([^)]+)\)|\*\*([^*]+)\*\*/g;
   const parts = [];
   let last = 0;
   let match;
   let i = 0;
-  while ((match = linkPattern.exec(text)) !== null) {
+  while ((match = tokenPattern.exec(text)) !== null) {
     if (match.index > last) parts.push(text.slice(last, match.index));
-    const [, label, href] = match;
-    const isInternal = href.startsWith("/");
-    parts.push(
-      isInternal ? (
-        <Link key={`${key}-l${i}`} to={href} className="text-botanique-green underline hover:opacity-80">
-          {label}
-        </Link>
-      ) : (
-        <a key={`${key}-l${i}`} href={href} target="_blank" rel="noopener noreferrer" className="text-botanique-green underline hover:opacity-80">
-          {label}
-        </a>
-      )
-    );
+    if (match[3] !== undefined) {
+      // **bold**
+      parts.push(
+        <strong key={`${key}-b${i}`} className="text-botanique-charcoal">
+          {match[3]}
+        </strong>
+      );
+    } else {
+      // [label](href)
+      const [, label, href] = match;
+      const isInternal = href.startsWith("/");
+      parts.push(
+        isInternal ? (
+          <Link key={`${key}-l${i}`} to={href} className="text-botanique-green underline hover:opacity-80">
+            {label}
+          </Link>
+        ) : (
+          <a key={`${key}-l${i}`} href={href} target="_blank" rel="noopener noreferrer" className="text-botanique-green underline hover:opacity-80">
+            {label}
+          </a>
+        )
+      );
+    }
     last = match.index + match[0].length;
     i++;
   }

@@ -38,6 +38,7 @@ const ROUTES = [
   '/services/lawn-care',
   '/faq',
   '/blog',
+  '/blog/best-landscape-design-software-2026',
   '/blog/what-does-a-landscape-designer-do',
   '/blog/choosing-the-right-grass-kenya',
   '/blog/landscaping-styles-explained',
