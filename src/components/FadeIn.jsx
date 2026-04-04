@@ -58,6 +58,6 @@ export default function FadeIn({
                 style={{ transitionDelay: `${delay}ms` }}
               >
           {children}
-        </div>div>
+        </div>
       );
-}</div>
+}
