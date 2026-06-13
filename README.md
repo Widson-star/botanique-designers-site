@@ -97,7 +97,3 @@ Deployed to **Vercel** as a static site. Vercel auto-detects Vite:
 
 The Express API in `server/` is **optional** and, if used, must be hosted
 separately (e.g. Render/Railway/Fly) with its URL supplied via `VITE_BACKEND_URL`.
-
-> Note: the `docs/` directory is an **older GitHub Pages build artifact** and is
-> **not** used by the Vercel deployment (which serves `dist/`). It is safe to
-> delete; left in place pending confirmation.
