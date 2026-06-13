@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { BACKEND_URL } from "../utils/backend";
+import { BACKEND_URL, CONTACT } from "../utils/backend";
 
 const QUICK_REPLIES = [
   "What services do you offer?",
@@ -11,6 +11,9 @@ const QUICK_REPLIES = [
 const BOOKING_KEYWORDS = [
   "consult", "site visit", "book", "schedule", "visit", "appointment", "come over", "come and see",
 ];
+
+const ASSISTANT_UNAVAILABLE_TEXT =
+  `Our live assistant is temporarily unavailable, but we can still help. Please WhatsApp us on ${CONTACT.phoneDisplay} with your location, project type, photos, and what you'd like done — or request a site visit from the website.`;
 
 function shouldShowBookingCTA(text) {
   const lower = text.toLowerCase();
@@ -104,7 +107,7 @@ export default function Assistant() {
         ...prev,
         {
           role: "bot",
-          text: "Our live assistant is offline right now. WhatsApp us on +254 720 861 592 or email botaniquedesigners@gmail.com and we'll get back to you personally.",
+          text: ASSISTANT_UNAVAILABLE_TEXT,
         },
       ]);
       return;
@@ -123,8 +126,13 @@ export default function Assistant() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: messageText, history }),
       });
-      const data = await res.json();
-      const reply = data.reply || data.error || "I couldn't get a response. Please try again.";
+      const data = await res.json().catch(() => ({}));
+      const reply =
+        res.ok && data.reply
+          ? data.reply
+          : res.status === 429 && data.error
+            ? data.error
+            : ASSISTANT_UNAVAILABLE_TEXT;
 
       const newBotMsg = { role: "bot", text: reply };
       setMessages((prev) => [
@@ -139,7 +147,7 @@ export default function Assistant() {
         ...prev,
         {
           role: "bot",
-          text: "I'm having trouble connecting right now. Please reach us directly at +254 720 861 592.",
+          text: ASSISTANT_UNAVAILABLE_TEXT,
         },
       ]);
     } finally {

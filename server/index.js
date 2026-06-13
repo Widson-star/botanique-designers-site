@@ -220,11 +220,14 @@ RESPONSE RULES — follow these strictly:
 
 TONE: Friendly, direct, Kenyan context-aware. Talk like a knowledgeable colleague, not a corporate brochure.`;
 
+const CHAT_FALLBACK_MESSAGE =
+  "Our live assistant is temporarily unavailable, but we can still help. Please WhatsApp us on +254 720 861 592 with your location, project type, photos, and what you'd like done — or request a site visit from the website.";
+
 app.post("/api/chat", rateLimit({ windowMs: 60_000, max: 20 }), async (req, res) => {
   try {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return res.status(503).json({ error: "AI service not configured. Please contact us directly." });
+      return res.status(503).json({ error: CHAT_FALLBACK_MESSAGE });
     }
 
     const { message, history = [] } = req.body;
@@ -252,8 +255,8 @@ app.post("/api/chat", rateLimit({ windowMs: 60_000, max: 20 }), async (req, res)
 
     res.json({ reply });
   } catch (err) {
-    console.error("Groq error:", err.message);
-    res.status(500).json({ error: "Something went wrong. Please try again or contact us directly." });
+    console.error("Groq error:", err.response?.data || err.status || err.message);
+    res.status(502).json({ error: CHAT_FALLBACK_MESSAGE });
   }
 });
 

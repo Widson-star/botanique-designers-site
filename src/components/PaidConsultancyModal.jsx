@@ -43,7 +43,7 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
       setStatus("sent");
     } catch (err) {
       setStatus("error");
-      setErrorMsg(err.message || "Something went wrong. Use the manual option below.");
+      setErrorMsg(err.message || "We could not start the M-Pesa prompt. Use the manual option below.");
     }
   }
 

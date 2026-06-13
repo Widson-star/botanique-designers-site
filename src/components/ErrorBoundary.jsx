@@ -19,7 +19,7 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div className="p-6 bg-white rounded-xl shadow-md text-center">
           <p className="text-botanique-green font-semibold">
-            ⚠️ Something went wrong here.
+            This section could not load.
           </p>
           <p className="text-gray-600 text-sm mt-2">
             Please refresh the page or try again later.
