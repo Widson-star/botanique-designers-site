@@ -13,7 +13,7 @@ const BOOKING_KEYWORDS = [
 ];
 
 const ASSISTANT_UNAVAILABLE_TEXT =
-  `Our live assistant is temporarily unavailable, but we can still help. Please WhatsApp us on ${CONTACT.phoneDisplay} with your location, project type, photos, and what you'd like done — or request a site visit from the website.`;
+  `Our live assistant is temporarily unavailable, but we can still help. Please WhatsApp us on ${CONTACT.phoneDisplay} with your location, project type, site photos, and what you'd like done — or request a site visit from the website.`;
 
 function shouldShowBookingCTA(text) {
   const lower = text.toLowerCase();
@@ -27,7 +27,7 @@ export default function Assistant() {
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      text: "Hi! I'm Ask Botanique 🌿\n\nI can help with services, pricing, EIA questions, or anything about your outdoor project. What would you like to know?",
+      text: "Hi! I'm Ask Botanique 🌿\n\nI can help with services, pricing, site visits, planting design, maintenance, and project enquiries. What would you like to know?",
     },
   ]);
 

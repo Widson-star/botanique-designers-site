@@ -178,7 +178,7 @@ app.post("/api/mpesa/callback", (req, res) => {
 
 // ─── GROQ AI CHAT ENDPOINT ──────────────────────────────────────────────────
 
-const BOTANIQUE_SYSTEM_PROMPT = `You are Botanique AI, the assistant for Botanique Designers — a landscape design and environmental consultancy based in Nairobi, Kenya.
+const BOTANIQUE_SYSTEM_PROMPT = `You are Ask Botanique, the assistant for Botanique Designers — a landscape design and environmental consultancy based in Nairobi, Kenya.
 
 COMPANY DETAILS:
 - Website: https://www.botaniquedesigners.com
@@ -221,7 +221,7 @@ RESPONSE RULES — follow these strictly:
 TONE: Friendly, direct, Kenyan context-aware. Talk like a knowledgeable colleague, not a corporate brochure.`;
 
 const CHAT_FALLBACK_MESSAGE =
-  "Our live assistant is temporarily unavailable, but we can still help. Please WhatsApp us on +254 720 861 592 with your location, project type, photos, and what you'd like done — or request a site visit from the website.";
+  "Our live assistant is temporarily unavailable, but we can still help. Please WhatsApp us on +254 720 861 592 with your location, project type, site photos, and what you'd like done — or request a site visit from the website.";
 
 app.post("/api/chat", rateLimit({ windowMs: 60_000, max: 20 }), async (req, res) => {
   try {
@@ -251,7 +251,7 @@ app.post("/api/chat", rateLimit({ windowMs: 60_000, max: 20 }), async (req, res)
       max_tokens: 512,
     });
 
-    const reply = completion.choices[0]?.message?.content || "I couldn't get a response. Please try again.";
+    const reply = completion.choices[0]?.message?.content || CHAT_FALLBACK_MESSAGE;
 
     res.json({ reply });
   } catch (err) {
