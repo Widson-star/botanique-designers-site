@@ -177,7 +177,7 @@ export default function Home() {
 
         <div className="relative z-10 max-w-3xl px-6">
           <p className="text-white/80 uppercase tracking-widest text-sm font-medium mb-4">
-            Landscape Design & Implementation · Kenya & East Africa
+            Landscape Design & Implementation · Kenya-based practice
           </p>
           <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
             Landscape design and implementation rooted in plant science
@@ -232,7 +232,7 @@ export default function Home() {
             <h2 className="text-4xl font-bold mb-4">Our Services</h2>
             <p className="text-gray-500 mb-14 max-w-xl mx-auto">
               End-to-end landscape design, planting and hands-on project delivery
-              across Kenya and East Africa.
+              across Kenya, with selected regional design work.
             </p>
           </FadeIn>
 
@@ -333,11 +333,12 @@ export default function Home() {
           Serving clients across
         </p>
         <h2 className="text-2xl font-bold mb-2">
-          All of Kenya & East Africa
+          Kenya and selected regional projects
         </h2>
         <p className="text-white/75 text-sm mb-7 max-w-xl mx-auto">
-          From Mombasa to Eldoret, Nairobi to Kisumu — no project is too far. We work
-          nationwide and take on international projects across East Africa.
+          From Mombasa to Eldoret, Nairobi to Kisumu — we serve clients across
+          Kenya and consider selected regional residential, institutional,
+          hospitality, and estate landscape briefs.
         </p>
         </FadeIn>
         <div className="flex flex-wrap justify-center gap-3 max-w-3xl mx-auto px-6">
@@ -599,7 +600,7 @@ export default function Home() {
                       <div>
                         <p className="font-semibold text-white">Location</p>
                         <p>Nairobi, Kenya</p>
-                        <p className="text-white/50 text-xs mt-1">Serving all of Kenya & East Africa</p>
+                        <p className="text-white/50 text-xs mt-1">Serving Kenya, with selected regional design work</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-4">

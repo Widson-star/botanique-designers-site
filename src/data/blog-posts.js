@@ -8,13 +8,13 @@ const blogPosts = [
     author: "Widson Ambaisi",
     image: "/images/blog/landscape-software-2026.jpg",
     imageAlt: "Landscape garden installation with colourful flower beds — Botanique Designers",
-    excerpt: "From DynaSCAPE to Polycam — five tools I've personally tested across real projects in East Africa, and how they fit into a modern landscape design workflow.",
+    excerpt: "From DynaSCAPE to Polycam — five tools I've personally tested across real projects in Kenya and selected design work, and how they fit into a modern landscape design workflow.",
     tags: ["software", "tools", "landscape design", "AI", "technology"],
     content: `I'll be honest with you — this article comes from a moment of being genuinely stranded.
 
 For years, Realtime Landscaping was my go-to design environment. It did exactly what a landscape designer needs: fast 3D visualisation, believable plant rendering, and a workflow that kept up with client meetings. Then I switched to a MacBook. Realtime Landscaping is Windows-only, and just like that, a critical part of my practice was gone.
 
-What followed was a weeks-long deep dive into the landscape design software landscape — testing, trialling, and in some cases, quietly closing a browser tab in disappointment. The five tools I'm writing about here are the ones that passed that test. These are not theoretical recommendations. I've run them on actual projects, across residential gardens in Karen and Runda, through site documentation work across East Africa, and in client presentations where I needed the tools to perform — not just look good in a YouTube demo.
+What followed was a weeks-long deep dive into the landscape design software landscape — testing, trialling, and in some cases, quietly closing a browser tab in disappointment. The five tools I'm writing about here are the ones that passed that test. These are not theoretical recommendations. I've run them on actual projects, across residential gardens in Karen and Runda, through site documentation work in Kenya and selected design briefs, and in client presentations where I needed the tools to perform — not just look good in a YouTube demo.
 
 Here's what I found.
 
@@ -34,7 +34,7 @@ The honest caveat: DynaSCAPE is primarily a Windows application. Mac users can r
 
 Rhino is not a landscape design tool by default. It's a precision 3D modelling environment built on NURBS geometry — the kind of mathematical modelling that architects and product designers rely on for forms that need to be exactly right. What makes it relevant to landscape architecture is the **Lands Design plugin**, which layers planting tools, terrain modelling, and vegetation data on top of Rhino's geometry engine.
 
-The result is something genuinely powerful. You can model topographically accurate terrain, generate realistic vegetation, assign plant species with full botanical data, and produce documentation that integrates seamlessly into a BIM workflow. When a project requires coordination with civil engineers or architects — which in East Africa's commercial landscape sector is increasingly the norm — Rhino speaks the same language.
+The result is something genuinely powerful. You can model topographically accurate terrain, generate realistic vegetation, assign plant species with full botanical data, and produce documentation that integrates seamlessly into a BIM workflow. When a project requires coordination with civil engineers or architects — increasingly common in commercial landscape work — Rhino speaks the same language.
 
 Rhino is natively available on macOS, which removes the Parallels workaround entirely. The learning curve is real: this is not software you open and understand in an afternoon. But for firms working on complex sites, master plans, or projects where parametric design adds value, the ceiling on what Rhino can produce is significantly higher than most alternatives.
 
@@ -72,7 +72,7 @@ Polycam is the tool on this list that doesn't produce finished drawings — and 
 
 Modern iPhones and iPads with LiDAR sensors can capture physical space in three dimensions. Polycam uses that sensor to turn a site visit into an accurate 3D mesh of the terrain, existing structures, and planting. You walk the site with your phone, the app builds the model in the background, and you leave with a georeferenced 3D file that can be imported into Rhino, SketchUp, or Vectorworks as the base for your design.
 
-For those of us doing site surveys across East Africa — in Karen, Westlands, along the Mombasa coast, or further afield in Uganda and Rwanda — the ability to arrive on site with an iPhone and leave with accurate survey data compresses what used to be an entire survey day into a site visit. Polycam also processes drone photography into orthomosaics and 3D models, which integrates well with drone survey workflows on larger sites.
+For those of us doing site surveys in Kenya — in Karen, Westlands, along the Mombasa coast, or on selected regional design briefs — the ability to arrive on site with an iPhone and leave with accurate survey data compresses what used to be an entire survey day into a site visit. Polycam also processes drone photography into orthomosaics and 3D models, which integrates well with drone survey workflows on larger sites.
 
 It's not a replacement for a topographic survey on a complex grading project. But for most residential and small commercial sites, it's accurate enough to build a credible design model from, and it's available in the App Store right now.
 
@@ -302,7 +302,7 @@ The strongest submissions shared common characteristics: they were designed with
 
 Seeing how cities in South Korea, Singapore, Colombia, and elsewhere approach green infrastructure provides useful reference points for what's possible in Kenyan cities. The scale differs, but the principles are transferable: design for measurable outcomes, select species based on site conditions, plan maintenance before you plant, and involve the community in stewardship.
 
-For Botanique Designers, this experience reinforced our approach to every project — whether it's a residential garden in Karen or a public park in Mogadishu. Design decisions should be grounded in plant science, adapted to local conditions, and planned with long-term care in mind. The AIPH recognition connects our practice to a global community of professionals working on the same challenges.`,
+For Botanique Designers, this experience reinforced our approach to every project — whether it's a residential garden in Karen or a design concept in Mogadishu. Design decisions should be grounded in plant science, adapted to local conditions, and planned with long-term care in mind. The AIPH recognition connects our practice to a global community of professionals working on the same challenges.`,
   },
 ];
 

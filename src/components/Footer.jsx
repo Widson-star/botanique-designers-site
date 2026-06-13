@@ -13,9 +13,9 @@ export default function Footer() {
             className="h-20 w-auto object-contain brightness-0 invert"
           />
           <p className="text-sm text-gray-300">
-            East Africa's botanical-led landscape practice. Garden design,
-            landscape architecture, plant taxonomy, and garden maintenance
-            across Kenya, Tanzania, Uganda, Rwanda, and Somalia.
+            Kenya-based botanical-led landscape design practice. Garden design,
+            landscape architecture, plant taxonomy, and garden maintenance for
+            clients across Kenya, with selected regional design experience.
           </p>
         </div>
 
@@ -52,7 +52,7 @@ export default function Footer() {
             <li><Link to="/areas/karen" className="hover:text-white transition">Karen & Runda</Link></li>
             <li>
               <span className="text-botanique-green text-xs font-medium">
-                + Kenya, Tanzania, Uganda, Rwanda, Somalia
+                + Kenya-wide, selected regional briefs
               </span>
             </li>
           </ul>

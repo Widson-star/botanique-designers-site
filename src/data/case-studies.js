@@ -93,25 +93,25 @@ const caseStudies = [
   },
   {
     slug: "zaara-park",
-    title: "Zaara Park — Landscape Design",
+    title: "Zaara Park — design concept",
     location: "Mogadishu, Somalia",
     category: "international",
     status: "Design Concept",
     heroImage: "/projects/project-37.jpg",
     galleryImages: ["/projects/project-37.jpg"],
     summary:
-      "A comprehensive landscape design concept for Zaara Park in Mogadishu — one of the firm's largest landscape design engagements and an example of cross-border design delivery.",
+      "Zaara Park, Mogadishu — landscape design concept. Design-only concept; implementation status not claimed.",
     scope: ["Detailed landscape design", "Master planning"],
     brief:
-      "A large-scale public park landscape in Mogadishu, delivered as a cross-border design engagement.",
+      "A large-scale landscape design concept in Mogadishu.",
     designResponse:
-      "A comprehensive, detailed landscape design developed for the site — one of the firm's largest landscape design engagements, delivered as a multi-zone landscape design concept.",
+      "A detailed landscape design concept developed for the site as a multi-zone design-only brief.",
     outcome:
-      "This was a design-only engagement — the available imagery is a design visualization, not built work. Botanique Designers delivered the landscape design; it was not implemented by the practice.",
+      "This was a design-only concept — the available imagery is a design visualization, not built work. Implementation status is not claimed.",
     relatedServices: ["landscape-design", "landscape-architecture", "commercial-landscaping"],
     evidenceLevel: "moderate",
     notesForWidson:
-      "Confirmed by Widson: Zaara Park was a design-only engagement (not built by the practice). Public budget figure removed per BD-WS-06; described as a large-scale design engagement instead.",
+      "Confirmed by Widson: Zaara Park is design-only. Public budget and acreage figures must not be used.",
   },
   {
     slug: "serenity-homes-diani",

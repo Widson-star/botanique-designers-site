@@ -49,7 +49,7 @@ export default function ProjectDetail() {
             "@context": "https://schema.org",
             "@type": "CreativeWork",
             name: study.title,
-            about: "Landscape design and implementation",
+            about: study.status === "Design Concept" ? "Landscape design concept" : "Landscape design project",
             locationCreated: { "@type": "Place", name: study.location },
             description: study.summary,
             image: `https://www.botaniquedesigners.com${study.heroImage}`,

@@ -103,8 +103,8 @@ export default function About() {
                 architecture, garden implementation, and ongoing maintenance.
                 Widson leads design and plant science. Martine Lotom, a
                 landscape architect from JKUAT, leads architectural-scale
-                planning and site supervision. Together they deliver projects
-                across Kenya, Tanzania, Uganda, Rwanda, and Somalia.
+                planning and site supervision. Together they serve clients
+                across Kenya, with selected regional design work.
               </p>
             </div>
           </div>
@@ -198,11 +198,11 @@ export default function About() {
               Where We Work
             </h2>
             <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-              Projects across five East African countries — from residential
-              gardens to large-scale landscape designs spanning over 30,000
-              acres.
+              Kenya-based landscape design practice serving residential,
+              institutional, hospitality, and estate landscape projects in Kenya
+              and selected regional design briefs.
             </p>
-            <div className="grid md:grid-cols-5 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               {[
                 {
                   country: "Kenya",
@@ -210,23 +210,13 @@ export default function About() {
                   flag: "🇰🇪",
                 },
                 {
-                  country: "Tanzania",
-                  detail: "Garden design and landscape architecture",
-                  flag: "🇹🇿",
+                  country: "Wider region",
+                  detail: "Selected regional design experience",
+                  flag: "🌍",
                 },
                 {
-                  country: "Uganda",
-                  detail: "Garden design and landscape architecture",
-                  flag: "🇺🇬",
-                },
-                {
-                  country: "Rwanda",
-                  detail: "Garden design and landscape architecture",
-                  flag: "🇷🇼",
-                },
-                {
-                  country: "Somalia",
-                  detail: "Zaara Park — over 30,000 acres",
+                  country: "Mogadishu",
+                  detail: "Zaara Park — design concept",
                   flag: "🇸🇴",
                 },
               ].map((c) => (

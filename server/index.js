@@ -203,8 +203,8 @@ AREAS SERVED:
 - Rift Valley: Nakuru, Eldoret, Nanyuki, Kericho, Kitale
 - Central: Nyeri, Thika, Limuru, Tigoni, Embu, Meru
 - Eastern: Machakos, Kitui, Isiolo
-- International: Uganda, Tanzania, Rwanda and wider East Africa
-We travel for the right project — no location is too remote.
+- Selected regional design briefs where the scope is a good fit
+We travel for suitable projects across Kenya and selected regional design work.
 
 PRICING:
 - Site visit / consultation: Ksh 3,500 base fee (within 5 km of Nairobi CBD) + Ksh 60/km beyond 5 km

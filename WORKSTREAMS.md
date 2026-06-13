@@ -151,9 +151,8 @@ Scope:
 
 Notes:
 
-* Zaara Park public budget figure (~KES 30M) removed from projects.js and
-  case-studies.js; reworded as "large-scale / multi-zone landscape design
-  engagement"; design-only framing preserved.
+* Zaara Park public budget references removed from projects.js and
+  case-studies.js; design-only framing preserved.
 * Metadata: clearer titles for Home, Projects, ServicePage ("[Service] in Kenya"),
   ProjectDetail ("[Project] — Case Study"); removed dead <meta keywords>; fixed
   favicon MIME (image/jpeg → image/png) in index.html.

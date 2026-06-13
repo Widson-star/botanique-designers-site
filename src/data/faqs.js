@@ -16,7 +16,7 @@ const faqs = [
       },
       {
         q: "What areas do you cover?",
-        a: "We work across Kenya — Nairobi and its suburbs (Karen, Runda, Kiambu, Westlands), Mombasa, Kisumu, Nakuru, Eldoret, and other regions. We also operate in Tanzania, Uganda, Rwanda, and Somalia. The 2024 Zaara Park project in Mogadishu is our largest cross-border engagement to date.",
+        a: "We work across Kenya — Nairobi and its suburbs (Karen, Runda, Kiambu, Westlands), Mombasa, Kisumu, Nakuru, Eldoret, and other regions. We are also available for selected regional design briefs where the scope is a good fit.",
       },
       {
         q: "What's the difference between a landscape designer and a landscape architect?",
@@ -24,7 +24,7 @@ const faqs = [
       },
       {
         q: "Do you work on commercial properties, offices, and public spaces?",
-        a: "Yes. We design and implement landscapes for offices, hotels, restaurants, schools, hospitals, and public parks — not just residential gardens. Commercial projects often require different plant selections (low-maintenance, high-impact species), irrigation planning for larger areas, and compliance with county regulations. Our 2024 Zaara Park project in Mogadishu and institutional botanical labelling work are examples of our non-residential portfolio.",
+        a: "Yes. We design and implement landscapes for offices, hotels, restaurants, schools, hospitals, and public-facing spaces — not just residential gardens. Commercial projects often require different plant selections, irrigation planning for larger sites, and compliance with county regulations. Zaara Park, Mogadishu is represented only as a landscape design concept; implementation status is not claimed.",
       },
     ],
   },
