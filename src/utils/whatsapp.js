@@ -1,9 +1,9 @@
 // Centralised WhatsApp message builders.
 //
-// Goal: leads should arrive pre-qualified so Botanique Designers does less
-// manual back-and-forth. Fields the UI actually collects are filled in; fields
-// it doesn't collect are left as editable placeholders the client completes in
-// WhatsApp before sending. No values are invented.
+// Goal: leads should arrive readable even when a visitor taps send without
+// editing. Fields the UI actually collects are filled in; missing fields are
+// left as simple labels the client can complete in WhatsApp. No values are
+// invented.
 //
 // Newlines (\n) are safe — encodeURIComponent turns them into %0A, so the
 // wa.me URL never contains a raw line break.
@@ -17,34 +17,34 @@ export function waLink(message) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
-const TIMELINE = "[urgent / within 1 month / 1-3 months / flexible]";
-const PROJECT_TYPE =
-  "[residential / estate / hospitality / commercial / institutional / farm / not sure]";
-const SITE_STATUS =
-  "[house complete / under construction / open land / existing garden / not sure]";
-const SITE_CONDITION = "[flat / sloping / wet area / dry area / not sure]";
+function line(label, value) {
+  const cleanValue = typeof value === "string" ? value.trim() : value;
+  return cleanValue ? `${label}: ${cleanValue}` : `${label}:`;
+}
 
 // Quotation / site-visit request (from the Quote Wizard or generic "WhatsApp us"
-// CTAs). Pass whatever fields are available; the rest become placeholders.
+// CTAs). Pass whatever fields are available; the rest remain simple labels.
 export function buildQuoteMessage(form = {}) {
-  return [
+  const lines = [
     "Hello Botanique Designers 🌿,",
     "",
     "I would like to request a site visit / quotation.",
     "",
-    `Service: ${form.service || "[please specify]"}`,
-    `Project Type: ${PROJECT_TYPE}`,
-    `Location: ${form.location || "[please add]"}`,
-    `Project Size: ${form.size || "[please add]"}`,
-    `Site Status: ${SITE_STATUS}`,
-    `Site Condition: ${SITE_CONDITION}`,
-    "What I need help with: [please describe]",
-    `Budget Range: ${form.budget || "[please add]"}`,
-    `Timeline: ${TIMELINE}`,
+    line("Service", form.service),
+    line("Location", form.location),
+    line("Project size", form.size),
+  ];
+
+  if (form.budget) lines.push(line("Budget range", form.budget));
+  if (form.timeline) lines.push(line("Preferred timeline", form.timeline));
+
+  return [
+    ...lines,
+    "Brief description:",
     "",
-    "I can share photos/videos of the site.",
+    "I can share photos or videos of the site.",
     "",
-    "Thank you.",
+    "Please advise on the next step.",
   ].join("\n");
 }
 
@@ -55,13 +55,11 @@ export function buildServiceMessage(serviceName) {
     "",
     `I am interested in ${serviceName}.`,
     "",
-    "Location: [please add]",
-    `Project Type: ${PROJECT_TYPE}`,
-    `Site Status: ${SITE_STATUS}`,
-    "What I need help with: [please describe]",
-    `Preferred Timeline: ${TIMELINE}`,
+    "Location:",
+    "Brief description:",
+    "Preferred timeline:",
     "",
-    "I can share photos/videos of the site.",
+    "I can share photos or videos of the site.",
     "",
     "Please advise on the next step.",
   ].join("\n");
@@ -72,16 +70,13 @@ export function buildProjectMessage(projectName) {
   return [
     "Hello Botanique Designers 🌿,",
     "",
-    `I saw the ${projectName} project and would like to discuss a similar landscape project.`,
+    `I saw the ${projectName} project and would like something similar.`,
     "",
-    "Location: [please add]",
-    `Project Type: ${PROJECT_TYPE}`,
-    "Site Size: [please add]",
-    "What I liked about this project: [please describe]",
-    "What I need help with: [please describe]",
-    `Preferred Timeline: ${TIMELINE}`,
+    "Location:",
+    "Brief description:",
+    "Preferred timeline:",
     "",
-    "I can share photos/videos of the site.",
+    "I can share photos or videos of the site.",
     "",
     "Please advise on the next step.",
   ].join("\n");
@@ -94,13 +89,13 @@ export function buildContactFallbackMessage(form = {}) {
     "",
     "I tried sending a message through the website, but I am sharing it here directly.",
     "",
-    `Name: ${form.name || "[please add]"}`,
-    `Phone: ${form.phone || "[please add]"}`,
-    `Email: ${form.email || "[please add]"}`,
-    `Service: ${form.service || "Not specified"}`,
-    "Location: [please add]",
-    `Message: ${form.message || "[please add]"}`,
+    line("Name", form.name),
+    line("Phone", form.phone),
+    line("Email", form.email),
+    line("Service", form.service),
+    "Location:",
+    line("Message", form.message),
     "",
-    "Please assist.",
+    "Please advise on the next step.",
   ].join("\n");
 }
