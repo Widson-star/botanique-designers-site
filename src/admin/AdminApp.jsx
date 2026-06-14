@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import AdminAccessDenied from "./components/AdminAccessDenied";
+import AdminConfigError from "./components/AdminConfigError";
 import AdminLogin from "./components/AdminLogin";
 import AdminLayout from "./AdminLayout";
 import AdminSetupRequired from "./components/AdminSetupRequired";
@@ -193,6 +194,13 @@ export default function AdminApp() {
     setProjects([]);
     setFinancialReferences({});
     setAuthStatus("idle");
+  }
+
+  // Missing Supabase config fails safe, scoped to /admin only:
+  //   - production build: a clear admin-only error (never the public site, never fake data)
+  //   - development: the clearly-labelled seed preview below
+  if (!supabaseConfigured && import.meta.env.PROD) {
+    return <AdminConfigError />;
   }
 
   if (isDemo && !demoRole) {

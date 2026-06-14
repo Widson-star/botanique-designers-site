@@ -17,6 +17,13 @@ export function mapDatabaseProject(project) {
     portfolioPermissionStatus: project.portfolio_permission_status,
     notes: project.notes || "",
     archived: Boolean(project.archived),
+    // Staff assigned-only access is currently enforced by Supabase RLS: the
+    // projects SELECT policy only returns rows a staff user is assigned to, so
+    // every row this mapper sees is already permitted. assignments/accessGranted
+    // are therefore set permissively for the client-side filter.
+    // TODO(staff): when staff profiles ship, fetch project_assignments and
+    // populate `assignments` + derive `accessGranted` per row so the client-side
+    // canViewProject() check mirrors RLS as defence-in-depth (do not widen access).
     assignments: [],
     accessGranted: true,
   };
