@@ -8,6 +8,7 @@ import Assistant from "./components/Assistant";
 import QuoteWizard from "./components/QuoteWizard";
 import PaymentConfirmationModal from "./components/PaymentConfirmationModal";
 import PaidConsultancyModal from "./components/PaidConsultancyModal";
+import AdminApp from "./admin/AdminApp";
 
 // Pages
 import Home from "./pages/Home";
@@ -45,6 +46,8 @@ function ScrollToTop() {
 
 // Inner app that has access to AppContext
 function AppInner() {
+  const { pathname } = useLocation();
+  const isAdminRoute = pathname.startsWith("/admin");
   const {
     quoteWizardOpen,
     setQuoteWizardOpen,
@@ -57,6 +60,10 @@ function AppInner() {
     setDistanceKm,
     paidService,
   } = useApp();
+
+  if (isAdminRoute) {
+    return <AdminApp />;
+  }
 
   return (
     <div className="font-sans text-botanique-charcoal">
