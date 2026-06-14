@@ -1,7 +1,6 @@
 import { Link, useParams } from "react-router-dom";
 import FinancialReferencesPanel from "../components/FinancialReferencesPanel";
 import ProjectBadge from "../components/ProjectBadge";
-import { projectSeed } from "../data/projectSeed";
 import { canManageStaff, canViewProject } from "../utils/permissions";
 
 function DetailCard({ title, children }) {
@@ -22,16 +21,19 @@ function DetailRow({ label, value }) {
   );
 }
 
-export default function AdminProjectDetail({ role }) {
+export default function AdminProjectDetail({ role, projects, financialReferences, dataStatus, dataError, isDemo }) {
   const { id } = useParams();
-  const project = projectSeed.find((item) => item.id === id);
+  const project = projects.find((item) => item.id === id);
+  const financialReference = financialReferences[project?.id] || {};
 
   if (!project || !canViewProject(project, role)) {
     return (
       <div className="bg-white border border-stone-200 rounded-lg p-8">
         <h1 className="text-xl font-bold">Project unavailable</h1>
         <p className="text-sm text-gray-500 mt-2">
-          This preview role cannot access that project, or the seed record does not exist.
+          {dataStatus === "loading"
+            ? "Project records are still loading."
+            : dataError || "This role cannot access that project, or the record does not exist."}
         </p>
         <Link to="/admin/projects" className="inline-flex mt-5 text-botanique-green font-semibold hover:underline">
           Back to projects
@@ -123,7 +125,7 @@ export default function AdminProjectDetail({ role }) {
         </div>
       </div>
 
-      <FinancialReferencesPanel project={project} role={role} />
+      <FinancialReferencesPanel financialReference={financialReference} role={role} isDemo={isDemo} />
 
       <section className="bg-white border border-stone-200 rounded-lg p-5">
         <h2 className="font-bold text-lg mb-2">Simple Invoice boundary</h2>

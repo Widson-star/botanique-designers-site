@@ -1,7 +1,5 @@
 import { Link } from "react-router-dom";
 import ProjectBadge from "../components/ProjectBadge";
-import { projectSeed } from "../data/projectSeed";
-import { getVisibleProjects } from "../utils/permissions";
 
 function StatCard({ label, value }) {
   return (
@@ -12,8 +10,7 @@ function StatCard({ label, value }) {
   );
 }
 
-export default function AdminDashboard({ role }) {
-  const projects = getVisibleProjects(projectSeed, role);
+export default function AdminDashboard({ projects, dataStatus, dataError, isDemo }) {
   const activeProjects = projects.filter((project) => ["Ongoing", "Pending", "Paused"].includes(project.status));
   const pendingNextActions = projects.filter((project) => project.nextAction && !project.archived);
   const portfolioPermissionNeeded = projects.filter((project) => project.portfolioPermissionStatus === "Permission Needed");
@@ -24,7 +21,9 @@ export default function AdminDashboard({ role }) {
         <div>
           <h1 className="text-2xl font-bold">Project tracker dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Operational preview for Botanique Designers projects.
+            {isDemo
+              ? "Dev-only seed preview for Botanique Designers projects."
+              : "Authenticated operational project tracker for Botanique Designers."}
           </p>
         </div>
         <Link
@@ -34,6 +33,18 @@ export default function AdminDashboard({ role }) {
           View projects
         </Link>
       </div>
+
+      {dataStatus === "loading" && (
+        <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">
+          Loading project records...
+        </div>
+      )}
+
+      {dataStatus === "error" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {dataError || "Unable to load project records."}
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total projects" value={projects.length} />

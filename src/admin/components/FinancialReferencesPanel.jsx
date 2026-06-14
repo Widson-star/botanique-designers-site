@@ -9,7 +9,7 @@ function ReferenceRow({ label, value }) {
   );
 }
 
-export default function FinancialReferencesPanel({ project, role }) {
+export default function FinancialReferencesPanel({ financialReference, role, isDemo }) {
   return (
     <RoleVisibility role={role} ownerOnly>
       <section className="bg-white border border-stone-200 rounded-lg p-5">
@@ -18,6 +18,7 @@ export default function FinancialReferencesPanel({ project, role }) {
             <h2 className="font-bold text-lg">Owner-only financial references</h2>
             <p className="text-sm text-gray-500 mt-1">
               Simple Invoice Manager remains the financial source of truth.
+              {isDemo ? " Dev preview values are safe placeholders only." : ""}
             </p>
           </div>
           <span className="rounded-full bg-botanique-beige px-3 py-1 text-xs font-semibold text-botanique-green">
@@ -26,14 +27,12 @@ export default function FinancialReferencesPanel({ project, role }) {
         </div>
 
         <dl>
-          <ReferenceRow label="Simple Invoice client name" value={project.simpleInvoiceClientName} />
-          <ReferenceRow label="Estimate number" value={project.relatedEstimateNumber} />
-          <ReferenceRow label="Invoice number" value={project.relatedInvoiceNumber} />
-          <ReferenceRow label="Receipt/payment references" value={project.receiptPaymentReferences} />
-          <ReferenceRow label="Payment status" value={project.paymentStatus} />
-          <ReferenceRow label="Amount" value={project.amount} />
-          <ReferenceRow label="PDF link" value={project.pdfLink} />
-          <ReferenceRow label="Financial notes" value={project.financialNotes} />
+          <ReferenceRow label="Simple Invoice client name" value={financialReference.simpleInvoiceClientName} />
+          <ReferenceRow label="Estimate number" value={financialReference.relatedEstimateNumber} />
+          <ReferenceRow label="Invoice number" value={financialReference.relatedInvoiceNumber} />
+          <ReferenceRow label="Receipt/payment reference" value={financialReference.receiptPaymentReferences} />
+          <ReferenceRow label="Payment status" value={financialReference.paymentStatus} />
+          <ReferenceRow label="Financial notes" value={financialReference.financialNotes} />
         </dl>
       </section>
     </RoleVisibility>

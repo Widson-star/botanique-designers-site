@@ -10,6 +10,7 @@ export function canManageStaff(role) {
 
 export function canViewProject(project, role) {
   if (role === ROLES.OWNER || role === ROLES.MANAGER) return true;
+  if (role === ROLES.STAFF && project.accessGranted) return true;
   if (role === ROLES.STAFF) return project.assignments?.includes("Staff / Casual Team");
   return false;
 }

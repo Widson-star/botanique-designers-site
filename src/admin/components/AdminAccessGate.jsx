@@ -36,7 +36,7 @@ export default function AdminAccessGate({ onSelectRole }) {
 
         <div className="mt-6 rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
           No real credentials, secrets, private client data, invoice numbers, payment
-          amounts, PDFs, or financial notes are stored in this prototype.
+          records, financial documents, or financial notes are stored in this prototype.
         </div>
       </section>
     </div>

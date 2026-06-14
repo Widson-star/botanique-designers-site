@@ -2,8 +2,7 @@ import { Link } from "react-router-dom";
 import { useMemo, useState } from "react";
 import ProjectBadge from "../components/ProjectBadge";
 import ProjectFilters from "../components/ProjectFilters";
-import { projectSeed } from "../data/projectSeed";
-import { canViewFinancialReferences, getVisibleProjects } from "../utils/permissions";
+import { canViewFinancialReferences } from "../utils/permissions";
 
 const defaultFilters = {
   search: "",
@@ -31,14 +30,13 @@ function matchesSearch(project, search, includeFinancial) {
   return searchableValues.some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
 }
 
-export default function AdminProjects({ role }) {
+export default function AdminProjects({ role, projects, dataStatus, dataError, isDemo }) {
   const [filters, setFilters] = useState(defaultFilters);
-  const includeFinancial = canViewFinancialReferences(role);
-  const visibleProjects = getVisibleProjects(projectSeed, role);
-  const leadPeople = [...new Set(visibleProjects.map((project) => project.leadPerson).filter(Boolean))];
+  const includeFinancial = isDemo && canViewFinancialReferences(role);
+  const leadPeople = [...new Set(projects.map((project) => project.leadPerson).filter(Boolean))];
 
   const filteredProjects = useMemo(() => {
-    return visibleProjects.filter((project) => {
+    return projects.filter((project) => {
       if (!matchesSearch(project, filters.search, includeFinancial)) return false;
       if (filters.status && project.status !== filters.status) return false;
       if (filters.stage && project.stage !== filters.stage) return false;
@@ -48,7 +46,7 @@ export default function AdminProjects({ role }) {
       if (includeFinancial && filters.paymentStatus && project.paymentStatus !== filters.paymentStatus) return false;
       return true;
     });
-  }, [filters, includeFinancial, visibleProjects]);
+  }, [filters, includeFinancial, projects]);
 
   return (
     <div className="space-y-5">
@@ -56,7 +54,9 @@ export default function AdminProjects({ role }) {
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Search and filter the safe seed project tracker.
+            {isDemo
+              ? "Search and filter the safe seed project tracker."
+              : "Search and filter authenticated operational project records."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -76,6 +76,18 @@ export default function AdminProjects({ role }) {
           </button>
         </div>
       </div>
+
+      {dataStatus === "loading" && (
+        <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">
+          Loading project records...
+        </div>
+      )}
+
+      {dataStatus === "error" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {dataError || "Unable to load project records."}
+        </div>
+      )}
 
       <ProjectFilters filters={filters} setFilters={setFilters} leadPeople={leadPeople} role={role} />
 
