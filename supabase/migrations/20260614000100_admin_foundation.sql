@@ -6,16 +6,6 @@
 
 create extension if not exists pgcrypto;
 
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
@@ -116,21 +106,150 @@ create table if not exists public.project_financial_references (
   unique (project_id)
 );
 
-create trigger profiles_set_updated_at
-before update on public.profiles
-for each row execute function public.set_updated_at();
+-- =====================================================================
+-- Audit field hardening (BD-OPS-08B)
+-- ---------------------------------------------------------------------
+-- Actor (created_by/updated_by/archived_by) and timestamp
+-- (created_at/updated_at/archived_at) columns are SYSTEM-CONTROLLED.
+-- The triggers below ignore any client-supplied values for these
+-- columns and overwrite them from auth.uid() / now(). This means no
+-- RLS WITH CHECK column whitelist is required to protect audit fields:
+-- even if a client (owner OR manager) sends tampered audit values, the
+-- BEFORE trigger restores the trusted values. auth.uid() is referenced
+-- with its explicit schema so the result is independent of search_path.
+-- =====================================================================
 
-create trigger projects_set_updated_at
-before update on public.projects
-for each row execute function public.set_updated_at();
+-- profiles: created_by/updated_by + created_at/updated_at are immutable
+-- from the client and always derived from the session.
+create or replace function public.tg_audit_profiles()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (tg_op = 'INSERT') then
+    new.created_at = now();
+    new.updated_at = now();
+    new.created_by = coalesce(new.created_by, auth.uid());
+    new.updated_by = auth.uid();
+  elsif (tg_op = 'UPDATE') then
+    -- Creation provenance can never be rewritten after insert.
+    new.created_at = old.created_at;
+    new.created_by = old.created_by;
+    new.updated_at = now();
+    new.updated_by = auth.uid();
+  end if;
+  return new;
+end;
+$$;
 
-create trigger project_assignments_set_updated_at
-before update on public.project_assignments
-for each row execute function public.set_updated_at();
+-- projects: same actor/timestamp protection plus archive provenance.
+-- archived_at/archived_by are derived from the archived flag transition
+-- and can never be set directly by any client (owner or manager).
+create or replace function public.tg_audit_projects()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (tg_op = 'INSERT') then
+    new.created_at = now();
+    new.updated_at = now();
+    new.created_by = coalesce(new.created_by, auth.uid());
+    new.updated_by = auth.uid();
+    -- A project created already-archived records the archive actor now;
+    -- otherwise archive provenance starts empty.
+    if (new.archived is true) then
+      new.archived_at = now();
+      new.archived_by = auth.uid();
+    else
+      new.archived_at = null;
+      new.archived_by = null;
+    end if;
+  elsif (tg_op = 'UPDATE') then
+    new.created_at = old.created_at;
+    new.created_by = old.created_by;
+    new.updated_at = now();
+    new.updated_by = auth.uid();
+    if (new.archived is true and old.archived is distinct from true) then
+      -- false -> true: stamp the archive actor/time.
+      new.archived_at = now();
+      new.archived_by = auth.uid();
+    else
+      -- No archive transition (or un-archive): preserve audit history.
+      -- We intentionally keep the prior archived_at/archived_by even when
+      -- un-archiving so the historical archive event is not erased, and
+      -- so clients cannot forge these values on ordinary updates.
+      new.archived_at = old.archived_at;
+      new.archived_by = old.archived_by;
+    end if;
+  end if;
+  return new;
+end;
+$$;
 
-create trigger project_financial_references_set_updated_at
-before update on public.project_financial_references
-for each row execute function public.set_updated_at();
+-- project_assignments: created_by + created_at/updated_at protection.
+-- (This table has no updated_by column.)
+create or replace function public.tg_audit_assignments()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (tg_op = 'INSERT') then
+    new.created_at = now();
+    new.updated_at = now();
+    new.created_by = coalesce(new.created_by, auth.uid());
+  elsif (tg_op = 'UPDATE') then
+    new.created_at = old.created_at;
+    new.created_by = old.created_by;
+    new.updated_at = now();
+  end if;
+  return new;
+end;
+$$;
+
+-- project_financial_references: owner-only table, same actor protection.
+create or replace function public.tg_audit_financial()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (tg_op = 'INSERT') then
+    new.created_at = now();
+    new.updated_at = now();
+    new.created_by = coalesce(new.created_by, auth.uid());
+    new.updated_by = auth.uid();
+  elsif (tg_op = 'UPDATE') then
+    new.created_at = old.created_at;
+    new.created_by = old.created_by;
+    new.updated_at = now();
+    new.updated_by = auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_audit
+before insert or update on public.profiles
+for each row execute function public.tg_audit_profiles();
+
+create trigger projects_audit
+before insert or update on public.projects
+for each row execute function public.tg_audit_projects();
+
+create trigger project_assignments_audit
+before insert or update on public.project_assignments
+for each row execute function public.tg_audit_assignments();
+
+create trigger project_financial_references_audit
+before insert or update on public.project_financial_references
+for each row execute function public.tg_audit_financial();
 
 create or replace function public.current_user_role()
 returns text
@@ -225,6 +344,14 @@ for select
 to authenticated
 using (public.is_manager() and role = 'staff' and is_active = true);
 
+-- Role-escalation protection: profile writes are owner-only. Managers
+-- have NO insert or update policy on profiles, so a manager cannot create
+-- an owner/manager, cannot promote a staff member, and cannot deactivate
+-- or alter any profile. Manager-driven staff invite is intentionally
+-- DEFERRED: it cannot be expressed safely as RLS alone (a manager INSERT
+-- policy on profiles would also have to forbid role in ('owner','manager')
+-- and forbid editing existing rows, which is brittle), so staff onboarding
+-- stays an owner-only action in this phase.
 create policy "profiles_insert_owner_only"
 on public.profiles
 for insert
@@ -254,6 +381,18 @@ for insert
 to authenticated
 with check (public.is_owner() or public.is_manager());
 
+-- Owner and manager may both run UPDATE on projects. Manager is allowed
+-- to edit operational columns (project_name, client_site_name, location,
+-- county, project_type, status, stage, lead_person_id, start_date,
+-- last_updated, next_action, next_action_date, portfolio_eligible,
+-- portfolio_permission_status, notes, archived). Manager may archive
+-- (set archived = true) but the resulting archived_at/archived_by are
+-- system-stamped by tg_audit_projects, not client-supplied. The audit
+-- columns (created_by/created_at/updated_by/updated_at/archived_by/
+-- archived_at) are NOT editable by anyone via this policy because the
+-- BEFORE trigger overrides any client value. Postgres RLS cannot express
+-- a per-column UPDATE whitelist in a single policy, so column protection
+-- is enforced by the trigger rather than by WITH CHECK.
 create policy "projects_update_owner_manager"
 on public.projects
 for update
