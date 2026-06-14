@@ -25,67 +25,59 @@ function line(label, value) {
 // Quotation / site-visit request (from the Quote Wizard or generic "WhatsApp us"
 // CTAs). Pass whatever fields are available; the rest remain simple labels.
 export function buildQuoteMessage(form = {}) {
-  const lines = [
-    "Hello Botanique Designers 🌿,",
+  return [
+    "Hello Botanique Designers,",
     "",
     "I would like to request a site visit / quotation.",
     "",
+    line("Name", form.name),
     line("Service", form.service),
     line("Location", form.location),
     line("Project size", form.size),
-  ];
-
-  if (form.budget) lines.push(line("Budget range", form.budget));
-  if (form.timeline) lines.push(line("Preferred timeline", form.timeline));
-
-  return [
-    ...lines,
-    "Brief description:",
+    line("Budget range", form.budget),
     "",
-    "I can share photos or videos of the site.",
-    "",
-    "Please advise on the next step.",
+    "Could you please advise on the site visit fee and the next available appointment?",
   ].join("\n");
 }
 
 // Service detail page CTA.
 export function buildServiceMessage(serviceName) {
   return [
-    "Hello Botanique Designers 🌿,",
+    "Hello Botanique Designers,",
     "",
-    `I am interested in ${serviceName}.`,
+    "I would like to request a site visit / quotation.",
     "",
+    "Name:",
+    line("Service", serviceName),
     "Location:",
-    "Brief description:",
-    "Preferred timeline:",
+    "Project size:",
+    "Budget range:",
     "",
-    "I can share photos or videos of the site.",
-    "",
-    "Please advise on the next step.",
+    "Could you please advise on the site visit fee and the next available appointment?",
   ].join("\n");
 }
 
 // Project / case-study CTA.
 export function buildProjectMessage(projectName) {
   return [
-    "Hello Botanique Designers 🌿,",
+    "Hello Botanique Designers,",
     "",
-    `I saw the ${projectName} project and would like something similar.`,
+    `I saw the ${projectName} project and would like to request a site visit / quotation for something similar.`,
     "",
+    "Name:",
+    "Service:",
     "Location:",
-    "Brief description:",
-    "Preferred timeline:",
+    "Project size:",
+    "Budget range:",
     "",
-    "I can share photos or videos of the site.",
-    "",
-    "Please advise on the next step.",
+    "Could you please advise on the site visit fee and the next available appointment?",
   ].join("\n");
 }
 
 // Contact-form WhatsApp fallback (used when the website form can't send).
 export function buildContactFallbackMessage(form = {}) {
   return [
-    "Hello Botanique Designers 🌿,",
+    "Hello Botanique Designers,",
     "",
     "I tried sending a message through the website, but I am sharing it here directly.",
     "",
