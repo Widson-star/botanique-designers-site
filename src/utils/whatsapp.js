@@ -23,21 +23,25 @@ function line(label, value) {
 }
 
 // Quotation / site-visit request (from the Quote Wizard or generic "WhatsApp us"
-// CTAs). Pass whatever fields are available; the rest remain simple labels.
+// CTAs). The Quote Wizard collects a name and site context in visible steps, so
+// those lines are included only when present. Generic CTAs that don't collect
+// them pass no form, so blank "Name:"/"Site context:" lines are omitted rather
+// than shown empty. Service/Location/Project size/Budget range remain as simple
+// labels for the client to complete in WhatsApp.
 export function buildQuoteMessage(form = {}) {
-  return [
-    "Hello Botanique Designers,",
-    "",
-    "I would like to request a site visit / quotation.",
-    "",
-    line("Name", form.name),
-    line("Service", form.service),
-    line("Location", form.location),
-    line("Project size", form.size),
-    line("Budget range", form.budget),
-    "",
-    "Could you please advise on the site visit fee and the next available appointment?",
-  ].join("\n");
+  const lines = ["Hello Botanique Designers,", "", "I would like to request a site visit / quotation.", ""];
+
+  if (form.name) lines.push(line("Name", form.name));
+
+  lines.push(line("Service", form.service), line("Location", form.location), line("Project size", form.size));
+
+  if (form.siteContext) lines.push(line("Site context", form.siteContext));
+
+  lines.push(line("Budget range", form.budget));
+
+  lines.push("", "Could you please advise on the site visit fee and the next available appointment?");
+
+  return lines.join("\n");
 }
 
 // Service detail page CTA.
@@ -47,7 +51,6 @@ export function buildServiceMessage(serviceName) {
     "",
     "I would like to request a site visit / quotation.",
     "",
-    "Name:",
     line("Service", serviceName),
     "Location:",
     "Project size:",
@@ -64,7 +67,6 @@ export function buildProjectMessage(projectName) {
     "",
     `I saw the ${projectName} project and would like to request a site visit / quotation for something similar.`,
     "",
-    "Name:",
     "Service:",
     "Location:",
     "Project size:",

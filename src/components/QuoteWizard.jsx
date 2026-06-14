@@ -5,17 +5,21 @@ import { buildQuoteMessage, waLink } from "../utils/whatsapp.js";
 export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
+    name: "",
     service: "",
     location: "",
     size: "",
+    siteContext: "",
     budget: "",
   });
 
   function isStepValid() {
-    if (step === 1) return form.service !== "";
-    if (step === 2) return form.location.trim() !== "";
-    if (step === 3) return form.size.trim() !== "";
-    if (step === 4) return form.budget !== "";
+    if (step === 1) return form.name.trim() !== "";
+    if (step === 2) return form.service !== "";
+    if (step === 3) return form.location.trim() !== "";
+    if (step === 4) return form.size.trim() !== "";
+    if (step === 5) return form.siteContext.trim() !== "";
+    if (step === 6) return form.budget !== "";
     return true;
   }
 
@@ -30,8 +34,8 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
   async function next() {
     if (!isStepValid()) return;
 
-    // STEP 1: if choosing Consultation, auto calculate distance
-    if (step === 1 && form.service === "Consultation & Site Assessment") {
+    // SERVICE STEP: if choosing Consultation, auto calculate distance
+    if (step === 2 && form.service === "Consultation & Site Assessment") {
       setOpen(false);
 
       // Get km distance from location user typed
@@ -48,7 +52,7 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
       return;
     }
 
-    if (step < 4) setStep(step + 1);
+    if (step < 6) setStep(step + 1);
   }
 
   function goBack() {
@@ -69,11 +73,26 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
             </button>
 
             <h2 className="text-xl font-bold mb-4">
-              Instant Quote – Step {step}/4
+              Instant Quote – Step {step}/6
             </h2>
 
-            {/* STEP 1 */}
+            {/* STEP 1 — Your name */}
             {step === 1 && (
+              <>
+                <p className="mb-2 text-gray-700">Your name</p>
+                <input
+                  className="w-full border p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="e.g. Jane Mwangi"
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm({ ...form, name: e.target.value })
+                  }
+                />
+              </>
+            )}
+
+            {/* STEP 2 — Service */}
+            {step === 2 && (
               <>
                 <p className="mb-2 text-gray-700">What service do you need?</p>
                 <select
@@ -96,8 +115,8 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
               </>
             )}
 
-            {/* STEP 2 */}
-            {step === 2 && (
+            {/* STEP 3 — Location */}
+            {step === 3 && (
               <>
                 <p className="mb-2 text-gray-700">Where is the project located?</p>
                 <input
@@ -111,8 +130,8 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
               </>
             )}
 
-            {/* STEP 3 */}
-            {step === 3 && (
+            {/* STEP 4 — Project size */}
+            {step === 4 && (
               <>
                 <p className="mb-2 text-gray-700">Approximate project size?</p>
                 <input
@@ -126,8 +145,24 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
               </>
             )}
 
-            {/* STEP 4 */}
-            {step === 4 && (
+            {/* STEP 5 — Site context */}
+            {step === 5 && (
+              <>
+                <p className="mb-2 text-gray-700">What is the current state of the site?</p>
+                <textarea
+                  rows={4}
+                  className="w-full border p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Example: vacant land, completed house, ongoing construction, old garden needing redesign, commercial site, estate common area..."
+                  value={form.siteContext}
+                  onChange={(e) =>
+                    setForm({ ...form, siteContext: e.target.value })
+                  }
+                />
+              </>
+            )}
+
+            {/* STEP 6 — Budget + preview */}
+            {step === 6 && (
               <>
                 <p className="mb-2 text-gray-700">Estimated budget range?</p>
 
@@ -173,7 +208,7 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
                 </button>
               )}
 
-              {step < 4 ? (
+              {step < 6 ? (
                 <button
                   onClick={next}
                   disabled={!isStepValid()}
