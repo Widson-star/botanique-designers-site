@@ -379,6 +379,12 @@ Consultation/location sequencing repair:
   transitions and blank-location calculations. PaidConsultancyModal now syncs its
   distance field when it (re)opens so the calculated km actually displays; fee
   calculation and payment rules are unchanged.
+* Async safety: the distance lookup is guarded by an `activeRef`. If the visitor
+  closes the wizard (✕ / Escape / backdrop) while the lookup is in flight, the
+  component unmounts (parent remount `key`) and the cleanup flips `activeRef` to
+  false, so a late-resolving `getDistanceKm` no longer reopens
+  PaidConsultancyModal for a request that no longer belongs to an open wizard.
+  The successful path and manual fallback are unaffected.
 
 Wizard usability / accessibility:
 
@@ -390,9 +396,18 @@ Wizard usability / accessibility:
   padding).
 * The red "please complete this step" warning now appears only after the visitor
   attempts to continue, not pre-emptively.
-* Service prefill from service/project pages is wired through to the wizard
-  (pre-selects the service when the passed label matches a wizard option; no
-  invented mappings).
+* Service prefill uses an authoritative category/slug mapping (in
+  `src/data/services.js`: `wizardServiceForSlug` / `wizardServiceForSlugs`), not
+  loose text matching. Service detail pages resolve their slug/category to the
+  matching broad wizard option (e.g. landscape-design/architecture/ecological →
+  "Landscape Design & Architecture"; irrigation-systems → "Irrigation System
+  Design & Installation"; garden-maintenance/lawn-care → "Garden Maintenance &
+  Aftercare"; plant-science services → "Horticultural Services"; implementation →
+  "Landscape Implementation & Construction"; commercial → "Public / Commercial
+  Landscaping"). Case-study/project pages derive the option from the study's
+  authoritative `relatedServices` slugs; homepage project cards open the wizard
+  with no service preselected. A project title is never passed as a service, and
+  no new services are invented.
 * The wizard resets on each open via a parent remount `key`, so a completed
   handoff starts fresh next time while moving back/forward between steps does not
   lose entered values.

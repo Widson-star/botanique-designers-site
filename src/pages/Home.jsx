@@ -449,7 +449,7 @@ export default function Home() {
                   <h3 className="text-lg font-semibold mb-1">{project.title}</h3>
                   <p className="text-sm text-white/80 mb-4">{project.location}</p>
                   <button
-                    onClick={() => openQuoteWizard(project.title)}
+                    onClick={() => openQuoteWizard()}
                     className="self-start px-5 py-2 rounded-full bg-botanique-green text-sm font-medium hover:scale-105 transition"
                   >
                     Request Similar Design

@@ -42,6 +42,18 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
   const [showError, setShowError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const dialogRef = useRef(null);
+  // Tracks whether this wizard instance is still mounted/active. A consultation
+  // distance lookup is async; if the visitor closes the wizard (✕ / Escape /
+  // backdrop) while it is in flight, the parent unmounts this instance and the
+  // cleanup below flips this to false, so the resolved lookup will NOT reopen the
+  // paid-consultancy modal for a request that no longer belongs to an open wizard.
+  const activeRef = useRef(true);
+  useEffect(() => {
+    activeRef.current = true;
+    return () => {
+      activeRef.current = false;
+    };
+  }, []);
 
   // Close on Escape while the wizard is open.
   useEffect(() => {
@@ -109,11 +121,14 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
       } catch {
         km = null;
       }
+      // If the wizard was closed/unmounted while the lookup was in flight, drop
+      // the result — do not reopen the paid-consultancy modal for a stale request.
+      if (!activeRef.current) return;
+      setSubmitting(false);
       setOpen(false);
       // If the automatic lookup fails, open the modal with 0 km so the visitor
       // can enter the distance manually (the modal keeps that fallback field).
       onConsultancyRequired(km ? Math.round(km) : 0);
-      setSubmitting(false);
       return;
     }
 
