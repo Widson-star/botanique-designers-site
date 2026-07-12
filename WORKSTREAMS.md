@@ -289,7 +289,7 @@ limiter is per-instance (fine for single-instance Express).
 
 ## BD-TRUTH-CONSISTENCY-01 — Public Claims and Credentials
 
-Status: In review — Draft PR #5
+Status: Implementation complete — PR #5
 
 Record:
 
