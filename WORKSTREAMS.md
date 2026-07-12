@@ -491,18 +491,33 @@ Approved commercial/operational policies (owner-approved 12 July 2026):
   `services.js`, `server/index.js` prompt, and the area-page maintenance cards).
   Those public files were **not** changed in Phase A.
 
-All thirteen commercial/operational decisions previously listed as unresolved are
-now **approved** (duration, renewal/cancellation, assessment-fee credit, payment
-cycle, VAT, weather/rescheduling, property access, client-caused missed visits,
-waste removal, materials/consumables, emergency work, visit-summary
-responsibilities, and final programme names). No Phase A commercial/operational
-decision remains outstanding.
+* **Commercial segmentation (approved 12 July 2026):** the three GardenCare
+  programmes serve residential and smaller commercial/institutional/hospitality
+  sites where the assessed work fits them; larger or operationally complex grounds
+  (extensive estate common areas, campuses, large hotels, hospitals, major
+  institutional properties) are handled through a **bespoke Botanique Designers
+  commercial maintenance agreement**, not the three standard programmes. Such
+  clients are not rejected — they remain Botanique clients on a separately scoped
+  agreement. No fourth GardenCare package or "GardenCare Bespoke" public name;
+  suitability is set by assessment; no size/acreage/staffing/price/complexity
+  thresholds are published.
 
-**Next phase: Phase B — public website implementation and consistency correction.**
-Phase B **has not started** and is a separate workstream. It covers drafting and
-owner sign-off of the public GardenCare wording, reconciling the existing public
-maintenance copy catalogued in the product definition (§21), and confirming the
-commercial-grounds segmentation (standard vs bespoke) for larger/complex grounds.
-GardenCare remains **not publicly launched**, and this change touched no public
-code or website content — only `GARDENCARE_PRODUCT_DEFINITION.md` and this
+**Phase A is fully complete.** All fourteen approved policies (the original thirteen
+commercial/operational decisions plus the commercial-grounds segmentation) are
+recorded and approved. **No GardenCare commercial or operational decision remains
+outstanding.**
+
+**Phase B is now ready to begin but has NOT started** (a separate workstream). Phase
+B scope:
+
+* public GardenCare wording;
+* reconciliation of the inconsistent existing maintenance claims catalogued in the
+  product definition (§21);
+* public website implementation;
+* enquiry / WhatsApp entry-point integration;
+* validation against the authoritative GardenCare definition.
+
+These are Phase B delivery items, not preconditions blocking Phase B from starting.
+GardenCare remains **not publicly launched**, and this change touched no public code
+or website content — only `GARDENCARE_PRODUCT_DEFINITION.md` and this
 `WORKSTREAMS.md` note.

@@ -33,16 +33,35 @@ pricing tables or website copy are created or changed.
   upkeep under a written agreement.
 - Estate and gated-community homes, and estate/common-area managers, within the
   coverage area.
-- Small commercial, institutional and hospitality grounds where the scope suits a
-  recurring maintenance agreement (larger or complex commercial grounds may be
-  handled under a bespoke commercial arrangement rather than a standard GardenCare
-  structure — to be confirmed in Phase B).
+- Smaller commercial, institutional and hospitality sites where the assessed work
+  fits the three standard GardenCare structures.
 - Customers who have had a garden designed/installed (by Botanique or others) and
   want it maintained to a defined standard.
 
 Customers outside the launch coverage area, or whose needs are primarily design,
 installation, rehabilitation or specialist work, are **not** GardenCare customers
 and should be routed to the relevant service enquiry instead.
+
+**Approved commercial segmentation (approved 12 July 2026):**
+
+> GardenCare Regular, GardenCare Monthly and GardenCare Seasonal are available to
+> residential properties and smaller commercial, institutional or hospitality
+> sites where the assessed work fits these structures. Larger or operationally
+> complex grounds — including extensive estate common areas, campuses, large
+> hotels, hospitals and major institutional properties — are handled through a
+> bespoke Botanique Designers commercial maintenance agreement, not through the
+> three standard GardenCare programmes.
+
+Interpretation and boundaries:
+
+- Large or complex clients are **not rejected** — they remain Botanique Designers
+  clients and receive a **separately scoped commercial maintenance agreement**.
+- This does **not** create a fourth GardenCare package or a "GardenCare Bespoke"
+  public name. The three GardenCare programmes (§4) remain the **only** approved
+  GardenCare public names.
+- **Suitability is determined through assessment.** Do **not** publish size,
+  acreage, staffing, price or complexity thresholds — none are defined and none may
+  be invented.
 
 ## 3. Launch coverage (precise, approved wording)
 
@@ -388,43 +407,43 @@ package-content lists vs per-property scope; "consistent team"; "log of each
 visit" / maintenance-log language; "replace as needed"; "everything a garden
 needs"; and coverage beyond Nairobi Metropolitan Area.
 
-## 22. Phase B — website-entry criteria and readiness
+## 22. Phase A completion and Phase B readiness
 
-The Phase A **commercial and operational policies are now approved** (§4, §5, §8–17;
-owner-approved 12 July 2026), and the **final public programme names are confirmed**
-(§4). What remains before Phase B can begin:
+**Phase A is complete.** All GardenCare commercial and operational policies are
+approved (§2 segmentation, §4, §5, §8–17; owner-approved 12 July 2026), the **final
+public programme names are confirmed** (§4), and the **commercial-grounds
+segmentation is approved** (§2). No Phase A commercial or operational decision
+remains unresolved.
 
-1. Approved **public-facing wording** for GardenCare (coverage, programmes,
-   inclusions/exclusions, pricing framing, duration/payment/cancellation, VAT,
-   weather/access/missed-visit, reporting) drafted from the approved policies and
-   signed off for publication.
-2. An agreed **reconciliation plan** for the existing website statements in §21, so
-   the new GardenCare copy and the existing maintenance copy are consistent.
-3. Confirmation that **no prohibited claim (§20)** appears in the launch copy.
-4. Confirmation of the **commercial-grounds segmentation** noted in §2 (standard
-   GardenCare vs bespoke commercial arrangement).
+**Phase B is now authorised to begin** as a separate workstream. It **has not
+started**. Phase B is public website implementation and consistency correction, and
+its scope is:
 
-**Readiness status:** the underlying commercial/operational decisions required to
-define the programme are **approved**. Phase B (public website implementation and
-consistency correction) is the next phase; it **has not started** and is a separate
-workstream. Do not treat Phase B as begun or completed.
+1. Drafting and owner sign-off of the **public-facing GardenCare wording** (coverage,
+   programmes, segmentation, inclusions/exclusions, pricing framing,
+   duration/payment/cancellation, VAT, weather/access/missed-visit, reporting).
+2. **Reconciling** the existing public maintenance copy catalogued in §21 so the new
+   GardenCare copy and the existing site copy are consistent.
+3. **Public website implementation** of GardenCare.
+4. **Enquiry / WhatsApp entry-point integration.**
+5. **Validation against this authoritative GardenCare definition**, confirming no
+   prohibited claim (§20) appears in the launch copy.
+
+These are **Phase B work items, not preconditions that block Phase B from
+beginning.** GardenCare remains **not publicly launched** until Phase B delivers and
+the owner approves the published wording.
 
 ## 23. Remaining open items
 
-All thirteen commercial/operational decisions previously listed as unresolved are
-now **approved** (see §4, §5, §8, §9, §10, §11, §12, §13, §14, §15, §16, §17 and
-the Owner Approval Record). No Phase A commercial/operational decision remains
-outstanding.
+**None at the Phase A commercial/operational level.** All fourteen approved policies
+— the original thirteen commercial/operational decisions plus the subsequently
+approved commercial-grounds segmentation — are recorded and approved (see §2, §4,
+§5, §8, §9, §10, §11, §12, §13, §14, §15, §16, §17 and the Owner Approval Record).
+No GardenCare commercial or operational decision remains outstanding.
 
-The only remaining open items are **Phase B scope**, not blocking Phase A
-commercial policy:
-
-- drafting and owner sign-off of the **public-facing GardenCare wording**;
-- the **reconciliation plan** for the existing maintenance copy in §21;
-- confirmation of the **commercial-grounds segmentation** in §2 (standard vs
-  bespoke) for larger/complex grounds.
-
-These are handled in Phase B and are not commercial-policy gaps.
+The remaining work (public wording, reconciliation of existing maintenance copy,
+website implementation, enquiry/WhatsApp integration, validation) is **Phase B
+delivery scope** — it is not an unresolved policy decision.
 
 ## Owner Approval Record
 
@@ -467,6 +486,17 @@ in this document, specifically:
     initial channel WhatsApp; no portal/dashboard/automated log (§17).
 13. Final programme names — GardenCare Regular, GardenCare Monthly, GardenCare
     Seasonal (final public names, no longer working names) (§4).
+14. Commercial segmentation — the three GardenCare programmes serve residential and
+    smaller commercial/institutional/hospitality sites where the assessed work fits
+    them; larger or operationally complex grounds (extensive estate common areas,
+    campuses, large hotels, hospitals, major institutional properties) are handled
+    through a **bespoke Botanique Designers commercial maintenance agreement**, not
+    the three standard programmes. No fourth GardenCare package or "GardenCare
+    Bespoke" public name is created; suitability is determined by assessment; no
+    size, acreage, staffing, price or complexity thresholds are published (§2).
+
+Items 1–13 are the original commercial/operational decisions; item 14 (commercial
+segmentation) was approved on the same date and completes the commercial policy set.
 
 GardenCare remains **not publicly launched**. This approval covers internal
 commercial/operational policy only; it does not authorise any public website
