@@ -421,3 +421,48 @@ Protected systems left unchanged:
   positioning, and GardenCare product work were all left untouched. No new
   testimonials, ratings, guarantees, response promises, prices or business claims
   were introduced.
+
+## BD-GARDENCARE-01 — GardenCare Maintenance Programme
+
+Status: Phase A complete (product/operations definition) — draft PR. **GardenCare
+is NOT publicly launched.**
+
+Phase A is **documentation only**. It defines GardenCare as an operationally
+realistic Botanique Designers maintenance programme before any public
+implementation. Full definition in `GARDENCARE_PRODUCT_DEFINITION.md`.
+
+Key points recorded:
+
+* GardenCare is a **programme offered by Botanique Designers** — not a separate
+  company, legal entity or unrelated brand.
+* **No public website functionality changed.** No public pages, packages, buttons,
+  pricing tables or website copy were added or edited. Only two files changed:
+  `GARDENCARE_PRODUCT_DEFINITION.md` (new) and this `WORKSTREAMS.md` note.
+* **Pricing remains custom** — priced after garden and location assessment. No
+  generic public prices; no invented package prices, discounts, visit durations,
+  labour hours or crew sizes. The existing site-visit fee and payment calculations
+  are unchanged.
+* **Coverage:** Nairobi Metropolitan Area — "Nairobi City and selected accessible
+  locations in Kiambu, Kajiado and Machakos counties, subject to site assessment
+  and route availability." Not nationwide; not blanket three-county coverage. The
+  separate Kenya-wide landscape-design positioning is unchanged.
+* Initial working structures (working names only): GardenCare Regular
+  (weekly/fortnightly), GardenCare Monthly (one comprehensive monthly visit),
+  GardenCare Seasonal (quarterly assessment/corrective — not a substitute for
+  routine lawn maintenance).
+* Reporting at launch is a short WhatsApp visit summary; no portal/dashboard/
+  automated log promised. The admin tracker, Supabase and operations systems were
+  **not** modified.
+* Existing public maintenance copy that will need review at public implementation
+  is catalogued in the product definition (`index.html` FAQ JSON-LD, `faqs.js`,
+  `services.js`, `server/index.js` prompt, and the area-page maintenance cards).
+  Those public files were **not** changed in Phase A.
+
+Phase B (public launch) **cannot begin** until the remaining commercial and
+operational decisions are approved by the owner, namely: minimum agreement
+duration; renewal and cancellation notice; treatment of the initial assessment
+fee; exact payment cycle; VAT treatment; weather and rescheduling policy;
+property-access requirements; treatment of client-caused missed visits;
+waste-removal limits; consumables/material approval process; emergency callout
+policy; responsibility for preparing and sending visit summaries; and whether the
+working programme names are the final public names.
