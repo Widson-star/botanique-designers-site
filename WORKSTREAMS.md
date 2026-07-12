@@ -325,7 +325,7 @@ Notes:
 
 ## BD-CONVERSION-01 — Project Enquiry Journey
 
-Status: Implementation complete — draft PR
+Status: Implementation complete — PR #6
 
 Scope:
 
