@@ -830,4 +830,43 @@ const services = {
   },
 };
 
+// ── QuoteWizard prefill mapping ──────────────────────────────────────────────
+// Maps authoritative service data (category id, with slug-level overrides) to the
+// broad service options offered in the project-enquiry wizard. Kept here so the
+// mapping stays next to the data it depends on. These strings must stay in sync
+// with SERVICE_OPTIONS in src/components/QuoteWizard.jsx.
+const WIZARD_OPTION_BY_CATEGORY = {
+  "design-planning": "Landscape Design & Architecture",
+  "plant-science": "Horticultural Services (Planting & Maintenance)",
+  implementation: "Landscape Implementation & Construction",
+  "ongoing-care": "Garden Maintenance & Aftercare",
+  commercial: "Public / Commercial Landscaping",
+};
+
+// Specific services that map to their own wizard option rather than their
+// category default (irrigation has a dedicated option even though it lives under
+// the "implementation" category).
+const WIZARD_OPTION_BY_SLUG = {
+  "irrigation-systems": "Irrigation System Design & Installation",
+};
+
+// Resolve a single service slug to a wizard option, or "" when it can't be
+// resolved from authoritative data (caller then leaves the service unselected).
+export function wizardServiceForSlug(slug) {
+  if (!slug) return "";
+  if (WIZARD_OPTION_BY_SLUG[slug]) return WIZARD_OPTION_BY_SLUG[slug];
+  const item = services.items[slug];
+  return item ? WIZARD_OPTION_BY_CATEGORY[item.category] || "" : "";
+}
+
+// Resolve the first recognised service slug in a list (e.g. a case study's
+// relatedServices) to a wizard option, or "" if none resolve.
+export function wizardServiceForSlugs(slugs = []) {
+  for (const slug of slugs) {
+    const option = wizardServiceForSlug(slug);
+    if (option) return option;
+  }
+  return "";
+}
+
 export default services;

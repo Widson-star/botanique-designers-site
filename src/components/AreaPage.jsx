@@ -156,17 +156,17 @@ export default function AreaPage({
       {/* CTA */}
       <section className="py-20 bg-botanique-green text-white text-center">
         <h2 className="text-3xl font-bold mb-4">
-          Get a Quote for Your {areaName} Property
+          Start a Project Enquiry for Your {areaName} Property
         </h2>
         <p className="text-white/80 mb-8 max-w-xl mx-auto">
-          We arrange site visits and quotes across {areaName} and surrounding
+          We arrange site visits and quotations across {areaName} and surrounding
           areas. Get in touch to tell us about your project.
         </p>
         <button
           onClick={() => openQuoteWizard()}
           className="px-8 py-4 rounded-full bg-white text-botanique-green font-semibold hover:scale-105 transition"
         >
-          Request a Site Visit
+          Start Your Project Enquiry
         </button>
       </section>
 

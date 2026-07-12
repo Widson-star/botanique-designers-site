@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useApp } from "../../context/AppContext";
 import FadeIn from "../../components/FadeIn";
-import services from "../../data/services";
+import services, { wizardServiceForSlug } from "../../data/services";
 import caseStudies from "../../data/case-studies";
 import { buildServiceMessage, waLink } from "../../utils/whatsapp";
 
@@ -36,7 +36,9 @@ export default function ServicePage() {
     : [];
 
   const handleQuote = () => {
-    setPrefilledService(svc.title);
+    // Preselect the wizard's broad service option from this service's slug/
+    // category (authoritative data), not its display title.
+    setPrefilledService(wizardServiceForSlug(slug));
     setQuoteWizardOpen(true);
   };
 
@@ -272,7 +274,7 @@ export default function ServicePage() {
               onClick={handleQuote}
               className="bg-white text-botanique-green px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition cursor-pointer"
             >
-              Request a Quote
+              Start Your Project Enquiry
             </button>
             <a
               href={waLink(buildServiceMessage(svc.title))}

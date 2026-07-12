@@ -117,6 +117,7 @@ function AppInner() {
       {/* Global Modals */}
       <ErrorBoundary>
         <QuoteWizard
+          key={quoteWizardOpen ? "quote-wizard-open" : "quote-wizard-closed"}
           open={quoteWizardOpen}
           setOpen={setQuoteWizardOpen}
           prefilledService={prefilledService}

@@ -151,7 +151,7 @@ export default function Header() {
             onClick={() => openQuoteWizard()}
             className="px-5 py-2 rounded-full bg-botanique-green text-white text-sm hover:scale-105 transition cursor-pointer"
           >
-            Get a Quote
+            Project Enquiry
           </button>
         </nav>
 
@@ -226,7 +226,7 @@ export default function Header() {
             onClick={() => { openQuoteWizard(); closeMobile(); }}
             className="block w-full mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center cursor-pointer"
           >
-            Get a Quote
+            Project Enquiry
           </button>
         </div>
       )}

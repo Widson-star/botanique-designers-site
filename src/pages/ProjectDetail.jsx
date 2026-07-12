@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 import FadeIn from "../components/FadeIn";
 import caseStudies from "../data/case-studies";
-import services from "../data/services";
+import services, { wizardServiceForSlugs } from "../data/services";
 import { buildProjectMessage, waLink } from "../utils/whatsapp";
 
 export default function ProjectDetail() {
@@ -27,7 +27,10 @@ export default function ProjectDetail() {
   }
 
   const handleQuote = () => {
-    setPrefilledService(study.title);
+    // Derive a valid wizard option from this case study's related services
+    // (authoritative slugs). Never pass the project title as a service; if
+    // nothing resolves, open the wizard with no service preselected.
+    setPrefilledService(wizardServiceForSlugs(study.relatedServices));
     setQuoteWizardOpen(true);
   };
 
@@ -276,7 +279,7 @@ export default function ProjectDetail() {
               onClick={handleQuote}
               className="bg-white text-botanique-green px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition cursor-pointer"
             >
-              Request a Site Visit
+              Start Your Project Enquiry
             </button>
             <a
               href={waLink(buildProjectMessage(study.title))}

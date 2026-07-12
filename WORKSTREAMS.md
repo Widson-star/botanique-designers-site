@@ -322,3 +322,102 @@ Notes:
   verified (12 July 2026). A test email sent from an external Gmail account
   arrived successfully in the Botanique Designers inbox, confirming the alias and
   mail routing.
+
+## BD-CONVERSION-01 — Project Enquiry Journey
+
+Status: Implementation complete — PR #6
+
+Scope:
+
+* correct misleading "Instant Quote" wording
+* repair the consultation location/distance sequencing defect
+* make wizard-opening CTAs consistent
+* improve modal mobile fit and accessibility
+* leave verified facts and protected systems unchanged
+
+Truthful conversion language:
+
+* The journey does not calculate a monetary price — it collects project details
+  and prepares a WhatsApp enquiry. Public "Instant Quote" / "Get a Quote" /
+  "custom quote" wording was replaced with project-enquiry language:
+  * Wizard heading: "Instant Quote – Step X/6" → "Tell Us About Your Project"
+    with a "Step X of 6 · we'll prepare a WhatsApp enquiry — no automatic price
+    is calculated" subline.
+  * Completion CTA: "Send to WhatsApp" → "Send Enquiry on WhatsApp".
+  * Header (desktop + mobile): "Get a Quote" → "Project Enquiry".
+  * Homepage hero + "How we work" buttons: "Request a Site Visit" → "Start Your
+    Project Enquiry".
+  * Homepage enquiry section: heading "Get an Instant Quote" → "Start Your
+    Project Enquiry"; button "Start Instant Quote" → "Start Your Project
+    Enquiry"; section id `instant-quote` → `project-enquiry` (no internal
+    references); the response line now reads "usually within one business day".
+  * Projects page: "Get a custom quote in under 2 minutes" → "Tell us about your
+    project in under 2 minutes"; button "Get an Instant Quote" → "Start Your
+    Project Enquiry".
+  * Service detail page: "Request a Quote" → "Start Your Project Enquiry".
+  * Project/case-study detail page: "Request a Site Visit" → "Start Your Project
+    Enquiry".
+  * Area pages: heading "Get a Quote for Your … Property" → "Start a Project
+    Enquiry for Your … Property"; button "Request a Site Visit" → "Start Your
+    Project Enquiry".
+  * Ask Botanique backend system prompt: "Instant Quote tool" → "Project Enquiry
+    tool" (public assistant content only).
+* Kept WhatsApp as the immediate alternative on every surface. Left genuine
+  quotation prose in the WhatsApp message body ("site visit / quotation") and the
+  homepage project-card CTA "Request Similar Design" untouched (honest, specific).
+
+Consultation/location sequencing repair:
+
+* Defect: selecting "Consultation & Site Assessment" at step 2 triggered a
+  distance lookup using `form.location` before the location was collected at
+  step 3 (always empty → always fell to the manual fallback).
+* Fix: the distance is now calculated at step 3, only after a valid location is
+  entered. On "Next" from step 3 for a consultation, the wizard calculates the
+  distance and opens the existing PaidConsultancyModal. If the lookup fails or
+  returns nothing, the modal opens with 0 km so the visitor can enter distance
+  manually (fallback preserved). A `submitting` guard prevents duplicate modal
+  transitions and blank-location calculations. PaidConsultancyModal now syncs its
+  distance field when it (re)opens so the calculated km actually displays; fee
+  calculation and payment rules are unchanged.
+* Async safety: the distance lookup is guarded by an `activeRef`. If the visitor
+  closes the wizard (✕ / Escape / backdrop) while the lookup is in flight, the
+  component unmounts (parent remount `key`) and the cleanup flips `activeRef` to
+  false, so a late-resolving `getDistanceKm` no longer reopens
+  PaidConsultancyModal for a request that no longer belongs to an open wizard.
+  The successful path and manual fallback are unaffected.
+
+Wizard usability / accessibility:
+
+* Modal now has `role="dialog"`, `aria-modal`, and `aria-labelledby`; the close
+  button has an accessible name; Escape closes; backdrop click closes while
+  clicks inside the dialog do not (stopPropagation); every field has an
+  associated `<label htmlFor>`; focus moves into the dialog on open.
+* Modal fits and scrolls on small screens (`max-h-[90vh] overflow-y-auto`, outer
+  padding).
+* The red "please complete this step" warning now appears only after the visitor
+  attempts to continue, not pre-emptively.
+* Service prefill uses an authoritative category/slug mapping (in
+  `src/data/services.js`: `wizardServiceForSlug` / `wizardServiceForSlugs`), not
+  loose text matching. Service detail pages resolve their slug/category to the
+  matching broad wizard option (e.g. landscape-design/architecture/ecological →
+  "Landscape Design & Architecture"; irrigation-systems → "Irrigation System
+  Design & Installation"; garden-maintenance/lawn-care → "Garden Maintenance &
+  Aftercare"; plant-science services → "Horticultural Services"; implementation →
+  "Landscape Implementation & Construction"; commercial → "Public / Commercial
+  Landscaping"). Case-study/project pages derive the option from the study's
+  authoritative `relatedServices` slugs; homepage project cards open the wizard
+  with no service preselected. A project title is never passed as a service, and
+  no new services are invented.
+* The wizard resets on each open via a parent remount `key`, so a completed
+  handoff starts fresh next time while moving back/forward between steps does not
+  lose entered values.
+
+Protected systems left unchanged:
+
+* Founder identity/credentials, hello@botaniquedesigners.com, EIA/NEMA removal,
+  Supabase/auth/RLS/migrations, /admin and src/admin/**, finance visibility,
+  project tracker, payment-confirmation logic, WhatsApp destination number,
+  consultation fees and payment calculations, published project facts, geographic
+  positioning, and GardenCare product work were all left untouched. No new
+  testimonials, ratings, guarantees, response promises, prices or business claims
+  were introduced.
