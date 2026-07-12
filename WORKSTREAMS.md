@@ -424,7 +424,7 @@ Protected systems left unchanged:
 
 ## BD-GARDENCARE-01 — GardenCare Maintenance Programme
 
-Status: Phase A complete (product/operations definition) — draft PR. **GardenCare
+Status: Phase A complete (product/operations definition) — PR #7. **GardenCare
 is NOT publicly launched.**
 
 Phase A is **documentation only**. It defines GardenCare as an operationally
