@@ -10,7 +10,7 @@ pricing tables or website copy are created or changed.
 > Record at the end). The programme structure, coverage, inclusions, exclusions and
 > prohibited-claim boundaries approved earlier remain in force. GardenCare is still
 > **not** publicly launched: nothing here may be copied to the public website until
-> the Phase B entry criteria are met and the owner approves the public wording.
+> Phase B is delivered and the owner approves the public wording.
 
 ---
 
