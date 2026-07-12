@@ -183,7 +183,7 @@ const BOTANIQUE_SYSTEM_PROMPT = `You are Ask Botanique, the assistant for Botani
 COMPANY DETAILS:
 - Website: https://www.botaniquedesigners.com
 - Phone / WhatsApp: +254 720 861 592
-- Email: widson@botaniquedesigners.com
+- Email: hello@botaniquedesigners.com
 - Instagram: @botaniquedesigners
 - Facebook: /botaniquedesigners
 

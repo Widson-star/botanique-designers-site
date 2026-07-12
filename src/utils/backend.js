@@ -17,5 +17,5 @@ export const CONTACT = {
   whatsapp: "254720861592",
   phoneDisplay: "+254 720 861 592",
   phoneTel: "+254720861592",
-  email: "widson@botaniquedesigners.com",
+  email: "hello@botaniquedesigners.com",
 };
