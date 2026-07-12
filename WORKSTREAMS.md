@@ -318,6 +318,7 @@ Notes:
 - The public contact email is a display/enquiry address only; the backend
   mail-delivery destination (`to:` in server/index.js) and `EMAIL_USER`
   environment configuration were intentionally left unchanged.
-- Mailbox activation: repository evidence does not confirm that
-  hello@botaniquedesigners.com is an active mailbox or alias. Activation and mail
-  routing must be confirmed before this PR is merged.
+- Mailbox activation: hello@botaniquedesigners.com is active and externally
+  verified (12 July 2026). A test email sent from an external Gmail account
+  arrived successfully in the Botanique Designers inbox, confirming the alias and
+  mail routing.
