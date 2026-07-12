@@ -10,7 +10,7 @@ const team = [
     image: "/team/widson-ambaisi.jpg",
     credentials: [
       "BA Geography & Environmental Studies, University of Nairobi",
-      "Associate Degree in Horticulture",
+      "Associate Degree in Horticulture, Egerton University",
       "Kenya Horticultural Society (KHS) member",
       "AIPH World Green City Awards — Youth Jury Member, 2024",
       "African Climate Summit delegate",
