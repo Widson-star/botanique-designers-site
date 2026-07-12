@@ -191,7 +191,7 @@ export default function Home() {
               onClick={() => openQuoteWizard()}
               className="px-8 py-3 rounded-full bg-botanique-green text-white font-medium hover:scale-105 transition shadow-lg"
             >
-              Request a Site Visit
+              Start Your Project Enquiry
             </button>
             <a
               href={waLink(buildQuoteMessage())}
@@ -312,7 +312,7 @@ export default function Home() {
                 onClick={() => openQuoteWizard()}
                 className="px-8 py-3 rounded-full bg-botanique-green text-white font-medium hover:scale-105 transition shadow-sm"
               >
-                Request a Site Visit
+                Start Your Project Enquiry
               </button>
               {/* Pricing sourced from existing repo content (consultancy modal / assistant). */}
               <p className="text-gray-400 text-sm">
@@ -365,9 +365,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ====== INSTANT QUOTE ====== */}
+      {/* ====== PROJECT ENQUIRY ====== */}
       <section
-        id="instant-quote"
+        id="project-enquiry"
         className="scroll-mt-24 py-24 bg-botanique-beige text-center"
       >
         <div className="max-w-3xl mx-auto px-6">
@@ -375,10 +375,10 @@ export default function Home() {
             <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
               Quick & Easy
             </p>
-            <h2 className="text-4xl font-bold mb-4">Get an Instant Quote</h2>
+            <h2 className="text-4xl font-bold mb-4">Start Your Project Enquiry</h2>
             <p className="text-gray-500 mb-10">
-              Describe your project briefly and we'll guide you to the right
-              solution — usually within 24 hours.
+              Tell us about your project and we'll guide you to the right
+              solution — usually within one business day.
             </p>
           </FadeIn>
 
@@ -388,7 +388,7 @@ export default function Home() {
                 onClick={() => openQuoteWizard()}
                 className="px-8 py-4 rounded-full bg-botanique-green text-white font-medium hover:scale-105 transition text-lg"
               >
-                Start Instant Quote
+                Start Your Project Enquiry
               </button>
               <p className="text-gray-400 text-sm mt-4">
                 Takes less than 2 minutes · No commitment required

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PAYMENT } from "../utils/paymentDetails";
 import { BACKEND_URL } from "../utils/backend";
 
@@ -15,6 +15,15 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
   const [status, setStatus] = useState("idle"); // idle | loading | sent | error
   const [errorMsg, setErrorMsg] = useState("");
   const [showManual, setShowManual] = useState(false);
+
+  // The modal instance stays mounted (it just renders null while closed), so the
+  // useState initialiser above only ever captured the first distanceKm. Sync the
+  // displayed distance whenever the modal (re)opens with a freshly calculated
+  // value, while still allowing manual edits afterwards. Fee calculation is
+  // unchanged — it is always derived from the km shown in the field.
+  useEffect(() => {
+    if (open) setInputKm(distanceKm);
+  }, [open, distanceKm]);
 
   if (!open) return null;
 

@@ -183,14 +183,14 @@ export default function Projects() {
           Ready to start your project?
         </h2>
         <p className="text-gray-600 mb-8 max-w-md mx-auto">
-          Get a custom quote in under 2 minutes. No obligation.
+          Tell us about your project in under 2 minutes. No obligation.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => setQuoteWizardOpen(true)}
             className="px-8 py-3 rounded-full bg-botanique-green text-white font-semibold hover:opacity-90 transition"
           >
-            Get an Instant Quote
+            Start Your Project Enquiry
           </button>
           <a
             href={waLink(buildQuoteMessage())}

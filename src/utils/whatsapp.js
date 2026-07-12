@@ -22,8 +22,8 @@ function line(label, value) {
   return cleanValue ? `${label}: ${cleanValue}` : `${label}:`;
 }
 
-// Quotation / site-visit request (from the Quote Wizard or generic "WhatsApp us"
-// CTAs). The Quote Wizard collects a name and site context in visible steps, so
+// Quotation / site-visit request (from the project-enquiry wizard or generic
+// "WhatsApp us" CTAs). The wizard collects a name and site context in visible steps, so
 // those lines are included only when present. Generic CTAs that don't collect
 // them pass no form, so blank "Name:"/"Site context:" lines are omitted rather
 // than shown empty. Service/Location/Project size/Budget range remain as simple

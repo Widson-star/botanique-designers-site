@@ -276,7 +276,7 @@ export default function ProjectDetail() {
               onClick={handleQuote}
               className="bg-white text-botanique-green px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition cursor-pointer"
             >
-              Request a Site Visit
+              Start Your Project Enquiry
             </button>
             <a
               href={waLink(buildProjectMessage(study.title))}
