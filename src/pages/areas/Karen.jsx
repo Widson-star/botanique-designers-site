@@ -31,12 +31,12 @@ export default function Karen() {
         },
       ]}
       whyUs={[
-        "Extensive experience working on Karen's residential estates",
+        "Experience working on Karen residential gardens",
         "Knowledge of local soil, climate and plant species that thrive in the area",
-        "On-time project delivery with dedicated on-site project management",
+        "Project logistics agreed before mobilisation",
         "Discretion and professionalism expected by Karen homeowners",
-        "90-day plant establishment warranty on all planted material",
-        "Trusted by Karen homeowners — references available on request",
+        "Plant establishment and aftercare agreed per project",
+        "References available on request",
       ]}
       nearbyAreas={[
         { label: "Runda", path: "/areas/runda" },

@@ -106,7 +106,6 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired }) {
                   <option>Landscape Design & Architecture</option>
                   <option>Landscape Implementation & Construction</option>
                   <option>Horticultural Services (Planting & Maintenance)</option>
-                  <option>Environmental Impact Assessment (EIA)</option>
                   <option>Irrigation System Design & Installation</option>
                   <option>Garden Maintenance & Aftercare</option>
                   <option>Public / Commercial Landscaping</option>

@@ -23,11 +23,17 @@ export default function SmartAdvisor() {
       };
     }
 
-    if (t.includes("eia") || t.includes("environment") || t.includes("impact")) {
+    if (
+      t.includes("ecolog") ||
+      t.includes("native") ||
+      t.includes("water-wise") ||
+      t.includes("environment") ||
+      t.includes("sustainab")
+    ) {
       return {
-        title: "Environmental Impact Assessment (EIA)",
+        title: "Ecological & Native Planting Design",
         message:
-          "🌍 Your project may require an Environmental Impact Assessment to ensure regulatory compliance.",
+          "🌍 We recommend climate-appropriate, water-wise planting using native and adapted species suited to your site's soil, rainfall and altitude.",
       };
     }
 

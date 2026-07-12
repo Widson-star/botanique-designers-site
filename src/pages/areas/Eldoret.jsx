@@ -6,7 +6,7 @@ export default function Eldoret() {
       areaName="Eldoret & North Rift"
       heroImage="/projects/project-7.jpg"
       tagline="Cool-climate landscape design for Eldoret's residences, institutions and large agricultural estates in Kenya's North Rift."
-      intro="Eldoret is Kenya's fifth-largest city, set at 2,100m above sea level with a cool, highland climate ideal for a wide range of ornamental and productive planting. Botanique Designers serves homeowners, school and university campuses, hospitals, hotels and agricultural estates across Eldoret, Uasin Gishu County and the broader North Rift region including Trans-Nzoia, West Pokot and Baringo. Our expertise in cool-climate planting, large-scale estate landscaping and NEMA Environmental Impact Assessments makes us the right partner for outdoor projects in this region — regardless of scale."
+      intro="Eldoret is Kenya's fifth-largest city, set at 2,100m above sea level with a cool, highland climate ideal for a wide range of ornamental and productive planting. Botanique Designers serves homeowners, school and university campuses, hospitals, hotels and agricultural estates across Eldoret, Uasin Gishu County and the broader North Rift region including Trans-Nzoia, West Pokot and Baringo. Our expertise in cool-climate planting and large-scale estate landscaping makes us a strong partner for outdoor projects across this region."
       extraIntro="At 2,100m, Eldoret's climate suits species that struggle at Nairobi's lower altitude — hybrid roses, Grevillea robusta, Cupressus lusitanica, Eucalyptus species, and flowering perennials like Delphinium and Lupin. The cool nights and well-distributed rainfall support dense, lush planting. Institutional campuses in the region — universities, hospitals, schools — benefit from low-maintenance indigenous species like Markhamia lutea and Croton megalocarpus alongside formal avenue planting."
       services={[
         {
@@ -33,10 +33,10 @@ export default function Eldoret() {
       whyUs={[
         "Expertise in cool, high-altitude planting suited to Eldoret's climate",
         "Experience with large institutional campuses and agricultural estates",
-        "NEMA EIA expertise for North Rift County developments",
-        "Remote project management from Nairobi with on-site supervision",
-        "Understanding of Uasin Gishu County permit and approval processes",
-        "90-day plant establishment warranty on all planted material",
+        "Cool-climate planting design for North Rift conditions",
+        "Project logistics agreed before mobilisation",
+        "Species selection matched to Eldoret's altitude, soils and rainfall",
+        "Plant establishment and aftercare agreed per project",
       ]}
       nearbyAreas={[
         { label: "Nakuru & Rift Valley", path: "/areas/nakuru" },

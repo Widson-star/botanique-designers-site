@@ -21,9 +21,6 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import FAQ from "./pages/FAQ";
 
-// Legacy service page kept as a secondary service (no slug-based equivalent)
-import EIAStudies from "./pages/services/EIAStudies";
-
 // Area pages
 import Karen from "./pages/areas/Karen";
 import Runda from "./pages/areas/Runda";
@@ -76,8 +73,8 @@ function AppInner() {
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<ServicesPage />} />
 
-          {/* EIA Studies — secondary service, kept on its own legacy route */}
-          <Route path="/services/eia-studies" element={<EIAStudies />} />
+          {/* Retired EIA Studies page — redirect the old URL to the services index */}
+          <Route path="/services/eia-studies" element={<Navigate to="/services" replace />} />
 
           {/* Legacy routes redirect to their canonical slug-based equivalents */}
           <Route path="/services/implementation" element={<Navigate to="/services/garden-implementation" replace />} />

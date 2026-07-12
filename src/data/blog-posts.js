@@ -5,7 +5,7 @@ const blogPosts = [
     date: "2026-04-08",
     category: "Tools & Technology",
     readTime: "6 min read",
-    author: "Widson Ambaisi",
+    author: "Widson Omutelema Ambaisi",
     image: "/images/blog/landscape-software-2026.jpg",
     imageAlt: "Landscape garden installation with colourful flower beds — Botanique Designers",
     excerpt: "From DynaSCAPE to Polycam — five tools I've personally tested across real projects in Kenya and selected design work, and how they fit into a modern landscape design workflow.",
@@ -98,7 +98,7 @@ The days of one software doing everything are effectively over. The firms that a
     date: "2026-03-25",
     category: "Design & Planning",
     readTime: "6 min read",
-    author: "Widson Ambaisi",
+    author: "Widson Omutelema Ambaisi",
     image: "/projects/karen-garden.jpg",
     imageAlt: "Landscape designer reviewing a planting plan on site in Nairobi",
     excerpt:
@@ -161,7 +161,7 @@ If you're planning a new garden, renovating an existing one, or dealing with a r
     date: "2026-03-22",
     category: "Plant Science & Advisory",
     readTime: "5 min read",
-    author: "Widson Ambaisi",
+    author: "Widson Omutelema Ambaisi",
     image: "/projects/project-30.jpg",
     imageAlt: "Lawn grass establishment in Kenya — Botanique Designers",
     excerpt:
@@ -194,7 +194,7 @@ The decision comes down to three factors: altitude and temperature, water availa
     date: "2026-03-21",
     category: "Design & Planning",
     readTime: "4 min read",
-    author: "Widson Ambaisi",
+    author: "Widson Omutelema Ambaisi",
     image: "/projects/project-18.jpg",
     imageAlt: "Landscape design styles in Kenya — Botanique Designers",
     excerpt:
@@ -252,7 +252,7 @@ Ask Botanique is simply our website assistant. It's not a separate product or co
 
 It's useful for a few everyday things:
 
-**Understanding our services.** Whether you're after landscape design, garden implementation, maintenance, or an EIA study, Ask Botanique can point you to the right service and explain what's involved.
+**Understanding our services.** Whether you're after landscape design, garden implementation, maintenance, or ecological planting design, Ask Botanique can point you to the right service and explain what's involved.
 
 **Planning a site visit.** It can walk you through how consultation and site visits work, including the fee structure, and help you start a booking on WhatsApp.
 
@@ -287,8 +287,8 @@ For our practice, the summit reinforced something we already believed: knowing y
     date: "2024-06-20",
     category: "Events",
     excerpt:
-      "Widson Ambaisi served as a Youth Jury Member for the AIPH World Green City Awards 2024, evaluating green infrastructure projects from cities worldwide.",
-    content: `In 2024, Widson Ambaisi was selected as a Youth Jury Member for the International Association of Horticultural Producers (AIPH) World Green City Awards. The awards recognise cities that have implemented outstanding green infrastructure projects — parks, urban forests, green corridors, biodiversity programs, and climate adaptation landscapes.
+      "Widson Omutelema Ambaisi served as a Youth Jury Member for the AIPH World Green City Awards 2024, evaluating green infrastructure projects from cities worldwide.",
+    content: `In 2024, Widson Omutelema Ambaisi was selected as a Youth Jury Member for the International Association of Horticultural Producers (AIPH) World Green City Awards. The awards recognise cities that have implemented outstanding green infrastructure projects — parks, urban forests, green corridors, biodiversity programs, and climate adaptation landscapes.
 
 **What the role involved:**
 

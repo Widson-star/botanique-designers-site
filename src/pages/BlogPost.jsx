@@ -79,7 +79,7 @@ export default function BlogPost() {
               : {}),
             author: {
               "@type": "Person",
-              name: "Widson Ambaisi",
+              name: "Widson Omutelema Ambaisi",
               jobTitle: "Founder & Principal Landscape Designer",
             },
             publisher: {
@@ -188,7 +188,7 @@ export default function BlogPost() {
               <p className="text-sm text-gray-500">
                 Written by{" "}
                 <span className="font-semibold text-botanique-charcoal">
-                  Widson Ambaisi
+                  Widson Omutelema Ambaisi
                 </span>{" "}
                 — Founder & Principal Landscape Designer, Botanique Designers
               </p>

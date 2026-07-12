@@ -52,7 +52,7 @@ const services = {
       slug: "landscape-design",
       title: "Landscape Design",
       category: "design-planning",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-2.jpg",
       shortDescription:
         "Site analysis, concept development, planting plans, and material selection for residential, commercial, institutional, and hospitality projects.",
@@ -162,7 +162,7 @@ const services = {
       slug: "plant-taxonomy",
       title: "Plant Taxonomy & Botanical Labelling",
       category: "plant-science",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-6.jpg",
       featured: true,
       shortDescription:
@@ -226,7 +226,7 @@ const services = {
       slug: "plant-health-care",
       title: "Plant Health Care",
       category: "plant-science",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-7.jpg",
       shortDescription:
         "Diagnosis of plant diseases, pest identification, nutrient deficiency assessment, and treatment plans.",
@@ -281,7 +281,7 @@ const services = {
       slug: "soil-analysis",
       title: "Soil Analysis",
       category: "plant-science",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-9.jpg",
       shortDescription:
         "Soil sampling, pH and nutrient testing, drainage assessment, and amendment recommendations.",
@@ -336,7 +336,7 @@ const services = {
       slug: "potted-indoor-plants",
       title: "Potted & Indoor Plants Care",
       category: "plant-science",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-4.jpg",
       shortDescription:
         "Species selection for interior environments, container specification, and ongoing care plans for offices, hotels, and residences.",
@@ -446,7 +446,7 @@ const services = {
       slug: "irrigation-systems",
       title: "Irrigation Systems",
       category: "implementation",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-11.jpg",
       shortDescription:
         "Design and installation of drip, sprinkler, and micro-irrigation systems with water source assessment and zone planning.",
@@ -501,7 +501,7 @@ const services = {
       slug: "garden-lighting",
       title: "Garden Lighting",
       category: "implementation",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-12.jpg",
       shortDescription:
         "Landscape lighting design and installation — path lights, uplighting, feature lighting, and security lighting with solar options.",
@@ -556,7 +556,7 @@ const services = {
       slug: "property-fencing",
       title: "Property Fencing",
       category: "implementation",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-13.jpg",
       shortDescription:
         "Perimeter fencing specification and installation — chain link, wooden, live fencing, and gabion walls.",
@@ -611,7 +611,7 @@ const services = {
       slug: "garden-maintenance",
       title: "Garden Maintenance",
       category: "ongoing-care",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-14.jpg",
       shortDescription:
         "Scheduled pruning, weeding, fertilisation, pest monitoring, and seasonal planting rotation on monthly or quarterly plans.",
@@ -666,7 +666,7 @@ const services = {
       slug: "lawn-care",
       title: "Lawn Care",
       category: "ongoing-care",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-15.jpg",
       shortDescription:
         "Mowing, aeration, top-dressing, weed control, and lawn renovation with species-specific programs.",
@@ -721,7 +721,7 @@ const services = {
       slug: "ecological-planting-design",
       title: "Ecological & Native Planting Design",
       category: "design-planning",
-      lead: "Widson Ambaisi — Principal Landscape Designer",
+      lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-14.jpg",
       shortDescription:
         "Climate-appropriate, water-wise planting using native and adapted species suited to your site's soil, rainfall, and altitude.",

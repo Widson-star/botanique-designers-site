@@ -5,12 +5,12 @@ import { buildQuoteMessage, waLink } from "../utils/whatsapp";
 
 const team = [
   {
-    name: "Widson Ambaisi",
+    name: "Widson Omutelema Ambaisi",
     title: "Founder & Principal Landscape Designer",
     image: "/team/widson-ambaisi.jpg",
     credentials: [
-      "BSc Environmental Science, University of Nairobi",
-      "Associate's in Horticultural Science, Egerton University",
+      "BA Geography & Environmental Studies, University of Nairobi",
+      "Associate Degree in Horticulture",
       "Kenya Horticultural Society (KHS) member",
       "AIPH World Green City Awards — Youth Jury Member, 2024",
       "African Climate Summit delegate",
@@ -85,7 +85,7 @@ export default function About() {
               <p>
                 Botanique Designers started with trees — specifically, with the
                 work of identifying and labelling them. At learning institutions
-                across Kenya, Widson Ambaisi walked campus grounds, keyed out
+                across Kenya, Widson Omutelema Ambaisi walked campus grounds, keyed out
                 species using botanical references, and installed labels showing
                 each tree's scientific name, common name, family, and origin.
                 That work — applied plant taxonomy — became the foundation of
@@ -271,7 +271,7 @@ export default function About() {
               <div className="md:w-1/2">
                 <img
                   src="/press/standard-feature.jpg"
-                  alt="The Standard newspaper feature on Widson Ambaisi"
+                  alt="The Standard newspaper feature on Widson Omutelema Ambaisi"
                   className="w-full h-full object-cover"
                 />
               </div>

@@ -19,9 +19,9 @@ export default function Kiambu() {
           desc: "Full landscape build-out across Kiambu County, leveraging locally available plant material where suitable.",
         },
         {
-          icon: "📄",
-          title: "EIA Studies",
-          desc: "NEMA-compliant environmental impact assessments for residential and commercial developments in Kiambu.",
+          icon: "🌿",
+          title: "Ecological & Native Planting",
+          desc: "Climate-appropriate, water-wise planting using native and adapted species suited to Kiambu's fertile volcanic soils and varied elevation.",
         },
         {
           icon: "✂️",
@@ -32,10 +32,10 @@ export default function Kiambu() {
       whyUs={[
         "Familiar with Kiambu's varied soils, rainfall and plant species",
         "Experience with sloped and terraced garden designs common in the region",
-        "Competitive rates for Kiambu properties — reflecting lower transport costs",
+        "Quotations based on verified scope and site conditions",
         "Strong local plant sourcing knowledge in the Kiambu region",
-        "Trusted by residential developers in Ruiru, Thika and surrounding towns",
-        "Fast site visits — our team is regularly working in Kiambu County",
+        "Site-specific assessment before design and quotation",
+        "Site visits arranged by appointment across Kiambu County",
       ]}
       nearbyAreas={[
         { label: "Runda", path: "/areas/runda" },

@@ -5,7 +5,7 @@ const QUICK_REPLIES = [
   "What services do you offer?",
   "How much does a garden design cost?",
   "Do you work anywhere in Kenya?",
-  "What is an EIA study?",
+  "Do you offer garden maintenance?",
 ];
 
 const BOOKING_KEYWORDS = [
@@ -363,7 +363,7 @@ export default function Assistant() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about services, pricing, EIA…"
+              placeholder="Ask about services, pricing, site visits…"
               className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-botanique-green/40"
               rows={1}
               disabled={loading}
