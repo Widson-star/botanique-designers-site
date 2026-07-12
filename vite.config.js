@@ -24,7 +24,6 @@ export default defineConfig({
         "/services/garden-maintenance",
         "/services/lawn-care",
         "/services/commercial-landscaping",
-        "/services/eia-studies",
         "/projects",
         "/projects/karen-residence",
         "/projects/muthithi-gardens-estate",

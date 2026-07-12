@@ -6,7 +6,7 @@ export default function Nakuru() {
       areaName="Nakuru & Rift Valley"
       heroImage="/projects/project-4.jpg"
       tagline="Highland landscape design for Nakuru's estates, farms and residential properties — set against the dramatic backdrop of the Great Rift Valley."
-      intro="Nakuru sits at over 1,800m above sea level in the heart of Kenya's Rift Valley — a highland environment with rich volcanic soils, cooler temperatures and spectacular scenery. Botanique Designers works with residential homeowners, farm estates, schools, hotels and commercial properties across Nakuru County and the wider Rift Valley region. Our designs take full advantage of the region's fertile soils and pleasant climate, creating landscapes that are both beautiful and productive. We also provide NEMA-compliant Environmental Impact Assessments for Rift Valley developments."
+      intro="Nakuru sits at over 1,800m above sea level in the heart of Kenya's Rift Valley — a highland environment with rich volcanic soils, cooler temperatures and spectacular scenery. Botanique Designers works with residential homeowners, farm estates, schools, hotels and commercial properties across Nakuru County and the wider Rift Valley region. Our designs take full advantage of the region's fertile soils and pleasant climate, creating landscapes that are both beautiful and productive."
       services={[
         {
           icon: "🌿",
@@ -14,9 +14,9 @@ export default function Nakuru() {
           desc: "Garden and estate design for Nakuru properties — highland planting schemes, farm landscapes, ornamental gardens and master planning.",
         },
         {
-          icon: "📄",
-          title: "EIA Studies",
-          desc: "NEMA-compliant Environmental Impact Assessments for Rift Valley developments, including lake-adjacent and escarpment projects.",
+          icon: "🌿",
+          title: "Ecological & Native Planting",
+          desc: "Climate-appropriate, water-wise planting using native highland species suited to Nakuru's volcanic soils and Rift Valley climate.",
         },
         {
           icon: "🛠️",
@@ -32,10 +32,10 @@ export default function Nakuru() {
       whyUs={[
         "Expertise in highland planting suited to Nakuru's cool climate and volcanic soils",
         "Experience with large farm and estate landscapes in the Rift Valley",
-        "NEMA EIA expertise for Rift Valley developments including lakeside projects",
-        "Remote project management from Nairobi with on-site supervision",
+        "Highland planting design suited to Rift Valley conditions",
+        "Project logistics agreed before mobilisation",
         "Knowledge of Nakuru's unique flora including indigenous highland species",
-        "90-day plant establishment warranty on all planted material",
+        "Plant establishment and aftercare agreed per project",
       ]}
       nearbyAreas={[
         { label: "Nairobi CBD", path: "/areas/nairobi" },

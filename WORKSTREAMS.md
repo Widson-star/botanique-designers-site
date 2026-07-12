@@ -86,6 +86,10 @@ Notes:
   homepage/project copy; no invented clients).
 * EIA Studies: decision (A) — kept as a SECONDARY service on its own legacy
   route `/services/eia-studies`; not headlined, not in the main category grid.
+  **[HISTORICAL — SUPERSEDED by BD-TRUTH-CONSISTENCY-01.]** This decision to
+  retain EIA Studies is no longer in effect. EIA/NEMA is not a current public
+  service: the EIA page was deleted and `/services/eia-studies` now redirects to
+  `/services`. See the BD-TRUTH-CONSISTENCY-01 section below.
 * Legacy routes: `/services/implementation` and `/services/maintenance` now
   redirect (301-style client redirect via <Navigate replace>) to
   `/services/garden-implementation` and `/services/garden-maintenance`. Their
@@ -171,8 +175,9 @@ Notes:
   Botanique copy; "best" only in the software-review blog + FAQ).
 
 Remaining SEO risks: dual sitemap mechanism (public/sitemap.xml vs
-vite-plugin-sitemap) still both present — kept in sync, consolidate later;
-area-page EIA emphasis could be trimmed in a future pass.
+vite-plugin-sitemap) still both present — kept in sync, consolidate later.
+(Area-page EIA emphasis is no longer future work: EIA/NEMA claims were removed
+from all area pages under BD-TRUTH-CONSISTENCY-01.)
 
 ## BD-WS-06B — WhatsApp Lead Template Improvement
 
@@ -281,3 +286,39 @@ Notes:
 Remaining risks: area files still carry unused `icon:` emoji data (harmless, not
 rendered); repo still has no git commits (baseline recommended); in-memory rate
 limiter is per-instance (fine for single-instance Express).
+
+## BD-TRUTH-CONSISTENCY-01 — Public Claims and Credentials
+
+Status: Implementation complete — PR #5
+
+Record:
+
+- EIA/NEMA service claims removed from public discovery and enquiry surfaces.
+- The former EIA page was deleted.
+- `/services/eia-studies` now redirects to `/services`.
+- EIA was removed from the sitemap and prerender list.
+- Founder name corrected to Widson Omutelema Ambaisi.
+- Founder education corrected to:
+  - BA Geography & Environmental Studies, University of Nairobi
+  - Associate Degree in Horticulture, Egerton University
+- Public email corrected to hello@botaniquedesigners.com.
+- Area-page warranties, availability guarantees and unsupported compliance claims were removed.
+- Positioning standardised as Kenya-based, serving Kenya, with selected regional design briefs.
+- Zaara Park remains a design concept only.
+- Admin, Supabase, finance, payments, projects and WhatsApp lead systems were untouched.
+
+Notes:
+
+- This workstream supersedes the earlier BD-WS-04 decision to retain EIA Studies
+  as a secondary service (see the marked note under BD-WS-04 above).
+- Email structure intended by the owner:
+  - hello@botaniquedesigners.com — public company enquiries (now shown on the site)
+  - widson@botaniquedesigners.com — direct founder/owner correspondence
+  - martine@botaniquedesigners.com — operational correspondence
+- The public contact email is a display/enquiry address only; the backend
+  mail-delivery destination (`to:` in server/index.js) and `EMAIL_USER`
+  environment configuration were intentionally left unchanged.
+- Mailbox activation: hello@botaniquedesigners.com is active and externally
+  verified (12 July 2026). A test email sent from an external Gmail account
+  arrived successfully in the Botanique Designers inbox, confirming the alias and
+  mail routing.

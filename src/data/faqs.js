@@ -12,7 +12,7 @@ const faqs = [
       },
       {
         q: "Do you handle both design and implementation?",
-        a: "Yes. We have a landscape designer (Widson Ambaisi) and a landscape architect (Martine Lotom) in-house, so we cover everything from the initial concept through to construction supervision. You can also hire us for design only — we'll produce drawings your own contractor can build from.",
+        a: "Yes. We have a landscape designer (Widson Omutelema Ambaisi) and a landscape architect (Martine Lotom) in-house, so we cover everything from the initial concept through to construction supervision. You can also hire us for design only — we'll produce drawings your own contractor can build from.",
       },
       {
         q: "What areas do you cover?",

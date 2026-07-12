@@ -24,9 +24,9 @@ export default function Runda() {
           desc: "Tailored maintenance contracts for Runda estates including lawn care, tree management and irrigation servicing.",
         },
         {
-          icon: "📄",
-          title: "EIA Studies",
-          desc: "Environmental assessments for any development or significant land alteration on your Runda property.",
+          icon: "🌿",
+          title: "Ecological & Native Planting",
+          desc: "Climate-appropriate, water-wise planting using native and adapted species suited to Runda's deep loam soils and sheltered microclimate.",
         },
       ]}
       whyUs={[
@@ -34,7 +34,7 @@ export default function Runda() {
         "Sensitive to the mature tree canopy and ecological character of the area",
         "Professional crews trained to work within gated, secure properties",
         "Flexible scheduling to suit estate management and homeowner availability",
-        "Clear, transparent quotations with no hidden costs",
+        "Quotations based on verified scope and site conditions",
         "Consistent quality across every project visit",
       ]}
       nearbyAreas={[

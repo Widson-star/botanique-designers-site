@@ -6,7 +6,7 @@ export default function Mombasa() {
       areaName="Mombasa & Coast"
       heroImage="/project-commercial.jpg"
       tagline="Coastal landscape design for Mombasa's villas, hotels and resorts — rooted in the tropical character of the Kenyan coast."
-      intro="The Kenyan coast offers a landscape canvas unlike anywhere in the country — tropical species, coastal soils, salt-tolerant plants, and an aesthetic shaped by the Indian Ocean. Botanique Designers brings specialist knowledge of coastal planting, NEMA-compliant Environmental Impact Assessments for coastal developments, and experience designing outdoor spaces that thrive in the heat and humidity of the Coast region. Whether you own a Mombasa residence, a boutique hotel in Diani, a resort on the North Coast, or a property anywhere in Kwale, Kilifi or Lamu counties — we design and deliver landscapes that feel authentically coastal and permanently beautiful."
+      intro="The Kenyan coast offers a landscape canvas unlike anywhere in the country — tropical species, coastal soils, salt-tolerant plants, and an aesthetic shaped by the Indian Ocean. Botanique Designers brings specialist knowledge of coastal planting and experience designing outdoor spaces that thrive in the heat and humidity of the Coast region. Whether you own a Mombasa residence, a boutique hotel in Diani, a resort on the North Coast, or a property anywhere in Kwale, Kilifi or Lamu counties — we design and deliver landscapes that feel authentically coastal and lasting."
       extraIntro="The coast presents a distinct planting environment — sandy, well-draining soils, high humidity, salt-laden air, and temperatures that rarely drop below 25°C. Species that perform here include Coconut Palm (Cocos nucifera), Frangipani (Plumeria rubra), Bougainvillea, Casuarina equisetifolia as windbreaks, Scaevola taccada for beachfront edges, and Traveller's Palm (Ravenala madagascariensis) for dramatic focal points. Lawns in Mombasa typically use Buffalo grass or Bermuda grass — both handle the heat and recover well from salt exposure."
       services={[
         {
@@ -27,16 +27,16 @@ export default function Mombasa() {
         {
           icon: "✂️",
           title: "Garden Maintenance",
-          desc: "Scheduled maintenance programmes for Mombasa residences, hotels and resorts — managed remotely or with local site supervision.",
+          desc: "Scheduled maintenance programmes for Mombasa residences, hotels and resorts — delivered per an agreed schedule.",
         },
       ]}
       whyUs={[
         "Knowledge of salt-tolerant and coastal-climate plant species",
-        "Experience preparing NEMA EIAs for sensitive coastal developments",
-        "Ability to manage projects remotely from Nairobi with local site oversight",
-        "Resort, hotel and high-end residential portfolio along the Kenyan coast",
-        "Understanding of coastal county permit and approval processes",
-        "90-day plant establishment warranty on all planted material",
+        "Salt-tolerant planting design and species selection for coastal sites",
+        "Project logistics agreed before mobilisation",
+        "Coastal planting schemes for residences, hotels and resorts",
+        "Species selection matched to coastal soils, salt and humidity",
+        "Plant establishment and aftercare agreed per project",
       ]}
       nearbyAreas={[
         { label: "Nairobi CBD", path: "/areas/nairobi" },

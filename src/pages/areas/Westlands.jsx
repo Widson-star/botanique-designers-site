@@ -24,9 +24,9 @@ export default function Westlands() {
           desc: "Regular, professional maintenance contracts for commercial properties — keeping your landscape looking sharp.",
         },
         {
-          icon: "📄",
-          title: "EIA Studies",
-          desc: "Environmental assessments for development projects in Westlands and surrounding commercial zones.",
+          icon: "🌿",
+          title: "Ecological & Native Planting",
+          desc: "Water-wise, low-maintenance planting using adapted species suited to Westlands' dense urban plots and container gardens.",
         },
       ]}
       whyUs={[
