@@ -424,12 +424,14 @@ Protected systems left unchanged:
 
 ## BD-GARDENCARE-01 — GardenCare Maintenance Programme
 
-Status: Phase A complete (product/operations definition) — PR #7. **GardenCare
-is NOT publicly launched.**
+Status: Phase A complete — product/operations definition **and commercial
+approval** (owner-approved 12 July 2026). **GardenCare is NOT publicly launched.**
 
 Phase A is **documentation only**. It defines GardenCare as an operationally
-realistic Botanique Designers maintenance programme before any public
-implementation. Full definition in `GARDENCARE_PRODUCT_DEFINITION.md`.
+realistic Botanique Designers maintenance programme, now including the commercial
+and operational policies approved by Widson Omutelema Ambaisi on 12 July 2026,
+before any public implementation. Full definition in
+`GARDENCARE_PRODUCT_DEFINITION.md`.
 
 Key points recorded:
 
@@ -446,23 +448,61 @@ Key points recorded:
   locations in Kiambu, Kajiado and Machakos counties, subject to site assessment
   and route availability." Not nationwide; not blanket three-county coverage. The
   separate Kenya-wide landscape-design positioning is unchanged.
-* Initial working structures (working names only): GardenCare Regular
+* **Final approved programme names** (no longer working names): GardenCare Regular
   (weekly/fortnightly), GardenCare Monthly (one comprehensive monthly visit),
   GardenCare Seasonal (quarterly assessment/corrective — not a substitute for
   routine lawn maintenance).
-* Reporting at launch is a short WhatsApp visit summary; no portal/dashboard/
-  automated log promised. The admin tracker, Supabase and operations systems were
-  **not** modified.
+* Reporting: a short WhatsApp visit summary after each visit — the assigned team
+  lead prepares it and the Operations Manager oversees delivery; no portal/
+  dashboard/automated log promised. The admin tracker, Supabase and operations
+  systems were **not** modified.
+
+Approved commercial/operational policies (owner-approved 12 July 2026):
+
+* **Duration:** Regular and Monthly have a three-month initial minimum term, then
+  rolling monthly; Seasonal is quarterly and paid per scheduled visit (no
+  three-month/rolling term).
+* **Renewal/cancellation:** rolling monthly after the initial term, ended by 30
+  days' written notice; **no "cancel anytime"**; initial-term termination subject
+  to the signed agreement.
+* **Assessment fee:** credited toward the first GardenCare invoice when the
+  agreement is accepted within 14 calendar days of the assessment; no new
+  assessment price; existing site-visit fee calculation unchanged.
+* **Payment cycle:** Regular/Monthly monthly in advance; Seasonal before each
+  visit; no work for an unpaid period unless agreed in writing.
+* **VAT:** "applied only where legally applicable and shown clearly on the relevant
+  proposal or invoice"; registration status not stated unless owner-confirmed.
+* **Weather:** visit moved to the next practical available date; visit not lost; no
+  fixed replacement date regardless of conditions/route.
+* **Access:** confirmed property access at the scheduled time; reasonable water
+  access where required; special access arrangements agreed before service.
+* **Client-caused missed visits:** a visit prevented by the client without ≥24
+  hours' notice counts as scheduled; replacement may be separately charged and
+  subject to route availability; not applicable when Botanique caused the miss.
+* **Waste removal:** ordinary waste consolidated onsite; offsite/substantial
+  removal separately quoted; **not unlimited**.
+* **Materials/consumables:** written pre-purchase approval required; charged
+  separately unless the signed proposal includes them; no invented markup/fee.
+* **Emergency/unscheduled work:** outside the standard agreement; subject to
+  availability, assessment and separate quotation; no emergency-response-time
+  promise.
 * Existing public maintenance copy that will need review at public implementation
   is catalogued in the product definition (`index.html` FAQ JSON-LD, `faqs.js`,
   `services.js`, `server/index.js` prompt, and the area-page maintenance cards).
   Those public files were **not** changed in Phase A.
 
-Phase B (public launch) **cannot begin** until the remaining commercial and
-operational decisions are approved by the owner, namely: minimum agreement
-duration; renewal and cancellation notice; treatment of the initial assessment
-fee; exact payment cycle; VAT treatment; weather and rescheduling policy;
-property-access requirements; treatment of client-caused missed visits;
-waste-removal limits; consumables/material approval process; emergency callout
-policy; responsibility for preparing and sending visit summaries; and whether the
-working programme names are the final public names.
+All thirteen commercial/operational decisions previously listed as unresolved are
+now **approved** (duration, renewal/cancellation, assessment-fee credit, payment
+cycle, VAT, weather/rescheduling, property access, client-caused missed visits,
+waste removal, materials/consumables, emergency work, visit-summary
+responsibilities, and final programme names). No Phase A commercial/operational
+decision remains outstanding.
+
+**Next phase: Phase B — public website implementation and consistency correction.**
+Phase B **has not started** and is a separate workstream. It covers drafting and
+owner sign-off of the public GardenCare wording, reconciling the existing public
+maintenance copy catalogued in the product definition (§21), and confirming the
+commercial-grounds segmentation (standard vs bespoke) for larger/complex grounds.
+GardenCare remains **not publicly launched**, and this change touched no public
+code or website content — only `GARDENCARE_PRODUCT_DEFINITION.md` and this
+`WORKSTREAMS.md` note.
