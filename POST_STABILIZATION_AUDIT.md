@@ -54,7 +54,7 @@ re-verified against source and/or live production and are classified **COMPLETE*
 | Workstream | Verified now |
 |---|---|
 | Truth & credentials (BD-TRUTH-CONSISTENCY-01) | Live `/about` shows founder **Widson Omutelema Ambaisi**, **BA Geography & Environmental Studies, University of Nairobi**, **Associate Degree in Horticulture, Egerton University**. No public EIA/NEMA claims anywhere in `src/`, `public/`, `index.html` (only the `/services/eia-studies` → `/services` retirement redirect). Public email is `hello@botaniquedesigners.com` on every public surface. |
-| Brand boundary (BD-WS-02) | **Apicora** appears in exactly one place — the About founder bio (`src/pages/About.jsx:17`), framed "a separate environmental intelligence platform for Africa." Compliant with the About-only boundary. |
+| Brand boundary (BD-WS-02) | See the dedicated Apicora-boundary note below the table — the public site mentions Apicora exactly once (About-page founder biography) and does not reframe Botanique around it. |
 | Positioning | Kenya-based / Kenya-wide with selected regional briefs (About + Footer), consistent with BD-TRUTH-CONSISTENCY-01. |
 | Project-status honesty (BD-WS-05) | `src/data/case-studies.js`: Zaara Park + Serenity Homes Diani are `Design Concept`; no budget/acreage figures; Tsavo Skywalk `Built / Implemented` with the confirmed 6-month maintenance scope. |
 | GardenCare launch (BD-GARDENCARE-01) | Live `/gardencare` returns **HTTP 200**; approved coverage/programme names present; enquiry CTAs reuse the existing wizard/WhatsApp. |
@@ -68,6 +68,25 @@ identical across all ~10 occurrences and `hello@botaniquedesigners.com` is the
 only public email. Accessibility spot-check: **all 25 `<img>` tags in `src/`
 carry an `alt` attribute** (multiline-aware scan).
 
+### Apicora boundary (precise wording)
+
+To avoid any misreading of "Apicora framing" as Botanique being reframed around
+Apicora:
+
+- In the **visitor-facing website**, Apicora is mentioned **exactly once**, in the
+  **About-page founder biography** (`src/pages/About.jsx:17`).
+- That mention identifies Apicora as **a separate environmental intelligence
+  platform for Africa** and part of **Widson Omutelema Ambaisi's founder
+  background**.
+- Apicora is **not** presented as a Botanique Designers service, product,
+  platform, operating system, or substitute brand.
+- **Internal authority/history documents** (this audit, `WORKSTREAMS.md`,
+  `README.md`, `MEASUREMENT_PLAN.md`, `GARDENCARE_PRODUCT_DEFINITION.md`) may
+  mention "Apicora" only when recording this boundary; those internal references
+  are **not public brand positioning**.
+- **Botanique Designers remains a separate landscape-design and implementation
+  practice.**
+
 ---
 
 ## 3. Findings table
@@ -80,7 +99,7 @@ finance, project tracker, payments, or the WhatsApp destination).
 | ID | Classification | Finding | Evidence | Route / file | Visitor / business impact | Risk | Owner input? | Recommended action |
 |---|---|---|---|---|---|---|---|---|
 | **F-1** | **VERIFIED DEFECT** | **Soft-404: unknown URLs return HTTP 200 with homepage-duplicate HTML and no `noindex`; a real browser renders only Header + Footer with an empty `<main>`.** | `curl /this-page-does-not-exist-12345` → **200**; served `<title>` = the homepage title; no `noindex` in the response. In-app browser at that URL renders only footer/header chrome, blank main, no "not found" message. `vercel.json` rewrites `"/(.*)" → "/"`; `src/App.jsx` has **no** `path="*"` catch-all; no `/404` is prerendered. | `src/App.jsx` (routes), `vercel.json`, `scripts/prerender.mjs` | Crawlers can index unlimited arbitrary URLs as homepage duplicates (soft-404 / duplicate-content risk); users who mistype or follow a stale link hit a content-less dead-end with no recovery path. | Moderate | No | Add a catch-all `NotFound` route with clear recovery links; prerender a `/404` document carrying `<meta name="robots" content="noindex">`; stop serving homepage-duplicate content for unmatched paths. **This is the recommended next workstream (§8).** |
-| **F-2** | **VERIFIED DEFECT** | **Oversized blog hero image (~2.26 MB) ships uncompressed.** Every other asset is ≤200 KB; this one is ~12×. | `public/images/blog/landscape-software-2026.jpg` = **2,370,961 bytes**; referenced as the post `image` in `src/data/blog-posts.js:9`; next-largest asset is 200 KB. `scripts/compress-images.mjs` (200 KB budget) exists but is **not wired into any npm script** (`build = generate-sitemap && vite build && prerender`). | `public/images/blog/landscape-software-2026.jpg`, `src/data/blog-posts.js`, `scripts/compress-images.mjs`, `package.json` | Slow LCP on the `/blog/best-landscape-design-software-2026` post — a deliberate SEO target — for a mobile-heavy audience. | Moderate | No | Run `scripts/compress-images.mjs` to bring the asset under 200 KB (optionally wire it into `build` so it cannot recur). Fast, self-contained. |
+| **F-2** | **VERIFIED DEFECT** | **Oversized blog hero image (~2.26 MB) ships uncompressed.** Every other asset is ≤200 KB; this one is ~12×. | `public/images/blog/landscape-software-2026.jpg` = **2,370,961 bytes**; referenced as the post `image` in `src/data/blog-posts.js:9`; next-largest asset is 200 KB. `scripts/compress-images.mjs` (200 KB budget) exists but is **not wired into any npm script** (`build = generate-sitemap && vite build && prerender`). | `public/images/blog/landscape-software-2026.jpg`, `src/data/blog-posts.js`, `scripts/compress-images.mjs`, `package.json` | Slow LCP on the `/blog/best-landscape-design-software-2026` post — a deliberate SEO target — for a mobile-heavy audience. | Moderate | No | **Targeted asset fix, not an automatic library-wide rewrite.** Optimize **only** this one file; preserve its displayed dimensions/aspect ratio and acceptable visual quality; verify the blog list/post render and the social/structured-data (`og:image`) references still resolve. Do **not** run a broad compression script or wire whole-library image mutation into `build` without first auditing exactly what else it would rewrite. |
 | **F-3** | OPTIONAL ENHANCEMENT | Dead component `src/components/SmartAdvisor.jsx` is unreferenced anywhere in the repo. | Repo-wide search: `SmartAdvisor` appears only inside its own file. `src/App.jsx` renders `Assistant`, not `SmartAdvisor`. | `src/components/SmartAdvisor.jsx` | None (not shipped/rendered). | Low | No | Delete in a future hygiene pass. Not a standalone workstream. |
 | **F-4** | OPTIONAL ENHANCEMENT | Contact number `254720861592` is hardcoded in ~10 files instead of importing `CONTACT` from `src/utils/backend.js`. | `grep` shows the literal in `Footer.jsx`, `Home.jsx`, `FAQ.jsx`, `Assistant.jsx`, `SmartAdvisor.jsx`, `PaidConsultancyModal.jsx`, `PaymentConfirmationModal.jsx`, `index.html`, and `backend.js`. All values currently identical. | multiple | None today (values consistent); future drift risk. | Low | No | Centralise on the `CONTACT` constant opportunistically. |
 | **F-5** | OPTIONAL ENHANCEMENT | Documentation staleness: the `BD-CODE-HYGIENE-01` entry in `WORKSTREAMS.md` still reads "Status: Implementation complete — draft PR," but that PR (#18) is merged into the audited production `main`. | `WORKSTREAMS.md` BD-CODE-HYGIENE-01 header vs. `git log` (#18 = audited SHA). | `WORKSTREAMS.md` | None (internal doc only). | Low | No | Correct the status line during a future documentation pass (left unchanged here to keep this diff minimal and faithful). |
@@ -158,11 +177,30 @@ workstream (proposed id **BD-DISCOVERABILITY-01**), addressing finding **F-1**.
 1. Add a catch-all React route (`path="*"`) rendering a proper "page not found"
    view with clear recovery links (home, services, projects, contact) and correct
    heading hierarchy.
-2. Prerender a `/404` document (and/or a `dist/404.html`) that carries
-   `<meta name="robots" content="noindex">`, so unmatched paths are not indexable
-   homepage duplicates.
-3. Adjust the unmatched-path handling so arbitrary URLs no longer serve the
-   homepage's HTML verbatim.
+2. Emit a not-found output carrying `<meta name="robots" content="noindex">` so
+   unmatched paths are not indexable homepage duplicates.
+3. Stop serving the homepage's HTML verbatim for arbitrary unmatched paths.
+
+**Implementation is not a one-line change — it starts with a routing-design
+question, not code.** A React catch-all plus a prerendered `/404` does **not**, on
+its own, guarantee a true HTTP 404 on Vercel: the current
+`vercel.json` rewrite (`"/(.*)" → "/"`) and the static/prerender model determine
+the actual status code, and a rendered "NotFound" React view can still be served
+with **HTTP 200**. The brief must first determine the correct Vercel /
+static-routing design that **simultaneously preserves all** of the following:
+
+- direct access to all **43 prerendered public routes** (unchanged status/content);
+- the existing **deliberate legacy redirects** (`/services/eia-studies`,
+  `/services/implementation`, `/services/maintenance`);
+- normal **client-side navigation** within the SPA;
+- a **helpful React NotFound view** for users;
+- **`noindex`** on the not-found output;
+- a **genuine HTTP 404** for arbitrary unknown URLs wherever Vercel supports it;
+- **no homepage-duplicate fallback** for unmatched paths.
+
+The brief **must test live HTTP status after deployment** and **must not** claim
+the defect resolved if unknown URLs still return **HTTP 200** — even if a NotFound
+message renders correctly. A rendered message without a 404 status is not a fix.
 
 **Why this one:**
 
@@ -174,19 +212,24 @@ workstream (proposed id **BD-DISCOVERABILITY-01**), addressing finding **F-1**.
 - **Requires no invented facts** — no copy, testimonials, project claims, or
   images are created.
 - **Respects protected systems** — public routing/build/config only.
-- **Bounded** — a small, well-scoped set of files (`src/App.jsx`,
-  `scripts/prerender.mjs`/route authority, `vercel.json`, one new page component)
-  with a clear done-definition and the existing 43/43 build gate to protect it.
+- **Bounded** — a well-scoped set of files (`src/App.jsx`,
+  `scripts/prerender.mjs`/route authority, `vercel.json`, one new page component),
+  gated by the existing 43/43 build check and by a **live post-deploy HTTP-status
+  test** as the done-definition (not merely "a NotFound view renders").
 - **Higher value than cosmetic cleanup** — it fixes crawlable duplicate-content
   exposure and a real visitor dead-end.
 
-**Fast companion fix (not the workstream, no owner input):** finding **F-2** (the
-2.26 MB blog image) is a one-command performance win (`scripts/compress-images.mjs`)
-that can be handled independently and immediately; it does not need to wait on
-BD-DISCOVERABILITY-01.
+**Companion fix (not the workstream, no owner input):** finding **F-2** (the
+2.26 MB blog image) is a **bounded, targeted single-asset optimization** — optimize
+only that one file, preserve its displayed dimensions/aspect ratio and acceptable
+quality, and verify the blog render and social/structured-data (`og:image`)
+references still resolve. It is **not** a whole-library rewrite and no broad
+image-mutation step should be wired into `build` without a separate audit of what
+else it would change. It can be handled independently of BD-DISCOVERABILITY-01.
 
 **If the owner prefers the smallest possible next step instead of a workstream:**
-ship F-2 first (fastest measurable win), then schedule BD-DISCOVERABILITY-01.
+ship the F-2 targeted asset fix first (fastest measurable win), then schedule
+BD-DISCOVERABILITY-01.
 
 ---
 

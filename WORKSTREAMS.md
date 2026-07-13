@@ -897,9 +897,13 @@ Vercel throughout.
 
 ## BD-CODE-HYGIENE-01 — Remove Confirmed Dead Area-Page Icon Data
 
-Status: Implementation complete — draft PR
+Status: **Complete, merged, deployed and production-verified.** PR #18 passed
+review and was squash-merged to `main`; production commit
+`918c61eeb12fb3295bc88a0d78914e434e545839`; the matching Vercel production
+deployment reached READY. (Verified during the BD-ROADMAP-02 audit — see
+`POST_STABILIZATION_AUDIT.md`.)
 
-Baseline `origin/main`: `2019c3ccaa4dc0d859d68dd374a3d0fba45b11c9`.
+Baseline `origin/main` (branch was cut from): `2019c3ccaa4dc0d859d68dd374a3d0fba45b11c9`.
 
 Scope: remove the now-unused `icon:` emoji fields left in the nine area-page
 service data objects after BD-WS-07 replaced their rendering with a consistent
@@ -967,12 +971,30 @@ Headline results:
 * **Recommended next single workstream:** a bounded **Unknown-Route / Soft-404
   Handling** workstream (proposed `BD-DISCOVERABILITY-01`) — public routing/build
   config only, no analytics dependency, no invented facts, no protected system
-  touched. The 2.26 MB image is a fast independent companion fix.
+  touched. This is **not** a one-line change: a React catch-all plus a `/404`
+  prerender does not by itself guarantee a true HTTP 404 on Vercel, so the brief
+  must first settle the Vercel/static-routing design (preserving all 43
+  prerendered routes, the deliberate legacy redirects, client-side navigation, a
+  helpful NotFound view, `noindex` output, a genuine 404 where Vercel supports it,
+  and no homepage-duplicate fallback) and must verify live HTTP status after
+  deploy — a rendered NotFound message with HTTP 200 is not a fix. The 2.26 MB
+  image is a **bounded, targeted single-asset** companion fix (optimize only that
+  file, preserve dimensions/quality, verify blog + `og:image` references), not a
+  whole-library rewrite.
 * **BLOCKED / evidence gaps unchanged:** Analytics Phase B (Vercel Hobby plan);
   the 7–14-day Production-filtered baseline (pending accumulation); verbatim
   testimonial wording and additional project imagery (owner-supplied evidence).
+* **Apicora boundary (precise):** in the **visitor-facing website** Apicora is
+  mentioned **exactly once**, in the **About-page founder biography**, identifying
+  it as a **separate environmental intelligence platform for Africa** and part of
+  Widson Omutelema Ambaisi's founder background. Apicora is **not** a Botanique
+  Designers service, product, platform, operating system, or substitute brand.
+  Internal authority/history documents (this file and the other root Markdown
+  records) mention "Apicora" only to record this boundary; those are **not** public
+  brand positioning. **Botanique Designers remains a separate landscape-design and
+  implementation practice.**
 * **Re-verified COMPLETE:** founder identity/credentials, public email,
-  EIA/NEMA removal, Apicora About-only boundary, Kenya/regional positioning,
+  EIA/NEMA removal, the Apicora boundary above, Kenya/regional positioning,
   Zaara Park design-only status, GardenCare launch, the 43-route sitemap/route
   authority, measurement Phase A, and the dead area-icon-data removal (#18).
 
