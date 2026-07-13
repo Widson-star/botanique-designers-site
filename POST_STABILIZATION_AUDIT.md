@@ -278,8 +278,10 @@ baseline accumulate, then re-read filtered to Production).
 **Baseline SHA:** `2ddd0a7de80b3938ebd11f5e1f284f39c18a7cd1`
 (`BD-ROADMAP-02: record post-stabilization evidence audit (#19)`).
 **Branch:** `claude/bd-discoverability-01-soft-404`.
-**Status:** Implemented and locally validated; **production completion pending
-merge and the required deployed-preview HTTP-status verification.**
+**Status:** **RESOLVED — production-complete and verified.** Merged as PR #20
+(squash-merged to `main`); production commit
+`3a82665bf1f016a03251d7d790f2247fe0486a04`; matching Vercel production deployment
+reached READY. See the production-verification block below.
 
 **Root cause (re-confirmed live):** the `vercel.json` rewrite
 `"/(.*)" → "/"` runs after the filesystem check, so every unmatched path was
@@ -331,5 +333,69 @@ Vercel preview (deployment-protection bypass used only to read status codes):
   with title "Page not found · Botanique Designers" and
   `robots noindex, nofollow` — no homepage-title duplication.
 
-**Not claimed:** production completion. The fix is verified on the preview only;
-production takes effect on merge to `main` (PR kept as draft).
+**Production verification (commit `3a82665`, `https://www.botaniquedesigners.com`):**
+re-probed live after merge — F-1 is resolved in production:
+
+- `/` and representative prerendered routes (`/about`,
+  `/services/landscape-design`, `/gardencare`, `/projects/karen-residence`,
+  `/blog/best-landscape-design-software-2026`, `/areas/karen`) → **HTTP 200**.
+- `/admin` and `/admin/dashboard` → **HTTP 200** (protected SPA loads).
+- Legacy routes → **HTTP 308** to their canonical destinations
+  (`/services/eia-studies` → `/services`; `/services/implementation` →
+  `/services/garden-implementation`; `/services/maintenance` →
+  `/services/garden-maintenance`).
+- Arbitrary unknown pages and an unknown `.js` asset → genuine **HTTP 404**.
+- Not-Found body: title "Page not found · Botanique Designers",
+  `robots noindex, nofollow`, **zero** `rel="canonical"` (no homepage-title/URL
+  duplication).
+
+**F-1 is closed.** The soft-404 defect no longer exists in production.
+
+---
+
+## 12. F-2 resolution — BD-PERFORMANCE-01 (Targeted Oversized Blog Image Optimization)
+
+**Baseline SHA:** `3a82665bf1f016a03251d7d790f2247fe0486a04`
+(`BD-DISCOVERABILITY-01: fix unknown-route soft 404s (#20)`).
+**Branch:** `claude/bd-performance-01-targeted-blog-image`.
+**Status:** Implemented and locally + preview verified; production completion
+pending merge (PR kept as draft).
+
+**Scope:** optimize exactly one asset —
+`public/images/blog/landscape-software-2026.jpg` — with no change to its URL,
+references, dimensions, or aspect ratio. No other image touched; no broad
+compression pass; no build-script mutation.
+
+**Source audit:** the file was, despite its `.jpg` name, a **PNG** — 1408×768,
+8-bit RGBA, sRGB, non-interlaced, alpha channel fully opaque (min=max=255, i.e.
+transparency unused), **2,370,961 bytes (≈2.26 MB)**. Production served it at
+`/images/blog/landscape-software-2026.jpg` with **HTTP 200**,
+`content-type: image/jpeg`, `content-length: 2370961`. Referenced once in source
+(`src/data/blog-posts.js:9`, post `image`), rendered as the **blog-post hero**
+(`src/pages/BlogPost.jsx`) and the Article **structured-data** `image`
+(`https://www.botaniquedesigners.com/images/blog/landscape-software-2026.jpg`).
+**Not** used by the blog listing card, and **not** the Open Graph / Twitter image
+(those use the site default `hero-botanique.jpg`); not in the sitemap or preload.
+
+**Optimization:** re-encoded to a real **progressive JPEG** (sharp + mozjpeg,
+quality 85, 4:2:0) — the format the `.jpg` URL and served `image/jpeg`
+content-type already imply, and the ideal codec for this photographic hero.
+Same filename, same **1408×768** dimensions, same **1.8333** aspect ratio, sRGB,
+no orientation change; alpha dropped only because it was fully opaque.
+
+- **Before:** 2,370,961 bytes (≈2315.4 KB).
+- **After:** 203,364 bytes (≈198.6 KB).
+- **Reduction:** **91.42 %** (≤200 KB target met; well under the 300 KB ceiling).
+
+**Visual verification:** full-image and 100 % crops (tablet-text and shirt-logo
+regions) are indistinguishable from the source — no banding, block artifacts,
+blurred text, or damaged detail. (The garbled tablet text "3056" / "Wideon
+Aunbalai" is a pre-existing source artifact, identical before and after.) Rendered
+blog-post hero verified via `vite preview` at desktop (768×419) and mobile
+(375×205) — correct display, aspect preserved, no cropping/orientation change,
+image `complete`, `naturalWidth/Height` = 1408×768, no console errors.
+
+**Local validation:** exactly three files changed (the image + this document +
+`WORKSTREAMS.md`); `npm ci` clean; `npm run build` → **43/43** routes + `404.html`;
+sitemap **43** URLs; lint holds at the inherited **20** errors (zero new);
+`git diff --check` clean; no protected file touched.

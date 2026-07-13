@@ -1005,8 +1005,9 @@ four files (zero new); `git diff --check` clean; the only changed files are
 
 ## BD-DISCOVERABILITY-01 — Unknown-Route and Soft-404 Correction
 
-Status: Implemented and verified on the deployed Vercel preview (PR #20);
-production completion pending merge.
+Status: **COMPLETE — merged and production-verified.** PR #20 squash-merged to
+`main` as `3a82665bf1f016a03251d7d790f2247fe0486a04`; matching Vercel production
+deployment reached READY. F-1 resolved.
 
 Baseline SHA: `2ddd0a7de80b3938ebd11f5e1f284f39c18a7cd1`
 (`BD-ROADMAP-02: record post-stabilization evidence audit (#19)`).
@@ -1045,9 +1046,53 @@ links, normal routes render, no console errors.
 Changed files: `src/pages/NotFound.jsx` (new), `src/App.jsx`,
 `scripts/prerender.mjs`, `vercel.json`, `POST_STABILIZATION_AUDIT.md`, this file.
 
-Deployed-preview verification (PR #20, head `486b4e9`): `/` and representative
-prerendered routes → 200; the three legacy routes → 308 to their correct
-canonical destinations; `/admin` and `/admin/dashboard` → 200 (SPA loads);
-multiple arbitrary unknown paths and an unknown asset → genuine 404 from
-`dist/404.html` (title "Page not found", `noindex, nofollow`, no homepage
-duplication). Production completion pending merge; PR kept as a draft.
+Production verification (commit `3a82665`, `https://www.botaniquedesigners.com`,
+re-probed after merge): `/` and representative prerendered routes → 200; the three
+legacy routes → 308 to their correct canonical destinations; `/admin` and
+`/admin/dashboard` → 200 (protected SPA loads); arbitrary unknown paths and an
+unknown asset → genuine 404 (Not-Found body: title "Page not found",
+`noindex, nofollow`, zero `rel="canonical"` — no homepage duplication). The
+soft-404 defect no longer exists in production.
+
+## BD-PERFORMANCE-01 — Targeted Oversized Blog Image Optimization
+
+Status: Implemented and locally + preview verified; production completion pending
+merge (PR kept as a draft).
+
+Baseline SHA: `3a82665bf1f016a03251d7d790f2247fe0486a04`
+(`BD-DISCOVERABILITY-01: fix unknown-route soft 404s (#20)`).
+Branch: `claude/bd-performance-01-targeted-blog-image`.
+
+Addresses **F-2** (oversized blog hero image) from `POST_STABILIZATION_AUDIT.md`
+§8 — see §12 of that document for the full record.
+
+Scope (exactly one asset; no other image, no broad compression, no build-script
+mutation):
+
+* Optimized only `public/images/blog/landscape-software-2026.jpg`. The file was a
+  mislabeled **PNG** (1408×768 RGBA, fully-opaque alpha, 2,370,961 bytes ≈2.26 MB)
+  served at a `.jpg` URL with `content-type: image/jpeg`.
+* Re-encoded to a real **progressive JPEG** (mozjpeg, quality 85, 4:2:0) — the
+  format the `.jpg` URL and served content-type already imply, and ideal for this
+  photographic hero. Same filename, same **1408×768** dimensions, same **1.8333**
+  aspect ratio, sRGB, correct orientation. Alpha dropped only because it was fully
+  opaque (no visual change).
+* **2,370,961 → 203,364 bytes = 91.42 % reduction** (≈198.6 KB; ≤200 KB target
+  met, far under the 300 KB ceiling).
+* URL and both references (`src/data/blog-posts.js:9` → blog-post hero
+  `src/pages/BlogPost.jsx` + Article structured-data `image`) unchanged. The image
+  is not used by the blog listing and is not the Open Graph / Twitter image
+  (those use `hero-botanique.jpg`); not in the sitemap.
+
+Visual verification: full-image and 100 % crops (tablet-text, shirt-logo)
+indistinguishable from the source — no banding, block artifacts, blurred text, or
+lost detail. Rendered blog-post hero verified via `vite preview` at desktop
+(768×419) and mobile (375×205): correct display, aspect preserved, no
+cropping/orientation change, image `complete`, natural 1408×768, no console
+errors.
+
+Local validation: exactly three files changed
+(`public/images/blog/landscape-software-2026.jpg`, `POST_STABILIZATION_AUDIT.md`,
+this file); `npm ci` clean; `npm run build` → **43/43** routes + `dist/404.html`;
+sitemap **43** URLs; lint holds at the inherited **20** errors (zero new);
+`git diff --check` clean; no protected file touched.
