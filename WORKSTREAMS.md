@@ -603,10 +603,13 @@ website code was changed as part of this verification. Full record in
 Status: Phase A complete, merged, deployed and production-verified (13 July
 2026; production commit `fa49bf31077c7b258a580ce6fac260f55b68de62`). The Vercel
 Web Analytics pageview foundation is live; pageviews only are active and no
-custom `track()` events exist. Custom events are Phase B and remain **BLOCKED**
-pending owner confirmation that this specific Vercel project is on Pro/Enterprise
-and a reviewed implementation brief. Full measurement definition and the release
-closeout in `MEASUREMENT_PLAN.md` (§7–§8).
+custom `track()` events exist. Custom events are Phase B and remain **BLOCKED**:
+owner dashboard evidence dated 13 July 2026 confirms the team/project is on the
+Vercel **Hobby** plan, on which custom events are unavailable. Phase B stays
+blocked unless the owner deliberately upgrades this specific team/project to Pro
+or Enterprise and a reviewed implementation brief exists; no upgrade is
+recommended or authorized. Full measurement definition, the release closeout, the
+plan confirmation and the early snapshot are in `MEASUREMENT_PLAN.md` (§7–§9).
 
 Audit findings (before implementation):
 
@@ -664,13 +667,32 @@ to accumulate for an initial 7–14 day baseline before any conversion
 recommendations are made. No business result, conversion improvement, lead
 volume or target is claimed — a baseline has not yet accumulated.
 
+Plan confirmation and early snapshot (13 July 2026): owner-supplied Vercel
+dashboard evidence confirms the team/project
+(`botanique-designers-projects` / `botanique-designers-site-gpm1`) is currently on
+the Vercel **Hobby** plan, and the Vercel Events panel states custom events
+require upgrading to a **Pro** team. Phase B custom `track()` events are therefore
+unavailable on the current plan. An early dashboard snapshot (filter: **All
+environments**, **Last 7 Days**) showed 46 visitors, 58 page views, 83% bounce,
+89% mobile, 89% Kenya, 41 homepage visitors, 3 `/gardencare` visitors and no
+custom events. This is recorded only as an **initial, non-decision-grade
+observation**: it is very early, may include preview/non-production traffic
+(because "All environments" was selected), and must **not** be treated as a
+completed 7–14-day baseline. No conversion performance, lead volume, confirmed
+clients or business result is claimed, and no website change is recommended from
+it. Referral entries are not interpreted yet (some may be automated/low-quality).
+A future baseline review should filter to **Production** over a **complete date
+window**. Pageview-only measurement remains the active scope. Full detail in
+`MEASUREMENT_PLAN.md` §9.
+
 Phase B gate (BLOCKED): custom `track()` events remain blocked until BOTH (1)
-the owner confirms this specific Vercel project is on Pro or Enterprise and is
-therefore eligible for custom events, and (2) ChatGPT prepares and reviews a
-focused implementation brief before any `track()` call is introduced. Phase B
-must use only the privacy-safe taxonomy already defined in `MEASUREMENT_PLAN.md`;
-the existing prohibited-data list remains binding; and no new PR for custom
-events should be opened merely because Phase A is live.
+the owner **deliberately upgrades** this specific Vercel project from the
+confirmed **Hobby** plan to Pro or Enterprise, making it eligible for custom
+events, and (2) ChatGPT prepares and reviews a focused implementation brief before
+any `track()` call is introduced. No upgrade is recommended or authorized by this
+record. Phase B must use only the privacy-safe taxonomy already defined in
+`MEASUREMENT_PLAN.md`; the existing prohibited-data list remains binding; and no
+new PR for custom events should be opened merely because Phase A is live.
 
 Protected systems confirmed unchanged: `/admin` and `src/admin/**`,
 Supabase/auth/RLS/migrations, finance/project tracker, payment-confirmation

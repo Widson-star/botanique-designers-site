@@ -4,9 +4,12 @@
 **Status:** Phase A complete — Vercel Web Analytics pageview foundation is
 merged, deployed and production-verified (13 July 2026; production commit
 `fa49bf31077c7b258a580ce6fac260f55b68de62`). Pageviews only are active; no
-custom `track()` events exist. Custom events are Phase B and remain **BLOCKED**
-until the owner confirms this specific Vercel project is on Pro/Enterprise and a
-reviewed implementation brief exists (see §5 and §8).
+custom `track()` events exist. Custom events are Phase B and remain **BLOCKED**:
+owner dashboard evidence dated 13 July 2026 confirms the team/project is on the
+Vercel **Hobby** plan, on which custom events are unavailable. Phase B stays
+blocked unless the owner deliberately upgrades this specific team/project to Pro
+or Enterprise and a reviewed implementation brief exists. No upgrade is
+recommended or authorized (see §5, §8 and §9).
 **Scope:** Website analytics only. This document does not change, and is not
 authoritative for, GardenCare commercial policy, the project-enquiry journey,
 WhatsApp behaviour, consultation pricing, or any protected system — see
@@ -162,10 +165,12 @@ This **supersedes** the earlier statement that dashboard enablement was still
 required — that action is done. Both the code-side integration and the dashboard
 setting are now in place, so pageviews are being collected.
 
-Custom events (Phase B) additionally require confirming this specific project is
-on a Vercel **Pro or Enterprise** plan before any `track()` call is added. That
-plan tier has **not** been confirmed, so Phase B remains blocked — see §5 and
-§8.
+Custom events (Phase B) additionally require this specific project to be on a
+Vercel **Pro or Enterprise** plan before any `track()` call is added. Owner
+dashboard evidence dated 13 July 2026 confirms the team/project is on the
+**Hobby** plan, and the Vercel Events panel states custom events require
+upgrading to a Pro team. Custom events are therefore **unavailable on the current
+plan** and Phase B remains blocked — see §5, §8 and §9.
 
 ## 8. Production release closeout (Phase A) — 13 July 2026
 
@@ -195,9 +200,12 @@ be, because a baseline has not yet accumulated.
 Phase B (custom `track()` events) remains **BLOCKED** until BOTH conditions are
 met:
 
-1. The owner confirms this specific Vercel project
-   (`botanique-designers-site-gpm1`, `prj_AgYJrkgpGuLeykbASImM3QT5Xhed`) is on
-   Pro or Enterprise and is therefore eligible for custom events.
+1. The owner **deliberately upgrades** this specific Vercel project
+   (`botanique-designers-site-gpm1`, `prj_AgYJrkgpGuLeykbASImM3QT5Xhed`) from the
+   confirmed **Hobby** plan to Pro or Enterprise, making it eligible for custom
+   events. As of 13 July 2026 the project is on Hobby and the Events panel states
+   custom events require upgrading to a Pro team; no upgrade is recommended or
+   authorized by this record.
 2. ChatGPT prepares and reviews a focused implementation brief before any
    `track()` call is introduced.
 
@@ -206,3 +214,58 @@ Additional binding constraints:
 - Phase B must use only the privacy-safe taxonomy already defined in §5.
 - The prohibited-data list in §5 remains binding.
 - No new PR for custom events should be opened merely because Phase A is live.
+
+## 9. Plan confirmation and early snapshot — 13 July 2026
+
+### Confirmed Vercel plan (owner dashboard evidence)
+
+Owner-supplied Vercel dashboard evidence dated 13 July 2026:
+
+- The team/project (`botanique-designers-projects` / `botanique-designers-site-gpm1`)
+  is currently on the Vercel **Hobby** plan.
+- The Vercel **Events** panel states that custom events require upgrading to a
+  **Pro** team.
+- Therefore Phase B custom `track()` events are **unavailable on the current plan**.
+- Phase B remains blocked unless the owner **deliberately upgrades** this specific
+  team/project to Pro or Enterprise **and** ChatGPT prepares/reviews an
+  implementation brief (see §8).
+- **No upgrade is recommended or authorized by this record, and no custom-event PR
+  should be opened.**
+
+### Early analytics snapshot — initial observation only (NOT a baseline)
+
+The following is recorded as an **initial, non-decision-grade observation**. It is
+**not** a completed 7–14-day baseline and must not be used to set targets, claim
+results, or drive changes.
+
+Dashboard filter shown:
+
+- **All environments**
+- **Last 7 Days**
+
+Visible snapshot:
+
+| Metric | Value |
+|---|---|
+| Visitors | 46 |
+| Page views | 58 |
+| Bounce rate | 83% |
+| Mobile | 89% |
+| Kenya | 89% |
+| Homepage visitors | 41 |
+| `/gardencare` visitors | 3 |
+| Custom events | none |
+
+Required cautions (binding on how this snapshot may be used):
+
+- The snapshot is **very early** and may include **preview/non-production traffic**,
+  because **"All environments"** was selected in the filter.
+- It **must not** be treated as a completed 7–14-day baseline.
+- Do **not** claim conversion performance, lead volume, confirmed clients, or any
+  business result from it.
+- Do **not** recommend website changes from this snapshot.
+- A future baseline review should filter to **Production** and use a **complete
+  date window**.
+- Do **not** interpret referral entries yet; some may be automated or low-quality
+  traffic.
+- **Pageview-only measurement remains the active scope.**
