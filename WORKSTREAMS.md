@@ -678,11 +678,15 @@ and Vercel domains/deployment configuration.
 
 ## BD-ROUTE-AUTHORITY-01 — Public Route and Sitemap Consolidation
 
-Status: Implementation and validation complete — draft PR (branch
-`claude/bd-route-authority-01`, cut from production `main`
-`37aa8e7ee4ced5569c3adf12f446cbdf8f4d8f4c`). Tooling/build-config only; no React
+Status: **Complete, merged, deployed and production-verified.** PR #13 passed
+independent ChatGPT review, was marked ready and squash-merged to `main`
+(production commit `63ac00f8a7dedd7756f4d226e785db09e3e597be`); the matching
+Vercel production deployment reached READY. Implemented from branch
+`claude/bd-route-authority-01`, cut from the prior production `main`
+`37aa8e7ee4ced5569c3adf12f446cbdf8f4d8f4c`. Tooling/build-config only; no React
 routing, visitor-facing content, metadata, structured data, redirects, robots
-behaviour, or public URL was changed.
+behaviour, or public URL was changed. A post-launch verification record is at
+the end of this section.
 
 Problem (rationale):
 
@@ -764,3 +768,19 @@ and enquiry behaviour, the analytics integration and measurement documents,
 `/admin` and `src/admin/**`, Supabase/auth/RLS/migrations, finance/project
 tracker, payment-confirmation logic, M-Pesa/Daraja configuration, and
 consultation fees/distance calculations.
+
+### Production release closeout
+
+- PR #13 passed independent ChatGPT review.
+- PR #13 was marked ready and squash-merged.
+- Production commit: `63ac00f8a7dedd7756f4d226e785db09e3e597be`.
+- The matching Vercel production deployment reached READY.
+- Live sitemap <https://www.botaniquedesigners.com/sitemap.xml> returned HTTP
+  200.
+- The live sitemap contains exactly 43 URLs and all 43 are unique.
+- All URLs use the correct production hostname
+  (`https://www.botaniquedesigners.com`).
+- `/gardencare` is present.
+- No redirect-only route is present.
+
+**BD-ROUTE-AUTHORITY-01 is complete, merged, deployed and production-verified.**
