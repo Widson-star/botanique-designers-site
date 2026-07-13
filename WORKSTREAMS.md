@@ -1056,8 +1056,10 @@ soft-404 defect no longer exists in production.
 
 ## BD-PERFORMANCE-01 — Targeted Oversized Blog Image Optimization
 
-Status: Implemented and locally + preview verified; production completion pending
-merge (PR kept as a draft).
+Status: **COMPLETE — merged, deployed and production-verified.** PR #21 passed
+independent review and was squash-merged to `main`; production commit
+`1e968354330df3b72b3ac73d12de164888087839`; the matching Vercel production
+deployment reached READY. **F-2 is resolved and production-verified.**
 
 Baseline SHA: `3a82665bf1f016a03251d7d790f2247fe0486a04`
 (`BD-DISCOVERABILITY-01: fix unknown-route soft 404s (#20)`).
@@ -1096,3 +1098,82 @@ Local validation: exactly three files changed
 this file); `npm ci` clean; `npm run build` → **43/43** routes + `dist/404.html`;
 sitemap **43** URLs; lint holds at the inherited **20** errors (zero new);
 `git diff --check` clean; no protected file touched.
+
+Production release closeout:
+
+- PR #21 passed independent review and was squash-merged to `main`.
+- Production commit: `1e968354330df3b72b3ac73d12de164888087839`.
+- The matching Vercel production deployment reached READY.
+- Live image URL
+  `https://www.botaniquedesigners.com/images/blog/landscape-software-2026.jpg`
+  returned HTTP 200, `content-type: image/jpeg`, `content-length: 203,364` bytes.
+- The blog article `/blog/best-landscape-design-software-2026` returned HTTP 200.
+- Same path and same 1408×768 dimensions retained.
+- No other image and no build process changed.
+
+**BD-PERFORMANCE-01 is complete, merged, deployed and production-verified. F-2 is
+closed.** Full record in `POST_STABILIZATION_AUDIT.md` §12.
+
+## BD-PORTFOLIO-EVIDENCE-01 — Existing Project Asset Provenance Audit
+
+Status: **Audit complete — documentation only. No portfolio implementation
+started.** No image binary was published, remapped, renamed, or deleted; no
+case-study or project data, public wording, status, route, or configuration was
+changed.
+
+Baseline / audited production `main`:
+`1e968354330df3b72b3ac73d12de164888087839` (13 July 2026).
+Branch: `claude/bd-portfolio-evidence-01-asset-audit`.
+
+Purpose: determine whether the repository already contains legitimate, currently
+unused project images that could *safely* strengthen the three image-thin case
+studies — **Tsavo Skywalk**, **Serenity Homes Diani**, **Zaara Park** — using only
+repository evidence (source references, filenames, captions, git history). Full
+record — method, complete asset inventory, referenced/unreferenced counts,
+per-project evidence tables, provenance classification, privacy review,
+duplicate/orphan findings, and the owner upload checklist — is in
+**`PORTFOLIO_ASSET_AUDIT.md`**.
+
+Headline results:
+
+* **Inventory:** 48 tracked images under `public/` (the only tracked image
+  directory; none outside `public/`). **47 are referenced** by `src/`/`index.html`;
+  **exactly 1 is unreferenced** — `public/vite.svg`, the default Vite framework
+  logo (scaffold asset, no project provenance).
+* **No safe additional mapping exists.** No currently-unused image can be
+  conclusively linked by repository evidence to Tsavo Skywalk, Serenity Homes
+  Diani, or Zaara Park. Each of the three already uses the only asset that exists
+  for it (`tsavo-skywalk.jpg`; `project-16.jpg`; `project-37.jpg`). The single
+  unused file is the Vite logo, which must not be published as a project asset.
+* **Statuses verified and preserved:** Tsavo Skywalk = **Built / Implemented**
+  (with the confirmed six-month maintenance scope); Serenity Homes Diani =
+  **Design Concept**; Zaara Park = **Design Concept** (design render, not a built
+  photograph). No status is changed.
+* **Do-not-do guardrails recorded:** do not relabel `project-37`/`project-16`
+  renders/design assets as built photographs; do not revive the superseded
+  `project-12`→"Tsavo" mislabel (`project-12` is the confirmed Muthithi
+  entrance-after image); do not fabricate before/after pairs.
+* **Duplicates:** none among tracked files. **Orphans:** seven historically
+  deleted `project-*.jpg` images exist only in git history (two ever referenced —
+  captioned "Munuga Corridor"/"Highland Residence", both residential, both
+  unrelated to the three targets); all are absent from the current tree.
+* **Privacy:** the only unused image (`vite.svg`) is a logo with no
+  people/vehicle/document/address content; the 47 referenced images are already
+  live, so this audit introduces no new publication exposure.
+* **Recommended next action:** no in-repo remapping. Strengthening these three
+  case studies is gated on **owner-supplied uploads** — this confirms evidence gap
+  B-4 in `POST_STABILIZATION_AUDIT.md`. The exact per-project owner upload/request
+  checklist is in `PORTFOLIO_ASSET_AUDIT.md` §10.
+
+Validation (audit): production build succeeds at 43/43 routes; lint holds at the
+inherited 20 errors in the same four files (zero new); `git diff --check` clean;
+the only changed files are `PORTFOLIO_ASSET_AUDIT.md` (new),
+`POST_STABILIZATION_AUDIT.md`, and this `WORKSTREAMS.md` entry. No portfolio
+implementation is marked started.
+
+Protected systems confirmed unchanged: `src/data/case-studies.js`,
+`src/data/projects.js`, project pages, captions/public wording, project statuses,
+public image binaries, GardenCare, founder facts, the Apicora boundary, analytics,
+`/admin` and `src/admin/**`, Supabase/auth/RLS, finance/payments/M-Pesa,
+WhatsApp/enquiry flow, routes/sitemap/Vercel configuration, and
+package/build scripts.

@@ -112,7 +112,7 @@ finance, project tracker, payments, or the WhatsApp destination).
 | **B-1** | BLOCKED | Analytics **Phase B** custom `track()` events | Owner dashboard evidence (13 Jul 2026) confirms the Vercel **Hobby** plan; the Events panel states custom events require a **Pro** team. Unavailable on the current plan. | A **deliberate** owner upgrade of this specific project to Pro/Enterprise **and** a reviewed implementation brief. **No upgrade is recommended or authorized.** |
 | **B-2** | EVIDENCE GAP | Production-filtered **7–14-day** analytics baseline | Only an early, non-decision-grade snapshot exists (filter: *All environments / Last 7 Days*; may include preview traffic). Not a completed baseline. | Let production pageviews accumulate; re-read filtered to **Production** over a **complete** window. Evidence-gathering, **not** an implementation task. |
 | **B-3** | EVIDENCE GAP | Testimonial wording not confirmed **verbatim** | Home/About show client feedback (e.g. Caroline N. — Tatu City; Stephen W. — Membley; Joyce N. — Runda). Names are real per Widson; the softer "Client Feedback" label is retained only because exact quote wording is unconfirmed (BD-WS-03). | Owner confirmation of verbatim quotes; then the label may revert to "Client Reviews." Facts must not be invented. |
-| **B-4** | EVIDENCE GAP | Additional project imagery | Tsavo Skywalk and Serenity Homes Diani each have a single image; Zaara Park is a single design render (`src/data/case-studies.js` `notesForWidson`). | Owner-supplied photos/renders to strengthen portfolio credibility and before/after evidence. Only one genuine before/after pair (Muthithi) exists and none should be fabricated. |
+| **B-4** | EVIDENCE GAP | Additional project imagery | Tsavo Skywalk and Serenity Homes Diani each have a single image; Zaara Park is a single design render (`src/data/case-studies.js` `notesForWidson`). **Confirmed by the BD-PORTFOLIO-EVIDENCE-01 asset audit (`PORTFOLIO_ASSET_AUDIT.md`): the repository holds no currently-unused legitimate project image for any of the three — the only unreferenced asset is the Vite scaffold logo. This is an owner-upload gap, not an in-repo remapping opportunity.** | Owner-supplied photos/renders to strengthen portfolio credibility and before/after evidence. Only one genuine before/after pair (Muthithi) exists and none should be fabricated. See the owner upload checklist in `PORTFOLIO_ASSET_AUDIT.md` §10. |
 
 ---
 
@@ -358,8 +358,11 @@ re-probed live after merge — F-1 is resolved in production:
 **Baseline SHA:** `3a82665bf1f016a03251d7d790f2247fe0486a04`
 (`BD-DISCOVERABILITY-01: fix unknown-route soft 404s (#20)`).
 **Branch:** `claude/bd-performance-01-targeted-blog-image`.
-**Status:** Implemented and locally + preview verified; production completion
-pending merge (PR kept as draft).
+**Status:** **RESOLVED — production-complete and verified.** PR #21 passed
+independent review and was squash-merged to `main`; production commit
+`1e968354330df3b72b3ac73d12de164888087839`; the matching Vercel production
+deployment reached READY. See the production-verification block at the end of
+this section. **F-2 is closed.**
 
 **Scope:** optimize exactly one asset —
 `public/images/blog/landscape-software-2026.jpg` — with no change to its URL,
@@ -399,3 +402,22 @@ image `complete`, `naturalWidth/Height` = 1408×768, no console errors.
 `WORKSTREAMS.md`); `npm ci` clean; `npm run build` → **43/43** routes + `404.html`;
 sitemap **43** URLs; lint holds at the inherited **20** errors (zero new);
 `git diff --check` clean; no protected file touched.
+
+**Production verification (commit `1e96835`, `https://www.botaniquedesigners.com`):**
+
+- **PR #21** passed independent review and was **squash-merged** to `main`.
+- **Production commit:** `1e968354330df3b72b3ac73d12de164888087839`.
+- The **matching Vercel production deployment reached READY.**
+- Live image URL
+  `https://www.botaniquedesigners.com/images/blog/landscape-software-2026.jpg` →
+  **HTTP 200**, `content-type: image/jpeg`, `content-length: 203,364` bytes — the
+  optimized progressive JPEG.
+- The blog article `/blog/best-landscape-design-software-2026` → **HTTP 200**.
+- **Same path and same 1408×768 dimensions retained** (URL, references, and aspect
+  ratio unchanged).
+- **No other image and no build process changed** — only the single asset was
+  re-encoded; `scripts/compress-images.mjs` was **not** wired into `build`, and no
+  whole-library compression pass was run.
+
+**F-2 is resolved and production-verified.** The oversized-blog-image defect no
+longer exists in production.
