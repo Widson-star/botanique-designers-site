@@ -593,3 +593,61 @@ availability; Kiambu states "selected accessible locations in Kiambu, subject
 to site assessment and route availability." No defects were found; no public
 website code was changed as part of this verification. Full record in
 `GARDENCARE_PRODUCT_DEFINITION.md` §25.
+
+## BD-MEASUREMENT-01 — Enquiry Measurement
+
+Status: Phase A complete — Vercel Web Analytics pageview foundation. Custom
+events are Phase B, deferred pending owner confirmation of Vercel plan
+eligibility. Full measurement definition in `MEASUREMENT_PLAN.md`.
+
+Audit findings (before implementation):
+
+* No analytics, tracking, cookie or consent code existed anywhere in the repo
+  (`src/`, `index.html`, `server/`, `package.json`, `vercel.json`) — confirmed
+  by repository-wide search. No `@vercel/analytics` or any other analytics
+  provider was previously installed.
+* No linked Vercel project config or plan/team environment variables exist in
+  this repository, so Vercel plan tier (Free vs Pro/Enterprise) could not be
+  conclusively verified from available evidence.
+
+Phase A scope:
+
+* Installed `@vercel/analytics` (^2.0.1) and added `<Analytics />` from
+  `@vercel/analytics/react` once, in the client-only default export of
+  `src/App.jsx` (the bundle rendered by `src/main.jsx`) — not in the
+  `AppRoutes` named export used by `src/entry-server.jsx` for SSR/prerender.
+  This keeps the integration entirely out of the prerender path by
+  construction, in addition to the package's own browser-only guards.
+* Pageviews are recorded automatically on load and on every React Router
+  navigation via the library's built-in History API detection — no manual
+  route wiring was added.
+* No custom `track()` calls were added. No cookie banner or consent flow was
+  added — pageview-only analytics with no custom events and no PII collection
+  does not set tracking cookies, so none was needed; this is recorded as
+  current factual behaviour, to be re-checked if instrumentation changes.
+* No other analytics/tracking provider (Google Analytics, Meta Pixel, Hotjar,
+  session recording, advertising cookies) was added.
+
+Privacy boundaries: no visitor PII (name, email, phone, address, free-text
+project details, WhatsApp message contents, payment/M-Pesa details,
+consultation distance) is collected. No persistent visitor identifier is
+generated. Full prohibited-data list and the proposed Phase B custom-event
+taxonomy (with privacy-safe properties only) are in `MEASUREMENT_PLAN.md`.
+
+Dashboard enablement: Vercel Web Analytics must still be turned on for this
+project in the Vercel dashboard (Project → Analytics) for pageview data to
+appear — this is an account-level setting outside the repository, and this
+workstream does not and cannot change it. Until enabled, the injected script
+fails to load silently (console message only); the site behaves exactly as
+before.
+
+No business result, conversion improvement, or target is claimed — no data
+has been collected yet.
+
+Protected systems confirmed unchanged: `/admin` and `src/admin/**`,
+Supabase/auth/RLS/migrations, finance/project tracker, payment-confirmation
+logic, M-Pesa/Daraja configuration, consultation fees and distance
+calculation, founder identity/credentials, public email addresses, EIA/NEMA
+corrections, project facts, GardenCare coverage/programmes/commercial
+policies, the WhatsApp destination number, existing enquiry wording/behaviour,
+and Vercel domains/deployment configuration.
