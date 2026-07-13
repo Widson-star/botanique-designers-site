@@ -614,7 +614,7 @@ const services = {
       lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-14.jpg",
       shortDescription:
-        "GardenCare scheduled garden maintenance — weekly, fortnightly, monthly or quarterly programmes, with scope agreed for your property.",
+        "GardenCare scheduled garden maintenance — Regular (weekly/fortnightly) or Monthly visits, plus Seasonal quarterly assessment and corrective care, with scope agreed for your property.",
       description:
         "A designed garden needs ongoing care to look the way it was intended. Botanique Designers delivers this through GardenCare, our scheduled maintenance programme for the Nairobi Metropolitan Area — pruning at the right time, agreed feeding, monitoring for pests before they become problems, and rotating seasonal plantings where scoped in. The exact activities and frequency are agreed for your property after assessment: GardenCare Regular and Monthly run weekly, fortnightly or monthly, and GardenCare Seasonal provides quarterly assessment and corrective care.",
       included: [
@@ -654,7 +654,7 @@ const services = {
         },
         {
           step: "Scheduled Visits",
-          desc: "Weekly, fortnightly, monthly or quarterly visits under GardenCare, per your agreed programme.",
+          desc: "GardenCare Regular (weekly/fortnightly) or Monthly visits for ongoing care, or GardenCare Seasonal for quarterly assessment and corrective care — not routine lawn maintenance.",
         },
         {
           step: "WhatsApp Visit Summary",

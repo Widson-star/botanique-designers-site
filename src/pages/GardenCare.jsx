@@ -255,7 +255,8 @@ export default function GardenCare() {
                 <button
                   key={p.name}
                   onClick={() => setSelectedProgramme(p.name)}
-                  className={`text-left bg-white rounded-2xl p-6 border-2 shadow-sm hover:shadow-md transition-all ${
+                  aria-pressed={selectedProgramme === p.name}
+                  className={`text-left bg-white rounded-2xl p-6 border-2 shadow-sm hover:shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-botanique-green focus-visible:ring-offset-2 ${
                     selectedProgramme === p.name
                       ? "border-botanique-green"
                       : "border-gray-100"
@@ -396,29 +397,36 @@ export default function GardenCare() {
           <div className="max-w-3xl mx-auto">
             <h2 className="text-3xl font-bold text-center mb-10">GardenCare FAQs</h2>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 px-6">
-              {FAQS.map((item, i) => (
-                <div key={item.q} className="border-b border-gray-200 last:border-b-0">
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full text-left py-5 px-1 flex items-start justify-between gap-4 cursor-pointer"
-                  >
-                    <span className="font-semibold text-botanique-charcoal pr-4">{item.q}</span>
-                    <svg
-                      className={`w-5 h-5 text-botanique-green flex-shrink-0 mt-0.5 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+              {FAQS.map((item, i) => {
+                const panelId = `gardencare-faq-panel-${i}`;
+                return (
+                  <div key={item.q} className="border-b border-gray-200 last:border-b-0">
+                    <button
+                      onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                      aria-expanded={openFaq === i}
+                      aria-controls={panelId}
+                      className="w-full text-left py-5 px-1 flex items-start justify-between gap-4 cursor-pointer"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ${openFaq === i ? "max-h-[500px] pb-5" : "max-h-0"}`}
-                  >
-                    <p className="text-gray-600 leading-relaxed px-1">{item.a}</p>
+                      <span className="font-semibold text-botanique-charcoal pr-4">{item.q}</span>
+                      <svg
+                        aria-hidden="true"
+                        className={`w-5 h-5 text-botanique-green flex-shrink-0 mt-0.5 transition-transform duration-200 ${openFaq === i ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <div
+                      id={panelId}
+                      className={`overflow-hidden transition-all duration-300 ${openFaq === i ? "max-h-[500px] pb-5" : "max-h-0"}`}
+                    >
+                      <p className="text-gray-600 leading-relaxed px-1">{item.a}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

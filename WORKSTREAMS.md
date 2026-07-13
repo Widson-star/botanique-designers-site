@@ -424,11 +424,11 @@ Protected systems left unchanged:
 
 ## BD-GARDENCARE-01 — GardenCare Maintenance Programme
 
-Status: Phase A complete — product/operations definition **and commercial
-approval** (owner-approved 12 July 2026). Phase B (public website
-implementation) **implemented on branch `claude/bd-gardencare-01-phase-b` as a
-draft, unmerged pull request** — see the Phase B subsection below.
-**GardenCare is NOT publicly launched** until that PR is reviewed and merged.
+Status: Phase A is complete and owner-approved (12 July 2026). Phase B (public
+website implementation and consistency correction) implementation and
+validation are complete — see the Phase B subsection below. **Publication
+remains pending owner approval and production deployment; GardenCare is NOT
+publicly launched** until that happens.
 
 Phase A is **documentation only**. It defines GardenCare as an operationally
 realistic Botanique Designers maintenance programme, now including the commercial
@@ -443,8 +443,8 @@ Key points recorded:
 * **Phase A changed no public website functionality.** No public pages, packages,
   buttons, pricing tables or website copy were added or edited in Phase A — only
   `GARDENCARE_PRODUCT_DEFINITION.md` (new) and this `WORKSTREAMS.md` note. (Phase
-  B, below, is where public implementation happens — and it remains an unmerged
-  draft PR, so GardenCare is still not live.)
+  B, below, is where public implementation happens; publication is still pending
+  owner approval and production deployment, so GardenCare is not yet live.)
 * **Pricing remains custom** — priced after garden and location assessment. No
   generic public prices; no invented package prices, discounts, visit durations,
   labour hours or crew sizes. The existing site-visit fee and payment calculations
@@ -514,9 +514,9 @@ outstanding.**
 
 ### Phase B — Public Website Implementation and Consistency Correction
 
-Status: **Implemented on branch `claude/bd-gardencare-01-phase-b`, submitted as
-a draft, unmerged pull request. GardenCare is NOT publicly launched** — it goes
-live only once that PR is reviewed and merged.
+Status: **Implementation and validation are complete. Publication remains
+pending owner approval and production deployment — GardenCare is NOT publicly
+launched** until that happens.
 
 Scope delivered:
 
@@ -533,8 +533,11 @@ Scope delivered:
   wizard, unmodified, with that service preselected. The consultation-distance
   shortcut is untouched and only triggers on an explicit "Consultation & Site
   Assessment" selection. A new `buildGardenCareMessage` WhatsApp helper
-  (`src/utils/whatsapp.js`) identifies GardenCare interest, selected
-  programme, location and site context — using the existing WhatsApp number.
+  (`src/utils/whatsapp.js`) identifies GardenCare interest and includes the
+  visitor's selected programme when they choose one via the on-page programme
+  cards; the helper also accepts optional `location`/`siteContext` values for
+  future callers, but the current page does not collect or pass those two
+  fields. Uses the existing WhatsApp number.
 * **Public entry points:** Header "Ongoing Care" dropdown, Footer link,
   Services-page callout, a restrained homepage callout, a Garden Maintenance
   service-page callout, and an opt-in `gardenCareArea` link on the five
@@ -565,5 +568,5 @@ Scope delivered:
   wording, Kisumu/Eldoret area-page content (no GardenCare-style claim existed
   there), and Vercel deployment configuration were all left untouched.
 
-GardenCare remains **not publicly launched** until this draft PR is reviewed
-and merged by the owner.
+GardenCare remains **not publicly launched** until publication is approved by
+the owner and deployed to production.

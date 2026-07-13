@@ -26,7 +26,7 @@ export default function Kiambu() {
         {
           icon: "✂️",
           title: "GardenCare Maintenance",
-          desc: "GardenCare Regular, Monthly or Seasonal programmes for Kiambu homeowners and residential development managers, agreed after assessment.",
+          desc: "GardenCare Regular, Monthly or Seasonal programmes, available in selected accessible locations in Kiambu, subject to site assessment and route availability.",
         },
       ]}
       whyUs={[

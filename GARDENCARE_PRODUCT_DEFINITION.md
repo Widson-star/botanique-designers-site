@@ -3,11 +3,10 @@
 **Workstream:** BD-GARDENCARE-01 — Phase A (Product and Operations Definition,
 commercially approved) and Phase B (Public Website Implementation and
 Consistency Correction)
-**Status:** Phase A approved. Phase B implemented on branch
-`claude/bd-gardencare-01-phase-b`, submitted as a **draft, unmerged pull
-request**. **GardenCare remains NOT publicly launched** — the `/gardencare`
-page and related public wording exist only in that draft PR and go live only
-once it is reviewed and merged.
+**Status:** Phase A is complete and owner-approved. Phase B implementation and
+validation are complete. **Publication remains pending owner approval and
+production deployment** — GardenCare must not be described as already live
+until it has been approved for publication and deployed.
 **Document type:** This document remains the authoritative product/operations
 definition. See §24 below for a record of exactly what Phase B implemented and
 which existing public claims it reconciled.
@@ -15,9 +14,9 @@ which existing public claims it reconciled.
 > **Owner approval:** the commercial and operational policies in this document were
 > approved by **Widson Omutelema Ambaisi on 12 July 2026** (see the Owner Approval
 > Record at the end). The programme structure, coverage, inclusions, exclusions and
-> prohibited-claim boundaries approved earlier remain in force. GardenCare is still
-> **not** publicly launched: nothing here may be copied to the public website until
-> Phase B is delivered and the owner approves the public wording.
+> prohibited-claim boundaries approved earlier remain in force. Phase B implementation
+> is complete; GardenCare is still **not** publicly launched, and nothing here may be
+> treated as live on the public website until publication is approved and deployed.
 
 ---
 
@@ -422,35 +421,38 @@ public programme names are confirmed** (§4), and the **commercial-grounds
 segmentation is approved** (§2). No Phase A commercial or operational decision
 remains unresolved.
 
-**Phase B is now authorised to begin** as a separate workstream. It **has not
-started**. Phase B is public website implementation and consistency correction, and
-its scope is:
+**Phase B implementation and validation are complete.** Phase B was public website
+implementation and consistency correction, and it delivered:
 
-1. Drafting and owner sign-off of the **public-facing GardenCare wording** (coverage,
-   programmes, segmentation, inclusions/exclusions, pricing framing,
-   duration/payment/cancellation, VAT, weather/access/missed-visit, reporting).
-2. **Reconciling** the existing public maintenance copy catalogued in §21 so the new
-   GardenCare copy and the existing site copy are consistent.
-3. **Public website implementation** of GardenCare.
+1. **Public-facing GardenCare wording** (coverage, programmes, segmentation,
+   inclusions/exclusions, pricing framing, duration/payment/cancellation, VAT,
+   weather/access/missed-visit, reporting), drafted from the approved policies.
+2. **Reconciliation** of the existing public maintenance copy catalogued in §21 so
+   the new GardenCare copy and the existing site copy are consistent.
+3. **Public website implementation** of GardenCare (see §24 for the exact record).
 4. **Enquiry / WhatsApp entry-point integration.**
 5. **Validation against this authoritative GardenCare definition**, confirming no
-   prohibited claim (§20) appears in the launch copy.
+   prohibited claim (§20) appears in the implemented copy.
 
-These are **Phase B work items, not preconditions that block Phase B from
-beginning.** GardenCare remains **not publicly launched** until Phase B delivers and
-the owner approves the published wording.
+Implementation and validation being complete is not the same as publication.
+**Publication remains pending owner approval and production deployment** —
+GardenCare must not be described as already live until it has been approved for
+publication and deployed.
 
 ## 23. Remaining open items
 
-**None at the Phase A commercial/operational level.** All fourteen approved policies
-— the original thirteen commercial/operational decisions plus the subsequently
-approved commercial-grounds segmentation — are recorded and approved (see §2, §4,
-§5, §8, §9, §10, §11, §12, §13, §14, §15, §16, §17 and the Owner Approval Record).
-No GardenCare commercial or operational decision remains outstanding.
+**None at the Phase A commercial/operational level, and none at the Phase B
+delivery level.** All fourteen approved policies — the original thirteen
+commercial/operational decisions plus the subsequently approved commercial-grounds
+segmentation — are recorded and approved (see §2, §4, §5, §8, §9, §10, §11, §12,
+§13, §14, §15, §16, §17 and the Owner Approval Record). Phase B's public wording,
+reconciliation, website implementation, enquiry/WhatsApp integration and validation
+are all complete (§24). No GardenCare commercial or operational decision, and no
+Phase B delivery item, remains outstanding.
 
-The remaining work (public wording, reconciliation of existing maintenance copy,
-website implementation, enquiry/WhatsApp integration, validation) is **Phase B
-delivery scope** — it is not an unresolved policy decision.
+The only remaining step is **publication**: owner approval to publish and
+production deployment. Until that happens, GardenCare is implemented but not
+publicly launched.
 
 ## Owner Approval Record
 
@@ -505,15 +507,16 @@ in this document, specifically:
 Items 1–13 are the original commercial/operational decisions; item 14 (commercial
 segmentation) was approved on the same date and completes the commercial policy set.
 
-GardenCare remains **not publicly launched**. This approval covers internal
-commercial/operational policy only; it does not authorise any public website
-content, which is Phase B.
+This approval covers internal commercial/operational policy. Phase B (§24) has
+since implemented the corresponding public website content; GardenCare remains
+**not publicly launched** until publication is separately approved and deployed.
 
-## 24. Phase B — Implementation Record (pending PR review/merge)
+## 24. Phase B — Implementation Record
 
-**Status: implemented on branch `claude/bd-gardencare-01-phase-b`, submitted as
-a draft, unmerged pull request. GardenCare is NOT live until that PR is
-reviewed and merged.**
+**Status: Phase B implementation and validation are complete. Publication
+remains pending owner approval and production deployment — GardenCare must
+not be described as already live until it has been approved for publication
+and deployed.**
 
 ### Public page
 
@@ -540,11 +543,14 @@ that service preselected. The wizard's consultation-distance shortcut is
 unaffected: it only triggers when a visitor explicitly selects "Consultation &
 Site Assessment" at step 2, which GardenCare's prefill does not set. A
 secondary WhatsApp CTA uses a new, GardenCare-specific message builder
-(`buildGardenCareMessage` in `src/utils/whatsapp.js`) that identifies GardenCare
-interest, the visitor's selected programme (if chosen via the on-page
-programme cards), location and site context when provided, and always ends
-with a next-step request — using the existing WhatsApp number, with no new
-number introduced.
+(`buildGardenCareMessage` in `src/utils/whatsapp.js`). The current
+`/gardencare` page identifies GardenCare interest and includes the visitor's
+selected programme when they pick one via the on-page programme cards, and
+always ends with a next-step request. The helper also accepts optional
+`location` and `siteContext` values for future callers, but the current page
+does not collect or pass those two fields — no location/site-context form
+fields were added, to avoid expanding the page beyond what was required. All
+of this uses the existing WhatsApp number; no new number was introduced.
 
 ### Public entry points added
 
@@ -611,7 +617,6 @@ reviews, prices, availability or `Offer` schema were added.
 
 ### Publication gate
 
-This entire Phase B implementation exists only on the draft PR for branch
-`claude/bd-gardencare-01-phase-b`. **GardenCare is not published and the
-public wording above does not go live until that PR is reviewed and merged**
-by the owner.
+Phase B implementation and validation are complete. **GardenCare is not
+published, and the public wording above does not go live, until publication
+is approved by the owner and deployed to production.**
