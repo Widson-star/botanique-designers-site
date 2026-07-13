@@ -1005,8 +1005,8 @@ four files (zero new); `git diff --check` clean; the only changed files are
 
 ## BD-DISCOVERABILITY-01 — Unknown-Route and Soft-404 Correction
 
-Status: Implemented; production completion pending merge + deployed-preview
-HTTP-404 verification.
+Status: Implemented and verified on the deployed Vercel preview (PR #20);
+production completion pending merge.
 
 Baseline SHA: `2ddd0a7de80b3938ebd11f5e1f284f39c18a7cd1`
 (`BD-ROADMAP-02: record post-stabilization evidence audit (#19)`).
@@ -1045,6 +1045,9 @@ links, normal routes render, no console errors.
 Changed files: `src/pages/NotFound.jsx` (new), `src/App.jsx`,
 `scripts/prerender.mjs`, `vercel.json`, `POST_STABILIZATION_AUDIT.md`, this file.
 
-Done-definition not yet met in production: the genuine HTTP-404 status is a
-Vercel-edge behaviour that `vite preview` cannot reproduce; it is verified on the
-deployed preview before the defect is described as fixed.
+Deployed-preview verification (PR #20, head `486b4e9`): `/` and representative
+prerendered routes → 200; the three legacy routes → 308 to their correct
+canonical destinations; `/admin` and `/admin/dashboard` → 200 (SPA loads);
+multiple arbitrary unknown paths and an unknown asset → genuine 404 from
+`dist/404.html` (title "Page not found", `noindex, nofollow`, no homepage
+duplication). Production completion pending merge; PR kept as a draft.

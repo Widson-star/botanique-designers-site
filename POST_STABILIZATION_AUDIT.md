@@ -314,6 +314,22 @@ holds at the inherited **20** errors in the same four files (zero new);
 `git diff --check` clean. In-app browser: NotFound view renders with Header/Footer
 and recovery links, normal routes render, no console errors.
 
-**Not yet claimed:** the genuine HTTP-404 status is a Vercel-edge behaviour that
-`vite preview` cannot reproduce; it is verified against the deployed preview
-before the defect is described as fixed in production.
+**Deployed-preview verification (PR #20, head `486b4e9`):** confirmed on the
+Vercel preview (deployment-protection bypass used only to read status codes):
+
+- `/` and representative prerendered routes (`/about`,
+  `/services/landscape-design`, `/gardencare`, `/projects/karen-residence`,
+  `/blog/best-landscape-design-software-2026`, `/areas/karen`) → **HTTP 200**.
+- Legacy routes → **HTTP 308** to the correct canonical destinations
+  (`/services/eia-studies` → `/services`; `/services/implementation` →
+  `/services/garden-implementation`; `/services/maintenance` →
+  `/services/garden-maintenance`).
+- `/admin` and `/admin/dashboard` → **HTTP 200** (SPA loads via the unchanged
+  `/admin` rewrites — not a 404, not the homepage-duplicate fallback).
+- Five arbitrary unknown paths **and** an unknown `.js` asset → genuine
+  **HTTP 404**, served from `dist/404.html` (`content-disposition: filename="404"`)
+  with title "Page not found · Botanique Designers" and
+  `robots noindex, nofollow` — no homepage-title duplication.
+
+**Not claimed:** production completion. The fix is verified on the preview only;
+production takes effect on merge to `main` (PR kept as draft).
