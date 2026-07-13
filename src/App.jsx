@@ -20,6 +20,7 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import FAQ from "./pages/FAQ";
+import GardenCare from "./pages/GardenCare";
 
 // Area pages
 import Karen from "./pages/areas/Karen";
@@ -82,6 +83,9 @@ function AppInner() {
 
           {/* Dynamic service pages (handles all data-driven services) */}
           <Route path="/services/:slug" element={<ServicePage />} />
+
+          {/* GardenCare — scheduled garden maintenance programme */}
+          <Route path="/gardencare" element={<GardenCare />} />
 
           {/* Projects */}
           <Route path="/projects" element={<Projects />} />

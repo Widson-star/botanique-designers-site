@@ -21,8 +21,8 @@ export default function Karen() {
         },
         {
           icon: "✂️",
-          title: "Garden Maintenance",
-          desc: "Weekly, bi-weekly or monthly maintenance contracts for Karen homeowners and estate managers.",
+          title: "GardenCare Maintenance",
+          desc: "GardenCare Regular, Monthly or Seasonal programmes for Karen homeowners and estate managers — scope and frequency agreed after assessment.",
         },
         {
           icon: "💧",
@@ -43,6 +43,7 @@ export default function Karen() {
         { label: "Westlands", path: "/areas/westlands" },
         { label: "Nairobi CBD", path: "/areas/nairobi" },
       ]}
+      gardenCareArea
     canonical="https://www.botaniquedesigners.com/areas/karen"
     />
   );

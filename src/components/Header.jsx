@@ -32,6 +32,7 @@ const serviceCategories = [
   {
     title: "Ongoing Care",
     items: [
+      { label: "GardenCare (Scheduled Maintenance)", path: "/gardencare" },
       { label: "Garden Maintenance", path: "/services/garden-maintenance" },
       { label: "Lawn Care", path: "/services/lawn-care" },
     ],

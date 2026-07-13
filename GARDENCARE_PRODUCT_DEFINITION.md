@@ -1,9 +1,16 @@
 # GardenCare — Product & Operations Definition
 
-**Workstream:** BD-GARDENCARE-01 — Phase A (Product and Operations Definition)
-**Status:** Internal definition only. **GardenCare is NOT publicly launched.**
-**Document type:** Documentation only — no public pages, packages, buttons,
-pricing tables or website copy are created or changed.
+**Workstream:** BD-GARDENCARE-01 — Phase A (Product and Operations Definition,
+commercially approved) and Phase B (Public Website Implementation and
+Consistency Correction)
+**Status:** Phase A approved. Phase B implemented on branch
+`claude/bd-gardencare-01-phase-b`, submitted as a **draft, unmerged pull
+request**. **GardenCare remains NOT publicly launched** — the `/gardencare`
+page and related public wording exist only in that draft PR and go live only
+once it is reviewed and merged.
+**Document type:** This document remains the authoritative product/operations
+definition. See §24 below for a record of exactly what Phase B implemented and
+which existing public claims it reconciled.
 
 > **Owner approval:** the commercial and operational policies in this document were
 > approved by **Widson Omutelema Ambaisi on 12 July 2026** (see the Owner Approval
@@ -501,3 +508,110 @@ segmentation) was approved on the same date and completes the commercial policy 
 GardenCare remains **not publicly launched**. This approval covers internal
 commercial/operational policy only; it does not authorise any public website
 content, which is Phase B.
+
+## 24. Phase B — Implementation Record (pending PR review/merge)
+
+**Status: implemented on branch `claude/bd-gardencare-01-phase-b`, submitted as
+a draft, unmerged pull request. GardenCare is NOT live until that PR is
+reviewed and merged.**
+
+### Public page
+
+A dedicated route, `/gardencare` (`src/pages/GardenCare.jsx`), was created
+containing: a hero with the approved coverage wording (§3); the three final
+approved programme names and definitions (§4) with an explicit statement that
+no fourth package or "GardenCare Bespoke" name exists; the routine-activity
+menu (§6) framed as a non-exhaustive menu; the separately-quoted list (§7)
+framed as scope boundaries, not a page dominated by exclusions; a seven-step
+"How It Works" sequence matching §5/§18 (no new assessment price introduced);
+a plain-language terms summary matching §9–§17 exactly (duration, payment
+cycle, notice period, assessment-fee credit, VAT principle, weather policy,
+access requirements, missed-visit rule, waste-removal limit, materials
+approval, emergency-work policy); the approved segmentation quote (§2); and an
+11-question FAQ whose visible content and FAQPage structured data are
+generated from the same array (so they cannot diverge).
+
+### CTA and enquiry integration
+
+Both GardenCare CTAs (`Start a GardenCare Enquiry`) call
+`openQuoteWizard("Garden Maintenance & Aftercare")` — the existing wizard
+option — so the enquiry proceeds through the unmodified six-step wizard with
+that service preselected. The wizard's consultation-distance shortcut is
+unaffected: it only triggers when a visitor explicitly selects "Consultation &
+Site Assessment" at step 2, which GardenCare's prefill does not set. A
+secondary WhatsApp CTA uses a new, GardenCare-specific message builder
+(`buildGardenCareMessage` in `src/utils/whatsapp.js`) that identifies GardenCare
+interest, the visitor's selected programme (if chosen via the on-page
+programme cards), location and site context when provided, and always ends
+with a next-step request — using the existing WhatsApp number, with no new
+number introduced.
+
+### Public entry points added
+
+Header "Ongoing Care" dropdown; Footer services list; a Services-page callout
+section; a restrained homepage callout section (between the services grid and
+"How We Work"); a callout on the Garden Maintenance service page
+(`src/pages/services/ServicePage.jsx`, shown only for that slug); and an
+"Explore what we offer" link on the five Nairobi-Metro-coverage area pages
+(Karen, Runda, Kiambu, Westlands, Nairobi) via a new opt-in `gardenCareArea`
+prop on the shared `AreaPage` component. No independent GardenCare logo,
+identity, email or footer was created — the page inherits the existing header,
+footer, typography and colour system.
+
+### Existing public claims reconciled
+
+- **`index.html`** (sitewide FAQPage JSON-LD) and **`src/data/faqs.js`** (the
+  visible `/faq` page): replaced the fixed "monthly/quarterly package contents"
+  framing with GardenCare programme names and an "agreed after assessment"
+  framing; replaced "we keep a log of each visit" with the approved short
+  WhatsApp visit summary; added an explicit GardenCare Regular/Monthly/Seasonal
+  explainer FAQ; softened the take-over-maintenance answer to reference the
+  right GardenCare programme or a bespoke commercial agreement. The
+  `OfferCatalog` "Garden Maintenance" offer was renamed "GardenCare
+  Maintenance" with a non-fixed-package description.
+- **`src/data/services.js`**: `garden-maintenance` — removed "everything a
+  garden needs" and "consistent team who knows your garden"; renamed the
+  process steps to reference GardenCare, a written proposal, scheduled visits
+  by frequency, and a WhatsApp visit summary; reframed "Fertilisation" as
+  "Agreed Feeding" and "Pest Monitoring" as "Plant-Health Observation" to match
+  the observation-vs-treatment boundary (§6/§7). `potted-indoor-plants` —
+  removed the "replace as needed" automatic-replacement implication;
+  replacement plants are now stated as separately quoted. `lawn-care` —
+  softened the fixed "annual program with monthly tasks" framing.
+  `commercial-landscaping` — reframed "Maintenance Programmes" to reference
+  GardenCare or a bespoke commercial agreement for larger/complex sites,
+  consistent with the §2 segmentation.
+- **`server/index.js`** (Ask Botanique system prompt, public-facing assistant
+  content only): replaced "Garden Maintenance — weekly, bi-weekly or monthly
+  programmes" with a GardenCare description naming the three programmes and
+  stating the Nairobi Metropolitan Area coverage, so the assistant cannot
+  imply nationwide GardenCare availability.
+- **Area pages**: Karen, Runda, Kiambu, Westlands and Nairobi (all within
+  launch coverage) had their maintenance-service cards reworded to name
+  GardenCare and its programmes, and Runda's card no longer implies tree
+  management/irrigation servicing are included in ordinary maintenance (both
+  are separately quoted per §7). Mombasa and Nakuru (outside launch coverage)
+  had their "scheduled maintenance programmes … delivered per an agreed
+  schedule" wording replaced with "maintenance and aftercare assessed and
+  agreed alongside your project," with an explicit statement that GardenCare
+  currently covers the Nairobi Metropolitan Area only. Kisumu and Eldoret
+  carried no GardenCare-style recurring-maintenance claim and were left
+  unchanged. Botanique's separate Kenya-wide landscape-design positioning was
+  not altered on any area page.
+
+### SEO / routing
+
+`/gardencare` was added to the React routes, the prerender route list
+(`scripts/prerender.mjs`), `vite-plugin-sitemap`'s `dynamicRoutes`
+(`vite.config.js`), and `public/sitemap.xml`. The page carries an accurate
+title, meta description, canonical URL, Open Graph tags, `Service` structured
+data (no price/offer schema), `BreadcrumbList` structured data, and `FAQPage`
+structured data generated from the same array as the visible FAQ. No ratings,
+reviews, prices, availability or `Offer` schema were added.
+
+### Publication gate
+
+This entire Phase B implementation exists only on the draft PR for branch
+`claude/bd-gardencare-01-phase-b`. **GardenCare is not published and the
+public wording above does not go live until that PR is reviewed and merged**
+by the owner.

@@ -258,6 +258,34 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ====== GARDENCARE CALLOUT ====== */}
+      <section className="py-16 bg-white border-t border-gray-100">
+        <div className="max-w-4xl mx-auto px-6">
+          <FadeIn>
+            <div className="bg-botanique-beige rounded-2xl p-8 md:p-10 flex flex-col md:flex-row items-center gap-6 justify-between">
+              <div className="text-center md:text-left">
+                <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-2">
+                  Ongoing Care
+                </p>
+                <h2 className="text-2xl font-bold text-botanique-charcoal mb-2">
+                  GardenCare — scheduled garden maintenance
+                </h2>
+                <p className="text-gray-500 text-sm max-w-xl">
+                  Regular, Monthly and Seasonal programmes for the Nairobi
+                  Metropolitan Area, custom-scoped and priced after assessment.
+                </p>
+              </div>
+              <Link
+                to="/gardencare"
+                className="shrink-0 px-6 py-3 rounded-full bg-botanique-green text-white text-sm font-semibold hover:opacity-90 transition"
+              >
+                Explore GardenCare →
+              </Link>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       {/* ====== HOW WE WORK ====== */}
       <section className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6 text-center">

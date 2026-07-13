@@ -76,6 +76,22 @@ export function buildProjectMessage(projectName) {
   ].join("\n");
 }
 
+// GardenCare secondary WhatsApp CTA (the /gardencare page). Identifies GardenCare
+// interest, the desired programme/frequency if the visitor picked one, location
+// and site context if provided, and always ends with a clear next-step request.
+// No price is stated — pricing is custom after assessment.
+export function buildGardenCareMessage({ programme, location, siteContext } = {}) {
+  const lines = ["Hello Botanique Designers,", "", "I'm interested in GardenCare (your garden maintenance programme)."];
+
+  if (programme) lines.push("", line("Programme of interest", programme));
+  if (location) lines.push(line("Location", location));
+  if (siteContext) lines.push(line("Garden / site context", siteContext));
+
+  lines.push("", "Could you please advise on the next step, including a garden and location assessment?");
+
+  return lines.join("\n");
+}
+
 // Contact-form WhatsApp fallback (used when the website form can't send).
 export function buildContactFallbackMessage(form = {}) {
   return [

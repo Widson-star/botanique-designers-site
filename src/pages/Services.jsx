@@ -128,6 +128,29 @@ export default function ServicesPage() {
         </FadeIn>
       ))}
 
+      {/* GardenCare callout */}
+      <FadeIn>
+        <section className="py-16 px-4 bg-botanique-beige">
+          <div className="max-w-3xl mx-auto text-center bg-white rounded-2xl shadow-sm p-10 border border-gray-100">
+            <p className="text-botanique-green font-medium text-sm uppercase tracking-widest mb-3">
+              Ongoing Care
+            </p>
+            <h2 className="text-3xl font-bold text-botanique-charcoal mb-4">GardenCare</h2>
+            <p className="text-gray-600 mb-6">
+              Our scheduled garden maintenance programme for the Nairobi
+              Metropolitan Area — GardenCare Regular, Monthly and Seasonal,
+              custom-scoped and priced after assessment.
+            </p>
+            <Link
+              to="/gardencare"
+              className="inline-block px-8 py-3 rounded-full bg-botanique-green text-white font-semibold hover:opacity-90 transition"
+            >
+              Explore GardenCare →
+            </Link>
+          </div>
+        </section>
+      </FadeIn>
+
       {/* CTA */}
       <section className="py-16 px-4 bg-botanique-green text-white text-center">
         <div className="max-w-2xl mx-auto">

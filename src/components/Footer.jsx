@@ -30,6 +30,7 @@ export default function Footer() {
             <li><Link to="/services/garden-implementation" className="hover:text-white transition">Garden Implementation</Link></li>
             <li><Link to="/services/commercial-landscaping" className="hover:text-white transition">Commercial & Institutional</Link></li>
             <li><Link to="/services/garden-maintenance" className="hover:text-white transition">Garden Maintenance</Link></li>
+            <li><Link to="/gardencare" className="hover:text-white transition">GardenCare</Link></li>
             <li><Link to="/services" className="text-botanique-green hover:text-white transition text-xs font-medium">View all services →</Link></li>
           </ul>
         </div>

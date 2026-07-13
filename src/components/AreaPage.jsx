@@ -15,6 +15,7 @@ export default function AreaPage({
   services,
   whyUs,
   nearbyAreas,
+  gardenCareArea = false,
 }) {
   const { openQuoteWizard } = useApp();
   const { pathname } = useLocation();
@@ -117,6 +118,7 @@ export default function AreaPage({
               { label: "Ecological & Native Planting", path: "/services/ecological-planting-design" },
               { label: "Garden Maintenance", path: "/services/garden-maintenance" },
               { label: "Commercial & Institutional", path: "/services/commercial-landscaping" },
+              ...(gardenCareArea ? [{ label: "GardenCare", path: "/gardencare" }] : []),
             ].map((s) => (
               <Link
                 key={s.path}

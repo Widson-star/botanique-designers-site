@@ -27,7 +27,7 @@ export default function Mombasa() {
         {
           icon: "✂️",
           title: "Garden Maintenance",
-          desc: "Scheduled maintenance programmes for Mombasa residences, hotels and resorts — delivered per an agreed schedule.",
+          desc: "Maintenance and aftercare assessed and agreed alongside your Mombasa project — scope and frequency confirmed on site. GardenCare, our scheduled maintenance programme, currently covers the Nairobi Metropolitan Area only.",
         },
       ]}
       whyUs={[
