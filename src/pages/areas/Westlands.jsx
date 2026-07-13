@@ -9,22 +9,18 @@ export default function Westlands() {
       intro="Westlands is one of Nairobi's most commercially active areas, blending high-rise offices, hotels, restaurants and upscale residential apartments. Landscape design here demands a different approach — balancing high foot traffic, limited space, maintenance accessibility and the need for year-round visual impact. Botanique Designers delivers landscape solutions for commercial complexes, rooftop gardens, courtyards, hotels and high-density residential developments in Westlands and Spring Valley."
       services={[
         {
-          icon: "🏢",
           title: "Commercial Landscaping",
           desc: "Exterior landscape design for office complexes, retail centres, hotels and mixed-use developments in Westlands.",
         },
         {
-          icon: "🌿",
           title: "Indoor & Rooftop Gardens",
           desc: "Interior planting schemes, living walls and rooftop garden designs for high-rise and mixed-use buildings.",
         },
         {
-          icon: "✂️",
           title: "GardenCare Maintenance",
           desc: "GardenCare scheduled maintenance for commercial properties, scope assessed per site — larger or complex grounds are handled through a bespoke commercial maintenance agreement.",
         },
         {
-          icon: "🌿",
           title: "Ecological & Native Planting",
           desc: "Water-wise, low-maintenance planting using adapted species suited to Westlands' dense urban plots and container gardens.",
         },

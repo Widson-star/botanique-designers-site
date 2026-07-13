@@ -232,7 +232,8 @@ Notes:
 * Left intentionally: the "🌿 Ask Botanique" chatbot button, WhatsApp message
   emoji (BD-WS-06B copy), payment-modal emoji, and the About country flags.
   Area files still carry now-unused `icon:` emoji in data (not rendered) — minor
-  cleanup for later.
+  cleanup for later. **Superseded:** the unused area `icon:` data was removed under
+  BD-CODE-HYGIENE-01 below (no visitor-visible change).
 * Cards: homepage service cards + area service cards gained a subtle border and
   restrained hover (shadow + slight lift); other card styles already consistent.
 * Image ratios: homepage project cards moved from fixed h-72 to aspect-[4/3]
@@ -287,9 +288,10 @@ Notes:
   BD-ROUTE-AUTHORITY-01, which consolidated route and sitemap authority into a
   single source (`scripts/public-routes.mjs`).
 
-Remaining risks: area files still carry unused `icon:` emoji data (harmless, not
-rendered); in-memory rate limiter is per-instance (fine for single-instance
-Express).
+Remaining risks: in-memory rate limiter is per-instance (fine for single-instance
+Express). **Superseded:** the "area files still carry unused `icon:` emoji data
+(harmless, not rendered)" note is resolved — that dead data was removed under
+BD-CODE-HYGIENE-01 below (no visitor-visible change).
 
 ## BD-TRUTH-CONSISTENCY-01 — Public Claims and Credentials
 
@@ -892,3 +894,47 @@ Vercel throughout.
 * **Scope:** no domain, DNS, Vercel configuration, branch, repository visibility,
   or application setting was changed, and no replacement Pages source was enabled.
   The only repository change is this documentation record.
+
+## BD-CODE-HYGIENE-01 — Remove Confirmed Dead Area-Page Icon Data
+
+Status: Implementation complete — draft PR
+
+Baseline `origin/main`: `2019c3ccaa4dc0d859d68dd374a3d0fba45b11c9`.
+
+Scope: remove the now-unused `icon:` emoji fields left in the nine area-page
+service data objects after BD-WS-07 replaced their rendering with a consistent
+check-in-badge. Data cleanup only — no rendering, styling, copy, service, link,
+metadata, or enquiry-flow change.
+
+Audit evidence (proof the fields were dead before removal):
+
+* **Fields removed:** 36 total — four `icon:` emoji per file across all nine area
+  pages: `src/pages/areas/Eldoret.jsx` (🌿🌿🛠️🌱), `Karen.jsx` (🌿🛠️✂️💧),
+  `Kiambu.jsx` (🌿🛠️🌿✂️), `Kisumu.jsx` (🌿🌿🛠️💧), `Mombasa.jsx` (🌿🌿🛠️✂️),
+  `Nairobi.jsx` (🌿🌿🛠️✂️), `Nakuru.jsx` (🌿🌿🛠️✂️), `Runda.jsx` (🌿🛠️✂️🌿),
+  `Westlands.jsx` (🏢🌿✂️🌿). Each belonged to a `services[]` entry that also
+  carries the still-used `title` and `desc`.
+* **Renderer:** `src/components/AreaPage.jsx` maps `services` using only `s.title`
+  and `s.desc`. The service-card badge is a hardcoded static SVG checkmark
+  (`d="M5 13l4 4L19 7"`); it does not read `s.icon`. No destructuring of `icon`,
+  no `s.icon`/`item.icon`/`service.icon`/`feature.icon`, and no dynamic
+  (`["icon"]`) access exists anywhere in the repository.
+* **No other consumer:** repo-wide search found `icon` only in unrelated places —
+  `src/data/services.js` (separate SVG-path `icon` for the Services page),
+  `src/pages/Home.jsx` (`svc.iconPath`, a different property), `Footer.jsx`/
+  `Home.jsx` social `simple-icons` images, and `index.html` favicon links. There
+  are no tests, schema generators, or build scripts that consume the area `icon`
+  field.
+
+Result: no change to visible text, card ordering, links, services, page metadata,
+structured data (BreadcrumbList JSON-LD), WhatsApp/enquiry behaviour, or responsive
+layout. There is **no visitor-visible change** — this is dead-data removal only.
+
+Supersedes the BD-WS-07 and BD-WS-08 remaining-risk notes about unused area
+`icon:` emoji data (both updated above to point here).
+
+Changed files (exactly): the nine `src/pages/areas/*.jsx` data files and this
+`WORKSTREAMS.md`. No `AreaPage` rendering/styling, public wording, services,
+GardenCare content, founder facts, EIA/NEMA text, WhatsApp destination, analytics,
+`/admin`, Supabase/auth, finance, payments, build/sitemap/routes/Vercel config, or
+`package.json`/`package-lock.json` was touched.
