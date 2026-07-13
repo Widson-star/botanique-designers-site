@@ -61,7 +61,7 @@ re-verified against source and/or live production and are classified **COMPLETE*
 | Route & sitemap authority (BD-ROUTE-AUTHORITY-01) | Single authority `scripts/public-routes.mjs` (43 routes); build 43/43; live sitemap exactly 43 URLs; no redirect-only route listed. |
 | Measurement Phase A (BD-MEASUREMENT-01) | `<Analytics />` client-only in `src/App.jsx`; pageviews only; no `track()` calls; no PII/consent surface. |
 | Repository hygiene (BD-REPOSITORY-HYGIENE-01) | No root `docs/`; GitHub Pages disabled; production served by Vercel from `dist/`. |
-| Dead area-icon data (BD-CODE-HYGIENE-01, #18) | Merged into the audited production SHA. |
+| Dead area-icon data (BD-CODE-HYGIENE-01, #18) | Merged into the audited production SHA (`918c61e…`); Vercel production deployment READY. The `WORKSTREAMS.md` status line, previously still reading "draft PR," was reconciled to complete/merged/deployed/production-verified in this same PR — so this is a resolved COMPLETE item, not an outstanding finding. |
 
 Contact consistency re-checked: the WhatsApp/phone number `254720861592` is
 identical across all ~10 occurrences and `hello@botaniquedesigners.com` is the
@@ -102,7 +102,6 @@ finance, project tracker, payments, or the WhatsApp destination).
 | **F-2** | **VERIFIED DEFECT** | **Oversized blog hero image (~2.26 MB) ships uncompressed.** Every other asset is ≤200 KB; this one is ~12×. | `public/images/blog/landscape-software-2026.jpg` = **2,370,961 bytes**; referenced as the post `image` in `src/data/blog-posts.js:9`; next-largest asset is 200 KB. `scripts/compress-images.mjs` (200 KB budget) exists but is **not wired into any npm script** (`build = generate-sitemap && vite build && prerender`). | `public/images/blog/landscape-software-2026.jpg`, `src/data/blog-posts.js`, `scripts/compress-images.mjs`, `package.json` | Slow LCP on the `/blog/best-landscape-design-software-2026` post — a deliberate SEO target — for a mobile-heavy audience. | Moderate | No | **Targeted asset fix, not an automatic library-wide rewrite.** Optimize **only** this one file; preserve its displayed dimensions/aspect ratio and acceptable visual quality; verify the blog list/post render and the social/structured-data (`og:image`) references still resolve. Do **not** run a broad compression script or wire whole-library image mutation into `build` without first auditing exactly what else it would rewrite. |
 | **F-3** | OPTIONAL ENHANCEMENT | Dead component `src/components/SmartAdvisor.jsx` is unreferenced anywhere in the repo. | Repo-wide search: `SmartAdvisor` appears only inside its own file. `src/App.jsx` renders `Assistant`, not `SmartAdvisor`. | `src/components/SmartAdvisor.jsx` | None (not shipped/rendered). | Low | No | Delete in a future hygiene pass. Not a standalone workstream. |
 | **F-4** | OPTIONAL ENHANCEMENT | Contact number `254720861592` is hardcoded in ~10 files instead of importing `CONTACT` from `src/utils/backend.js`. | `grep` shows the literal in `Footer.jsx`, `Home.jsx`, `FAQ.jsx`, `Assistant.jsx`, `SmartAdvisor.jsx`, `PaidConsultancyModal.jsx`, `PaymentConfirmationModal.jsx`, `index.html`, and `backend.js`. All values currently identical. | multiple | None today (values consistent); future drift risk. | Low | No | Centralise on the `CONTACT` constant opportunistically. |
-| **F-5** | OPTIONAL ENHANCEMENT | Documentation staleness: the `BD-CODE-HYGIENE-01` entry in `WORKSTREAMS.md` still reads "Status: Implementation complete — draft PR," but that PR (#18) is merged into the audited production `main`. | `WORKSTREAMS.md` BD-CODE-HYGIENE-01 header vs. `git log` (#18 = audited SHA). | `WORKSTREAMS.md` | None (internal doc only). | Low | No | Correct the status line during a future documentation pass (left unchanged here to keep this diff minimal and faithful). |
 
 ---
 
@@ -256,8 +255,8 @@ BD-DISCOVERABILITY-01.
 
 - **VERIFIED DEFECT (2):** F-1 soft-404 / unknown-route handling; F-2 oversized
   2.26 MB blog hero image.
-- **OPTIONAL ENHANCEMENT (3):** F-3 dead `SmartAdvisor.jsx`; F-4 hardcoded contact
-  number; F-5 `WORKSTREAMS.md` BD-CODE-HYGIENE-01 status staleness.
+- **OPTIONAL ENHANCEMENT (2):** F-3 dead `SmartAdvisor.jsx`; F-4 hardcoded contact
+  number.
 - **EVIDENCE GAP (3):** B-2 production analytics baseline; B-3 verbatim
   testimonials; B-4 additional project imagery.
 - **BLOCKED (1):** B-1 Analytics Phase B (Hobby plan).
