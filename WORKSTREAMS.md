@@ -426,9 +426,11 @@ Protected systems left unchanged:
 
 Status: Phase A is complete and owner-approved (12 July 2026). Phase B (public
 website implementation and consistency correction) implementation and
-validation are complete — see the Phase B subsection below. **Publication
-remains pending owner approval and production deployment; GardenCare is NOT
-publicly launched** until that happens.
+validation are complete — see the Phase B subsection below. The owner approved
+publication by instructing ChatGPT to merge PR #9, which was merged to `main`
+on 13 July 2026; production deployment completed successfully. **GardenCare is
+publicly launched** at <https://www.botaniquedesigners.com/gardencare>. A
+post-launch verification record is included below.
 
 Phase A is **documentation only**. It defines GardenCare as an operationally
 realistic Botanique Designers maintenance programme, now including the commercial
@@ -514,9 +516,10 @@ outstanding.**
 
 ### Phase B — Public Website Implementation and Consistency Correction
 
-Status: **Implementation and validation are complete. Publication remains
-pending owner approval and production deployment — GardenCare is NOT publicly
-launched** until that happens.
+Status: **Implementation and validation are complete. The owner approved
+publication by instructing ChatGPT to merge PR #9; it was merged to `main` on
+13 July 2026 and production deployment completed successfully. GardenCare is
+publicly launched** at <https://www.botaniquedesigners.com/gardencare>.
 
 Scope delivered:
 
@@ -568,5 +571,25 @@ Scope delivered:
   wording, Kisumu/Eldoret area-page content (no GardenCare-style claim existed
   there), and Vercel deployment configuration were all left untouched.
 
-GardenCare remains **not publicly launched** until publication is approved by
-the owner and deployed to production.
+**GardenCare is publicly launched.** A concise post-launch verification record
+follows.
+
+### Post-launch verification (13 July 2026)
+
+Functional and content verification of the live implementation was run against
+a fresh build of the exact merged commit (direct browser access to the live
+production domain from the verification environment was blocked by that
+environment's own network egress policy — a sandbox restriction, not a
+production issue). Verified: the page loads with no JS runtime errors; Header,
+Footer, homepage, Services page and the Garden Maintenance page all link to
+`/gardencare`; all three programme cards render and selection updates state;
+the WhatsApp CTA opens the existing number with GardenCare interest and the
+selected programme; both enquiry buttons open the existing six-step wizard
+with `Garden Maintenance & Aftercare` preselected, without triggering the
+consultation shortcut; FAQ accordions open and close; no horizontal overflow
+or broken site-asset images; canonical/structured-data/sitemap entries are
+present; Mombasa/Nakuru/Kisumu/Eldoret advertise no standard GardenCare
+availability; Kiambu states "selected accessible locations in Kiambu, subject
+to site assessment and route availability." No defects were found; no public
+website code was changed as part of this verification. Full record in
+`GARDENCARE_PRODUCT_DEFINITION.md` §25.

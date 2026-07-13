@@ -4,19 +4,19 @@
 commercially approved) and Phase B (Public Website Implementation and
 Consistency Correction)
 **Status:** Phase A is complete and owner-approved. Phase B implementation and
-validation are complete. **Publication remains pending owner approval and
-production deployment** — GardenCare must not be described as already live
-until it has been approved for publication and deployed.
+validation are complete. **GardenCare is publicly launched** at
+<https://www.botaniquedesigners.com/gardencare>. See §25 for the post-launch
+verification record.
 **Document type:** This document remains the authoritative product/operations
-definition. See §24 below for a record of exactly what Phase B implemented and
-which existing public claims it reconciled.
+definition. See §24 for a record of exactly what Phase B implemented and which
+existing public claims it reconciled, and §25 for the post-launch verification.
 
 > **Owner approval:** the commercial and operational policies in this document were
 > approved by **Widson Omutelema Ambaisi on 12 July 2026** (see the Owner Approval
 > Record at the end). The programme structure, coverage, inclusions, exclusions and
-> prohibited-claim boundaries approved earlier remain in force. Phase B implementation
-> is complete; GardenCare is still **not** publicly launched, and nothing here may be
-> treated as live on the public website until publication is approved and deployed.
+> prohibited-claim boundaries approved earlier remain in force. The owner instructed
+> ChatGPT to merge PR #9, which was merged to `main` on 13 July 2026; production
+> deployment completed successfully, and **GardenCare is now publicly launched**.
 
 ---
 
@@ -434,10 +434,11 @@ implementation and consistency correction, and it delivered:
 5. **Validation against this authoritative GardenCare definition**, confirming no
    prohibited claim (§20) appears in the implemented copy.
 
-Implementation and validation being complete is not the same as publication.
-**Publication remains pending owner approval and production deployment** —
-GardenCare must not be described as already live until it has been approved for
-publication and deployed.
+**Publication is complete.** The owner instructed ChatGPT to merge PR #9; it was
+merged to `main` on 13 July 2026, and production deployment completed
+successfully. **GardenCare is publicly launched** at
+<https://www.botaniquedesigners.com/gardencare>. See §25 for the post-launch
+verification record.
 
 ## 23. Remaining open items
 
@@ -447,12 +448,9 @@ commercial/operational decisions plus the subsequently approved commercial-groun
 segmentation — are recorded and approved (see §2, §4, §5, §8, §9, §10, §11, §12,
 §13, §14, §15, §16, §17 and the Owner Approval Record). Phase B's public wording,
 reconciliation, website implementation, enquiry/WhatsApp integration and validation
-are all complete (§24). No GardenCare commercial or operational decision, and no
-Phase B delivery item, remains outstanding.
-
-The only remaining step is **publication**: owner approval to publish and
-production deployment. Until that happens, GardenCare is implemented but not
-publicly launched.
+are all complete (§24), publication is complete, and post-launch verification is
+recorded (§25). No GardenCare commercial or operational decision, no Phase B
+delivery item, and no publication step remains outstanding.
 
 ## Owner Approval Record
 
@@ -508,15 +506,18 @@ Items 1–13 are the original commercial/operational decisions; item 14 (commerc
 segmentation) was approved on the same date and completes the commercial policy set.
 
 This approval covers internal commercial/operational policy. Phase B (§24) has
-since implemented the corresponding public website content; GardenCare remains
-**not publicly launched** until publication is separately approved and deployed.
+since implemented the corresponding public website content, the owner approved
+publication by instructing ChatGPT to merge PR #9 (merged to `main` on 13 July
+2026), and production deployment completed successfully. **GardenCare is
+publicly launched.**
 
 ## 24. Phase B — Implementation Record
 
-**Status: Phase B implementation and validation are complete. Publication
-remains pending owner approval and production deployment — GardenCare must
-not be described as already live until it has been approved for publication
-and deployed.**
+**Status: Phase B implementation and validation are complete. PR #9 was merged
+to `main` on 13 July 2026 and production deployment completed successfully.
+GardenCare is publicly launched at
+<https://www.botaniquedesigners.com/gardencare>. See §25 for the post-launch
+verification record.**
 
 ### Public page
 
@@ -615,8 +616,44 @@ data (no price/offer schema), `BreadcrumbList` structured data, and `FAQPage`
 structured data generated from the same array as the visible FAQ. No ratings,
 reviews, prices, availability or `Offer` schema were added.
 
-### Publication gate
+### Publication
 
-Phase B implementation and validation are complete. **GardenCare is not
-published, and the public wording above does not go live, until publication
-is approved by the owner and deployed to production.**
+Phase B implementation and validation are complete. The owner approved
+publication by instructing ChatGPT to merge PR #9, which was merged to `main`
+on 13 July 2026; production deployment completed successfully. **GardenCare is
+publicly launched** at <https://www.botaniquedesigners.com/gardencare>. See
+§25 for the post-launch verification record.
+
+## 25. Post-launch verification record
+
+**Date:** 13 July 2026. **Scope:** functional and content verification of the
+live implementation at <https://www.botaniquedesigners.com/gardencare>, run
+against a fresh build of the exact merged commit (direct browser access to the
+live production domain from the verification environment was blocked by that
+environment's own network egress policy — a sandbox restriction, not a
+production issue — so verification ran against a locally served build of the
+identical, already-merged code).
+
+Verified (desktop and mobile viewports):
+
+- The page loads successfully with no JavaScript runtime errors.
+- Header, footer, homepage, Services page and the Garden Maintenance service
+  page all link to `/gardencare`.
+- All three programme cards (Regular, Monthly, Seasonal) render; selecting one
+  updates its selected/pressed state.
+- The WhatsApp CTA opens the existing WhatsApp number with a message
+  identifying GardenCare interest and the selected programme.
+- Both "Start a GardenCare Enquiry" buttons open the existing six-step wizard
+  with `Garden Maintenance & Aftercare` preselected; the consultation-distance
+  shortcut does not trigger.
+- FAQ accordion items open and close correctly.
+- No horizontal overflow; no broken images from the site's own asset paths.
+- Canonical URL, `Service`/`BreadcrumbList`/`FAQPage` structured data, and the
+  sitemap entry for `/gardencare` are all present.
+- Mombasa, Nakuru, Kisumu and Eldoret do not advertise standard GardenCare
+  programme availability in their own page content.
+- Kiambu's GardenCare mention states "selected accessible locations in
+  Kiambu, subject to site assessment and route availability."
+
+No defects were found. No public website code was changed as part of this
+verification.
