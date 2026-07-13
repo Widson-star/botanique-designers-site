@@ -1,9 +1,12 @@
 # Measurement Plan — BD-MEASUREMENT-01
 
 **Workstream:** BD-MEASUREMENT-01 — Enquiry Measurement
-**Status:** Phase A implemented — Vercel Web Analytics pageviews only. Custom
-events are Phase B, deferred pending owner confirmation of Vercel plan
-eligibility (see §4).
+**Status:** Phase A complete — Vercel Web Analytics pageview foundation is
+merged, deployed and production-verified (13 July 2026; production commit
+`fa49bf31077c7b258a580ce6fac260f55b68de62`). Pageviews only are active; no
+custom `track()` events exist. Custom events are Phase B and remain **BLOCKED**
+until the owner confirms this specific Vercel project is on Pro/Enterprise and a
+reviewed implementation brief exists (see §5 and §8).
 **Scope:** Website analytics only. This document does not change, and is not
 authoritative for, GardenCare commercial policy, the project-enquiry journey,
 WhatsApp behaviour, consultation pricing, or any protected system — see
@@ -141,19 +144,65 @@ expressed interest — they have not necessarily become a client, and the
 amount, if any, is not tracked by this system (consultation fees and project
 values live in the protected finance/project-tracker systems, which this
 workstream does not touch). No target, benchmark, or conversion-rate
-improvement is claimed by this document; none exists yet, because no data has
-been collected. Once real pageview (and, later, event) data accumulates, any
-targets should be set from that baseline — not invented in advance.
+improvement is claimed by this document; none exists yet, because no baseline
+has yet accumulated. Pageview collection is now active (see §7–§8), but real
+data should accumulate for an initial 7–14 day baseline before any targets or
+conversion recommendations are set — not invented in advance.
 
-## 7. Dashboard action required (owner / Vercel account, not this repository)
+## 7. Dashboard enablement — COMPLETED
 
-Vercel Web Analytics must be **enabled for this project in the Vercel
-dashboard** (Project → Analytics tab) for pageview data to actually appear.
-This is an account-level setting outside this repository's control — this PR
-adds the code-side integration only. Until it is enabled, the injected script
-fails to load with a console message only (handled by the `@vercel/analytics`
-package's own `onerror` handler) — no error is thrown, and the site otherwise
-behaves exactly as before.
+Vercel Web Analytics has been **enabled by the owner for this project** in the
+Vercel dashboard (confirmed 13 July 2026):
 
-Custom events (Phase B) additionally require confirming the project is on a
-Vercel **Pro or Enterprise** plan before any `track()` call is added — see §5.
+- Team: `botanique-designers-projects`
+- Project: `botanique-designers-site-gpm1`
+- Project ID: `prj_AgYJrkgpGuLeykbASImM3QT5Xhed`
+
+This **supersedes** the earlier statement that dashboard enablement was still
+required — that action is done. Both the code-side integration and the dashboard
+setting are now in place, so pageviews are being collected.
+
+Custom events (Phase B) additionally require confirming this specific project is
+on a Vercel **Pro or Enterprise** plan before any `track()` call is added. That
+plan tier has **not** been confirmed, so Phase B remains blocked — see §5 and
+§8.
+
+## 8. Production release closeout (Phase A) — 13 July 2026
+
+Phase A is complete, merged, deployed and production-verified. Verified facts:
+
+- PR #11 was marked ready and squash-merged on 13 July 2026.
+- Production merge commit: `fa49bf31077c7b258a580ce6fac260f55b68de62`.
+- The corresponding Vercel production deployment reached READY.
+- Production domains were assigned without alias errors.
+- `https://www.botaniquedesigners.com` returned HTTP 200.
+- The deployed production JavaScript contains the Vercel Analytics integration.
+- `https://www.botaniquedesigners.com/_vercel/insights/script.js` returned HTTP
+  200.
+- Pageviews only are active; no custom `track()` events exist; no protected
+  systems were changed.
+
+### Data-accumulation note
+
+Pageview data may take time to appear and should be allowed to accumulate before
+any conversion recommendations are made. Real pageview data should accumulate
+for an initial **7–14 day baseline** before conversion recommendations. No
+conversion improvement, lead volume, or business result is claimed — none can
+be, because a baseline has not yet accumulated.
+
+### Phase B gate — BLOCKED
+
+Phase B (custom `track()` events) remains **BLOCKED** until BOTH conditions are
+met:
+
+1. The owner confirms this specific Vercel project
+   (`botanique-designers-site-gpm1`, `prj_AgYJrkgpGuLeykbASImM3QT5Xhed`) is on
+   Pro or Enterprise and is therefore eligible for custom events.
+2. ChatGPT prepares and reviews a focused implementation brief before any
+   `track()` call is introduced.
+
+Additional binding constraints:
+
+- Phase B must use only the privacy-safe taxonomy already defined in §5.
+- The prohibited-data list in §5 remains binding.
+- No new PR for custom events should be opened merely because Phase A is live.
