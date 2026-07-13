@@ -897,9 +897,13 @@ Vercel throughout.
 
 ## BD-CODE-HYGIENE-01 — Remove Confirmed Dead Area-Page Icon Data
 
-Status: Implementation complete — draft PR
+Status: **Complete, merged, deployed and production-verified.** PR #18 passed
+review and was squash-merged to `main`; production commit
+`918c61eeb12fb3295bc88a0d78914e434e545839`; the matching Vercel production
+deployment reached READY. (Verified during the BD-ROADMAP-02 audit — see
+`POST_STABILIZATION_AUDIT.md`.)
 
-Baseline `origin/main`: `2019c3ccaa4dc0d859d68dd374a3d0fba45b11c9`.
+Baseline `origin/main` (branch was cut from): `2019c3ccaa4dc0d859d68dd374a3d0fba45b11c9`.
 
 Scope: remove the now-unused `icon:` emoji fields left in the nine area-page
 service data objects after BD-WS-07 replaced their rendering with a consistent
@@ -938,3 +942,63 @@ Changed files (exactly): the nine `src/pages/areas/*.jsx` data files and this
 GardenCare content, founder facts, EIA/NEMA text, WhatsApp destination, analytics,
 `/admin`, Supabase/auth, finance, payments, build/sitemap/routes/Vercel config, or
 `package.json`/`package-lock.json` was touched.
+
+## BD-ROADMAP-02 — Post-Stabilization Evidence Audit
+
+Status: Audit complete — documentation only. No implementation started.
+
+Baseline / audited production `main`:
+`918c61eeb12fb3295bc88a0d78914e434e545839` (13 July 2026).
+
+A fresh evidence-based audit of the current production website, production build
+and repository was run to determine what genuinely remains after the
+stabilization, truth, conversion, GardenCare, measurement, route-authority and
+repository-hygiene workstreams. Full record — audit method, completed-workstream
+verification, findings table, blocked/evidence-gap register, accepted
+limitations, the single recommended next workstream, the explicit
+"not recommended now" list, and protected-system boundaries — is in
+**`POST_STABILIZATION_AUDIT.md`**.
+
+Headline results:
+
+* **Two VERIFIED DEFECTS.** (1) Soft-404: unknown URLs return HTTP 200 with
+  homepage-duplicate HTML and no `noindex`, and render only Header + Footer with
+  an empty `<main>` in a real browser (`src/App.jsx` has no `path="*"`;
+  `vercel.json` rewrites `"/(.*)" → "/"`; no `/404` is prerendered). (2) An
+  oversized ~2.26 MB blog hero image ships uncompressed
+  (`public/images/blog/landscape-software-2026.jpg`; `scripts/compress-images.mjs`
+  is not wired into the build).
+* **Recommended next single workstream:** a bounded **Unknown-Route / Soft-404
+  Handling** workstream (proposed `BD-DISCOVERABILITY-01`) — public routing/build
+  config only, no analytics dependency, no invented facts, no protected system
+  touched. This is **not** a one-line change: a React catch-all plus a `/404`
+  prerender does not by itself guarantee a true HTTP 404 on Vercel, so the brief
+  must first settle the Vercel/static-routing design (preserving all 43
+  prerendered routes, the deliberate legacy redirects, client-side navigation, a
+  helpful NotFound view, `noindex` output, a genuine 404 where Vercel supports it,
+  and no homepage-duplicate fallback) and must verify live HTTP status after
+  deploy — a rendered NotFound message with HTTP 200 is not a fix. The 2.26 MB
+  image is a **bounded, targeted single-asset** companion fix (optimize only that
+  file, preserve dimensions/quality, verify blog + `og:image` references), not a
+  whole-library rewrite.
+* **BLOCKED / evidence gaps unchanged:** Analytics Phase B (Vercel Hobby plan);
+  the 7–14-day Production-filtered baseline (pending accumulation); verbatim
+  testimonial wording and additional project imagery (owner-supplied evidence).
+* **Apicora boundary (precise):** in the **visitor-facing website** Apicora is
+  mentioned **exactly once**, in the **About-page founder biography**, identifying
+  it as a **separate environmental intelligence platform for Africa** and part of
+  Widson Omutelema Ambaisi's founder background. Apicora is **not** a Botanique
+  Designers service, product, platform, operating system, or substitute brand.
+  Internal authority/history documents (this file and the other root Markdown
+  records) mention "Apicora" only to record this boundary; those are **not** public
+  brand positioning. **Botanique Designers remains a separate landscape-design and
+  implementation practice.**
+* **Re-verified COMPLETE:** founder identity/credentials, public email,
+  EIA/NEMA removal, the Apicora boundary above, Kenya/regional positioning,
+  Zaara Park design-only status, GardenCare launch, the 43-route sitemap/route
+  authority, measurement Phase A, and the dead area-icon-data removal (#18).
+
+No new implementation is marked started. Validation for the audit: production
+build succeeds at 43/43 routes; lint holds at the inherited 20 errors in the same
+four files (zero new); `git diff --check` clean; the only changed files are
+`POST_STABILIZATION_AUDIT.md` (new) and this `WORKSTREAMS.md` entry.
