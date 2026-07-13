@@ -283,11 +283,13 @@ Notes:
   routes served as static files (no conflict with SPA rewrite); no /api on Vercel.
 * docs/ confirmed NOT deployed by Vercel (serves dist/) — flagged safe to delete.
   Subsequently deleted; see BD-REPOSITORY-HYGIENE-01 below. Dual sitemap (public/ +
-  vite-plugin) still present, kept in sync — consolidation optional.
+  vite-plugin) — superseded: the duplication was removed under
+  BD-ROUTE-AUTHORITY-01, which consolidated route and sitemap authority into a
+  single source (`scripts/public-routes.mjs`).
 
 Remaining risks: area files still carry unused `icon:` emoji data (harmless, not
-rendered); repo still has no git commits (baseline recommended); in-memory rate
-limiter is per-instance (fine for single-instance Express).
+rendered); in-memory rate limiter is per-instance (fine for single-instance
+Express).
 
 ## BD-TRUTH-CONSISTENCY-01 — Public Claims and Credentials
 
