@@ -270,3 +270,66 @@ BD-DISCOVERABILITY-01.
 (additional project images). **Owner decision (not recommended):** B-1 (Vercel
 plan upgrade). **Owner-gated evidence-gathering:** B-2 (let the production
 baseline accumulate, then re-read filtered to Production).
+
+---
+
+## 11. F-1 resolution — BD-DISCOVERABILITY-01 (Unknown-Route / Soft-404 Correction)
+
+**Baseline SHA:** `2ddd0a7de80b3938ebd11f5e1f284f39c18a7cd1`
+(`BD-ROADMAP-02: record post-stabilization evidence audit (#19)`).
+**Branch:** `claude/bd-discoverability-01-soft-404`.
+**Status:** Implemented and locally validated; **production completion pending
+merge and the required deployed-preview HTTP-status verification.**
+
+**Root cause (re-confirmed live):** the `vercel.json` rewrite
+`"/(.*)" → "/"` runs after the filesystem check, so every unmatched path was
+served `dist/index.html` as **HTTP 200** with the homepage `<title>` and
+`canonical=/`. `/this-page-does-not-exist-xyz123` returned **200** in production.
+
+**Routing design (per official Vercel routing evidence — `redirects` run before
+the filesystem, the `vercel.json` `rewrites` array runs after it, and a static
+`dist/404.html` is served with a genuine HTTP 404 for unmatched paths):**
+
+- Removed the broad `"/(.*)" → "/"` homepage fallback.
+- Added three explicit **permanent (308) redirects** for the legacy routes
+  (`/services/eia-studies` → `/services`, `/services/implementation` →
+  `/services/garden-implementation`, `/services/maintenance` →
+  `/services/garden-maintenance`), replacing reliance on client `<Navigate>` for
+  full-page loads.
+- Kept the narrow `/admin` and `/admin/:path*` rewrites unchanged; no
+  `src/admin/**` edits.
+- Added a catch-all React route (`path="*"`) rendering `src/pages/NotFound.jsx`
+  (Botanique-styled; `noindex, nofollow`; unique title; no homepage canonical;
+  recovery links to Home, Services, Projects and a WhatsApp project enquiry).
+- Extended `scripts/prerender.mjs` to emit `dist/404.html` from that view —
+  **outside** the public-route authority (not in `scripts/public-routes.mjs`, not
+  in the sitemap, not a 44th canonical route).
+
+**Local validation (this branch):** `npm ci` clean; `npm run build` renders
+**43/43** canonical routes plus `dist/404.html`; sitemap remains **43** unique
+URLs with **no** `/404` entry; `dist/404.html` contains "Page not found" +
+`noindex, nofollow` and **no** canonical/homepage-title duplication; all 43 route
+files present; legacy redirect targets correct; `/admin` source untouched; lint
+holds at the inherited **20** errors in the same four files (zero new);
+`git diff --check` clean. In-app browser: NotFound view renders with Header/Footer
+and recovery links, normal routes render, no console errors.
+
+**Deployed-preview verification (PR #20, head `486b4e9`):** confirmed on the
+Vercel preview (deployment-protection bypass used only to read status codes):
+
+- `/` and representative prerendered routes (`/about`,
+  `/services/landscape-design`, `/gardencare`, `/projects/karen-residence`,
+  `/blog/best-landscape-design-software-2026`, `/areas/karen`) → **HTTP 200**.
+- Legacy routes → **HTTP 308** to the correct canonical destinations
+  (`/services/eia-studies` → `/services`; `/services/implementation` →
+  `/services/garden-implementation`; `/services/maintenance` →
+  `/services/garden-maintenance`).
+- `/admin` and `/admin/dashboard` → **HTTP 200** (SPA loads via the unchanged
+  `/admin` rewrites — not a 404, not the homepage-duplicate fallback).
+- Five arbitrary unknown paths **and** an unknown `.js` asset → genuine
+  **HTTP 404**, served from `dist/404.html` (`content-disposition: filename="404"`)
+  with title "Page not found · Botanique Designers" and
+  `robots noindex, nofollow` — no homepage-title duplication.
+
+**Not claimed:** production completion. The fix is verified on the preview only;
+production takes effect on merge to `main` (PR kept as draft).

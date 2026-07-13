@@ -78,6 +78,29 @@ try {
 
   console.log(`\n✅ Pre-rendered ${ok} routes into ${DIST}${fail ? `  (${fail} failed)` : ''}`)
   if (fail > 0) process.exit(1)
+
+  // Custom 404 page — rendered from the catch-all React route and written to
+  // dist/404.html. Vercel serves this file with a genuine HTTP 404 status for
+  // any unmatched path (see vercel.json: no broad homepage rewrite). This page
+  // is deliberately OUTSIDE the public-route authority: it is not in
+  // scripts/public-routes.mjs, not in the sitemap, and is not a canonical
+  // route. A sentinel path is used so the App's `path="*"` route matches.
+  const { html: notFoundBody, helmet: notFoundHelmet } = await render('/__not-found__')
+
+  const notFoundHead = [
+    notFoundHelmet?.title?.toString() ?? '',
+    notFoundHelmet?.meta?.toString() ?? '',
+    notFoundHelmet?.link?.toString() ?? '',
+  ]
+    .filter(Boolean)
+    .join('\n    ')
+
+  const notFoundPage = template
+    .replace('</head>', `    ${notFoundHead}\n  </head>`)
+    .replace('<div id="root"></div>', `<div id="root">${notFoundBody}</div>`)
+
+  fs.writeFileSync(path.join(DIST, '404.html'), notFoundPage)
+  console.log('  ✓ 404.html (custom Not Found page)')
 } finally {
   await vite.close()
 }
