@@ -874,16 +874,21 @@ Vercel throughout.
 * **Safety gates (all passed before change):** `origin/main` at the authorized
   baseline `ad2879a`; no open PR affecting hosting/domains/Vercel/Pages/`docs/`;
   root `docs/` absent at `origin/main`; Vercel production deployment **READY** for
-  `ad2879a`; both `https://www.botaniquedesigners.com` and
-  `https://botaniquedesigners.com` returned HTTP 200 via Vercel; neither redirected
-  to `widson-star.github.io`; no repository configuration or DNS/domain doc
-  depended on the Pages URL.
+  `ad2879a`; `https://www.botaniquedesigners.com` returned HTTP 200 via Vercel and
+  `https://botaniquedesigners.com` returned HTTP 308 redirecting to the www domain,
+  whose final response was HTTP 200 via Vercel — the expected healthy
+  canonical-domain redirect behaviour; neither domain redirected to
+  `widson-star.github.io`; no repository configuration or DNS/domain doc depended
+  on the Pages URL.
 * **Change result:** the DELETE returned **HTTP 204 No Content** — GitHub Pages
   disabled successfully.
 * **Post-change verification:** the Pages API now returns **404 Not Found**
-  (Pages disabled); `https://www.botaniquedesigners.com` and
-  `https://botaniquedesigners.com` both still returned HTTP 200 via Vercel; Vercel
-  production remained READY and no production alias changed.
+  (Pages disabled); `https://www.botaniquedesigners.com` still returned HTTP 200
+  via Vercel and `https://botaniquedesigners.com` still returned HTTP 308
+  redirecting to the www domain, whose final response was HTTP 200 via Vercel — the
+  expected healthy canonical-domain redirect behaviour; neither domain redirected
+  to `widson-star.github.io`; Vercel production remained READY and no production
+  alias changed.
 * **Scope:** no domain, DNS, Vercel configuration, branch, repository visibility,
   or application setting was changed, and no replacement Pages source was enabled.
   The only repository change is this documentation record.
