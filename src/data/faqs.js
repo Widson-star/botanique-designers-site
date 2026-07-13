@@ -40,8 +40,8 @@ const faqs = [
         a: "We offer a brief initial phone or WhatsApp conversation at no charge to understand your project and determine if we're a good fit. Site visits and detailed consultations are charged because they involve professional time, travel, and site assessment work that informs the design.",
       },
       {
-        q: "What's included in your maintenance packages?",
-        a: "Monthly packages typically include lawn mowing, hedge trimming, bed weeding, fertilisation, pest monitoring, and general cleanup. Quarterly packages add aeration, top-dressing, seasonal planting changes, and irrigation system checks. We write a maintenance plan specific to your garden — your plants, your soil, your climate zone.",
+        q: "What's included in a GardenCare maintenance agreement?",
+        a: "GardenCare, our scheduled maintenance programme, may include lawn mowing, hedge and shrub pruning, bed weeding, deadheading, plant-health observation and general cleanup — the exact activities and frequency are agreed for your property after assessment, not fixed in a generic package. Fertiliser, pesticides, replacement plants and other materials are quoted separately.",
       },
       {
         q: "Can I get just a design without implementation?",
@@ -83,19 +83,19 @@ const faqs = [
     questions: [
       {
         q: "How often should my garden be maintained?",
-        a: "Most residential gardens in Nairobi need weekly or fortnightly mowing and monthly comprehensive maintenance (pruning, feeding, weeding). Gardens with irrigation systems need less frequent watering attention but still need regular plant care. We'll recommend a frequency based on your garden's size, complexity, and plant types.",
+        a: "It depends on your garden. GardenCare Regular (weekly or fortnightly visits) suits actively managed gardens and lawns; GardenCare Monthly (one comprehensive visit a month) suits established, lower-maintenance gardens. We recommend a programme based on your garden's size, complexity, and plant types after assessment.",
       },
       {
-        q: "Do you offer monthly maintenance plans?",
-        a: "Yes. We offer monthly and quarterly maintenance plans. Monthly is better for gardens that need regular mowing and active bed management. Quarterly works for lower-maintenance landscapes with established trees and ground covers. Each plan is written for your specific garden — not a generic checklist.",
+        q: "What's the difference between GardenCare Regular, Monthly and Seasonal?",
+        a: "GardenCare Regular is weekly or fortnightly, for actively managed gardens. GardenCare Monthly is one comprehensive visit a month, for established, lower-maintenance gardens. GardenCare Seasonal is a quarterly assessment and corrective-care visit — it is not a substitute for routine lawn maintenance. Each agreement's scope is written for your specific garden.",
       },
       {
-        q: "What does a maintenance visit include?",
-        a: "A typical monthly visit includes: lawn mowing at species-appropriate height, hedge and shrub pruning, bed weeding, deadheading, fertiliser application, pest and disease inspection, irrigation system check, and general cleanup. We keep a log of each visit so you can track what was done and any issues flagged.",
+        q: "What does a GardenCare visit include?",
+        a: "The exact activities depend on your agreed scope, but routine visits may include lawn mowing at species-appropriate height, hedge and shrub pruning, bed weeding, deadheading, plant-health observation and general cleanup. Not every activity is included in every visit — your scope is agreed after assessment. After each visit we send a short WhatsApp summary of what was done.",
       },
       {
         q: "Can you take over maintenance of a garden designed by someone else?",
-        a: "Yes. We'll start with an assessment visit to document your plants, assess their condition, and understand the design intent. Then we'll write a maintenance plan based on what's actually in your garden. If we spot issues — wrong species for the location, drainage problems, pest infestations — we'll flag them and recommend solutions.",
+        a: "Yes. We'll start with an assessment visit to document your plants, assess their condition, and understand the design intent. From there we can propose the GardenCare programme that fits (or a bespoke commercial agreement for larger grounds). If we spot issues — wrong species for the location, drainage problems, pest infestations — we'll flag them and recommend solutions.",
       },
     ],
   },

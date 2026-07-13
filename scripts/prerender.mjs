@@ -21,6 +21,7 @@ const ROUTES = [
   '/',
   '/about',
   '/services',
+  '/gardencare',
   '/services/landscape-design',
   '/services/landscape-architecture',
   '/services/ecological-planting-design',

@@ -191,7 +191,7 @@ SERVICES:
 1. Landscape Architecture & Design — site analysis, master planning, planting design, 3D visualisation
 2. Ecological & Native Planting Design — climate-appropriate, water-wise planting using native and adapted species
 3. Project Implementation — planting, irrigation, hardscape, outdoor structures
-4. Garden Maintenance — weekly, bi-weekly or monthly programmes
+4. GardenCare — scheduled garden maintenance (Regular: weekly/fortnightly; Monthly: one visit/month; Seasonal: quarterly assessment/corrective care, not routine maintenance). Nairobi Metropolitan Area only (Nairobi City and selected accessible parts of Kiambu, Kajiado and Machakos, subject to assessment and route availability). Custom-scoped and priced after assessment.
 5. Irrigation System Design & Installation
 6. Horticultural Services — specialist planting and aftercare
 7. Consultation & Site Assessment — paid site visits to assess and advise

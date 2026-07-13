@@ -1,16 +1,22 @@
 # GardenCare — Product & Operations Definition
 
-**Workstream:** BD-GARDENCARE-01 — Phase A (Product and Operations Definition)
-**Status:** Internal definition only. **GardenCare is NOT publicly launched.**
-**Document type:** Documentation only — no public pages, packages, buttons,
-pricing tables or website copy are created or changed.
+**Workstream:** BD-GARDENCARE-01 — Phase A (Product and Operations Definition,
+commercially approved) and Phase B (Public Website Implementation and
+Consistency Correction)
+**Status:** Phase A is complete and owner-approved. Phase B implementation and
+validation are complete. **Publication remains pending owner approval and
+production deployment** — GardenCare must not be described as already live
+until it has been approved for publication and deployed.
+**Document type:** This document remains the authoritative product/operations
+definition. See §24 below for a record of exactly what Phase B implemented and
+which existing public claims it reconciled.
 
 > **Owner approval:** the commercial and operational policies in this document were
 > approved by **Widson Omutelema Ambaisi on 12 July 2026** (see the Owner Approval
 > Record at the end). The programme structure, coverage, inclusions, exclusions and
-> prohibited-claim boundaries approved earlier remain in force. GardenCare is still
-> **not** publicly launched: nothing here may be copied to the public website until
-> Phase B is delivered and the owner approves the public wording.
+> prohibited-claim boundaries approved earlier remain in force. Phase B implementation
+> is complete; GardenCare is still **not** publicly launched, and nothing here may be
+> treated as live on the public website until publication is approved and deployed.
 
 ---
 
@@ -415,35 +421,38 @@ public programme names are confirmed** (§4), and the **commercial-grounds
 segmentation is approved** (§2). No Phase A commercial or operational decision
 remains unresolved.
 
-**Phase B is now authorised to begin** as a separate workstream. It **has not
-started**. Phase B is public website implementation and consistency correction, and
-its scope is:
+**Phase B implementation and validation are complete.** Phase B was public website
+implementation and consistency correction, and it delivered:
 
-1. Drafting and owner sign-off of the **public-facing GardenCare wording** (coverage,
-   programmes, segmentation, inclusions/exclusions, pricing framing,
-   duration/payment/cancellation, VAT, weather/access/missed-visit, reporting).
-2. **Reconciling** the existing public maintenance copy catalogued in §21 so the new
-   GardenCare copy and the existing site copy are consistent.
-3. **Public website implementation** of GardenCare.
+1. **Public-facing GardenCare wording** (coverage, programmes, segmentation,
+   inclusions/exclusions, pricing framing, duration/payment/cancellation, VAT,
+   weather/access/missed-visit, reporting), drafted from the approved policies.
+2. **Reconciliation** of the existing public maintenance copy catalogued in §21 so
+   the new GardenCare copy and the existing site copy are consistent.
+3. **Public website implementation** of GardenCare (see §24 for the exact record).
 4. **Enquiry / WhatsApp entry-point integration.**
 5. **Validation against this authoritative GardenCare definition**, confirming no
-   prohibited claim (§20) appears in the launch copy.
+   prohibited claim (§20) appears in the implemented copy.
 
-These are **Phase B work items, not preconditions that block Phase B from
-beginning.** GardenCare remains **not publicly launched** until Phase B delivers and
-the owner approves the published wording.
+Implementation and validation being complete is not the same as publication.
+**Publication remains pending owner approval and production deployment** —
+GardenCare must not be described as already live until it has been approved for
+publication and deployed.
 
 ## 23. Remaining open items
 
-**None at the Phase A commercial/operational level.** All fourteen approved policies
-— the original thirteen commercial/operational decisions plus the subsequently
-approved commercial-grounds segmentation — are recorded and approved (see §2, §4,
-§5, §8, §9, §10, §11, §12, §13, §14, §15, §16, §17 and the Owner Approval Record).
-No GardenCare commercial or operational decision remains outstanding.
+**None at the Phase A commercial/operational level, and none at the Phase B
+delivery level.** All fourteen approved policies — the original thirteen
+commercial/operational decisions plus the subsequently approved commercial-grounds
+segmentation — are recorded and approved (see §2, §4, §5, §8, §9, §10, §11, §12,
+§13, §14, §15, §16, §17 and the Owner Approval Record). Phase B's public wording,
+reconciliation, website implementation, enquiry/WhatsApp integration and validation
+are all complete (§24). No GardenCare commercial or operational decision, and no
+Phase B delivery item, remains outstanding.
 
-The remaining work (public wording, reconciliation of existing maintenance copy,
-website implementation, enquiry/WhatsApp integration, validation) is **Phase B
-delivery scope** — it is not an unresolved policy decision.
+The only remaining step is **publication**: owner approval to publish and
+production deployment. Until that happens, GardenCare is implemented but not
+publicly launched.
 
 ## Owner Approval Record
 
@@ -498,6 +507,116 @@ in this document, specifically:
 Items 1–13 are the original commercial/operational decisions; item 14 (commercial
 segmentation) was approved on the same date and completes the commercial policy set.
 
-GardenCare remains **not publicly launched**. This approval covers internal
-commercial/operational policy only; it does not authorise any public website
-content, which is Phase B.
+This approval covers internal commercial/operational policy. Phase B (§24) has
+since implemented the corresponding public website content; GardenCare remains
+**not publicly launched** until publication is separately approved and deployed.
+
+## 24. Phase B — Implementation Record
+
+**Status: Phase B implementation and validation are complete. Publication
+remains pending owner approval and production deployment — GardenCare must
+not be described as already live until it has been approved for publication
+and deployed.**
+
+### Public page
+
+A dedicated route, `/gardencare` (`src/pages/GardenCare.jsx`), was created
+containing: a hero with the approved coverage wording (§3); the three final
+approved programme names and definitions (§4) with an explicit statement that
+no fourth package or "GardenCare Bespoke" name exists; the routine-activity
+menu (§6) framed as a non-exhaustive menu; the separately-quoted list (§7)
+framed as scope boundaries, not a page dominated by exclusions; a seven-step
+"How It Works" sequence matching §5/§18 (no new assessment price introduced);
+a plain-language terms summary matching §9–§17 exactly (duration, payment
+cycle, notice period, assessment-fee credit, VAT principle, weather policy,
+access requirements, missed-visit rule, waste-removal limit, materials
+approval, emergency-work policy); the approved segmentation quote (§2); and an
+11-question FAQ whose visible content and FAQPage structured data are
+generated from the same array (so they cannot diverge).
+
+### CTA and enquiry integration
+
+Both GardenCare CTAs (`Start a GardenCare Enquiry`) call
+`openQuoteWizard("Garden Maintenance & Aftercare")` — the existing wizard
+option — so the enquiry proceeds through the unmodified six-step wizard with
+that service preselected. The wizard's consultation-distance shortcut is
+unaffected: it only triggers when a visitor explicitly selects "Consultation &
+Site Assessment" at step 2, which GardenCare's prefill does not set. A
+secondary WhatsApp CTA uses a new, GardenCare-specific message builder
+(`buildGardenCareMessage` in `src/utils/whatsapp.js`). The current
+`/gardencare` page identifies GardenCare interest and includes the visitor's
+selected programme when they pick one via the on-page programme cards, and
+always ends with a next-step request. The helper also accepts optional
+`location` and `siteContext` values for future callers, but the current page
+does not collect or pass those two fields — no location/site-context form
+fields were added, to avoid expanding the page beyond what was required. All
+of this uses the existing WhatsApp number; no new number was introduced.
+
+### Public entry points added
+
+Header "Ongoing Care" dropdown; Footer services list; a Services-page callout
+section; a restrained homepage callout section (between the services grid and
+"How We Work"); a callout on the Garden Maintenance service page
+(`src/pages/services/ServicePage.jsx`, shown only for that slug); and an
+"Explore what we offer" link on the five Nairobi-Metro-coverage area pages
+(Karen, Runda, Kiambu, Westlands, Nairobi) via a new opt-in `gardenCareArea`
+prop on the shared `AreaPage` component. No independent GardenCare logo,
+identity, email or footer was created — the page inherits the existing header,
+footer, typography and colour system.
+
+### Existing public claims reconciled
+
+- **`index.html`** (sitewide FAQPage JSON-LD) and **`src/data/faqs.js`** (the
+  visible `/faq` page): replaced the fixed "monthly/quarterly package contents"
+  framing with GardenCare programme names and an "agreed after assessment"
+  framing; replaced "we keep a log of each visit" with the approved short
+  WhatsApp visit summary; added an explicit GardenCare Regular/Monthly/Seasonal
+  explainer FAQ; softened the take-over-maintenance answer to reference the
+  right GardenCare programme or a bespoke commercial agreement. The
+  `OfferCatalog` "Garden Maintenance" offer was renamed "GardenCare
+  Maintenance" with a non-fixed-package description.
+- **`src/data/services.js`**: `garden-maintenance` — removed "everything a
+  garden needs" and "consistent team who knows your garden"; renamed the
+  process steps to reference GardenCare, a written proposal, scheduled visits
+  by frequency, and a WhatsApp visit summary; reframed "Fertilisation" as
+  "Agreed Feeding" and "Pest Monitoring" as "Plant-Health Observation" to match
+  the observation-vs-treatment boundary (§6/§7). `potted-indoor-plants` —
+  removed the "replace as needed" automatic-replacement implication;
+  replacement plants are now stated as separately quoted. `lawn-care` —
+  softened the fixed "annual program with monthly tasks" framing.
+  `commercial-landscaping` — reframed "Maintenance Programmes" to reference
+  GardenCare or a bespoke commercial agreement for larger/complex sites,
+  consistent with the §2 segmentation.
+- **`server/index.js`** (Ask Botanique system prompt, public-facing assistant
+  content only): replaced "Garden Maintenance — weekly, bi-weekly or monthly
+  programmes" with a GardenCare description naming the three programmes and
+  stating the Nairobi Metropolitan Area coverage, so the assistant cannot
+  imply nationwide GardenCare availability.
+- **Area pages**: Karen, Runda, Kiambu, Westlands and Nairobi (all within
+  launch coverage) had their maintenance-service cards reworded to name
+  GardenCare and its programmes, and Runda's card no longer implies tree
+  management/irrigation servicing are included in ordinary maintenance (both
+  are separately quoted per §7). Mombasa and Nakuru (outside launch coverage)
+  had their "scheduled maintenance programmes … delivered per an agreed
+  schedule" wording replaced with "maintenance and aftercare assessed and
+  agreed alongside your project," with an explicit statement that GardenCare
+  currently covers the Nairobi Metropolitan Area only. Kisumu and Eldoret
+  carried no GardenCare-style recurring-maintenance claim and were left
+  unchanged. Botanique's separate Kenya-wide landscape-design positioning was
+  not altered on any area page.
+
+### SEO / routing
+
+`/gardencare` was added to the React routes, the prerender route list
+(`scripts/prerender.mjs`), `vite-plugin-sitemap`'s `dynamicRoutes`
+(`vite.config.js`), and `public/sitemap.xml`. The page carries an accurate
+title, meta description, canonical URL, Open Graph tags, `Service` structured
+data (no price/offer schema), `BreadcrumbList` structured data, and `FAQPage`
+structured data generated from the same array as the visible FAQ. No ratings,
+reviews, prices, availability or `Offer` schema were added.
+
+### Publication gate
+
+Phase B implementation and validation are complete. **GardenCare is not
+published, and the public wording above does not go live, until publication
+is approved by the owner and deployed to production.**

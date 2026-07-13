@@ -424,8 +424,11 @@ Protected systems left unchanged:
 
 ## BD-GARDENCARE-01 — GardenCare Maintenance Programme
 
-Status: Phase A complete — product/operations definition **and commercial
-approval** (owner-approved 12 July 2026). **GardenCare is NOT publicly launched.**
+Status: Phase A is complete and owner-approved (12 July 2026). Phase B (public
+website implementation and consistency correction) implementation and
+validation are complete — see the Phase B subsection below. **Publication
+remains pending owner approval and production deployment; GardenCare is NOT
+publicly launched** until that happens.
 
 Phase A is **documentation only**. It defines GardenCare as an operationally
 realistic Botanique Designers maintenance programme, now including the commercial
@@ -437,9 +440,11 @@ Key points recorded:
 
 * GardenCare is a **programme offered by Botanique Designers** — not a separate
   company, legal entity or unrelated brand.
-* **No public website functionality changed.** No public pages, packages, buttons,
-  pricing tables or website copy were added or edited. Only two files changed:
-  `GARDENCARE_PRODUCT_DEFINITION.md` (new) and this `WORKSTREAMS.md` note.
+* **Phase A changed no public website functionality.** No public pages, packages,
+  buttons, pricing tables or website copy were added or edited in Phase A — only
+  `GARDENCARE_PRODUCT_DEFINITION.md` (new) and this `WORKSTREAMS.md` note. (Phase
+  B, below, is where public implementation happens; publication is still pending
+  owner approval and production deployment, so GardenCare is not yet live.)
 * **Pricing remains custom** — priced after garden and location assessment. No
   generic public prices; no invented package prices, discounts, visit durations,
   labour hours or crew sizes. The existing site-visit fee and payment calculations
@@ -507,17 +512,61 @@ commercial/operational decisions plus the commercial-grounds segmentation) are
 recorded and approved. **No GardenCare commercial or operational decision remains
 outstanding.**
 
-**Phase B is now ready to begin but has NOT started** (a separate workstream). Phase
-B scope:
+### Phase B — Public Website Implementation and Consistency Correction
 
-* public GardenCare wording;
-* reconciliation of the inconsistent existing maintenance claims catalogued in the
-  product definition (§21);
-* public website implementation;
-* enquiry / WhatsApp entry-point integration;
-* validation against the authoritative GardenCare definition.
+Status: **Implementation and validation are complete. Publication remains
+pending owner approval and production deployment — GardenCare is NOT publicly
+launched** until that happens.
 
-These are Phase B delivery items, not preconditions blocking Phase B from starting.
-GardenCare remains **not publicly launched**, and this change touched no public code
-or website content — only `GARDENCARE_PRODUCT_DEFINITION.md` and this
-`WORKSTREAMS.md` note.
+Scope delivered:
+
+* **New public page `/gardencare`** (`src/pages/GardenCare.jsx`): hero with the
+  approved coverage wording; the three final approved programme names only (no
+  fourth package, no "GardenCare Bespoke"); a non-exhaustive routine-activity
+  menu; a separately-quoted scope-boundaries list; a seven-step "How It Works"
+  sequence (no new assessment price); a plain-language terms summary matching
+  every approved commercial policy; the approved commercial segmentation; and
+  an 11-question FAQ whose visible content and FAQPage structured data are
+  generated from one shared array.
+* **Enquiry integration:** both GardenCare CTAs call
+  `openQuoteWizard("Garden Maintenance & Aftercare")` — the existing six-step
+  wizard, unmodified, with that service preselected. The consultation-distance
+  shortcut is untouched and only triggers on an explicit "Consultation & Site
+  Assessment" selection. A new `buildGardenCareMessage` WhatsApp helper
+  (`src/utils/whatsapp.js`) identifies GardenCare interest and includes the
+  visitor's selected programme when they choose one via the on-page programme
+  cards; the helper also accepts optional `location`/`siteContext` values for
+  future callers, but the current page does not collect or pass those two
+  fields. Uses the existing WhatsApp number.
+* **Public entry points:** Header "Ongoing Care" dropdown, Footer link,
+  Services-page callout, a restrained homepage callout, a Garden Maintenance
+  service-page callout, and an opt-in `gardenCareArea` link on the five
+  Nairobi-Metro-coverage area pages (Karen, Runda, Kiambu, Westlands, Nairobi).
+  No independent GardenCare logo, identity, email or footer was created.
+* **Consistency correction:** reconciled `index.html` FAQPage JSON-LD,
+  `src/data/faqs.js`, `src/data/services.js` (garden-maintenance, lawn-care,
+  potted-indoor-plants, commercial-landscaping), the `server/index.js` Ask
+  Botanique prompt, and the maintenance cards on Karen/Runda/Kiambu/Westlands/
+  Nairobi (in-coverage) and Mombasa/Nakuru (out-of-coverage, no longer implying
+  standing recurring GardenCare crews). Removed "everything a garden needs",
+  "consistent team who knows your garden", "we keep a log of each visit",
+  "replace as needed", and fixed monthly/quarterly package-content framing;
+  replaced with GardenCare programme names, an "agreed after assessment"
+  framing, and the short WhatsApp visit-summary reporting model. Full
+  claim-by-claim record in `GARDENCARE_PRODUCT_DEFINITION.md` §24.
+* **SEO/routing:** `/gardencare` added to React routes, the prerender route
+  list, `vite-plugin-sitemap` `dynamicRoutes`, and `public/sitemap.xml`, with
+  accurate title/description/canonical/OG tags, `Service` and `BreadcrumbList`
+  structured data, and `FAQPage` structured data matching the visible FAQ. No
+  ratings, reviews, prices, availability or `Offer` schema were added.
+* **Protected systems unchanged:** `/admin` and `src/admin/**`, Supabase/auth/
+  RLS/migrations, project tracker, finance visibility, payment-confirmation
+  logic, the existing consultation fee calculation, M-Pesa/Daraja config,
+  founder identity/credentials, `hello@botaniquedesigners.com`, the EIA/NEMA
+  corrections, published project facts, the approved GardenCare commercial
+  policies themselves, the WhatsApp destination number, the approved coverage
+  wording, Kisumu/Eldoret area-page content (no GardenCare-style claim existed
+  there), and Vercel deployment configuration were all left untouched.
+
+GardenCare remains **not publicly launched** until publication is approved by
+the owner and deployed to production.

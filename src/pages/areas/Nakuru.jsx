@@ -26,7 +26,7 @@ export default function Nakuru() {
         {
           icon: "✂️",
           title: "Garden Maintenance",
-          desc: "Scheduled maintenance programmes for Nakuru residential properties, schools, hotels and farm estates.",
+          desc: "Maintenance and aftercare assessed and agreed alongside your Nakuru project — scope and frequency confirmed on site. GardenCare, our scheduled maintenance programme, currently covers the Nairobi Metropolitan Area only.",
         },
       ]}
       whyUs={[

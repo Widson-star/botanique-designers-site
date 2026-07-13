@@ -365,7 +365,7 @@ const services = {
         },
         {
           title: "Maintenance Plans",
-          desc: "Weekly or bi-weekly visits to water, prune, feed, and replace as needed.",
+          desc: "Weekly or fortnightly visits to water, prune and feed; replacement plants are quoted separately when needed.",
         },
       ],
       process: [
@@ -614,51 +614,51 @@ const services = {
       lead: "Widson Omutelema Ambaisi — Principal Landscape Designer",
       heroImage: "/projects/project-14.jpg",
       shortDescription:
-        "Scheduled pruning, weeding, fertilisation, pest monitoring, and seasonal planting rotation on monthly or quarterly plans.",
+        "GardenCare scheduled garden maintenance — Regular (weekly/fortnightly) or Monthly visits, plus Seasonal quarterly assessment and corrective care, with scope agreed for your property.",
       description:
-        "A designed garden needs ongoing care to look the way it was intended. Our maintenance programs cover everything a garden needs through the year — pruning at the right time, fertilising with the right product, monitoring for pests before they become problems, and rotating seasonal plantings to keep beds productive and attractive. Plans are monthly or quarterly depending on garden size and complexity.",
+        "A designed garden needs ongoing care to look the way it was intended. Botanique Designers delivers this through GardenCare, our scheduled maintenance programme for the Nairobi Metropolitan Area — pruning at the right time, agreed feeding, monitoring for pests before they become problems, and rotating seasonal plantings where scoped in. The exact activities and frequency are agreed for your property after assessment: GardenCare Regular and Monthly run weekly, fortnightly or monthly, and GardenCare Seasonal provides quarterly assessment and corrective care.",
       included: [
         {
           title: "Pruning & Shaping",
-          desc: "Hedge trimming, shrub pruning, deadheading, and tree canopy maintenance.",
+          desc: "Hedge trimming, shrub pruning, and deadheading, where scoped into your plan.",
         },
         {
           title: "Weeding",
           desc: "Manual weeding of beds, borders, and paved areas.",
         },
         {
-          title: "Fertilisation",
-          desc: "Scheduled feeding with products matched to your soil and plant types.",
+          title: "Agreed Feeding",
+          desc: "Routine feeding where scoped into your plan; specialist products and treatments are quoted separately.",
         },
         {
-          title: "Pest Monitoring",
-          desc: "Regular inspection for insects, diseases, and nutrient deficiencies.",
+          title: "Plant-Health Observation",
+          desc: "Visual inspection for pests, disease and nutrient issues; treatment is arranged and quoted separately.",
         },
         {
           title: "Seasonal Planting",
-          desc: "Rotate annuals and seasonal plants for year-round colour.",
+          desc: "Rotate annuals and seasonal plants where agreed for year-round colour.",
         },
         {
-          title: "General Cleanup",
-          desc: "Leaf removal, path sweeping, and garden waste disposal.",
+          title: "Routine Cleanup",
+          desc: "Leaf removal, path sweeping, and ordinary garden waste consolidated on site.",
         },
       ],
       process: [
         {
           step: "Garden Assessment",
-          desc: "Evaluate current condition and agree on priorities and frequency.",
+          desc: "Evaluate current condition and agree on scope, priorities and frequency.",
         },
         {
-          step: "Maintenance Plan",
-          desc: "Written schedule of tasks by month with product specifications.",
+          step: "GardenCare Proposal",
+          desc: "A property-specific scope and custom price, set out in a written agreement.",
         },
         {
-          step: "Regular Visits",
-          desc: "Monthly or quarterly visits with a consistent team who knows your garden.",
+          step: "Scheduled Visits",
+          desc: "GardenCare Regular (weekly/fortnightly) or Monthly visits for ongoing care, or GardenCare Seasonal for quarterly assessment and corrective care — not routine lawn maintenance.",
         },
         {
-          step: "Seasonal Review",
-          desc: "Adjust the plan each season based on growth, weather, and your feedback.",
+          step: "WhatsApp Visit Summary",
+          desc: "A short summary after each visit; the plan is reviewed with you as the garden changes.",
         },
       ],
     },
@@ -705,7 +705,7 @@ const services = {
         },
         {
           step: "Care Program",
-          desc: "Written annual program with monthly tasks specific to your lawn.",
+          desc: "Written care program tailored to your lawn's species, with a schedule agreed for your site.",
         },
         {
           step: "Regular Service",
@@ -805,7 +805,7 @@ const services = {
         },
         {
           title: "Maintenance Programmes",
-          desc: "Scheduled upkeep to keep institutional and hospitality grounds presentable year-round.",
+          desc: "Ongoing upkeep for institutional and hospitality grounds — through GardenCare where suitable, or a bespoke commercial maintenance agreement for larger or complex sites.",
         },
       ],
       process: [
@@ -823,7 +823,7 @@ const services = {
         },
         {
           step: "Maintenance Handover",
-          desc: "We set up a maintenance programme so the landscape holds its quality over time.",
+          desc: "We set up ongoing care — GardenCare or a bespoke commercial agreement, as suited to your site — so the landscape holds its quality over time.",
         },
       ],
     },

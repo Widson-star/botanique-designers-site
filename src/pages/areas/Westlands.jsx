@@ -20,8 +20,8 @@ export default function Westlands() {
         },
         {
           icon: "✂️",
-          title: "Commercial Maintenance",
-          desc: "Regular, professional maintenance contracts for commercial properties — keeping your landscape looking sharp.",
+          title: "GardenCare Maintenance",
+          desc: "GardenCare scheduled maintenance for commercial properties, scope assessed per site — larger or complex grounds are handled through a bespoke commercial maintenance agreement.",
         },
         {
           icon: "🌿",
@@ -42,6 +42,7 @@ export default function Westlands() {
         { label: "Runda", path: "/areas/runda" },
         { label: "Nairobi CBD", path: "/areas/nairobi" },
       ]}
+      gardenCareArea
       extraIntro="Westlands sits within Nairobi's urban core at around 1,670m, with similar rainfall to the city but denser hardscape, shallower soil profiles on many plots, and greater ambient heat from surrounding development. Container planting and raised beds are common here. Ficus benjamina clips well into formal hedges for boundary screening; Dracaena fragrans tolerates shade and compacted soils near buildings; Heliconia species add tropical structure in sheltered courtyards. For rooftop and terrace gardens, succulents including Aloe vera, Agave sisalana, and Euphorbia tirucalli provide structure with minimal irrigation demand."
     canonical="https://www.botaniquedesigners.com/areas/westlands"
     />
