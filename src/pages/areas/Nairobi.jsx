@@ -9,22 +9,18 @@ export default function NairobiCBD() {
       intro="Nairobi is our home base and the centre of our operations. From the CBD and its surrounding commercial zones, to suburban neighbourhoods like Lavington, Kilimani, Hurlingham, Langata and beyond — Botanique Designers has built a portfolio of diverse landscape projects across the city. Whether you're a homeowner, a property developer, or a public institution, we have the expertise and local knowledge to deliver outstanding results in Nairobi's unique urban context."
       services={[
         {
-          icon: "🌿",
           title: "Landscape Architecture",
           desc: "Full design services for residential and commercial properties across all Nairobi neighbourhoods.",
         },
         {
-          icon: "🌿",
           title: "Ecological & Native Planting",
           desc: "Climate-appropriate, water-wise planting using native and adapted species suited to Nairobi's soil, rainfall and altitude.",
         },
         {
-          icon: "🛠️",
           title: "Project Implementation",
           desc: "On-the-ground execution of landscape designs across all Nairobi suburbs and commercial zones.",
         },
         {
-          icon: "✂️",
           title: "GardenCare Maintenance",
           desc: "GardenCare scheduled garden maintenance — Regular, Monthly or Seasonal — for Nairobi homes, apartments, offices and institutions, agreed after assessment.",
         },

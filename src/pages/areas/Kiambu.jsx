@@ -9,22 +9,18 @@ export default function Kiambu() {
       intro="Kiambu County's peri-urban and semi-rural character offers some of Kenya's most beautiful setting for landscape design. With a cooler climate, fertile soils and increasingly affluent residential developments, Kiambu is a growing market for quality landscape services. Botanique Designers serves clients across the county — including Ruiru, Thika, Kiambu Town, Limuru, Tigoni and Loresho — with the same standard of service we deliver in Nairobi."
       services={[
         {
-          icon: "🌿",
           title: "Landscape Design",
           desc: "Site analysis and master planning suited to Kiambu's varied topography — from flat plots to sloped hillside gardens.",
         },
         {
-          icon: "🛠️",
           title: "Implementation",
           desc: "Full landscape build-out across Kiambu County, leveraging locally available plant material where suitable.",
         },
         {
-          icon: "🌿",
           title: "Ecological & Native Planting",
           desc: "Climate-appropriate, water-wise planting using native and adapted species suited to Kiambu's fertile volcanic soils and varied elevation.",
         },
         {
-          icon: "✂️",
           title: "GardenCare Maintenance",
           desc: "GardenCare Regular, Monthly or Seasonal programmes, available in selected accessible locations in Kiambu, subject to site assessment and route availability.",
         },

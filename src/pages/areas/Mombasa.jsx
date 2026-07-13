@@ -10,22 +10,18 @@ export default function Mombasa() {
       extraIntro="The coast presents a distinct planting environment — sandy, well-draining soils, high humidity, salt-laden air, and temperatures that rarely drop below 25°C. Species that perform here include Coconut Palm (Cocos nucifera), Frangipani (Plumeria rubra), Bougainvillea, Casuarina equisetifolia as windbreaks, Scaevola taccada for beachfront edges, and Traveller's Palm (Ravenala madagascariensis) for dramatic focal points. Lawns in Mombasa typically use Buffalo grass or Bermuda grass — both handle the heat and recover well from salt exposure."
       services={[
         {
-          icon: "🌿",
           title: "Landscape Architecture",
           desc: "Bespoke garden design for coastal properties — tropical planting schemes, palm gardens, resort-style layouts and 3D visualisations.",
         },
         {
-          icon: "🌿",
           title: "Plant Taxonomy & Botanical Labelling",
           desc: "Identification, labelling and tagging of trees and plants for institutional campuses and botanic gardens across the Coast region.",
         },
         {
-          icon: "🛠️",
           title: "Project Implementation",
           desc: "Full build-out of your coastal landscape design — planting, irrigation, hardscape, water features and outdoor structures.",
         },
         {
-          icon: "✂️",
           title: "Garden Maintenance",
           desc: "Maintenance and aftercare assessed and agreed alongside your Mombasa project — scope and frequency confirmed on site. GardenCare, our scheduled maintenance programme, currently covers the Nairobi Metropolitan Area only.",
         },

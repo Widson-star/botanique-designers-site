@@ -9,22 +9,18 @@ export default function Runda() {
       intro="Runda is a prestigious gated suburb known for its large plots, mature trees and carefully guarded green character. Botanique Designers brings specialist landscape expertise to Runda properties — from comprehensive estate redesigns to seasonal garden refresh programmes. We respect the privacy and high standards that Runda residents expect, delivering work that enhances both the aesthetics and the ecological health of the land."
       services={[
         {
-          icon: "🌿",
           title: "Estate Landscape Design",
           desc: "Full master planning for large Runda plots — zoning, circulation design, planting and feature elements.",
         },
         {
-          icon: "🛠️",
           title: "Project Implementation",
           desc: "Complete landscape build-out managed end-to-end with minimal disruption to estate operations.",
         },
         {
-          icon: "✂️",
           title: "GardenCare Maintenance",
           desc: "GardenCare scheduled garden maintenance for Runda estates, with tree work and irrigation servicing available as separately quoted specialist services.",
         },
         {
-          icon: "🌿",
           title: "Ecological & Native Planting",
           desc: "Climate-appropriate, water-wise planting using native and adapted species suited to Runda's deep loam soils and sheltered microclimate.",
         },

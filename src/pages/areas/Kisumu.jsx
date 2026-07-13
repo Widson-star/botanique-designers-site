@@ -9,22 +9,18 @@ export default function Kisumu() {
       intro="Kisumu sits on the shores of Lake Victoria, surrounded by a lush, humid landscape that supports a remarkable variety of tropical plants. Botanique Designers brings landscape architecture and planting design expertise to Kisumu, Nyanza and the broader Western Kenya region. From lakeside residential gardens to institutional grounds, school campuses, hotels and commercial properties — we design outdoor spaces that complement the unique geography and climate of this region."
       services={[
         {
-          icon: "🌿",
           title: "Landscape Architecture",
           desc: "Garden design for Kisumu residences and institutions — lakeside planting schemes, tropical gardens and functional outdoor spaces.",
         },
         {
-          icon: "🌿",
           title: "Ecological & Native Planting",
           desc: "Climate-appropriate, water-wise planting design suited to Kisumu's lakeside soils, humidity and warm conditions.",
         },
         {
-          icon: "🛠️",
           title: "Project Implementation",
           desc: "Full execution of landscape designs including planting, irrigation, paving, outdoor furniture and structures.",
         },
         {
-          icon: "💧",
           title: "Irrigation Systems",
           desc: "Design and installation of water-efficient irrigation systems suited to Kisumu's climate and water availability.",
         },

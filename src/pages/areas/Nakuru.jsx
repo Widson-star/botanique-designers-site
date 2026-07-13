@@ -9,22 +9,18 @@ export default function Nakuru() {
       intro="Nakuru sits at over 1,800m above sea level in the heart of Kenya's Rift Valley — a highland environment with rich volcanic soils, cooler temperatures and spectacular scenery. Botanique Designers works with residential homeowners, farm estates, schools, hotels and commercial properties across Nakuru County and the wider Rift Valley region. Our designs take full advantage of the region's fertile soils and pleasant climate, creating landscapes that are both beautiful and productive."
       services={[
         {
-          icon: "🌿",
           title: "Landscape Architecture",
           desc: "Garden and estate design for Nakuru properties — highland planting schemes, farm landscapes, ornamental gardens and master planning.",
         },
         {
-          icon: "🌿",
           title: "Ecological & Native Planting",
           desc: "Climate-appropriate, water-wise planting using native highland species suited to Nakuru's volcanic soils and Rift Valley climate.",
         },
         {
-          icon: "🛠️",
           title: "Project Implementation",
           desc: "Full landscape build-out including planting, irrigation, terracing, pathways and outdoor structures suited to highland conditions.",
         },
         {
-          icon: "✂️",
           title: "Garden Maintenance",
           desc: "Maintenance and aftercare assessed and agreed alongside your Nakuru project — scope and frequency confirmed on site. GardenCare, our scheduled maintenance programme, currently covers the Nairobi Metropolitan Area only.",
         },

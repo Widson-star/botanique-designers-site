@@ -10,22 +10,18 @@ export default function Eldoret() {
       extraIntro="At 2,100m, Eldoret's climate suits species that struggle at Nairobi's lower altitude — hybrid roses, Grevillea robusta, Cupressus lusitanica, Eucalyptus species, and flowering perennials like Delphinium and Lupin. The cool nights and well-distributed rainfall support dense, lush planting. Institutional campuses in the region — universities, hospitals, schools — benefit from low-maintenance indigenous species like Markhamia lutea and Croton megalocarpus alongside formal avenue planting."
       services={[
         {
-          icon: "🌿",
           title: "Landscape Architecture",
           desc: "Garden and estate design for Eldoret properties — cool-climate planting schemes, institutional grounds design and master planning for large plots.",
         },
         {
-          icon: "🌿",
           title: "Plant Taxonomy & Botanical Labelling",
           desc: "Identification, labelling and tagging of trees and plants for institutional campuses and botanic gardens across the North Rift region.",
         },
         {
-          icon: "🛠️",
           title: "Project Implementation",
           desc: "Full landscape build-out — planting, irrigation, hardscape, fencing and outdoor structures suited to Eldoret's highland conditions.",
         },
         {
-          icon: "🌱",
           title: "Horticultural Services",
           desc: "Specialist planting and plant establishment services using species that thrive in Eldoret's cool, high-altitude climate.",
         },
