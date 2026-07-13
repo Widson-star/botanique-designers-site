@@ -12,56 +12,16 @@ import { createServer } from 'vite'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import fs from 'fs'
+import { ROUTE_PATHS as ROUTES, assertValidRoutes } from './public-routes.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const DIST = path.resolve(ROOT, 'dist')
 
-const ROUTES = [
-  '/',
-  '/about',
-  '/services',
-  '/gardencare',
-  '/services/landscape-design',
-  '/services/landscape-architecture',
-  '/services/ecological-planting-design',
-  '/services/plant-taxonomy',
-  '/services/plant-health-care',
-  '/services/soil-analysis',
-  '/services/potted-indoor-plants',
-  '/services/garden-implementation',
-  '/services/irrigation-systems',
-  '/services/garden-lighting',
-  '/services/property-fencing',
-  '/services/garden-maintenance',
-  '/services/lawn-care',
-  '/services/commercial-landscaping',
-  '/faq',
-  '/blog',
-  '/blog/best-landscape-design-software-2026',
-  '/blog/what-does-a-landscape-designer-do',
-  '/blog/choosing-the-right-grass-kenya',
-  '/blog/landscaping-styles-explained',
-  '/blog/building-ask-botanique',
-  '/blog/africa-climate-summit-2023',
-  '/blog/aiph-world-green-city-awards-2024',
-  '/projects',
-  '/projects/karen-residence',
-  '/projects/muthithi-gardens-estate',
-  '/projects/ksms-campus',
-  '/projects/zaara-park',
-  '/projects/serenity-homes-diani',
-  '/projects/tsavo-skywalk',
-  '/areas/karen',
-  '/areas/mombasa',
-  '/areas/eldoret',
-  '/areas/nairobi',
-  '/areas/westlands',
-  '/areas/kiambu',
-  '/areas/runda',
-  '/areas/nakuru',
-  '/areas/kisumu',
-]
+// Prerender input is the single authoritative route inventory
+// (scripts/public-routes.mjs) — the same source the sitemap is generated from,
+// so the two cannot diverge. Validate its invariants before rendering.
+assertValidRoutes()
 
 // Read the Vite-built HTML template (has correct asset hashes)
 const template = fs.readFileSync(path.join(DIST, 'index.html'), 'utf-8')

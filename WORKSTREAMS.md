@@ -675,3 +675,92 @@ calculation, founder identity/credentials, public email addresses, EIA/NEMA
 corrections, project facts, GardenCare coverage/programmes/commercial
 policies, the WhatsApp destination number, existing enquiry wording/behaviour,
 and Vercel domains/deployment configuration.
+
+## BD-ROUTE-AUTHORITY-01 — Public Route and Sitemap Consolidation
+
+Status: Implementation and validation complete — draft PR (branch
+`claude/bd-route-authority-01`, cut from production `main`
+`37aa8e7ee4ced5569c3adf12f446cbdf8f4d8f4c`). Tooling/build-config only; no React
+routing, visitor-facing content, metadata, structured data, redirects, robots
+behaviour, or public URL was changed.
+
+Problem (rationale):
+
+* The public-route inventory was duplicated in three hand-synced places —
+  `vite-plugin-sitemap`'s `dynamicRoutes` in `vite.config.js`, the `ROUTES`
+  array in `scripts/prerender.mjs`, and the manually maintained
+  `public/sitemap.xml`. Three copies of the same 43 routes had to be edited in
+  lockstep whenever a public page was added or removed, and they could silently
+  drift (the historical "dual sitemap mechanism" flagged under BD-WS-06 / BD-WS-08).
+
+Pre-change audit (before any edit):
+
+* All three inventories were compared programmatically and confirmed to contain
+  the **identical 43 canonical public routes**, with no duplicates and no
+  mismatch — so consolidation was a safe refactor, not a content change.
+
+Single-source design:
+
+* New `scripts/public-routes.mjs` is the **one authoritative inventory**. It is
+  framework-independent (no Vite/React imports) and lists every public route
+  once with its `path`, sitemap `changefreq`, and `priority`. It exports
+  `PUBLIC_ROUTES`, `ROUTE_PATHS`, `HOSTNAME`
+  (`https://www.botaniquedesigners.com`), and an `assertValidRoutes()` guard
+  that runs at import time.
+* New `scripts/generate-sitemap.mjs` generates standards-compliant
+  `public/sitemap.xml` from the authority, then re-parses its own output and
+  fails the build if paths are duplicated, a path does not begin with `/`, a
+  non-production hostname (localhost / Vercel preview) appears, or the output
+  does not contain exactly the authoritative route set.
+* `scripts/prerender.mjs` now **imports** `ROUTE_PATHS` from the authority
+  instead of maintaining its own `ROUTES` array, so the prerender input and the
+  sitemap output are the same source and cannot diverge.
+* `package.json` build is now
+  `node scripts/generate-sitemap.mjs && vite build && node scripts/prerender.mjs`,
+  so the sitemap is regenerated before Vite copies `public/` into `dist/`.
+* `vite-plugin-sitemap` was removed from `vite.config.js` and uninstalled
+  (`package.json` + `package-lock.json` updated via the package manager); it is
+  no longer needed.
+* `public/sitemap.xml` is kept as the committed, deployable artifact (now
+  generated, marked "Do not edit by hand"); `public/robots.txt` is unchanged and
+  still points at `/sitemap.xml`.
+
+Validation results:
+
+* Clean `npm install` and production `npm run build` both succeed.
+* 43/43 routes prerender successfully.
+* Generated sitemap contains exactly 43 unique canonical URLs; production
+  hostname only; no localhost/Vercel host; XML parses (`xmllint --noout`).
+* Every prerendered route is in the sitemap and every sitemap route is
+  prerendered (bidirectional set equality with the authority).
+* All 43 `(path, changefreq, priority)` tuples preserved **exactly** vs the
+  previous `public/sitemap.xml` — no priority/changefreq drift.
+* `/gardencare`, all six case studies, all nine area pages, and all seven blog
+  posts plus `/blog` are present; no legacy redirect-only route
+  (`/services/eia-studies`, `/services/implementation`, `/services/maintenance`)
+  appears.
+* `dist/sitemap.xml` is byte-identical to the generated `public/sitemap.xml`;
+  `dist/robots.txt` is identical to `public/robots.txt` (robots behaviour
+  unchanged).
+* Guard verified to reject duplicate paths, non-`/` paths, invalid changefreq,
+  and out-of-range priority.
+* `git diff --check` clean; lint holds at the inherited baseline of 20 errors
+  across the same four files (`server/index.js`, `src/components/Assistant.jsx`,
+  `src/components/FadeIn.jsx`, `src/context/AppContext.jsx`) with zero new errors
+  (the new `.mjs` scripts are outside eslint's `**/*.{js,jsx}` scope, matching
+  the existing `scripts/prerender.mjs`).
+
+Changed files (exactly): `scripts/public-routes.mjs` (new),
+`scripts/generate-sitemap.mjs` (new), `scripts/prerender.mjs`, `vite.config.js`,
+`package.json`, `package-lock.json`, and `public/sitemap.xml` (regenerated
+artifact), plus this `WORKSTREAMS.md` note.
+
+Protected systems confirmed unchanged: React application routing and
+visitor-facing content, page titles/descriptions/canonicals/structured data,
+`robots.txt` behaviour, every existing public URL, redirects, GardenCare
+content/programmes/coverage/policies, founder facts/credentials, public email
+addresses, EIA/NEMA corrections, project/case-study facts, WhatsApp destination
+and enquiry behaviour, the analytics integration and measurement documents,
+`/admin` and `src/admin/**`, Supabase/auth/RLS/migrations, finance/project
+tracker, payment-confirmation logic, M-Pesa/Daraja configuration, and
+consultation fees/distance calculations.
