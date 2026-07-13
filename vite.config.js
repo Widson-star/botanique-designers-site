@@ -1,58 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import sitemap from "vite-plugin-sitemap";
+
+// Sitemap generation is handled by scripts/generate-sitemap.mjs (run before
+// `vite build`), which writes public/sitemap.xml from the single authoritative
+// route inventory in scripts/public-routes.mjs. See BD-ROUTE-AUTHORITY-01.
 export default defineConfig({
-  plugins: [
-    react(),
-    sitemap({
-      hostname: "https://www.botaniquedesigners.com",
-      dynamicRoutes: [
-        "/",
-        "/about",
-        "/services",
-        "/gardencare",
-        "/services/landscape-design",
-        "/services/landscape-architecture",
-        "/services/ecological-planting-design",
-        "/services/plant-taxonomy",
-        "/services/plant-health-care",
-        "/services/soil-analysis",
-        "/services/potted-indoor-plants",
-        "/services/garden-implementation",
-        "/services/irrigation-systems",
-        "/services/garden-lighting",
-        "/services/property-fencing",
-        "/services/garden-maintenance",
-        "/services/lawn-care",
-        "/services/commercial-landscaping",
-        "/projects",
-        "/projects/karen-residence",
-        "/projects/muthithi-gardens-estate",
-        "/projects/ksms-campus",
-        "/projects/zaara-park",
-        "/projects/serenity-homes-diani",
-        "/projects/tsavo-skywalk",
-        "/blog",
-        "/blog/best-landscape-design-software-2026",
-        "/blog/what-does-a-landscape-designer-do",
-        "/blog/choosing-the-right-grass-kenya",
-        "/blog/landscaping-styles-explained",
-        "/blog/building-ask-botanique",
-        "/blog/africa-climate-summit-2023",
-        "/blog/aiph-world-green-city-awards-2024",
-        "/faq",
-        "/areas/karen",
-        "/areas/runda",
-        "/areas/kiambu",
-        "/areas/westlands",
-        "/areas/nairobi",
-        "/areas/mombasa",
-        "/areas/kisumu",
-        "/areas/nakuru",
-        "/areas/eldoret",
-      ],
-    }),
-  ],
+  plugins: [react()],
   server: {
     host: true,
   },

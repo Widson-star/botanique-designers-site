@@ -7,7 +7,7 @@
     "dev": "vite",
     "server": "node server/index.js",
     "dev:full": "concurrently \"vite\" \"node server/index.js\"",
-    "build": "vite build && node scripts/prerender.mjs",
+    "build": "node scripts/generate-sitemap.mjs && vite build && node scripts/prerender.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -39,7 +39,6 @@
     "postcss": "^8.5.6",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
-    "vite": "^7.2.4",
-    "vite-plugin-sitemap": "^0.8.2"
+    "vite": "^7.2.4"
   }
 }
