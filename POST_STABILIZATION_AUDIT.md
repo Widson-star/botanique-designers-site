@@ -102,6 +102,7 @@ finance, project tracker, payments, or the WhatsApp destination).
 | **F-2** | **VERIFIED DEFECT** | **Oversized blog hero image (~2.26 MB) ships uncompressed.** Every other asset is ≤200 KB; this one is ~12×. | `public/images/blog/landscape-software-2026.jpg` = **2,370,961 bytes**; referenced as the post `image` in `src/data/blog-posts.js:9`; next-largest asset is 200 KB. `scripts/compress-images.mjs` (200 KB budget) exists but is **not wired into any npm script** (`build = generate-sitemap && vite build && prerender`). | `public/images/blog/landscape-software-2026.jpg`, `src/data/blog-posts.js`, `scripts/compress-images.mjs`, `package.json` | Slow LCP on the `/blog/best-landscape-design-software-2026` post — a deliberate SEO target — for a mobile-heavy audience. | Moderate | No | **Targeted asset fix, not an automatic library-wide rewrite.** Optimize **only** this one file; preserve its displayed dimensions/aspect ratio and acceptable visual quality; verify the blog list/post render and the social/structured-data (`og:image`) references still resolve. Do **not** run a broad compression script or wire whole-library image mutation into `build` without first auditing exactly what else it would rewrite. |
 | **F-3** | OPTIONAL ENHANCEMENT | Dead component `src/components/SmartAdvisor.jsx` is unreferenced anywhere in the repo. | Repo-wide search: `SmartAdvisor` appears only inside its own file. `src/App.jsx` renders `Assistant`, not `SmartAdvisor`. | `src/components/SmartAdvisor.jsx` | None (not shipped/rendered). | Low | No | Delete in a future hygiene pass. Not a standalone workstream. |
 | **F-4** | OPTIONAL ENHANCEMENT | Contact number `254720861592` is hardcoded in ~10 files instead of importing `CONTACT` from `src/utils/backend.js`. | `grep` shows the literal in `Footer.jsx`, `Home.jsx`, `FAQ.jsx`, `Assistant.jsx`, `SmartAdvisor.jsx`, `PaidConsultancyModal.jsx`, `PaymentConfirmationModal.jsx`, `index.html`, and `backend.js`. All values currently identical. | multiple | None today (values consistent); future drift risk. | Low | No | Centralise on the `CONTACT` constant opportunistically. |
+| **F-5** | **VERIFIED DEFECT** | **Serenity Homes Diani location is geographically inconsistent: public source data reads `"Diani, Mombasa"`, but Diani is in **Kwale County**, not Mombasa County.** | `src/data/projects.js:29` (`location: "Diani, Mombasa"`) and `src/data/case-studies.js:119` (`location: "Diani, Mombasa"`) both name Mombasa; the `serenity-homes-diani` case study renders that location on `/projects/serenity-homes-diani`. Diani Beach is administratively in Kwale County (authoritative Botanique project facts place the project in **Diani, Kwale**). | `src/data/projects.js`, `src/data/case-studies.js`, `/projects/serenity-homes-diani` | A published location that names the wrong county — a factual/credibility inaccuracy on a public case study. | Low | No | **Separate, focused truth-correction task** (after this documentation-only audit merges): change **only** the incorrect location wording `"Diani, Mombasa"` → `"Diani, Kwale"` in `projects.js` and `case-studies.js`. Do **not** alter the project name, its **Design Concept** status, scope, or images; image-provenance conclusions are unaffected. Discovered during BD-PORTFOLIO-EVIDENCE-01; not changed here because this PR is documentation-only. |
 
 ---
 
@@ -112,7 +113,7 @@ finance, project tracker, payments, or the WhatsApp destination).
 | **B-1** | BLOCKED | Analytics **Phase B** custom `track()` events | Owner dashboard evidence (13 Jul 2026) confirms the Vercel **Hobby** plan; the Events panel states custom events require a **Pro** team. Unavailable on the current plan. | A **deliberate** owner upgrade of this specific project to Pro/Enterprise **and** a reviewed implementation brief. **No upgrade is recommended or authorized.** |
 | **B-2** | EVIDENCE GAP | Production-filtered **7–14-day** analytics baseline | Only an early, non-decision-grade snapshot exists (filter: *All environments / Last 7 Days*; may include preview traffic). Not a completed baseline. | Let production pageviews accumulate; re-read filtered to **Production** over a **complete** window. Evidence-gathering, **not** an implementation task. |
 | **B-3** | EVIDENCE GAP | Testimonial wording not confirmed **verbatim** | Home/About show client feedback (e.g. Caroline N. — Tatu City; Stephen W. — Membley; Joyce N. — Runda). Names are real per Widson; the softer "Client Feedback" label is retained only because exact quote wording is unconfirmed (BD-WS-03). | Owner confirmation of verbatim quotes; then the label may revert to "Client Reviews." Facts must not be invented. |
-| **B-4** | EVIDENCE GAP | Additional project imagery | Tsavo Skywalk and Serenity Homes Diani each have a single image; Zaara Park is a single design render (`src/data/case-studies.js` `notesForWidson`). | Owner-supplied photos/renders to strengthen portfolio credibility and before/after evidence. Only one genuine before/after pair (Muthithi) exists and none should be fabricated. |
+| **B-4** | EVIDENCE GAP | Additional project imagery | Tsavo Skywalk and Serenity Homes Diani each have a single image; Zaara Park is a single design render (`src/data/case-studies.js` `notesForWidson`). **Confirmed by the BD-PORTFOLIO-EVIDENCE-01 asset audit (`PORTFOLIO_ASSET_AUDIT.md`): the repository holds no currently-unused legitimate project image for any of the three — the only unreferenced asset is the Vite scaffold logo. This is an owner-upload gap, not an in-repo remapping opportunity.** | Owner-supplied photos/renders to strengthen portfolio credibility and before/after evidence. Only one genuine before/after pair (Muthithi) exists and none should be fabricated. See the owner upload checklist in `PORTFOLIO_ASSET_AUDIT.md` §10. |
 
 ---
 
@@ -253,8 +254,10 @@ BD-DISCOVERABILITY-01.
 
 ## 10. Headline findings by classification
 
-- **VERIFIED DEFECT (2):** F-1 soft-404 / unknown-route handling; F-2 oversized
-  2.26 MB blog hero image.
+- **VERIFIED DEFECT (3):** F-1 soft-404 / unknown-route handling *(resolved,
+  §11)*; F-2 oversized 2.26 MB blog hero image *(resolved, §12)*; F-5 Serenity
+  Homes Diani location inconsistency (`"Diani, Mombasa"` → Diani is in **Kwale**
+  County) *(open — separate truth-correction task)*.
 - **OPTIONAL ENHANCEMENT (2):** F-3 dead `SmartAdvisor.jsx`; F-4 hardcoded contact
   number.
 - **EVIDENCE GAP (3):** B-2 production analytics baseline; B-3 verbatim
@@ -358,8 +361,11 @@ re-probed live after merge — F-1 is resolved in production:
 **Baseline SHA:** `3a82665bf1f016a03251d7d790f2247fe0486a04`
 (`BD-DISCOVERABILITY-01: fix unknown-route soft 404s (#20)`).
 **Branch:** `claude/bd-performance-01-targeted-blog-image`.
-**Status:** Implemented and locally + preview verified; production completion
-pending merge (PR kept as draft).
+**Status:** **RESOLVED — production-complete and verified.** PR #21 passed
+independent review and was squash-merged to `main`; production commit
+`1e968354330df3b72b3ac73d12de164888087839`; the matching Vercel production
+deployment reached READY. See the production-verification block at the end of
+this section. **F-2 is closed.**
 
 **Scope:** optimize exactly one asset —
 `public/images/blog/landscape-software-2026.jpg` — with no change to its URL,
@@ -399,3 +405,22 @@ image `complete`, `naturalWidth/Height` = 1408×768, no console errors.
 `WORKSTREAMS.md`); `npm ci` clean; `npm run build` → **43/43** routes + `404.html`;
 sitemap **43** URLs; lint holds at the inherited **20** errors (zero new);
 `git diff --check` clean; no protected file touched.
+
+**Production verification (commit `1e96835`, `https://www.botaniquedesigners.com`):**
+
+- **PR #21** passed independent review and was **squash-merged** to `main`.
+- **Production commit:** `1e968354330df3b72b3ac73d12de164888087839`.
+- The **matching Vercel production deployment reached READY.**
+- Live image URL
+  `https://www.botaniquedesigners.com/images/blog/landscape-software-2026.jpg` →
+  **HTTP 200**, `content-type: image/jpeg`, `content-length: 203,364` bytes — the
+  optimized progressive JPEG.
+- The blog article `/blog/best-landscape-design-software-2026` → **HTTP 200**.
+- **Same path and same 1408×768 dimensions retained** (URL, references, and aspect
+  ratio unchanged).
+- **No other image and no build process changed** — only the single asset was
+  re-encoded; `scripts/compress-images.mjs` was **not** wired into `build`, and no
+  whole-library compression pass was run.
+
+**F-2 is resolved and production-verified.** The oversized-blog-image defect no
+longer exists in production.
