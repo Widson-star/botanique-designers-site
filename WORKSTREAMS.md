@@ -1,7 +1,9 @@
 # Botanique Designers Workstreams
 
-> Placed at the repo root because `docs/` contains a stale GitHub Pages build
-> artifact and is not a maintained docs directory.
+> Placed at the repo root alongside the other maintained Markdown authority files
+> (`README.md`, `GARDENCARE_PRODUCT_DEFINITION.md`, `MEASUREMENT_PLAN.md`). The
+> repository has no root `docs/` directory: the former `docs/` was a stale GitHub
+> Pages build artifact and was deleted (see BD-REPOSITORY-HYGIENE-01 below).
 
 ## BD-WS-01 — Phase 1 Stabilization
 
@@ -279,9 +281,9 @@ Notes:
   gitignored machine-specific .claude/launch.json (+ settings.local.json).
 * Deployment: build `npm run build` → dist; Vercel auto-detects Vite; prerendered
   routes served as static files (no conflict with SPA rewrite); no /api on Vercel.
-* docs/ confirmed NOT deployed by Vercel (serves dist/) — flagged safe to delete,
-  left in place pending confirmation. Dual sitemap (public/ + vite-plugin) still
-  present, kept in sync — consolidation optional.
+* docs/ confirmed NOT deployed by Vercel (serves dist/) — flagged safe to delete.
+  Subsequently deleted; see BD-REPOSITORY-HYGIENE-01 below. Dual sitemap (public/ +
+  vite-plugin) still present, kept in sync — consolidation optional.
 
 Remaining risks: area files still carry unused `icon:` emoji data (harmless, not
 rendered); repo still has no git commits (baseline recommended); in-memory rate
@@ -784,3 +786,51 @@ consultation fees/distance calculations.
 - No redirect-only route is present.
 
 **BD-ROUTE-AUTHORITY-01 is complete, merged, deployed and production-verified.**
+
+## BD-REPOSITORY-HYGIENE-01 — Stale Root `docs/` Artifact Audit
+
+Status: Audit complete — no deletion required (already removed upstream)
+
+Purpose: prove or disprove the long-standing note (BD-WS-08 above) that the root
+`docs/` directory was a stale GitHub Pages build artifact safe to delete, before
+removing anything.
+
+Finding: there is **no root `docs/` directory** in the repository. It was already
+deleted in commit `4f46f31` ("chore: remove stale GitHub Pages artifact"), which
+is an ancestor of `main`. No deletion remained to perform, so this workstream made
+no code or artifact changes — only this documentation record.
+
+Audit evidence (against `main` @ `5993b9e`):
+
+* **Was it stale build output?** Yes. The deleted tree was a Vite build artifact:
+  hashed bundles (`docs/assets/index-*.js`, `index-*.css`), `docs/vite.svg`,
+  `docs/index.html`, and duplicated project images — never hand-maintained source.
+* **Unique maintained source there?** None. The maintained Markdown authority files
+  live at the repository root (`README.md`, `WORKSTREAMS.md`,
+  `GARDENCARE_PRODUCT_DEFINITION.md`, `MEASUREMENT_PLAN.md`) and in
+  `src/admin/DEPLOYMENT.md` — all present and untouched. Root `docs/` held no
+  authoritative business record.
+* **Build/Vercel config consuming it?** No. `npm run build` =
+  `generate-sitemap → vite build → prerender`; Vite outputs the default `dist/`;
+  `vercel.json` only sets `cleanUrls` + SPA rewrites; README documents output
+  directory `dist`. No script writes to `docs/` (prerender → `dist/`,
+  sitemap/images → `public/`).
+* **Workflows depending on it?** None — the repository has no `.github/` directory.
+* **GitHub Pages publishing from it?** GitHub Pages is still *enabled* pointing at
+  `main:/docs` (`build_type: legacy`), but its last build **errored** because
+  `docs/` no longer exists. There is no custom domain (`cname: null`); the
+  production site is served by Vercel from `dist/`. No live Botanique Designers
+  domain, redirect, asset, or route depends on `docs/` or on the errored
+  `widson-star.github.io` Pages URL. Disabling/repointing GitHub Pages is a
+  repository *settings* change, out of scope here and left for the repo owner.
+* **Current production deploys from:** `dist/` (Vercel auto-detects Vite).
+
+Distinction (root `docs/` vs. maintained Markdown authority): the removed root
+`docs/` was generated GitHub Pages *build output*, unrelated to the hand-maintained
+Markdown documents that intentionally sit at the repository root. Those authority
+files, and `src/admin/DEPLOYMENT.md`, remain in place and were not modified by this
+workstream.
+
+Changed files (exactly): this `WORKSTREAMS.md` note only. No application code,
+build scripts, configuration, or generated artifacts were touched; no `.gitignore`
+rule was added (no local process regenerates `docs/`).
