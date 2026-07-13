@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import { AppProvider, useApp } from "./context/AppContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Header from "./components/Header";
@@ -156,11 +157,17 @@ export function AppRoutes() {
   );
 }
 
-// Default export for the client bundle — includes BrowserRouter
+// Default export for the client bundle — includes BrowserRouter.
+// <Analytics /> is client-only (it is not imported by entry-server.jsx, which
+// uses the AppRoutes named export instead), so it never runs during the SSR
+// prerender step. It records pageviews only — no custom track() calls — and
+// degrades silently (a console message, no thrown error) if Vercel Web
+// Analytics has not been enabled for this project yet.
 export default function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <Analytics />
     </BrowserRouter>
   );
 }
