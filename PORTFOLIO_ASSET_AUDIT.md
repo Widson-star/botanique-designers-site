@@ -57,10 +57,10 @@ public-asset directory.
 | `public/` (root) | 7 | `botanique.png`, `favicon.png`, `hero-botanique.jpg`, `project-commercial.jpg`, `project-public.jpg`, `project-residential.jpg`, `vite.svg` — *(brand/hero/generic + scaffold; `vite.svg` is the only unreferenced file)* |
 | `public/images/blog/` | 1 | `landscape-software-2026.jpg` (BD-PERFORMANCE-01 subject) |
 | `public/press/` | 1 | `standard-feature.jpg` |
-| `public/projects/` | 38 | portfolio images (`project-*.jpg`, `ksms-*.jpg`, `karen-*.jpg`, `tsavo-skywalk.jpg`) |
+| `public/projects/` | 37 | portfolio images (`project-*.jpg`, `ksms-*.jpg`, `karen-*.jpg`, `tsavo-skywalk.jpg`) |
 | `public/team/` | 2 | `lotom.jpg`, `widson-ambaisi.jpg` |
 
-Directory totals: 7 + 1 + 1 + 38 + 2 = **48** tracked images.
+Directory totals: 7 + 1 + 1 + 37 + 2 = **48** tracked images.
 
 ### 2.1 Full inventory (path · size · dimensions · format · references)
 
@@ -169,12 +169,28 @@ that further imagery is owner-supplied and pending.
 
 | Asset | Repository evidence | Verdict |
 |---|---|---|
-| `public/projects/project-16.jpg` (1200×1600, 177,260 B) | `case-studies.js` slug `serenity-homes-diani` `heroImage` + sole `galleryImages` entry; `projects.js` title "Serenity Homes — 7-Zone Luxury Coastal Landscape", location "Diani, Mombasa"; `notesForWidson`: "Confirmed by Widson: Serenity Homes Diani was a design-only engagement. Single image currently available." | **Confirmed project asset (already in use).** |
+| `public/projects/project-16.jpg` (1200×1600, 177,260 B) | `case-studies.js` slug `serenity-homes-diani` `heroImage` + sole `galleryImages` entry; `projects.js` title "Serenity Homes — 7-Zone Luxury Coastal Landscape"; `notesForWidson`: "Confirmed by Widson: Serenity Homes Diani was a design-only engagement. Single image currently available." | **Confirmed project asset (already in use)** — the existing Serenity Homes Diani **design-concept** asset. |
 | Any other image | No other tracked image is captioned or data-mapped to "Serenity", "Diani", or "coastal". History search finds no prior mapping of any other file to this project. | **No additional asset conclusively linked.** |
 
 **Additional confirmed Serenity assets available in-repo: none.** The data file
-states only a single image is currently available. Status must remain **Design
-Concept** — no image may be relabelled as built work.
+states only a single image is currently available. `project-16.jpg` is the
+existing **design-concept** asset for this engagement; repository evidence does
+**not** classify it as a generated render, and it must **not** be described as a
+built photograph. Status must remain **Design Concept** — no image may be
+relabelled as built work.
+
+> **Location inconsistency (flagged, not corrected here).** The public source
+> entries give the location as **"Diani, Mombasa"** (`projects.js:29` and
+> `case-studies.js:119`). Diani is administratively in **Kwale County**, not
+> Mombasa County; authoritative Botanique project facts place the project in
+> **Diani, Kwale**. This audit does **not** present "Diani, Mombasa" as a verified
+> correct location — it is a **location inconsistency**. Because this PR is
+> **documentation-only**, the public source data is **not changed here**; the fix
+> is a separate, focused truth-correction task that should change **only** the
+> incorrect location wording after this audit merges. Recorded as **F-5** in
+> `POST_STABILIZATION_AUDIT.md` §3. The **Design Concept** status, project name,
+> scope, images, and all image-provenance conclusions are **unaffected** by this
+> discrepancy.
 
 ### 4.3 Zaara Park — status: Design Concept
 
@@ -194,7 +210,7 @@ prohibited (owner instruction, recorded in the data file and BD-WS-06).
 
 | Class | Assets |
 |---|---|
-| **Confirmed project asset** (filename/caption/data mapping ties it to a named project) | `tsavo-skywalk.jpg` (Tsavo); `karen-fountain.jpg`, `karen-garden.jpg` (Karen); `ksms-1/2/3.jpg` (KSMS); `project-10.jpg`, `project-12.jpg`, `project-22.jpg` (Muthithi); `project-16.jpg` (Serenity, design); `project-37.jpg` (Zaara, **render**) |
+| **Confirmed project asset** (filename/caption/data mapping ties it to a named project) | `tsavo-skywalk.jpg` (Tsavo); `karen-fountain.jpg`, `karen-garden.jpg` (Karen); `ksms-1/2/3.jpg` (KSMS); `project-10.jpg`, `project-12.jpg`, `project-22.jpg` (Muthithi); `project-16.jpg` (Serenity, **design concept** — not classified as a render by repository evidence); `project-37.jpg` (Zaara, **render**) |
 | **Likely-but-unconfirmed** (used in `projects.js`/`services.js` with a caption, but no independent corroboration) | The remaining `project-*.jpg` gallery images used only via `projects.js`/`services.js`/area pages (e.g. `project-11/13/14/15/17/18/19/24/26/27/28/29/30/31/32/33/34/35/36/38`, `project-2/4/5/6/7/9`). Captions exist but were not independently re-verified here; **none is linked to Tsavo/Serenity/Zaara.** |
 | **Unrelated** (belongs to a different, named context) | `project-2/4/5/6/7/9.jpg` (service/area hero usage), Karen/KSMS/Muthithi assets — all mapped to their own projects, none to the three targets |
 | **Generic / stock / hero / brand** | `hero-botanique.jpg`, `botanique.png`, `favicon.png`, `project-commercial.jpg`, `project-public.jpg`, `project-residential.jpg` (area/category heroes), `press/standard-feature.jpg` (press), `team/lotom.jpg`, `team/widson-ambaisi.jpg` (team) |
@@ -284,7 +300,12 @@ Verified against `src/data/case-studies.js` at the audited SHA — statuses are
   "Maintenance (6 months)"; `designResponse`/`outcome` state design +
   implementation + six months' maintenance. ✅ matches the confirmed scope.
 - **Serenity Homes Diani** → `status: "Design Concept"`, `outcome`: "design-only
-  engagement… not implemented by the practice." ✅
+  engagement… not implemented by the practice." ✅ *(Status correct and unchanged.
+  Separately, the published **location** "Diani, Mombasa" is geographically
+  inconsistent — Diani is in **Kwale** County; see the location-inconsistency note
+  in §4.2 and F-5 in `POST_STABILIZATION_AUDIT.md`. That wording issue does not
+  affect the status or any image-provenance conclusion and is not changed by this
+  documentation-only audit.)*
 - **Zaara Park** → `status: "Design Concept"`, `outcome`: "design-only concept…
   Implementation status is not claimed." ✅
 

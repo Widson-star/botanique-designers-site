@@ -1147,8 +1147,19 @@ Headline results:
   unused file is the Vite logo, which must not be published as a project asset.
 * **Statuses verified and preserved:** Tsavo Skywalk = **Built / Implemented**
   (with the confirmed six-month maintenance scope); Serenity Homes Diani =
-  **Design Concept**; Zaara Park = **Design Concept** (design render, not a built
-  photograph). No status is changed.
+  **Design Concept** (existing design-concept asset `project-16.jpg`; not
+  classified as a render by repository evidence, and not a built photograph);
+  Zaara Park = **Design Concept** (design render, not a built photograph). No
+  status is changed.
+* **Location inconsistency discovered (flagged, not fixed here):** the Serenity
+  Homes Diani public source location reads **"Diani, Mombasa"** (`projects.js:29`,
+  `case-studies.js:119`), but Diani is in **Kwale County** — authoritative facts
+  place it in **Diani, Kwale**. Recorded as a VERIFIED DEFECT **F-5** in
+  `POST_STABILIZATION_AUDIT.md` §3. This documentation-only PR does **not** change
+  public source data; a separate focused truth-correction task should change only
+  the incorrect location wording after this audit merges. The Design Concept
+  status, project name, scope, images, and all image-provenance conclusions are
+  unaffected.
 * **Do-not-do guardrails recorded:** do not relabel `project-37`/`project-16`
   renders/design assets as built photographs; do not revive the superseded
   `project-12`→"Tsavo" mislabel (`project-12` is the confirmed Muthithi

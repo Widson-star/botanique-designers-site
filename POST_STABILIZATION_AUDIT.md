@@ -102,6 +102,7 @@ finance, project tracker, payments, or the WhatsApp destination).
 | **F-2** | **VERIFIED DEFECT** | **Oversized blog hero image (~2.26 MB) ships uncompressed.** Every other asset is ≤200 KB; this one is ~12×. | `public/images/blog/landscape-software-2026.jpg` = **2,370,961 bytes**; referenced as the post `image` in `src/data/blog-posts.js:9`; next-largest asset is 200 KB. `scripts/compress-images.mjs` (200 KB budget) exists but is **not wired into any npm script** (`build = generate-sitemap && vite build && prerender`). | `public/images/blog/landscape-software-2026.jpg`, `src/data/blog-posts.js`, `scripts/compress-images.mjs`, `package.json` | Slow LCP on the `/blog/best-landscape-design-software-2026` post — a deliberate SEO target — for a mobile-heavy audience. | Moderate | No | **Targeted asset fix, not an automatic library-wide rewrite.** Optimize **only** this one file; preserve its displayed dimensions/aspect ratio and acceptable visual quality; verify the blog list/post render and the social/structured-data (`og:image`) references still resolve. Do **not** run a broad compression script or wire whole-library image mutation into `build` without first auditing exactly what else it would rewrite. |
 | **F-3** | OPTIONAL ENHANCEMENT | Dead component `src/components/SmartAdvisor.jsx` is unreferenced anywhere in the repo. | Repo-wide search: `SmartAdvisor` appears only inside its own file. `src/App.jsx` renders `Assistant`, not `SmartAdvisor`. | `src/components/SmartAdvisor.jsx` | None (not shipped/rendered). | Low | No | Delete in a future hygiene pass. Not a standalone workstream. |
 | **F-4** | OPTIONAL ENHANCEMENT | Contact number `254720861592` is hardcoded in ~10 files instead of importing `CONTACT` from `src/utils/backend.js`. | `grep` shows the literal in `Footer.jsx`, `Home.jsx`, `FAQ.jsx`, `Assistant.jsx`, `SmartAdvisor.jsx`, `PaidConsultancyModal.jsx`, `PaymentConfirmationModal.jsx`, `index.html`, and `backend.js`. All values currently identical. | multiple | None today (values consistent); future drift risk. | Low | No | Centralise on the `CONTACT` constant opportunistically. |
+| **F-5** | **VERIFIED DEFECT** | **Serenity Homes Diani location is geographically inconsistent: public source data reads `"Diani, Mombasa"`, but Diani is in **Kwale County**, not Mombasa County.** | `src/data/projects.js:29` (`location: "Diani, Mombasa"`) and `src/data/case-studies.js:119` (`location: "Diani, Mombasa"`) both name Mombasa; the `serenity-homes-diani` case study renders that location on `/projects/serenity-homes-diani`. Diani Beach is administratively in Kwale County (authoritative Botanique project facts place the project in **Diani, Kwale**). | `src/data/projects.js`, `src/data/case-studies.js`, `/projects/serenity-homes-diani` | A published location that names the wrong county — a factual/credibility inaccuracy on a public case study. | Low | No | **Separate, focused truth-correction task** (after this documentation-only audit merges): change **only** the incorrect location wording `"Diani, Mombasa"` → `"Diani, Kwale"` in `projects.js` and `case-studies.js`. Do **not** alter the project name, its **Design Concept** status, scope, or images; image-provenance conclusions are unaffected. Discovered during BD-PORTFOLIO-EVIDENCE-01; not changed here because this PR is documentation-only. |
 
 ---
 
@@ -253,8 +254,10 @@ BD-DISCOVERABILITY-01.
 
 ## 10. Headline findings by classification
 
-- **VERIFIED DEFECT (2):** F-1 soft-404 / unknown-route handling; F-2 oversized
-  2.26 MB blog hero image.
+- **VERIFIED DEFECT (3):** F-1 soft-404 / unknown-route handling *(resolved,
+  §11)*; F-2 oversized 2.26 MB blog hero image *(resolved, §12)*; F-5 Serenity
+  Homes Diani location inconsistency (`"Diani, Mombasa"` → Diani is in **Kwale**
+  County) *(open — separate truth-correction task)*.
 - **OPTIONAL ENHANCEMENT (2):** F-3 dead `SmartAdvisor.jsx`; F-4 hardcoded contact
   number.
 - **EVIDENCE GAP (3):** B-2 production analytics baseline; B-3 verbatim
