@@ -22,6 +22,7 @@ import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import FAQ from "./pages/FAQ";
 import GardenCare from "./pages/GardenCare";
+import NotFound from "./pages/NotFound";
 
 // Area pages
 import Karen from "./pages/areas/Karen";
@@ -109,6 +110,12 @@ function AppInner() {
           <Route path="/areas/kisumu" element={<Kisumu />} />
           <Route path="/areas/nakuru" element={<Nakuru />} />
           <Route path="/areas/eldoret" element={<Eldoret />} />
+
+          {/* Catch-all — unknown paths render the NotFound view (noindex).
+              On Vercel these paths are served from the prerendered dist/404.html
+              with a genuine HTTP 404 status; this route handles the same view
+              for client-side navigation. */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
 

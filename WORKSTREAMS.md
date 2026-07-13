@@ -1002,3 +1002,49 @@ No new implementation is marked started. Validation for the audit: production
 build succeeds at 43/43 routes; lint holds at the inherited 20 errors in the same
 four files (zero new); `git diff --check` clean; the only changed files are
 `POST_STABILIZATION_AUDIT.md` (new) and this `WORKSTREAMS.md` entry.
+
+## BD-DISCOVERABILITY-01 — Unknown-Route and Soft-404 Correction
+
+Status: Implemented; production completion pending merge + deployed-preview
+HTTP-404 verification.
+
+Baseline SHA: `2ddd0a7de80b3938ebd11f5e1f284f39c18a7cd1`
+(`BD-ROADMAP-02: record post-stabilization evidence audit (#19)`).
+Branch: `claude/bd-discoverability-01-soft-404`.
+
+Addresses **F-1** (soft-404) from `POST_STABILIZATION_AUDIT.md` §8 — see §11 of
+that document for the full resolution record.
+
+Scope (public routing/build config + one new page component only; no protected
+system touched):
+
+* Removed the broad `vercel.json` rewrite `"/(.*)" → "/"` that converted every
+  unmatched path into an HTTP 200 homepage duplicate.
+* Added three explicit **permanent (308) redirects** for the legacy routes
+  (`/services/eia-studies`, `/services/implementation`, `/services/maintenance`)
+  so full-page loads redirect at the edge instead of relying on client
+  `<Navigate>`.
+* Kept the narrow `/admin` and `/admin/:path*` rewrites unchanged; `src/admin/**`
+  untouched.
+* Added a catch-all React route (`path="*"`) → new `src/pages/NotFound.jsx`:
+  Botanique-styled, accessible heading hierarchy, keyboard-focusable recovery
+  links (Home, Services, Projects, WhatsApp project enquiry), `noindex, nofollow`,
+  unique title, no homepage canonical, no invented claims.
+* Extended `scripts/prerender.mjs` to emit `dist/404.html` from that view —
+  **outside** the route authority: not in `scripts/public-routes.mjs`, not in the
+  sitemap, not a 44th canonical route. Vercel serves it with a genuine HTTP 404
+  for unmatched paths.
+
+Local validation: `npm ci` clean; `npm run build` → **43/43** routes +
+`dist/404.html`; sitemap unchanged at **43** URLs (no `/404`); `dist/404.html`
+carries "Page not found" + `noindex, nofollow`, no homepage-title duplication;
+legacy redirect targets correct; lint holds at the inherited **20** errors (zero
+new); `git diff --check` clean. In-app browser: NotFound renders with recovery
+links, normal routes render, no console errors.
+
+Changed files: `src/pages/NotFound.jsx` (new), `src/App.jsx`,
+`scripts/prerender.mjs`, `vercel.json`, `POST_STABILIZATION_AUDIT.md`, this file.
+
+Done-definition not yet met in production: the genuine HTTP-404 status is a
+Vercel-edge behaviour that `vite preview` cannot reproduce; it is verified on the
+deployed preview before the defect is described as fixed.

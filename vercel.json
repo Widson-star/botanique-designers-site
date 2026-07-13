@@ -1,8 +1,12 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/services/eia-studies", "destination": "/services", "permanent": true },
+    { "source": "/services/implementation", "destination": "/services/garden-implementation", "permanent": true },
+    { "source": "/services/maintenance", "destination": "/services/garden-maintenance", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/admin", "destination": "/" },
-    { "source": "/admin/:path*", "destination": "/" },
-    { "source": "/(.*)", "destination": "/" }
+    { "source": "/admin/:path*", "destination": "/" }
   ]
 }
