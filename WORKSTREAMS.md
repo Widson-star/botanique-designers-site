@@ -840,13 +840,14 @@ Audit evidence (against `main` @ `5993b9e`):
   directory `dist`. No script writes to `docs/` (prerender → `dist/`,
   sitemap/images → `public/`).
 * **Workflows depending on it?** None — the repository has no `.github/` directory.
-* **GitHub Pages publishing from it?** GitHub Pages is still *enabled* pointing at
-  `main:/docs` (`build_type: legacy`), but its last build **errored** because
-  `docs/` no longer exists. There is no custom domain (`cname: null`); the
-  production site is served by Vercel from `dist/`. No live Botanique Designers
-  domain, redirect, asset, or route depends on `docs/` or on the errored
-  `widson-star.github.io` Pages URL. Disabling/repointing GitHub Pages is a
-  repository *settings* change, out of scope here and left for the repo owner.
+* **GitHub Pages publishing from it?** At audit time GitHub Pages was still
+  *enabled* pointing at `main:/docs` (`build_type: legacy`) with its last build
+  **errored** (because `docs/` no longer exists) and no custom domain
+  (`cname: null`); the production site is served by Vercel from `dist/`, and no
+  live Botanique Designers domain, redirect, asset, or route depended on `docs/`
+  or on the errored `widson-star.github.io` Pages URL. **Superseded:** this
+  obsolete GitHub Pages publication has since been disabled — see the GitHub Pages
+  closeout below.
 * **Current production deploys from:** `dist/` (Vercel auto-detects Vite).
 
 Distinction (root `docs/` vs. maintained Markdown authority): the removed root
@@ -858,3 +859,31 @@ workstream.
 Changed files (exactly): this `WORKSTREAMS.md` note only. No application code,
 build scripts, configuration, or generated artifacts were touched; no `.gitignore`
 rule was added (no local process regenerates `docs/`).
+
+### GitHub Pages closeout — obsolete publication disabled (13 July 2026)
+
+Owner-authorized repository-settings cleanup: the obsolete GitHub Pages
+publication was disabled via the authenticated GitHub API
+(`DELETE /repos/Widson-star/botanique-designers-site/pages`). This is a
+repository-settings cleanup only — not a website migration; production remains on
+Vercel throughout.
+
+* **Pre-change state (re-queried before mutating):** Pages **enabled**,
+  `build_type: legacy`, source `main:/docs`, status **errored**, no custom domain
+  (`cname: null`).
+* **Safety gates (all passed before change):** `origin/main` at the authorized
+  baseline `ad2879a`; no open PR affecting hosting/domains/Vercel/Pages/`docs/`;
+  root `docs/` absent at `origin/main`; Vercel production deployment **READY** for
+  `ad2879a`; both `https://www.botaniquedesigners.com` and
+  `https://botaniquedesigners.com` returned HTTP 200 via Vercel; neither redirected
+  to `widson-star.github.io`; no repository configuration or DNS/domain doc
+  depended on the Pages URL.
+* **Change result:** the DELETE returned **HTTP 204 No Content** — GitHub Pages
+  disabled successfully.
+* **Post-change verification:** the Pages API now returns **404 Not Found**
+  (Pages disabled); `https://www.botaniquedesigners.com` and
+  `https://botaniquedesigners.com` both still returned HTTP 200 via Vercel; Vercel
+  production remained READY and no production alias changed.
+* **Scope:** no domain, DNS, Vercel configuration, branch, repository visibility,
+  or application setting was changed, and no replacement Pages source was enabled.
+  The only repository change is this documentation record.
