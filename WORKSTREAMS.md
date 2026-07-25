@@ -1482,3 +1482,51 @@ dependency. Changed files: `src/utils/getDistanceKm.js`,
 
 **BD-CONSULTATION-01 is complete, merged and production-verified. The
 consultation-location defect is resolved and is no longer a paid-campaign blocker.**
+
+## BD-CAMPAIGN-READINESS-01 — Campaign & Revenue-Conversion Readiness
+
+Status: **Audit complete — documentation only. No implementation started.** New
+workstream (no existing marketing/growth workstream covered this; broader than
+BD-MEASUREMENT-01 [website analytics] and BD-CONVERSION-01/02 [enquiry pathway]).
+
+Baseline `main`: `752c80fb022705a4f3407f6f66855e6fd4522fbc`
+(`BD-CONVERSION-02 (#23)`). Branch: `claude/bd-campaign-readiness-01-audit`.
+
+An evidence-based readiness audit for the next advertising campaign, optimising the
+commercial chain *advert → relevant landing path → qualified enquiry → assessment →
+quotation → awarded project → revenue & margin* — not vanity metrics. Full record —
+executive decision, Instagram/Google evidence interpretation, website/landing-path
+audit, measurement gaps, dedicated-SIM & WhatsApp Business readiness, manual
+lead-register definition, lead-handling principle, GBP/directories assessment,
+creative readiness, commercial KPIs, the full readiness matrix, per-channel launch
+gates, and a six-phase programme — is in **`CAMPAIGN_READINESS_AUDIT.md`**.
+
+Headline results:
+
+* **Demand is proven; scale-readiness is not.** The small GardenCare-led Instagram
+  test proved demand for the **wider** landscape offer; Google PMax proved only cheap
+  clicks (conversion tracking was misconfigured — 0 recorded conversions is **not**
+  proof of no enquiries). Neither channel produced decision-grade cost-per-qualified-
+  lead, assessment, quotation, awarded-project or revenue/ROAS. No leads, revenue or
+  ROAS are invented.
+* **Website funnel is ready** after BD-CONVERSION-02; **downstream measurement is
+  not** (custom events blocked on Vercel Hobby; no Google/Meta conversion tracking,
+  no Pixel/GA/GTM/cookies approved).
+* **Blocking gates before launch:** dedicated Botanique SIM (deferred — number not
+  supplied), WhatsApp Business setup, manual lead register, campaign source/UTM
+  standard, lead-response ownership; plus Google conversion measurement before Google
+  Search, and Meta measurement before scale/retargeting. **Performance Max should not
+  run** until trustworthy conversion inputs exist.
+* **Next principal campaign leads with landscape design & implementation**, not
+  GardenCare; residential and commercial/hospitality intent must be separated.
+
+Explicit non-goals (unchanged by this audit): no advertising tags/pixels, analytics
+events, landing-page implementation, CRM/database, Google Business Profile edits,
+directory purchases, creative production, external-account changes, or contact-number
+change. Proposed follow-on workstreams (IDs assigned at their own preflight):
+BD-CONTACT-SIM-01, BD-MEASUREMENT-02, BD-CONVERSION-03, BD-LANDING-01,
+BD-CREATIVE-01, BD-LOCAL-01, BD-LEADOPS-01.
+
+Changed files (this workstream): `CAMPAIGN_READINESS_AUDIT.md` (new) and this
+`WORKSTREAMS.md` entry only. No application code, configuration, or protected system
+was touched.
