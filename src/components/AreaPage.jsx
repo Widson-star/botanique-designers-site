@@ -165,7 +165,7 @@ export default function AreaPage({
           areas. Get in touch to tell us about your project.
         </p>
         <button
-          onClick={() => openQuoteWizard()}
+          onClick={() => openQuoteWizard("", { source: `${areaName} area page` })}
           className="px-8 py-4 rounded-full bg-white text-botanique-green font-semibold hover:scale-105 transition"
         >
           Start Your Project Enquiry

@@ -1191,8 +1191,9 @@ package/build scripts.
 
 ## BD-CONVERSION-02 — Enquiry Qualification Enforcement
 
-Status: **Implementation and local validation complete — draft PR open, not
-merged.**
+Status: **Implementation and local validation complete — draft PR #23 open, not
+merged.** Includes a repair pass (below) correcting bypasses and authority
+overclaims found in the first draft.
 
 Baseline `origin/main` (branch cut from):
 `5bdef9039eaf978bbfc4e19dc6b0fdde59b9eeb6`
@@ -1204,88 +1205,150 @@ project-enquiry journey). Those established the six-step wizard, the authoritati
 `wizardServiceForSlug`/`wizardServiceForSlugs` mapping, and structured WhatsApp
 templates. Neither addressed the defect below.
 
-Verified root cause (against `origin/main`): every clear new-project-intent
-surface paired the wizard CTA with a sibling **direct-WhatsApp bypass** that skipped
+Verified root cause (against `origin/main`): clear new-project-intent surfaces
+paired the wizard CTA with a sibling **direct-WhatsApp bypass** that skipped
 qualification entirely — `buildQuoteMessage()`/`buildServiceMessage()`/
 `buildProjectMessage()`/`buildGardenCareMessage()` links with empty placeholder
 fields on the homepage hero, Projects CTA, Projects lightbox ("I want this →"),
-service pages, project/case-study pages, and both GardenCare CTAs. The Services and
-About "Work with us" CTAs also offered an unqualified project-quote WhatsApp link.
-Separately, the wizard's pre-handoff check only validated the current step, so it
-relied solely on step-by-step gating with no single final all-required-field guard.
+service pages, project/case-study pages, both GardenCare CTAs, and the Services/
+About "Work with us" CTAs. In addition, the **NotFound (404) page** had a
+`Project enquiry` link that opened WhatsApp directly, and **Ask Botanique**
+(`Assistant.jsx`) ran a *duplicate* inline site-visit booking form with its own
+fee calculation and a hardcoded WhatsApp URL — a parallel, unqualified consultation
+path. Separately, the wizard's pre-handoff check only validated the current step,
+so it relied solely on step-by-step gating with no single final all-required-field
+guard.
+
+### Correction of first-draft overclaims
+
+The first draft of this PR claimed that **every** new-project-intent surface had
+already been repaired, that all remaining direct WhatsApp routes were "general
+contact or protected", that Ask Botanique had a **protected exception**, that
+`CONTACT` alone would drive the future SIM migration, and that the budget ranges
+were "approved". Those statements were inaccurate and are corrected here:
+
+* The **NotFound 404** `Project enquiry` link and the **Ask Botanique** site-visit
+  booking were still project-intent WhatsApp bypasses; both are now routed through
+  the wizard (see repair pass).
+* Ask Botanique had **no repository authority** establishing a protected exception;
+  it is treated as a project-intent route and consolidated into the wizard.
+* `CONTACT` did **not** by itself control the whole public number — hardcoded
+  copies remained. Active client copies are now centralised; the remaining
+  static/server/dead copies are inventoried below and must also change at SIM swap.
+* The budget ranges are **task-specified provisional qualification ranges pending
+  performance review**, not a separately recorded owner approval.
 
 Scope delivered (public enquiry pathway only):
 
-* **Single controlled funnel.** All new-project-intent CTAs now route through the
-  six-step wizard before any WhatsApp handoff. The sibling direct-WhatsApp project
-  bypasses were removed; secondary CTAs on those surfaces now lead to projects or
-  services (internal navigation) or, on Services, to general contact — never an
-  unqualified project WhatsApp message. The Projects lightbox "I want this →" now
-  opens the wizard ("Request Similar Project →").
-* **Final required-field validation.** Before opening WhatsApp the wizard now
-  validates **all** required fields (Service, Location, Approximate size, Budget)
-  and jumps back to the first incomplete step instead of relying only on
-  step-by-step validation. Keyboard/focus/labels/back-forward/Escape/close and
-  retained values are all preserved.
-* **Budget ranges** updated to the approved premium-aligned structure with
-  consistent `KSh` (Below 150,000 · 150,000–500,000 · 500,000–1.5M · 1.5–5M ·
-  Above 5M · Need guidance). No prior repository authority recorded budget ranges,
-  so this is not a silent change of approved values.
-* **One authoritative message builder.** `buildQuoteMessage` is the single
-  project-enquiry builder; it gained an optional photos/video offer line and an
-  optional human-readable enquiry context ({ programme, source }). The now-unused
-  `buildServiceMessage`, `buildProjectMessage`, and `buildGardenCareMessage`
-  builders were removed.
-* **Context into the wizard.** `openQuoteWizard(service, context)` carries a
-  readable enquiry **source** (e.g. "Landscape Design service page") and, for
-  GardenCare, the visitor's selected **programme**, into the final message. No
-  internal route/component names, tracking jargon, or identifiers are exposed.
-* **Service taxonomy unchanged.** The seven wizard `SERVICE_OPTIONS` remain the
-  authoritative set wired to `wizardServiceForSlug`/`wizardServiceForSlugs` in
-  `src/data/services.js`; no second/disconnected taxonomy was introduced.
-* **Contact number.** The founder number `0720 861 592` / `+254 720 861 592`
-  (`254720861592`) is unchanged. The one in-scope hardcoded copy (FAQ's general
-  "WhatsApp Us") was routed through the central `waLink`/`CONTACT` helper. The
-  authoritative central value is `CONTACT` in `src/utils/backend.js` — the single
-  location to change when the dedicated Botanique SIM is supplied.
+* **Single controlled funnel.** All new-project-intent CTAs — including the
+  NotFound 404 recovery link and Ask Botanique's "Book a Site Visit" — now route
+  through the six-step wizard before any WhatsApp handoff. Sibling direct-WhatsApp
+  project bypasses were removed; secondary CTAs lead to projects/services or general
+  contact, never an unqualified project WhatsApp message.
+* **Ask Botanique consolidation.** "Book a Site Visit" (quick-reply card and
+  in-thread CTA) now closes the chat panel and opens the wizard with
+  `Consultation & Site Assessment` preselected and source `Ask Botanique`. The
+  duplicate inline booking form, its independent fee calculation, dead booking
+  state, and the hardcoded `wa.me` URL were removed. The wizard's location step,
+  distance lookup and `PaidConsultancyModal` remain the authoritative fee/payment
+  path — base fee, per-km rate, manual-distance fallback, payment details and
+  M-Pesa behaviour are unchanged (verified: 13 km → Ksh 3,980).
+* **Final required-field validation.** Before opening WhatsApp the wizard validates
+  **all** required fields (Service, Location, Approximate size, Budget) and jumps
+  back to the first incomplete step. Keyboard/focus/labels/back-forward/Escape/close
+  and retained values preserved. The photos/video line is retained.
+* **Budget ranges** set to task-specified provisional qualification ranges (pending
+  performance review), with consistent `KSh`: Below 150,000 · 150,000–500,000 ·
+  500,000–1.5M · 1.5–5M · Above 5M · Need guidance. No prior repository authority
+  recorded budget ranges, and no owner approval of these specific ranges is claimed.
+* **One authoritative message builder.** `buildQuoteMessage(form, context)` is the
+  single project-enquiry builder; it carries an optional photos/video line and
+  optional `{ programme, source }`. The unused `buildServiceMessage`,
+  `buildProjectMessage`, and `buildGardenCareMessage` builders were removed.
+* **Enquiry-source propagation.** A concise, human-readable source is passed from
+  all controlled wizard entry points: Homepage hero / how-we-work / project-enquiry
+  section / project card (with title), Header (desktop + mobile), Services page,
+  individual service page, Projects gallery CTA, Projects lightbox (with title),
+  project/case-study page, area page (with area name), GardenCare (with programme),
+  Ask Botanique, and Page-not-found recovery. No route slugs, component names,
+  analytics terms, or internal identifiers are exposed.
+* **Service taxonomy unchanged.** The seven wizard `SERVICE_OPTIONS` remain
+  authoritative and wired to `wizardServiceForSlug`/`wizardServiceForSlugs`.
+* **Contact-number centralisation.** The number `0720 861 592` /
+  `+254 720 861 592` / `254720861592` is **unchanged** (dedicated SIM not yet
+  supplied). All **active client-side** references now resolve through `CONTACT`
+  (`src/utils/backend.js`) / `waLink`: FAQ general WhatsApp, Footer `tel:`, homepage
+  contact `tel:`, PaidConsultancyModal (×3, messages/fee preserved) and
+  PaymentConfirmationModal. Remaining copies (see inventory) are **not** yet driven
+  by `CONTACT`; the SIM swap still requires editing them.
 
-Route matrix (final behaviour): Homepage hero → wizard (+ "View Our Work"→
-/projects); Header desktop/mobile → wizard; Service pages → wizard (service
-preselected); Projects CTA → wizard (+ "Explore Services"); Projects lightbox →
-wizard; Project/case-study pages → wizard (service from `relatedServices`); Area
-pages → wizard (already; unchanged); GardenCare hero/closing → wizard (maintenance
-preselected + programme context); Services page → wizard (+ "Get in Touch"→
-/#contact); About → "Get in Touch"→ /#contact (general). Remaining direct WhatsApp
-routes are all **general contact or protected**, not project-enquiry bypasses: FAQ
-"I have a question" (general, now centralised); homepage contact-form send-failure
-fallback; NotFound recovery link; PaidConsultancyModal / PaymentConfirmationModal
-(protected payment handoff); Assistant / Ask Botanique booking (protected);
-Footer/homepage `tel:` and `index.html`/`server` (general contact display). These,
-plus the payment-modal hardcoded numbers, are documented for the future SIM swap.
+Route classification (every direct WhatsApp/number route after repair):
 
-Deferred: dedicated Botanique SIM number replacement (owner to supply); conversion
-analytics (BD-MEASUREMENT-01 Phase B remains blocked on Vercel plan); lead
-persistence / Operations Workflow integration; optionally propagating the enquiry
-`source` line from every remaining wizard call site (only GardenCare, service and
-project pages populate it today).
+* **New-project intent → wizard (no direct WhatsApp):** Homepage hero (+ View Our
+  Work), homepage how-we-work / project-enquiry / project cards, Header desktop +
+  mobile, Services page (+ Get in Touch), individual service pages (+ View Our
+  Projects), Projects gallery CTA (+ Explore Services), Projects lightbox,
+  project/case-study pages (+ View More Projects), area pages, GardenCare hero
+  (+ Explore All Services) and closing, About "Work with us" (→ Get in Touch, general),
+  NotFound `Project enquiry`, Ask Botanique "Book a Site Visit".
+* **General contact (may remain direct):** FAQ "I have a question" WhatsApp (via
+  central `waLink`); Footer / homepage `tel:` (via `CONTACT`); homepage `mailto:`.
+* **Contact-form delivery fallback (may remain direct):** homepage contact form's
+  send-failure WhatsApp/call/email block (`buildContactFallbackMessage`) — shown
+  only when a configured backend fails to deliver.
+* **Payment confirmation after the protected payment flow (may remain direct):**
+  PaidConsultancyModal (×3) and PaymentConfirmationModal WhatsApp links — reached
+  only after the paid-consultation/payment flow; numbers now via `CONTACT`.
+* **Dead/unused code:** `src/components/SmartAdvisor.jsx` (not imported/rendered
+  anywhere) still holds a hardcoded `wa.me` number; left untouched and flagged as a
+  removal candidate (out of scope here).
 
-Boundaries respected: no `/admin`, Supabase, lead DB, finance, payment/M-Pesa,
-consultation fee/distance logic, Ask Botanique booking, GardenCare commercial
-terms/coverage, founder facts, EIA/NEMA corrections, Apicora boundary, portfolio
-evidence, testimonials, analytics, or routes/sitemap/Vercel config were changed. No
-new analytics events, pixels, cookies, or dependencies were added.
+Remaining hardcoded-number inventory (post-repair):
 
-Validation: `npm run lint` holds at the inherited **20** errors in the same four
-files (zero new); `npm run build` succeeds at **43/43** routes + `dist/404.html`;
-`git diff --check` clean. In-app browser: homepage hero shows wizard + "View Our
-Work" with no WhatsApp bypass; the wizard's final validation blocks a send with an
-empty budget and shows the step warning; the six new budget ranges render; the
-handoff message carries Service/Location/Size/Budget + the photos line with no
-jargon; the GardenCare programme selection and "GardenCare page" source appear in
-the final message; a service page CTA shows a single wizard CTA with zero `wa.me`
-links; the paid-consultation modal still opens with the correct fee; no console
-errors. Changed files: `src/App.jsx`, `src/context/AppContext.jsx`,
-`src/components/QuoteWizard.jsx`, `src/utils/whatsapp.js`, `src/pages/Home.jsx`,
-`src/pages/Projects.jsx`, `src/pages/services/ServicePage.jsx`,
+* **Central authority:** `src/utils/backend.js` `CONTACT` (`whatsapp`,
+  `phoneDisplay`, `phoneTel`).
+* **Active client code:** none hardcoded — all via `CONTACT`/`waLink`.
+* **Static HTML / structured data:** `index.html` line ~55 (`"telephone"` in
+  LocalBusiness JSON-LD).
+* **Server / backend:** `server/index.js` (Ask Botanique system prompt + fallback
+  text, ~4 occurrences).
+* **Dead/unused:** `src/components/SmartAdvisor.jsx` (`wa.me` link).
+
+The eventual dedicated-SIM swap therefore requires changing `CONTACT` **and** these
+static/server (and, if it survives, dead) locations — not `CONTACT` alone.
+
+Deferred (recorded, not implemented): dedicated Botanique SIM number replacement
+(owner to supply); richer wizard qualification — property/site type, timeline, and
+an in-wizard telephone field; more granular service taxonomy; conversion analytics
+(BD-MEASUREMENT-01 Phase B remains blocked on Vercel plan); lead persistence /
+Operations Workflow integration; removal of the dead `SmartAdvisor.jsx`.
+
+Boundaries respected: no `/admin`, Supabase, lead DB, finance, consultation
+fee/distance logic, `PaidConsultancyModal` behaviour, M-Pesa/manual-payment
+behaviour, GardenCare commercial terms/coverage, founder facts, EIA/NEMA
+corrections, Apicora boundary, portfolio evidence, testimonials, analytics, or
+routes/sitemap/Vercel config were changed. No new analytics events, pixels,
+cookies, or dependencies were added.
+
+Validation: `npm run lint` → **19** errors (was an inherited 20; the removed dead
+Ask-Botanique `bookingSubmitted` state eliminated one baseline error; **zero new**
+errors, all remaining in `server/index.js`, `src/components/FadeIn.jsx`,
+`src/context/AppContext.jsx`); `npm run build` → **43/43** routes + `dist/404.html`;
+`git diff --check` clean. In-app browser: an unknown path renders NotFound and its
+`Project enquiry` opens the wizard (not WhatsApp); Ask Botanique "Book a Site Visit"
+closes the panel and opens the wizard with Consultation preselected → location →
+`PaidConsultancyModal` with the unchanged fee (13 km → Ksh 3,980); the Header
+enquiry message ends with "Enquiry source: Header"; the GardenCare programme +
+"Enquiry source: GardenCare page" appear; final validation blocks an empty-budget
+send; the six budget ranges render; Footer/contact phone render via `CONTACT`; no
+console errors.
+
+Changed files (this workstream): `src/App.jsx`, `src/context/AppContext.jsx`,
+`src/components/QuoteWizard.jsx`, `src/components/Assistant.jsx`,
+`src/components/Header.jsx`, `src/components/AreaPage.jsx`,
+`src/components/Footer.jsx`, `src/components/PaidConsultancyModal.jsx`,
+`src/components/PaymentConfirmationModal.jsx`, `src/utils/whatsapp.js`,
+`src/pages/Home.jsx`, `src/pages/Projects.jsx`, `src/pages/services/ServicePage.jsx`,
 `src/pages/ProjectDetail.jsx`, `src/pages/GardenCare.jsx`, `src/pages/Services.jsx`,
-`src/pages/About.jsx`, `src/pages/FAQ.jsx`, and this `WORKSTREAMS.md` entry.
+`src/pages/About.jsx`, `src/pages/FAQ.jsx`, `src/pages/NotFound.jsx`, and this
+`WORKSTREAMS.md` entry.

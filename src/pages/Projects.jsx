@@ -186,7 +186,7 @@ export default function Projects() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => openQuoteWizard()}
+            onClick={() => openQuoteWizard("", { source: "Projects gallery" })}
             className="px-8 py-3 rounded-full bg-botanique-green text-white font-semibold hover:opacity-90 transition"
           >
             Start Your Project Enquiry
@@ -210,8 +210,11 @@ export default function Projects() {
           onNext={goNext}
           onPrev={goPrev}
           onEnquire={() => {
+            const title = filtered[lightboxIndex]?.title;
             closeLightbox();
-            openQuoteWizard();
+            openQuoteWizard("", {
+              source: title ? `Projects gallery — ${title}` : "Projects gallery",
+            });
           }}
         />
       )}

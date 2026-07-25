@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
-import { buildQuoteMessage, waLink } from "../utils/whatsapp";
+import { useApp } from "../context/AppContext";
 
 /**
  * NotFound — catch-all view for unknown paths.
@@ -14,6 +14,7 @@ import { buildQuoteMessage, waLink } from "../utils/whatsapp";
  * never be indexed and must not point crawlers back at the homepage.
  */
 export default function NotFound() {
+  const { openQuoteWizard } = useApp();
   return (
     <div className="pt-20 min-h-[70vh] flex items-center justify-center bg-botanique-beige">
       <Helmet>
@@ -65,14 +66,13 @@ export default function NotFound() {
                 </Link>
               </li>
               <li>
-                <a
-                  href={waLink(buildQuoteMessage())}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block px-5 py-2.5 rounded-full border border-botanique-green text-botanique-green font-medium hover:bg-botanique-green hover:text-white transition"
+                <button
+                  type="button"
+                  onClick={() => openQuoteWizard("", { source: "Page-not-found recovery" })}
+                  className="inline-block px-5 py-2.5 rounded-full border border-botanique-green text-botanique-green font-medium hover:bg-botanique-green hover:text-white transition cursor-pointer"
                 >
                   Project enquiry
-                </a>
+                </button>
               </li>
             </ul>
           </nav>

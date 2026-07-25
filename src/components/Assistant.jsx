@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { BACKEND_URL, CONTACT } from "../utils/backend";
+import { useApp } from "../context/AppContext";
 
 const QUICK_REPLIES = [
   "What services do you offer?",
@@ -21,6 +22,7 @@ function shouldShowBookingCTA(text) {
 }
 
 export default function Assistant() {
+  const { openQuoteWizard } = useApp();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,10 +32,6 @@ export default function Assistant() {
       text: "Hi! I'm Ask Botanique 🌿\n\nI can help with services, pricing, site visits, planting design, maintenance, and project enquiries. What would you like to know?",
     },
   ]);
-
-  // Booking form state
-  const [bookingData, setBookingData] = useState({ name: "", phone: "", location: "", km: "" });
-  const [bookingSubmitted, setBookingSubmitted] = useState(false);
 
   const endRef = useRef(null);
   const inputRef = useRef(null);
@@ -46,49 +44,16 @@ export default function Assistant() {
     if (open) setTimeout(() => inputRef.current?.focus(), 150);
   }, [open]);
 
-  // Check if a booking-form card is already in the thread
-  const hasBookingForm = messages.some((m) => m.role === "booking-form");
+  // Whether a booking prompt card is already in the thread (avoid duplicates).
+  const hasBookingCta = messages.some((m) => m.role === "booking-cta");
 
-  function openBookingForm() {
-    if (hasBookingForm) return;
-    setBookingSubmitted(false);
-    setBookingData({ name: "", phone: "", location: "", km: "" });
-    setMessages((prev) => [
-      ...prev,
-      { role: "bot", text: "Sure! Fill in your details below and I'll get you booked in for a site visit." },
-      { role: "booking-form" },
-    ]);
-  }
-
-  function submitBooking() {
-    const { name, phone, location, km } = bookingData;
-    if (!name.trim() || !phone.trim() || !location.trim()) return;
-
-    const parsedKm = parseFloat(km) || 0;
-    const extraKm = Math.max(0, parsedKm - 5);
-    const total = 3500 + extraKm * 60;
-
-    const waText = encodeURIComponent(
-      `Hi Botanique! I'd like to book a site visit.\n\n` +
-      `Name: ${name}\nPhone: ${phone}\nLocation: ${location}\n` +
-      (parsedKm ? `Distance from CBD: ~${parsedKm} km\nEstimated fee: Ksh ${total.toLocaleString()}\n` : "") +
-      `\nPlease confirm the booking. Thank you!`
-    );
-
-    setBookingSubmitted(true);
-
-    // Replace booking-form message with success message
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.role === "booking-form"
-          ? { role: "booking-success", name, total }
-          : m
-      )
-    );
-
-    setTimeout(() => {
-      window.open(`https://wa.me/254720861592?text=${waText}`, "_blank");
-    }, 400);
+  // Route a site-visit booking into the single controlled qualification flow:
+  // open the QuoteWizard with "Consultation & Site Assessment" preselected so the
+  // wizard's location step, distance lookup and PaidConsultancyModal remain the
+  // authoritative fee/payment path. Close the chat panel so the wizard is usable.
+  function startSiteVisitBooking() {
+    setOpen(false);
+    openQuoteWizard("Consultation & Site Assessment", { source: "Ask Botanique" });
   }
 
   async function sendMessage(text) {
@@ -138,7 +103,7 @@ export default function Assistant() {
       setMessages((prev) => [
         ...prev,
         newBotMsg,
-        ...(shouldShowBookingCTA(reply) && !hasBookingForm
+        ...(shouldShowBookingCTA(reply) && !hasBookingCta
           ? [{ role: "booking-cta" }]
           : []),
       ]);
@@ -178,10 +143,6 @@ export default function Assistant() {
       );
     });
   }
-
-  const baseFee = 3500;
-  const extraKm = Math.max(0, (parseFloat(bookingData.km) || 0) - 5);
-  const estimatedTotal = baseFee + extraKm * 60;
 
   return (
     <>
@@ -236,84 +197,17 @@ export default function Assistant() {
                 );
               }
 
-              // Booking CTA card (appears after AI mentions consultation)
+              // Booking CTA card (appears after AI mentions consultation).
+              // Opens the controlled QuoteWizard rather than a duplicate form.
               if (m.role === "booking-cta") {
                 return (
                   <div key={i} className="flex justify-start">
                     <button
-                      onClick={openBookingForm}
+                      onClick={startSiteVisitBooking}
                       className="flex items-center gap-2 px-4 py-2.5 bg-botanique-green/10 border border-botanique-green/30 text-botanique-green rounded-2xl rounded-bl-sm text-sm font-medium hover:bg-botanique-green hover:text-white transition"
                     >
                       📅 Book a Site Visit
                     </button>
-                  </div>
-                );
-              }
-
-              // Inline booking form
-              if (m.role === "booking-form") {
-                return (
-                  <div key={i} className="flex justify-start w-full">
-                    <div className="bg-gray-50 border border-gray-200 rounded-2xl rounded-bl-sm p-3 w-full space-y-2">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Site Visit Booking</p>
-                      <input
-                        type="text"
-                        placeholder="Your name *"
-                        value={bookingData.name}
-                        onChange={(e) => setBookingData((d) => ({ ...d, name: e.target.value }))}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30"
-                      />
-                      <input
-                        type="tel"
-                        placeholder="Phone number *"
-                        value={bookingData.phone}
-                        onChange={(e) => setBookingData((d) => ({ ...d, phone: e.target.value }))}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Your location / area *"
-                        value={bookingData.location}
-                        onChange={(e) => setBookingData((d) => ({ ...d, location: e.target.value }))}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30"
-                      />
-                      <div>
-                        <input
-                          type="number"
-                          placeholder="~Distance from Nairobi CBD (km)"
-                          value={bookingData.km}
-                          onChange={(e) => setBookingData((d) => ({ ...d, km: e.target.value }))}
-                          min="0"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-botanique-green/30"
-                        />
-                        {bookingData.km && (
-                          <p className="text-xs text-botanique-green mt-1 pl-1">
-                            Estimated fee: <strong>Ksh {estimatedTotal.toLocaleString()}</strong>
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={submitBooking}
-                        disabled={!bookingData.name || !bookingData.phone || !bookingData.location}
-                        className="w-full bg-botanique-green text-white rounded-lg py-2 text-sm font-medium hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Send Booking Request on WhatsApp
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              // Booking success card
-              if (m.role === "booking-success") {
-                return (
-                  <div key={i} className="flex justify-start">
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-2xl rounded-bl-sm px-4 py-3 text-sm">
-                      <p className="font-semibold text-emerald-700">Booking request sent! 🎉</p>
-                      <p className="text-gray-600 mt-1">
-                        Hi {m.name}, your WhatsApp message has been pre-filled. The team will confirm your visit shortly.
-                      </p>
-                    </div>
                   </div>
                 );
               }
@@ -348,7 +242,7 @@ export default function Assistant() {
                 </button>
               ))}
               <button
-                onClick={openBookingForm}
+                onClick={startSiteVisitBooking}
                 className="text-xs px-3 py-1 rounded-full bg-botanique-green text-white hover:opacity-90 transition"
               >
                 📅 Book a Visit
