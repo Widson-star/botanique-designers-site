@@ -52,6 +52,7 @@ function AppInner() {
     quoteWizardOpen,
     setQuoteWizardOpen,
     prefilledService,
+    enquiryContext,
     confirmationOpen,
     setConfirmationOpen,
     consultancyOpen,
@@ -133,6 +134,7 @@ function AppInner() {
           open={quoteWizardOpen}
           setOpen={setQuoteWizardOpen}
           prefilledService={prefilledService}
+          enquiryContext={enquiryContext}
           onConsultancyRequired={(km) => {
             setDistanceKm(km);
             setConsultancyOpen(true);

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import services from "../data/services";
-import { buildQuoteMessage, waLink } from "../utils/whatsapp";
+import { useApp } from "../context/AppContext";
 
 const categoryIcons = {
   "design-planning": (
@@ -34,6 +34,7 @@ const categoryIcons = {
 };
 
 export default function ServicesPage() {
+  const { openQuoteWizard } = useApp();
   return (
     <div className="pt-20">
       <Helmet>
@@ -160,20 +161,18 @@ export default function ServicesPage() {
             We'll recommend the right combination of services.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => openQuoteWizard()}
+              className="bg-white text-botanique-green px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+            >
+              Start Your Project Enquiry
+            </button>
             <Link
               to="/#contact"
-              className="bg-white text-botanique-green px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+              className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition"
             >
               Get in Touch
             </Link>
-            <a
-              href={waLink(buildQuoteMessage())}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition"
-            >
-              WhatsApp Us
-            </a>
           </div>
         </div>
       </section>

@@ -1188,3 +1188,104 @@ public image binaries, GardenCare, founder facts, the Apicora boundary, analytic
 `/admin` and `src/admin/**`, Supabase/auth/RLS, finance/payments/M-Pesa,
 WhatsApp/enquiry flow, routes/sitemap/Vercel configuration, and
 package/build scripts.
+
+## BD-CONVERSION-02 — Enquiry Qualification Enforcement
+
+Status: **Implementation and local validation complete — draft PR open, not
+merged.**
+
+Baseline `origin/main` (branch cut from):
+`5bdef9039eaf978bbfc4e19dc6b0fdde59b9eeb6`
+(`BD-PORTFOLIO-EVIDENCE-01: audit existing project assets (#22)`).
+Branch: `claude/bd-conversion-02-enquiry-qualification`.
+
+Follows BD-WS-06B (centralised WhatsApp templates) and BD-CONVERSION-01 (the
+project-enquiry journey). Those established the six-step wizard, the authoritative
+`wizardServiceForSlug`/`wizardServiceForSlugs` mapping, and structured WhatsApp
+templates. Neither addressed the defect below.
+
+Verified root cause (against `origin/main`): every clear new-project-intent
+surface paired the wizard CTA with a sibling **direct-WhatsApp bypass** that skipped
+qualification entirely — `buildQuoteMessage()`/`buildServiceMessage()`/
+`buildProjectMessage()`/`buildGardenCareMessage()` links with empty placeholder
+fields on the homepage hero, Projects CTA, Projects lightbox ("I want this →"),
+service pages, project/case-study pages, and both GardenCare CTAs. The Services and
+About "Work with us" CTAs also offered an unqualified project-quote WhatsApp link.
+Separately, the wizard's pre-handoff check only validated the current step, so it
+relied solely on step-by-step gating with no single final all-required-field guard.
+
+Scope delivered (public enquiry pathway only):
+
+* **Single controlled funnel.** All new-project-intent CTAs now route through the
+  six-step wizard before any WhatsApp handoff. The sibling direct-WhatsApp project
+  bypasses were removed; secondary CTAs on those surfaces now lead to projects or
+  services (internal navigation) or, on Services, to general contact — never an
+  unqualified project WhatsApp message. The Projects lightbox "I want this →" now
+  opens the wizard ("Request Similar Project →").
+* **Final required-field validation.** Before opening WhatsApp the wizard now
+  validates **all** required fields (Service, Location, Approximate size, Budget)
+  and jumps back to the first incomplete step instead of relying only on
+  step-by-step validation. Keyboard/focus/labels/back-forward/Escape/close and
+  retained values are all preserved.
+* **Budget ranges** updated to the approved premium-aligned structure with
+  consistent `KSh` (Below 150,000 · 150,000–500,000 · 500,000–1.5M · 1.5–5M ·
+  Above 5M · Need guidance). No prior repository authority recorded budget ranges,
+  so this is not a silent change of approved values.
+* **One authoritative message builder.** `buildQuoteMessage` is the single
+  project-enquiry builder; it gained an optional photos/video offer line and an
+  optional human-readable enquiry context ({ programme, source }). The now-unused
+  `buildServiceMessage`, `buildProjectMessage`, and `buildGardenCareMessage`
+  builders were removed.
+* **Context into the wizard.** `openQuoteWizard(service, context)` carries a
+  readable enquiry **source** (e.g. "Landscape Design service page") and, for
+  GardenCare, the visitor's selected **programme**, into the final message. No
+  internal route/component names, tracking jargon, or identifiers are exposed.
+* **Service taxonomy unchanged.** The seven wizard `SERVICE_OPTIONS` remain the
+  authoritative set wired to `wizardServiceForSlug`/`wizardServiceForSlugs` in
+  `src/data/services.js`; no second/disconnected taxonomy was introduced.
+* **Contact number.** The founder number `0720 861 592` / `+254 720 861 592`
+  (`254720861592`) is unchanged. The one in-scope hardcoded copy (FAQ's general
+  "WhatsApp Us") was routed through the central `waLink`/`CONTACT` helper. The
+  authoritative central value is `CONTACT` in `src/utils/backend.js` — the single
+  location to change when the dedicated Botanique SIM is supplied.
+
+Route matrix (final behaviour): Homepage hero → wizard (+ "View Our Work"→
+/projects); Header desktop/mobile → wizard; Service pages → wizard (service
+preselected); Projects CTA → wizard (+ "Explore Services"); Projects lightbox →
+wizard; Project/case-study pages → wizard (service from `relatedServices`); Area
+pages → wizard (already; unchanged); GardenCare hero/closing → wizard (maintenance
+preselected + programme context); Services page → wizard (+ "Get in Touch"→
+/#contact); About → "Get in Touch"→ /#contact (general). Remaining direct WhatsApp
+routes are all **general contact or protected**, not project-enquiry bypasses: FAQ
+"I have a question" (general, now centralised); homepage contact-form send-failure
+fallback; NotFound recovery link; PaidConsultancyModal / PaymentConfirmationModal
+(protected payment handoff); Assistant / Ask Botanique booking (protected);
+Footer/homepage `tel:` and `index.html`/`server` (general contact display). These,
+plus the payment-modal hardcoded numbers, are documented for the future SIM swap.
+
+Deferred: dedicated Botanique SIM number replacement (owner to supply); conversion
+analytics (BD-MEASUREMENT-01 Phase B remains blocked on Vercel plan); lead
+persistence / Operations Workflow integration; optionally propagating the enquiry
+`source` line from every remaining wizard call site (only GardenCare, service and
+project pages populate it today).
+
+Boundaries respected: no `/admin`, Supabase, lead DB, finance, payment/M-Pesa,
+consultation fee/distance logic, Ask Botanique booking, GardenCare commercial
+terms/coverage, founder facts, EIA/NEMA corrections, Apicora boundary, portfolio
+evidence, testimonials, analytics, or routes/sitemap/Vercel config were changed. No
+new analytics events, pixels, cookies, or dependencies were added.
+
+Validation: `npm run lint` holds at the inherited **20** errors in the same four
+files (zero new); `npm run build` succeeds at **43/43** routes + `dist/404.html`;
+`git diff --check` clean. In-app browser: homepage hero shows wizard + "View Our
+Work" with no WhatsApp bypass; the wizard's final validation blocks a send with an
+empty budget and shows the step warning; the six new budget ranges render; the
+handoff message carries Service/Location/Size/Budget + the photos line with no
+jargon; the GardenCare programme selection and "GardenCare page" source appear in
+the final message; a service page CTA shows a single wizard CTA with zero `wa.me`
+links; the paid-consultation modal still opens with the correct fee; no console
+errors. Changed files: `src/App.jsx`, `src/context/AppContext.jsx`,
+`src/components/QuoteWizard.jsx`, `src/utils/whatsapp.js`, `src/pages/Home.jsx`,
+`src/pages/Projects.jsx`, `src/pages/services/ServicePage.jsx`,
+`src/pages/ProjectDetail.jsx`, `src/pages/GardenCare.jsx`, `src/pages/Services.jsx`,
+`src/pages/About.jsx`, `src/pages/FAQ.jsx`, and this `WORKSTREAMS.md` entry.

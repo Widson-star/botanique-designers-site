@@ -5,7 +5,7 @@ import { useApp } from "../context/AppContext";
 import projects from "../data/projects";
 import FadeIn from "../components/FadeIn";
 import { BACKEND_URL, BACKEND_CONFIGURED, CONTACT } from "../utils/backend";
-import { buildContactFallbackMessage, buildQuoteMessage, waLink } from "../utils/whatsapp";
+import { buildContactFallbackMessage, waLink } from "../utils/whatsapp";
 
 const HOME_FILTERS = ["all", "residential", "estate", "design", "international"];
 
@@ -193,14 +193,12 @@ export default function Home() {
             >
               Start Your Project Enquiry
             </button>
-            <a
-              href={waLink(buildQuoteMessage())}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/projects"
               className="px-8 py-3 rounded-full bg-white/15 border border-white text-white font-medium hover:bg-white hover:text-botanique-green transition backdrop-blur"
             >
-              WhatsApp Us
-            </a>
+              View Our Work
+            </Link>
           </div>
         </div>
       </section>

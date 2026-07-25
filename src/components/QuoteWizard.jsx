@@ -28,7 +28,7 @@ const EMPTY_FORM = {
 // A project-enquiry wizard. It gathers project details across six steps and
 // prepares a WhatsApp enquiry — it does NOT calculate a monetary quote, so the
 // public wording avoids promising an instant/automatic price.
-export default function QuoteWizard({ open, setOpen, onConsultancyRequired, prefilledService = "" }) {
+export default function QuoteWizard({ open, setOpen, onConsultancyRequired, prefilledService = "", enquiryContext = null }) {
   // A fresh start each time the wizard opens is handled by the parent remounting
   // this component (a `key` tied to the open state), so the initial state below
   // runs on every open. Pre-select the incoming service if it matches an offered
@@ -80,6 +80,20 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
     return true;
   }
 
+  // The minimum information a project enquiry must carry before it reaches
+  // WhatsApp: service, location, approximate size and budget. Step-by-step
+  // validation already gates each step, but this is the single final guard so a
+  // handoff can never leave with a required field blank (e.g. if a later change
+  // ever let step 6 be reached without them). Returns the first incomplete step,
+  // or null when every required field is present.
+  function firstIncompleteRequiredStep() {
+    if (form.service === "") return 2;
+    if (form.location.trim() === "") return 3;
+    if (form.size.trim() === "") return 4;
+    if (form.budget === "") return 6;
+    return null;
+  }
+
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
     // Clear any previous "please complete this step" warning as soon as the
@@ -88,11 +102,16 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
   }
 
   function buildMessage() {
-    return buildQuoteMessage(form);
+    return buildQuoteMessage(form, enquiryContext);
   }
 
   function openWhatsApp() {
-    if (!isStepValid()) {
+    // Final validation of ALL required fields (not just the current step) before
+    // any WhatsApp handoff. If something required is missing, jump back to the
+    // first incomplete step and show the error rather than sending a thin lead.
+    const incompleteStep = firstIncompleteRequiredStep();
+    if (incompleteStep !== null) {
+      setStep(incompleteStep);
       setShowError(true);
       return;
     }
@@ -262,9 +281,12 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
               onChange={(e) => updateField("budget", e.target.value)}
             >
               <option value="">Select budget</option>
-              <option>Ksh 20k – 150k</option>
-              <option>Ksh 150k – 500k</option>
-              <option>Ksh 500k – 1M+</option>
+              <option>Below KSh 150,000</option>
+              <option>KSh 150,000 – 500,000</option>
+              <option>KSh 500,000 – 1.5 million</option>
+              <option>KSh 1.5 – 5 million</option>
+              <option>Above KSh 5 million</option>
+              <option>Need guidance before setting a budget</option>
             </select>
 
             {/* WhatsApp Preview */}

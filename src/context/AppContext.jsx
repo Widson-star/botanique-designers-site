@@ -5,13 +5,18 @@ const AppContext = createContext(null);
 export function AppProvider({ children }) {
   const [quoteWizardOpen, setQuoteWizardOpen] = useState(false);
   const [prefilledService, setPrefilledService] = useState("");
+  // Optional human-readable enquiry context carried into the wizard (e.g. a
+  // GardenCare programme the visitor selected). Reset on every open so context
+  // from one enquiry never leaks into the next.
+  const [enquiryContext, setEnquiryContext] = useState(null);
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [paidService, setPaidService] = useState("");
   const [consultancyOpen, setConsultancyOpen] = useState(false);
   const [distanceKm, setDistanceKm] = useState(0);
 
-  function openQuoteWizard(service = "") {
+  function openQuoteWizard(service = "", context = null) {
     setPrefilledService(service);
+    setEnquiryContext(context);
     setQuoteWizardOpen(true);
   }
 
@@ -22,6 +27,8 @@ export function AppProvider({ children }) {
         setQuoteWizardOpen,
         prefilledService,
         setPrefilledService,
+        enquiryContext,
+        setEnquiryContext,
         confirmationOpen,
         setConfirmationOpen,
         paidService,
