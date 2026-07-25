@@ -31,12 +31,14 @@ analytics events are blocked on the current Vercel plan.
 Recommended posture:
 
 - **Do not repeat or scale** the GardenCare-led creative or Google Performance Max.
-- **First technical action: repair the consultation-location defect (§4.4)** — a
-  live `Karen` test showed a ≈ KSh 422,060 payable total. This is a **blocking
-  conversion risk** and must be fixed before any paid campaign.
-- **Then fix the conversion-measurement foundation** (dedicated SIM + WhatsApp
-  Business, a manual lead register, a campaign source/UTM standard, and a
-  conversion-tracking decision) **before** meaningful ad spend.
+- **The consultation-location defect (§4.4) is now RESOLVED** under BD-CONSULTATION-01
+  (`c112ca2`, production-verified) — a live `Karen` test previously showed a ≈ KSh
+  422,060 payable total; it now resolves to ~Ksh 3,980 or a safe manual state.
+  **Launch gate 0 is met.**
+- **The remaining pre-campaign work is the conversion-measurement & operations
+  foundation** (dedicated SIM + WhatsApp Business, a manual lead register, lead
+  ownership/follow-up, a campaign source/UTM standard, and Google/Meta
+  measurement decisions) **before** meaningful ad spend.
 - Then run **small, controlled** campaigns — Meta residential prospecting and
   tightly-scoped high-intent Google Search — separating **residential** from
   **commercial/hospitality** intent, and judge them on **commercial KPIs**, not
@@ -176,34 +178,40 @@ and is sequenced in §13 Phase 3.
 page strongly matches the search intent (see §16). It is only *recommended/required*
 for themes whose destination or evidence is weak.
 
-### 4.4 Consultation location resolution — VERIFIED DEFECT (high risk)
+### 4.4 Consultation location resolution — VERIFIED DEFECT (RESOLVED)
 
 **Evidence (live production test, `https://www.botaniquedesigners.com`, 2026-07-25):**
 entering the ordinary Nairobi location **`Karen`** in the consultation path produced
 an **implausibly high distance and a displayed payable total of ≈ KSh 422,060**.
+*(Historical evidence — retained as the reason the repair was required.)*
 
-**Root cause:** `src/utils/getDistanceKm.js` queries **unrestricted worldwide**
-Nominatim results and takes `data[0]` (no Kenya country filter, no address-detail
-request, no country/coordinate validation); `PaidConsultancyModal` then **immediately
-calculates and displays a payable fee** from that value. The manually-editable
-distance field only appears **after** the incorrect total is already shown.
+**Root cause (historical):** `src/utils/getDistanceKm.js` queried **unrestricted
+worldwide** Nominatim results and took `data[0]` (no Kenya country filter, no
+address-detail request, no country/coordinate validation); `PaidConsultancyModal`
+then **immediately** calculated and displayed a payable fee from that value, with the
+manually-editable distance field only appearing **after** the incorrect total.
 
-**Commercial risk:** a genuine Nairobi prospect can be shown an **alarming, obviously
-incorrect** assessment amount **at the point of highest intent** — destroying trust
-and **wasting Instagram and Google Ads spend even when the campaign and enquiry
-funnel otherwise work correctly**.
+**Commercial risk (why it was a mandatory pre-campaign repair):** a genuine Nairobi
+prospect could be shown an **alarming, obviously incorrect** assessment amount **at
+the point of highest intent** — destroying trust and **wasting Instagram and Google
+Ads spend even when the campaign and enquiry funnel otherwise work correctly**.
 
-**Status:** **Not ready — verified defect.**
+**Status:** **RESOLVED under BD-CONSULTATION-01** — **production-verified**.
+PR #26 squash-merged to `main` as **`c112ca2bc5187400fd26c09d0f031046a1c37f08`**; the
+matching Vercel production deployment reached READY. The fix applies Kenya-constrained,
+confidence-safe geocoding (returned `country_code` must be Kenya **and** coordinates
+within the Kenya bounding box), returns an explicit `{ status: "ok" | "uncertain" }`,
+and shows **no payable fee when resolution is uncertain** (blank field + manual-entry
+prompt). Live production verification: `Karen, Nairobi` and bare `Karen` → ~13 km /
+**Ksh 3,980** (no implausible amount); nonsense/uncertain → no fee; manual 20 km →
+**Ksh 4,400** (unchanged formula); clearing hides the fee/payment; the fee formula and
+centralised payment number are unchanged.
 
-**Launch gate:** **required before** the next Instagram/Meta campaign, **required
-before** Google Search, **required before** Performance Max, and **required before**
-retargeting wherever the consultation path remains accessible.
+**Launch gate 0: MET.** The consultation-location defect no longer blocks the next
+Instagram/Meta, Google Search, Performance Max, or retargeting campaigns.
 
-**Required action (its own repair workstream, not this audit):** Kenya-constrained,
-confidence-safe location resolution; **no payment amount displayed when distance
-resolution is uncertain**; explicit, safe manual correction. Note: this defect
-**existed before BD-CONVERSION-02** but became easier to reach now that Ask Botanique
-correctly routes into the authoritative consultation flow.
+Note: this defect **existed before BD-CONVERSION-02** but became easier to reach once
+Ask Botanique correctly routed into the authoritative consultation flow.
 
 ---
 
@@ -384,7 +392,7 @@ Status legend: **Ready** · **Partially ready** · **Not ready** · **Blocked** 
 
 | Work area | Evidence | Status | Defect / gap | Commercial risk | Required action | Owner / workstream | Blocking? | Before IG? | Before Google? | Verification |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **Consultation location resolution** | Live test `Karen` → ≈ **KSh 422,060**; `getDistanceKm` takes first worldwide Nominatim result; modal shows payable fee immediately | **Not ready — verified defect** | Foreign/implausible distance drives a displayed payable total; manual field appears only after | **High** (trust destroyed at peak intent; wasted ad spend) | Kenya-constrained, confidence-safe resolution; no amount shown when uncertain; safe manual correction | Consultation-location repair (own workstream) | **Yes** | **Yes** | **Yes** | Fixture/helper tests + live checks |
+| **Consultation location resolution** | Live `Karen` → ≈ KSh 422,060 (historical); fixed in BD-CONSULTATION-01 (`c112ca2`), production-verified `Karen`→~13 km/Ksh 3,980, uncertain→no fee | **Ready — RESOLVED & production-verified** | None outstanding (Kenya-confident geocode; no fee when uncertain) | Resolved (was High) | Done — BD-CONSULTATION-01 merged & production-verified | BD-CONSULTATION-01 (COMPLETE) | No (met) | No (met) | No (met) | 25/25 tests + live prod checks (done) |
 | Website qualification funnel | BD-CONVERSION-02 merged `752c80f`, prod-verified | **Ready** | Minor (no site-type/timeline/phone/UTM) | Low | None to launch | BD-CONVERSION-02 (done) | No | No | No | Live prod checks (done) |
 | Enquiry source context | Source on all entry points | **Ready** | Not from UTM params | Low–Med | Add UTM read (later) | BD-CONVERSION-0x | No | No | No | Wizard message shows source |
 | Landing-path relevance (residential) | `/services/landscape-design` etc. | **Partially ready** | Design/impl split; no LP; homepage generic | Med | Match ads to closest page; consider LP | New (Phase 3) | No | **Recommended** | **Recommended** | Ad→page intent review |
@@ -411,7 +419,7 @@ Mandatory-before-launch decision for each, split by channel.
 
 | # | Gate | Instagram/Meta | Google Search | Performance Max | Retargeting |
 |---|---|---|---|---|---|
-| 0 | **Consultation-location defect repaired** (§4.4) | **Required** | **Required** | **Required** | **Required** (where consultation is reachable) |
+| 0 | **Consultation-location defect repaired** (§4.4) | ✅ **met** (BD-CONSULTATION-01, `c112ca2`) | ✅ **met** | ✅ **met** | ✅ **met** |
 | 1 | BD-CONVERSION-02 production verification | ✅ met | ✅ met | ✅ met | ✅ met |
 | 2 | Dedicated Botanique SIM | **Required** | **Required** | Required | Required |
 | 3 | WhatsApp Business setup | **Required** | **Required** | Required | Required |
@@ -435,56 +443,62 @@ measurement (gate 7) and audience/consent readiness.
 
 ## 15. Recommended phased programme
 
-### 15.0 Immediate implementation sequence (corrected — first technical action)
+### 15.0 Immediate implementation sequence (updated — consultation repair DONE)
 
-The **first technical action is to repair the consultation-location defect**, not
-the dedicated SIM or any advertising work. The SIM/advertising work must **not**
-obscure the live consultation defect.
+The consultation-location repair (BD-CONSULTATION-01, `c112ca2`) and the authority
+closeouts (BD-CONVERSION-02 / this audit) are **complete**. The next sequence is
+therefore the operations & measurement foundation, then controlled launch:
 
-1. **Repair consultation-location resolution** (§4.4) — the first technical action.
-2. Complete and **merge the corrected authority PRs** (#24 closeout, #25 this audit)
-   after independent review.
-3. Obtain the **dedicated Botanique SIM**.
-4. Configure **WhatsApp Business**.
-5. Establish the **manual lead register**.
-6. Define **campaign source and UTM standards**.
-7. **Design Google and Meta measurement.**
-8. **Confirm the first launchable service themes** (see §16 — Landscape Design,
-   Commercial/Institutional, Garden Implementation subject to relevance review).
-9. **Prepare the creative set.**
-10. **Launch controlled campaigns.**
+1. Obtain the **dedicated Botanique SIM**.
+2. Configure **WhatsApp Business**.
+3. Establish the **manual lead register**.
+4. Assign **lead-response ownership and a follow-up routine**.
+5. Define the **campaign source and UTM standard**.
+6. Make the **Google and Meta measurement decisions**.
+7. **Confirm the first launchable service themes and destination pages** (see §16 —
+   Landscape Design, Garden Implementation, Commercial/Institutional).
+8. **Prepare residential and commercial creative sets.**
+9. **Run a controlled campaign.**
+10. **Reconcile spend to qualified leads, assessments, quotations, projects, revenue
+    and margin.**
 
-**Phase 1 — Conversion foundation** (blocking)
+*(Completed prerequisites: BD-CONVERSION-02 enquiry-qualification enforcement
+[`752c80f`], and BD-CONSULTATION-01 consultation-location repair [`c112ca2`], both
+merged and production-verified.)*
+
+**Phase 1 — Conversion & operations foundation** (blocking)
 1. Close BD-CONVERSION-02 ✅ (done — merged `752c80f`, production-verified).
-2. **Repair the consultation-location defect (§4.4)** — first technical action.
+2. Repair the consultation-location defect ✅ (done — BD-CONSULTATION-01, merged
+   `c112ca2`, production-verified).
 3. Dedicated SIM supplied.
 4. WhatsApp Business set up (profile, greeting, absence, quick replies, labels).
 5. Manual lead register stood up (§7).
-6. Campaign source/UTM naming standard defined.
+6. Lead-response ownership + follow-up routine assigned (§8).
+7. Campaign source/UTM naming standard defined.
 
 **Phase 2 — Measurement design** (decisions before any tag)
-7. Google conversion architecture (actions + tagging choice).
-8. Meta measurement decision (Pixel vs CAPI vs qualified native lead form per §5).
-9. UTM standard finalised + (later) wizard UTM read.
-10. Privacy/consent review (consent UI required if pixels/GA/GTM are added).
-11. Manual sales-outcome reconciliation routine (register ↔ finance).
+8. Google conversion architecture (actions + tagging choice).
+9. Meta measurement decision (Pixel vs CAPI vs qualified native lead form per §5).
+10. UTM standard finalised + (later) wizard UTM read.
+11. Privacy/consent review (consent UI required if pixels/GA/GTM are added).
+12. Manual sales-outcome reconciliation routine (register ↔ finance).
 
 **Phase 3 — Destination readiness**
-12. Audit landing paths (§4.3); repair/create **only** required pages (a dedicated
+13. Audit landing paths (§4.3); repair/create **only** required pages (a dedicated
     LP is not automatically mandatory where an existing page strongly matches — §16).
-13. Separate residential vs commercial/hospitality intent.
+14. Separate residential vs commercial/hospitality intent.
 
 **Phase 4 — Creative readiness**
-14. Select verified completed projects; build residential set; build
+15. Select verified completed projects; build residential set; build
     commercial/hospitality set; write concise copy (§11 standards).
 
 **Phase 5 — Controlled launch**
-15. Meta residential prospecting (small); small commercial/hospitality test; Meta
+16. Meta residential prospecting (small); small commercial/hospitality test; Meta
     retargeting where authorised; high-intent Google Search on the launchable themes
     (§16). **No Performance Max until conversion evidence exists.**
 
 **Phase 6 — Commercial review**
-16. Review qualified leads, assessments, quotations, awarded projects, revenue &
+17. Review qualified leads, assessments, quotations, awarded projects, revenue &
     margin (from the lead register + protected finance); reallocate budget on
     decision-grade KPIs (§12).
 
@@ -492,31 +506,35 @@ obscure the live consultation defect.
 
 ## 16. Readiness decision (summary)
 
-- **Instagram/Meta launch:** **Not ready** — blocked on the consultation-location
-  defect (§4.4), SIM, WhatsApp Business, lead register, source/UTM standard,
-  lead-response ownership; residential creative strongly recommended. (Small
-  prospecting can start once the blocking gates are met, even before full Meta
-  measurement — but only with the manual register capturing outcomes.)
-- **Google Search launch:** **Not ready** — but **not universally blocked on building
-  every proposed landing page.** A dedicated LP is **not automatically mandatory**
-  where an existing service page strongly matches search intent.
-  - *Existing pages that may support a controlled Search launch* (after the blocking
-    foundations below): **Landscape Design** (`/services/landscape-design`),
-    **Commercial / Institutional Landscaping** (`/services/commercial-landscaping`),
-    and **Garden Implementation** (`/services/garden-implementation`, subject to a
-    final advert-to-page relevance review).
+> **Gate 0 (consultation-location defect) is MET** — resolved and production-verified
+> under BD-CONSULTATION-01 (`c112ca2`). The decisions below reflect the remaining
+> blockers only.
+
+- **Instagram/Meta launch:** **Not ready** — remaining blockers: dedicated Botanique
+  SIM (pending), WhatsApp Business (not configured), manual lead register (not
+  operational), campaign source/UTM standard (not adopted), lead-response owner +
+  follow-up routine (not assigned), and the final creative set (not approved). Full
+  Meta measurement may remain **recommended** for a small controlled prospecting test
+  but is **required before meaningful scaling or retargeting** (with the manual
+  register capturing outcomes in the interim).
+- **Google Search launch:** **Not ready** — remaining blockers: dedicated SIM +
+  WhatsApp Business, manual lead register, campaign source/UTM standard, lead
+  ownership + follow-up, and **trustworthy Google conversion measurement**. It is
+  **not universally blocked on building every landing page** — a dedicated LP is not
+  automatically mandatory where an existing page strongly matches intent.
+  - *Existing pages that may support a controlled Search launch* (after the universal
+    blockers above are resolved and advert-to-page relevance is confirmed):
+    **Landscape Design** (`/services/landscape-design`), **Garden Implementation**
+    (`/services/garden-implementation`), and **Commercial / Institutional
+    Landscaping** (`/services/commercial-landscaping`).
   - *Themes that should remain blocked until destination and evidence improve:*
     **lawn establishment/replacement**, **garden rehabilitation/redesign**,
     **hospitality-specific** landscaping, and **tropical/indigenous** campaigns where
     matching imagery and proof are weak.
-  - *Universal Google blockers (theme-independent):* the **consultation-location
-    defect (§4.4)**, dedicated business number + WhatsApp Business, manual lead
-    register, campaign source/UTM standard, lead ownership + follow-up, and
-    **trustworthy Google conversion measurement**.
-- **Performance Max:** **Not ready / not recommended** — do not run until
-  trustworthy conversion inputs exist (and the §4.4 defect is fixed).
-- **Retargeting:** **Not ready** — blocked on Meta measurement, audience/consent
-  readiness, and (where consultation is reachable) the §4.4 defect.
+- **Performance Max:** **Not recommended** — do not run until trustworthy conversion
+  inputs exist.
+- **Retargeting:** **Not ready** — blocked on Meta measurement and audience/consent
+  readiness.
 
 ---
 
@@ -550,11 +568,12 @@ deferred). Nothing here is marked implemented.
 
 Each is a **separate, scoped** task:
 
-- **BD-CONSULTATION-01** — **consultation-location resolution repair** (§4.4): the
-  **first technical action** and a blocking pre-campaign gate. Kenya-constrained,
-  confidence-safe geocoding; no payable amount displayed when distance is uncertain;
-  safe explicit manual correction. (This is a distinct workstream from
-  BD-CONVERSION-03; it is being implemented on its own branch/PR.)
+- **BD-CONSULTATION-01** — consultation-location resolution repair (§4.4):
+  **✅ COMPLETE — merged (`c112ca2`) and production-verified.** Was the blocking
+  pre-campaign gate 0 (now met). Kenya-constrained, confidence-safe geocoding; no
+  payable amount displayed when distance is uncertain; safe explicit manual
+  correction. Distinct from BD-CONVERSION-03. Listed here for the record; no further
+  action required.
 - **BD-CONTACT-SIM-01** — swap the public number to the dedicated SIM across
   `CONTACT` + the documented static/server (and dead) locations, once supplied.
 - **BD-MEASUREMENT-02** — campaign conversion measurement design & implementation

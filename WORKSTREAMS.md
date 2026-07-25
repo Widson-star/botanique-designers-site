@@ -1489,8 +1489,9 @@ Status: **Audit complete — documentation only. No implementation started.** Ne
 workstream (no existing marketing/growth workstream covered this; broader than
 BD-MEASUREMENT-01 [website analytics] and BD-CONVERSION-01/02 [enquiry pathway]).
 
-Baseline `main`: `752c80fb022705a4f3407f6f66855e6fd4522fbc`
-(`BD-CONVERSION-02 (#23)`). Branch: `claude/bd-campaign-readiness-01-audit`.
+Baseline `main`: authored at `752c80f` (`BD-CONVERSION-02 (#23)`) and rebased onto
+`ca09117` (after the BD-CONVERSION-02 / BD-CONSULTATION-01 closeout, #24). Branch:
+`claude/bd-campaign-readiness-01-audit`.
 
 An evidence-based readiness audit for the next advertising campaign, optimising the
 commercial chain *advert → relevant landing path → qualified enquiry → assessment →
@@ -1512,11 +1513,14 @@ Headline results:
 * **Website funnel is ready** after BD-CONVERSION-02; **downstream measurement is
   not** (custom events blocked on Vercel Hobby; no Google/Meta conversion tracking,
   no Pixel/GA/GTM/cookies approved).
-* **Blocking gates before launch:** dedicated Botanique SIM (deferred — number not
-  supplied), WhatsApp Business setup, manual lead register, campaign source/UTM
-  standard, lead-response ownership; plus Google conversion measurement before Google
-  Search, and Meta measurement before scale/retargeting. **Performance Max should not
-  run** until trustworthy conversion inputs exist.
+* **Gate 0 (consultation-location defect) is now MET** — resolved and
+  production-verified under BD-CONSULTATION-01 (`c112ca2`); `Karen` no longer yields
+  the ≈ KSh 422,060 total. (Historical evidence retained in the audit.)
+* **Remaining blocking gates before launch:** dedicated Botanique SIM (deferred —
+  number not supplied), WhatsApp Business setup, manual lead register, lead-response
+  ownership + follow-up, campaign source/UTM standard; plus Google conversion
+  measurement before Google Search, and Meta measurement before scale/retargeting.
+  **Performance Max should not run** until trustworthy conversion inputs exist.
 * **Next principal campaign leads with landscape design & implementation**, not
   GardenCare; residential and commercial/hospitality intent must be separated.
 
