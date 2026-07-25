@@ -59,6 +59,8 @@ function AppInner() {
     setConsultancyOpen,
     distanceKm,
     setDistanceKm,
+    distanceResolved,
+    setDistanceResolved,
     paidService,
   } = useApp();
 
@@ -135,8 +137,12 @@ function AppInner() {
           setOpen={setQuoteWizardOpen}
           prefilledService={prefilledService}
           enquiryContext={enquiryContext}
-          onConsultancyRequired={(km) => {
-            setDistanceKm(km);
+          onConsultancyRequired={(result) => {
+            // result: { status: "ok" | "uncertain", km: number | null }
+            const resolved =
+              result && result.status === "ok" && Number.isFinite(result.km) && result.km >= 0;
+            setDistanceResolved(resolved);
+            setDistanceKm(resolved ? result.km : 0);
             setConsultancyOpen(true);
           }}
         />
@@ -152,6 +158,7 @@ function AppInner() {
         open={consultancyOpen}
         onClose={() => setConsultancyOpen(false)}
         distanceKm={distanceKm}
+        distanceResolved={distanceResolved}
       />
     </div>
   );

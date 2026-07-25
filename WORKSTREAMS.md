@@ -1352,3 +1352,69 @@ Changed files (this workstream): `src/App.jsx`, `src/context/AppContext.jsx`,
 `src/pages/ProjectDetail.jsx`, `src/pages/GardenCare.jsx`, `src/pages/Services.jsx`,
 `src/pages/About.jsx`, `src/pages/FAQ.jsx`, `src/pages/NotFound.jsx`, and this
 `WORKSTREAMS.md` entry.
+
+## BD-CONSULTATION-01 — Consultation Location Resolution Repair
+
+Status: **Implementation and local validation complete — draft PR open, not
+merged.** Narrowest accurate conversion repair under the existing consultation/
+enquiry authority. Deliberately **not** named BD-CONVERSION-03 (which the
+BD-CAMPAIGN-READINESS-01 audit proposes for *richer wizard qualification*) — this is
+a distinct, bounded correctness fix.
+
+Baseline `origin/main` (branch cut from): `752c80fb022705a4f3407f6f66855e6fd4522fbc`
+(`BD-CONVERSION-02 (#23)`). Branch: `claude/bd-consultation-01-location-resolution`.
+
+**Verified defect (surfaced by BD-CONVERSION-02 production verification):** entering
+the ordinary Nairobi location `Karen` in the consultation path produced an
+implausible distance and a displayed payable total of ≈ **KSh 422,060**.
+`src/utils/getDistanceKm.js` queried Nominatim **unrestricted worldwide** and took
+`data[0]` (no Kenya filter, no address details, no country/coordinate validation),
+and on failure returned `null` which the wizard mapped to a **misleading 0 km**;
+`PaidConsultancyModal` then displayed a payable fee immediately. Pre-existing, but
+easier to reach after Ask Botanique began correctly using the authoritative flow.
+
+Fix (public consultation flow + one util; no protected system, no new dependency):
+
+* **Kenya-constrained, confidence-safe geocoding** (`src/utils/getDistanceKm.js`):
+  trims/normalises the query, biases it to Kenya, restricts Nominatim with
+  `countrycodes=ke`, requests `addressdetails=1&limit=5`, and accepts only
+  candidates with a Kenyan `country_code` (or, when absent, coordinates inside a
+  Kenya bounding box) and numeric, in-Kenya lat/lon. Rejects foreign/invalid results.
+  Returns an explicit **`{ status: "ok", km }`** or **`{ status: "uncertain", km: null }`**
+  — never a foreign/NaN/negative/infinite distance and never a silent `0 km`.
+  Nairobi CBD origin and the fee formula are unchanged. Locations anywhere in Kenya
+  are preserved (e.g. Mombasa remains a legitimate long distance).
+* **Explicit resolution state** threaded wizard → `AppContext` → modal
+  (`distanceResolved`). `QuoteWizard` passes the structured result;
+  `AppContext`/`App` derive `distanceResolved` (true only for a finite, non-negative
+  Kenyan km).
+* **Safe uncertainty handling** (`PaidConsultancyModal`): when the distance is **not**
+  confidently resolved the field is **blank** (not 0), a message asks the visitor to
+  enter the approximate distance from Nairobi CBD, and **no fee and no payment action
+  are shown** until a finite, non-negative distance is entered; a confidently
+  resolved distance is labelled an editable **estimate**. Negative/NaN input is
+  rejected. Payment details, the fee formula, M-Pesa sandbox honesty, and the
+  centralised WhatsApp number are unchanged.
+* **Location-field guidance** (`QuoteWizard`): placeholder `e.g. Karen, Nairobi`;
+  consultation hint asks for town/area + county, no exact address; typed location is
+  never sent to analytics.
+
+Validation: **`node --test src/utils/getDistanceKm.test.mjs` → 18/18 pass**
+(deterministic fixture tests of the selection/rejection/distance/uncertainty logic
+with a stubbed fetch — no live Nominatim needed, no new dependency; the `.mjs` test
+is outside eslint's `{js,jsx}` scope). `npm run lint` holds at the inherited **19**
+errors (`server/index.js`, `FadeIn.jsx`, `AppContext.jsx`; zero new). `npm run build`
+→ **43/43** routes + `dist/404.html`. `git diff --check` clean. In-app browser
+(dev): `Karen, Nairobi` (resolved) → **Ksh 3,980** with an editable estimate hint (was
+KSh 422,060); a foreign result → blank field, "could not confidently calculate"
+message, **no total, no payment**; manual entry (20 km) → Ksh 4,400 and payment
+re-enabled; negative input rejected; blank hides the total; mobile modal usable; no
+console errors. Regression: normal six-step enquiries unaffected; consultation remains
+the only post-location branch; Ask Botanique still preselects Consultation.
+
+Boundaries: no `/admin`, Supabase, finance, CRM, Operations Workflow, GardenCare
+terms, analytics/cookies/tracking, or campaign work; no contact-number change; no new
+dependency. Changed files: `src/utils/getDistanceKm.js`,
+`src/utils/getDistanceKm.test.mjs` (new), `src/components/QuoteWizard.jsx`,
+`src/components/PaidConsultancyModal.jsx`, `src/context/AppContext.jsx`,
+`src/App.jsx`, and this `WORKSTREAMS.md` entry.
