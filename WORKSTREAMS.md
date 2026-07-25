@@ -1191,9 +1191,14 @@ package/build scripts.
 
 ## BD-CONVERSION-02 — Enquiry Qualification Enforcement
 
-Status: **Implementation and local validation complete — draft PR #23 open, not
-merged.** Includes a repair pass (below) correcting bypasses and authority
-overclaims found in the first draft.
+Status: **COMPLETE — merged and production-verified.** PR #23 squash-merged to
+`main` as `752c80fb022705a4f3407f6f66855e6fd4522fbc` (merged 2026-07-25); the
+matching Vercel production deployment reached READY. Its acceptance criteria
+(enquiry-qualification enforcement + bypass removal) passed. Production verification
+also **surfaced a separate, pre-existing consultation-location resolution defect**,
+which has since been **resolved under BD-CONSULTATION-01** (see the closeout record
+below and the BD-CONSULTATION-01 section). Includes a repair pass (below) correcting
+bypasses and authority overclaims found in the first draft.
 
 Baseline `origin/main` (branch cut from):
 `5bdef9039eaf978bbfc4e19dc6b0fdde59b9eeb6`
@@ -1353,13 +1358,38 @@ Changed files (this workstream): `src/App.jsx`, `src/context/AppContext.jsx`,
 `src/pages/About.jsx`, `src/pages/FAQ.jsx`, `src/pages/NotFound.jsx`, and this
 `WORKSTREAMS.md` entry.
 
+### Production closeout & consultation-defect resolution (2026-07-25)
+
+- PR #23 was marked ready and **squash-merged** to `main` as
+  `752c80fb022705a4f3407f6f66855e6fd4522fbc`; the matching Vercel production
+  deployment reached READY. BD-CONVERSION-02 **remained complete** — its own
+  acceptance criteria (qualification enforcement + bypass removal) passed and were
+  production-verified on `https://www.botaniquedesigners.com`.
+- **Separate defect surfaced by that verification:** entering the ordinary Nairobi
+  location `Karen` in the consultation path produced an implausible distance and a
+  displayed payable total of **≈ KSh 422,060** (`getDistanceKm` took the first
+  unrestricted worldwide Nominatim result; the modal displayed a payable fee
+  immediately; the manual field did not make that total acceptable). Pre-existing,
+  but easier to reach after Ask Botanique began correctly using the authoritative
+  consultation flow. This was **not** resolved by BD-CONVERSION-02.
+- **Resolved under BD-CONSULTATION-01:** the defect was fixed in PR #26,
+  squash-merged to `main` as **`c112ca2bc5187400fd26c09d0f031046a1c37f08`**; the
+  matching Vercel production deployment reached **READY** and was **production-verified**
+  on the live domain (see the BD-CONSULTATION-01 section). The ≈ KSh 422,060 result
+  no longer occurs — `Karen, Nairobi` and bare `Karen` now resolve to ~13 km / **Ksh
+  3,980**, and uncertain lookups show no payable fee. **The consultation-location
+  defect is therefore no longer a current paid-campaign blocker.** The historical
+  KSh 422,060 evidence is retained above as the reason the repair was necessary.
+
 ## BD-CONSULTATION-01 — Consultation Location Resolution Repair
 
-Status: **Implementation and local validation complete — draft PR open, not
-merged.** Narrowest accurate conversion repair under the existing consultation/
-enquiry authority. Deliberately **not** named BD-CONVERSION-03 (which the
-BD-CAMPAIGN-READINESS-01 audit proposes for *richer wizard qualification*) — this is
-a distinct, bounded correctness fix.
+Status: **COMPLETE — merged and production-verified.** PR #26 squash-merged to
+`main` as `c112ca2bc5187400fd26c09d0f031046a1c37f08` (merged 2026-07-25); the
+matching Vercel production deployment reached READY. Narrowest accurate conversion
+repair under the existing consultation/enquiry authority. Deliberately **not** named
+BD-CONVERSION-03 (which the BD-CAMPAIGN-READINESS-01 audit proposes for *richer
+wizard qualification*) — this is a distinct, bounded correctness fix. A
+production-verification record is at the end of this section.
 
 Baseline `origin/main` (branch cut from): `752c80fb022705a4f3407f6f66855e6fd4522fbc`
 (`BD-CONVERSION-02 (#23)`). Branch: `claude/bd-consultation-01-location-resolution`.
@@ -1425,3 +1455,30 @@ dependency. Changed files: `src/utils/getDistanceKm.js`,
 `src/utils/getDistanceKm.test.mjs` (new), `src/components/QuoteWizard.jsx`,
 `src/components/PaidConsultancyModal.jsx`, `src/context/AppContext.jsx`,
 `src/App.jsx`, and this `WORKSTREAMS.md` entry.
+
+### Production release closeout (2026-07-25)
+
+- PR #26 was marked ready and **squash-merged** to `main` as
+  **`c112ca2bc5187400fd26c09d0f031046a1c37f08`**; the matching Vercel production
+  deployment reached **READY** (commit status success). A pre-merge repair also
+  tightened the country-confidence rule so a candidate is accepted only when its
+  returned `country_code` is Kenya **and** its coordinates fall within the Kenya
+  bounding box (the box is a guard, never a fallback for missing country evidence);
+  deterministic tests grew to **25/25** including request-URL assertions.
+- **Live production verification** (`https://www.botaniquedesigners.com`, the exact
+  merged commit): Ask Botanique "Book a Visit" opens the wizard with
+  `Consultation & Site Assessment` preselected; `Karen, Nairobi` **and** bare `Karen`
+  now resolve to ~13 km / **Ksh 3,980** (no implausible amount — the ≈ KSh 422,060
+  defect is gone); a nonsense/uncertain location shows **no payable fee** (blank
+  field + "could not confidently calculate" message, no payment action); manual entry
+  of 20 km yields **Ksh 4,400** with the unchanged fee formula and re-enables payment;
+  clearing the distance hides the fee and payment actions; the payment WhatsApp
+  destination remains the centralised number; normal non-consultation enquiries reach
+  step 6 and never trigger the consultation modal; no client-side console errors.
+- **Remaining limitations:** none for this defect — it is resolved and
+  production-verified. The dedicated Botanique SIM swap remains deferred (unrelated),
+  and the geocoder still depends on public Nominatim availability, with the explicit
+  manual-distance path as the designed safe fallback when a lookup is uncertain.
+
+**BD-CONSULTATION-01 is complete, merged and production-verified. The
+consultation-location defect is resolved and is no longer a paid-campaign blocker.**
