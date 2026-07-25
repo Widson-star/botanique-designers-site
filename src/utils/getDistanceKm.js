@@ -7,8 +7,10 @@
 // alarming payable fee. This module now:
 //   * normalises the query and biases it to Kenya,
 //   * restricts Nominatim to Kenya (`countrycodes=ke`) and a small result set,
-//   * requests address details and accepts only genuinely Kenyan candidates with
-//     numeric, in-Kenya coordinates,
+//   * requests address details and accepts a candidate only when its returned
+//     country code is Kenya AND its numeric coordinates also fall within Kenya
+//     (the bounding box is an extra guard, never a fallback for missing country
+//     evidence),
 //   * returns an explicit { status, km } so the caller can distinguish a confidently
 //     resolved distance from one that needs manual entry — instead of silently
 //     falling back to a misleading 0 km.
@@ -24,22 +26,27 @@ export const NAIROBI_CBD = { lat: -1.286389, lon: 36.817223 };
 // roughly lat -4.7..5.0, lon 33.9..41.9; padded slightly here.
 export const KENYA_BOUNDS = { minLat: -5.2, maxLat: 5.6, minLon: 33.8, maxLon: 42.1 };
 
-// True when a Nominatim candidate is a usable Kenyan location: numeric coordinates
-// that fall inside Kenya, and not explicitly flagged as another country.
+// True only when a Nominatim candidate is CONFIDENTLY Kenyan: the returned country
+// code must be Kenya AND the coordinates must also fall within the Kenya bounding
+// box. The bounding box is an additional guard, never a fallback for missing
+// country evidence — a candidate with no `address`, no/empty `country_code`, or any
+// non-`ke` code is rejected even if its coordinates happen to be inside Kenya, and a
+// `ke` candidate whose coordinates fall outside Kenya is also rejected.
 export function isKenyanCandidate(candidate) {
   if (!candidate || typeof candidate !== "object") return false;
+
+  // 1) Require an address object with a string country_code that normalises to "ke".
+  const address = candidate.address;
+  if (!address || typeof address !== "object") return false;
+  if (typeof address.country_code !== "string") return false;
+  if (address.country_code.trim().toLowerCase() !== "ke") return false;
+
+  // 2) Require finite numeric coordinates.
   const lat = Number(candidate.lat);
   const lon = Number(candidate.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
 
-  const cc =
-    candidate.address && typeof candidate.address.country_code === "string"
-      ? candidate.address.country_code.toLowerCase()
-      : "";
-  // An explicit non-Kenya country code is a hard reject, regardless of coordinates.
-  if (cc && cc !== "ke") return false;
-
-  // Must also be geographically inside Kenya (guards a stray/mislabelled result).
+  // 3) Coordinates must ALSO fall inside the Kenya bounding box (extra guard).
   return (
     lat >= KENYA_BOUNDS.minLat &&
     lat <= KENYA_BOUNDS.maxLat &&

@@ -1377,9 +1377,14 @@ Fix (public consultation flow + one util; no protected system, no new dependency
 
 * **Kenya-constrained, confidence-safe geocoding** (`src/utils/getDistanceKm.js`):
   trims/normalises the query, biases it to Kenya, restricts Nominatim with
-  `countrycodes=ke`, requests `addressdetails=1&limit=5`, and accepts only
-  candidates with a Kenyan `country_code` (or, when absent, coordinates inside a
-  Kenya bounding box) and numeric, in-Kenya lat/lon. Rejects foreign/invalid results.
+  `countrycodes=ke`, requests `addressdetails=1&limit=5`, and accepts a candidate
+  only when the **returned country code is Kenya AND the coordinates also fall within
+  the Kenya bounding box**. The bounding box is an **additional guard, never a
+  fallback for missing country evidence**: a candidate with no `address`, no/empty
+  `country_code`, or any non-`ke` code is rejected even if its coordinates are in
+  Kenya, and a `ke` candidate whose coordinates fall outside Kenya is also rejected
+  (`KE` is accepted after lowercase normalisation). It does not trust
+  `countrycodes=ke` on the request alone — the returned evidence is validated.
   Returns an explicit **`{ status: "ok", km }`** or **`{ status: "uncertain", km: null }`**
   — never a foreign/NaN/negative/infinite distance and never a silent `0 km`.
   Nairobi CBD origin and the fee formula are unchanged. Locations anywhere in Kenya
@@ -1399,10 +1404,12 @@ Fix (public consultation flow + one util; no protected system, no new dependency
   consultation hint asks for town/area + county, no exact address; typed location is
   never sent to analytics.
 
-Validation: **`node --test src/utils/getDistanceKm.test.mjs` → 18/18 pass**
-(deterministic fixture tests of the selection/rejection/distance/uncertainty logic
-with a stubbed fetch — no live Nominatim needed, no new dependency; the `.mjs` test
-is outside eslint's `{js,jsx}` scope). `npm run lint` holds at the inherited **19**
+Validation: **`node --test src/utils/getDistanceKm.test.mjs` → 25/25 pass**
+(deterministic fixture tests of the country-confidence/selection/rejection/distance/
+uncertainty logic — incl. `ke`/`KE` accept, missing/empty/foreign country code
+reject, `ke`-outside-Kenya reject, and Nominatim request-URL assertions — with a
+stubbed fetch; no live Nominatim needed, no new dependency; the `.mjs` test is
+outside eslint's `{js,jsx}` scope). `npm run lint` holds at the inherited **19**
 errors (`server/index.js`, `FadeIn.jsx`, `AppContext.jsx`; zero new). `npm run build`
 → **43/43** routes + `dist/404.html`. `git diff --check` clean. In-app browser
 (dev): `Karen, Nairobi` (resolved) → **Ksh 3,980** with an editable estimate hint (was
