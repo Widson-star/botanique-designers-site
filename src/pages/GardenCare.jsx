@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 import FadeIn from "../components/FadeIn";
-import { buildGardenCareMessage, waLink } from "../utils/whatsapp";
 
 const GARDEN_MAINTENANCE_SERVICE = "Garden Maintenance & Aftercare";
 
@@ -128,9 +127,14 @@ export default function GardenCare() {
   const [selectedProgramme, setSelectedProgramme] = useState("");
   const [openFaq, setOpenFaq] = useState(null);
 
-  const gardenCareWaLink = waLink(
-    buildGardenCareMessage({ programme: selectedProgramme })
-  );
+  // Open the qualification wizard with the maintenance service preselected and
+  // the visitor's chosen programme (if any) carried through as enquiry context.
+  function startGardenCareEnquiry() {
+    openQuoteWizard(GARDEN_MAINTENANCE_SERVICE, {
+      programme: selectedProgramme || undefined,
+      source: "GardenCare page",
+    });
+  }
 
   return (
     <div className="pt-20 font-sans text-botanique-charcoal">
@@ -215,19 +219,17 @@ export default function GardenCare() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => openQuoteWizard(GARDEN_MAINTENANCE_SERVICE)}
+              onClick={startGardenCareEnquiry}
               className="px-8 py-3 rounded-full bg-botanique-green text-white font-medium hover:scale-105 transition shadow-lg"
             >
               Start a GardenCare Enquiry
             </button>
-            <a
-              href={gardenCareWaLink}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/services"
               className="px-8 py-3 rounded-full bg-white/15 border border-white text-white font-medium hover:bg-white hover:text-botanique-green transition backdrop-blur"
             >
-              WhatsApp Us
-            </a>
+              Explore All Services
+            </Link>
           </div>
         </div>
       </section>
@@ -247,8 +249,8 @@ export default function GardenCare() {
             <h2 className="text-3xl font-bold text-center mb-4">GardenCare Programmes</h2>
             <p className="text-gray-500 text-center max-w-2xl mx-auto mb-12">
               Three programmes, each suited to a different kind of garden. Select
-              one to include it in your WhatsApp message — the exact scope is
-              always agreed after assessment.
+              one to include it in your enquiry — the exact scope is always agreed
+              after assessment.
             </p>
             <div className="grid sm:grid-cols-3 gap-6">
               {PROGRAMMES.map((p) => (
@@ -440,21 +442,13 @@ export default function GardenCare() {
             Tell us about your garden and we'll arrange a site assessment —
             custom-priced, no generic package prices.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <button
-              onClick={() => openQuoteWizard(GARDEN_MAINTENANCE_SERVICE)}
+              onClick={startGardenCareEnquiry}
               className="px-8 py-4 rounded-full bg-white text-botanique-green font-semibold hover:scale-105 transition"
             >
               Start a GardenCare Enquiry
             </button>
-            <a
-              href={gardenCareWaLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white/10 transition"
-            >
-              WhatsApp Us
-            </a>
           </div>
         </div>
       </section>

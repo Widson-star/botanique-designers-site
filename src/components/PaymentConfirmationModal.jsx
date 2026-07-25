@@ -1,3 +1,5 @@
+import { CONTACT } from "../utils/backend";
+
 export default function PaymentConfirmationModal({
   open,
   onClose,
@@ -37,7 +39,7 @@ export default function PaymentConfirmationModal({
 
         <div className="flex flex-col gap-3">
           <a
-            href="https://wa.me/254720861592"
+            href={`https://wa.me/${CONTACT.whatsapp}`}
             target="_blank"
             rel="noreferrer"
             className="w-full text-center px-4 py-3 rounded-full bg-botanique-green text-white hover:opacity-90"

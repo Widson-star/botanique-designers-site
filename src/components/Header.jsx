@@ -149,7 +149,7 @@ export default function Header() {
           </button>
 
           <button
-            onClick={() => openQuoteWizard()}
+            onClick={() => openQuoteWizard("", { source: "Header" })}
             className="px-5 py-2 rounded-full bg-botanique-green text-white text-sm hover:scale-105 transition cursor-pointer"
           >
             Project Enquiry
@@ -224,7 +224,7 @@ export default function Header() {
           <Link to="/faq" className="block py-2 hover:text-botanique-green" onClick={closeMobile}>FAQ</Link>
           <button onClick={handleContactClick} className="block w-full text-left py-2 hover:text-botanique-green cursor-pointer">Contact</button>
           <button
-            onClick={() => { openQuoteWizard(); closeMobile(); }}
+            onClick={() => { openQuoteWizard("", { source: "Header" }); closeMobile(); }}
             className="block w-full mt-2 px-5 py-2 rounded-full bg-botanique-green text-white text-center cursor-pointer"
           >
             Project Enquiry

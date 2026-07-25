@@ -4,11 +4,10 @@ import { useApp } from "../../context/AppContext";
 import FadeIn from "../../components/FadeIn";
 import services, { wizardServiceForSlug } from "../../data/services";
 import caseStudies from "../../data/case-studies";
-import { buildServiceMessage, waLink } from "../../utils/whatsapp";
 
 export default function ServicePage() {
   const { slug } = useParams();
-  const { setQuoteWizardOpen, setPrefilledService } = useApp();
+  const { openQuoteWizard } = useApp();
   const svc = services.items[slug];
 
   const relatedCaseStudies = caseStudies.filter((cs) =>
@@ -37,9 +36,11 @@ export default function ServicePage() {
 
   const handleQuote = () => {
     // Preselect the wizard's broad service option from this service's slug/
-    // category (authoritative data), not its display title.
-    setPrefilledService(wizardServiceForSlug(slug));
-    setQuoteWizardOpen(true);
+    // category (authoritative data), not its display title. Carry a
+    // human-readable enquiry source for the team.
+    openQuoteWizard(wizardServiceForSlug(slug), {
+      source: `${svc.title} service page`,
+    });
   };
 
   return (
@@ -301,14 +302,12 @@ export default function ServicePage() {
             >
               Start Your Project Enquiry
             </button>
-            <a
-              href={waLink(buildServiceMessage(svc.title))}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/projects"
               className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition"
             >
-              WhatsApp Us
-            </a>
+              View Our Projects
+            </Link>
           </div>
         </div>
       </section>

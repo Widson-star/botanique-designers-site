@@ -4,11 +4,10 @@ import { useApp } from "../context/AppContext";
 import FadeIn from "../components/FadeIn";
 import caseStudies from "../data/case-studies";
 import services, { wizardServiceForSlugs } from "../data/services";
-import { buildProjectMessage, waLink } from "../utils/whatsapp";
 
 export default function ProjectDetail() {
   const { slug } = useParams();
-  const { setQuoteWizardOpen, setPrefilledService } = useApp();
+  const { openQuoteWizard } = useApp();
   const study = caseStudies.find((c) => c.slug === slug);
 
   if (!study) {
@@ -29,9 +28,11 @@ export default function ProjectDetail() {
   const handleQuote = () => {
     // Derive a valid wizard option from this case study's related services
     // (authoritative slugs). Never pass the project title as a service; if
-    // nothing resolves, open the wizard with no service preselected.
-    setPrefilledService(wizardServiceForSlugs(study.relatedServices));
-    setQuoteWizardOpen(true);
+    // nothing resolves, open the wizard with no service preselected. Carry a
+    // human-readable enquiry source for the team.
+    openQuoteWizard(wizardServiceForSlugs(study.relatedServices), {
+      source: `${study.title} project page`,
+    });
   };
 
   const relatedServices = (study.relatedServices || [])
@@ -281,14 +282,12 @@ export default function ProjectDetail() {
             >
               Start Your Project Enquiry
             </button>
-            <a
-              href={waLink(buildProjectMessage(study.title))}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/projects"
               className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition"
             >
-              WhatsApp Us
-            </a>
+              View More Projects
+            </Link>
           </div>
         </div>
       </section>

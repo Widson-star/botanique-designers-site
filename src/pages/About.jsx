@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
-import { buildQuoteMessage, waLink } from "../utils/whatsapp";
 
 const team = [
   {
@@ -303,21 +302,13 @@ export default function About() {
             established landscape maintained — we'd like to hear about your
             project.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <Link
               to="/#contact"
               className="bg-white text-botanique-green px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
             >
               Get in Touch
             </Link>
-            <a
-              href={waLink(buildQuoteMessage())}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition"
-            >
-              WhatsApp Us
-            </a>
           </div>
         </div>
       </section>

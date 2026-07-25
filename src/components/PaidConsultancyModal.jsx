@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PAYMENT } from "../utils/paymentDetails";
-import { BACKEND_URL } from "../utils/backend";
+import { BACKEND_URL, CONTACT } from "../utils/backend";
 
 // Live in-app M-Pesa STK Push is OFF by default. The server currently talks to
 // the Safaricom *sandbox*, so an STK prompt would NOT actually charge the
@@ -124,7 +124,7 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
               <p className="text-xs text-gray-400 pt-1">Use your full name as the payment reference.</p>
             </div>
             <a
-              href={`https://wa.me/254720861592?text=Hi%20Botanique!%20I'd%20like%20to%20book%20a%20site%20visit%20(fee%20Ksh%20${total}).%20Here%20is%20my%20payment%20confirmation.`}
+              href={`https://wa.me/${CONTACT.whatsapp}?text=Hi%20Botanique!%20I'd%20like%20to%20book%20a%20site%20visit%20(fee%20Ksh%20${total}).%20Here%20is%20my%20payment%20confirmation.`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-4 block w-full text-center bg-botanique-green text-white py-3 rounded-xl hover:opacity-90 transition"
@@ -144,7 +144,7 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
               Enter your PIN to complete payment.
             </p>
             <a
-              href={`https://wa.me/254720861592?text=Hi%20Botanique!%20I%20just%20paid%20Ksh%20${total}%20for%20the%20site%20visit.%20Please%20confirm.`}
+              href={`https://wa.me/${CONTACT.whatsapp}?text=Hi%20Botanique!%20I%20just%20paid%20Ksh%20${total}%20for%20the%20site%20visit.%20Please%20confirm.`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-5 block w-full text-center bg-botanique-green text-white py-3 rounded-xl hover:opacity-90 transition"
@@ -200,7 +200,7 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
                 <p><strong>Account No:</strong> {PAYMENT.accountNo}</p>
                 <p className="text-xs text-gray-400 pt-1">Use your full name as payment reference.</p>
                 <a
-                  href="https://wa.me/254720861592?text=Hi%20Botanique!%20I%20have%20paid%20for%20the%20consultancy%20visit.%20Here%20is%20my%20proof."
+                  href={`https://wa.me/${CONTACT.whatsapp}?text=Hi%20Botanique!%20I%20have%20paid%20for%20the%20consultancy%20visit.%20Here%20is%20my%20proof.`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block mt-2 text-center text-botanique-green underline"

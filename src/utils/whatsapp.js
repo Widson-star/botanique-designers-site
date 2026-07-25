@@ -28,66 +28,33 @@ function line(label, value) {
 // them pass no form, so blank "Name:"/"Site context:" lines are omitted rather
 // than shown empty. Service/Location/Project size/Budget range remain as simple
 // labels for the client to complete in WhatsApp.
-export function buildQuoteMessage(form = {}) {
+// The optional `context` carries human-readable enquiry context set when the
+// wizard was opened (e.g. { programme } from the GardenCare page, or a readable
+// { source }). It is operational context for the team, never internal route or
+// component names.
+export function buildQuoteMessage(form = {}, context = {}) {
+  const ctx = context || {};
   const lines = ["Hello Botanique Designers,", "", "I would like to request a site visit / quotation.", ""];
 
   if (form.name) lines.push(line("Name", form.name));
 
-  lines.push(line("Service", form.service), line("Location", form.location), line("Project size", form.size));
+  lines.push(line("Service", form.service));
+
+  if (ctx.programme) lines.push(line("Programme of interest", ctx.programme));
+
+  lines.push(line("Location", form.location), line("Project size", form.size));
 
   if (form.siteContext) lines.push(line("Site context", form.siteContext));
 
   lines.push(line("Budget range", form.budget));
 
-  lines.push("", "Could you please advise on the site visit fee and the next available appointment?");
-
-  return lines.join("\n");
-}
-
-// Service detail page CTA.
-export function buildServiceMessage(serviceName) {
-  return [
-    "Hello Botanique Designers,",
+  lines.push(
     "",
-    "I would like to request a site visit / quotation.",
-    "",
-    line("Service", serviceName),
-    "Location:",
-    "Project size:",
-    "Budget range:",
-    "",
-    "Could you please advise on the site visit fee and the next available appointment?",
-  ].join("\n");
-}
+    "I can share photos or a short video of the site in this chat.",
+    "Could you please advise on the site visit fee and the next available appointment?"
+  );
 
-// Project / case-study CTA.
-export function buildProjectMessage(projectName) {
-  return [
-    "Hello Botanique Designers,",
-    "",
-    `I saw the ${projectName} project and would like to request a site visit / quotation for something similar.`,
-    "",
-    "Service:",
-    "Location:",
-    "Project size:",
-    "Budget range:",
-    "",
-    "Could you please advise on the site visit fee and the next available appointment?",
-  ].join("\n");
-}
-
-// GardenCare secondary WhatsApp CTA (the /gardencare page). Identifies GardenCare
-// interest, the desired programme/frequency if the visitor picked one, location
-// and site context if provided, and always ends with a clear next-step request.
-// No price is stated — pricing is custom after assessment.
-export function buildGardenCareMessage({ programme, location, siteContext } = {}) {
-  const lines = ["Hello Botanique Designers,", "", "I'm interested in GardenCare (your garden maintenance programme)."];
-
-  if (programme) lines.push("", line("Programme of interest", programme));
-  if (location) lines.push(line("Location", location));
-  if (siteContext) lines.push(line("Garden / site context", siteContext));
-
-  lines.push("", "Could you please advise on the next step, including a garden and location assessment?");
+  if (ctx.source) lines.push("", line("Enquiry source", ctx.source));
 
   return lines.join("\n");
 }

@@ -4,7 +4,6 @@ import { Helmet } from "react-helmet-async";
 import { useApp } from "../context/AppContext";
 import projects from "../data/projects.js";
 import caseStudies from "../data/case-studies.js";
-import { buildQuoteMessage, buildProjectMessage, waLink } from "../utils/whatsapp.js";
 
 const filters = [
   { value: "all", label: "All Projects" },
@@ -17,7 +16,7 @@ const filters = [
 export default function Projects() {
   const [active, setActive] = useState("all");
   const [lightboxIndex, setLightboxIndex] = useState(null);
-  const { setQuoteWizardOpen } = useApp();
+  const { openQuoteWizard } = useApp();
 
   const filtered =
     active === "all"
@@ -187,19 +186,17 @@ export default function Projects() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
-            onClick={() => setQuoteWizardOpen(true)}
+            onClick={() => openQuoteWizard("", { source: "Projects gallery" })}
             className="px-8 py-3 rounded-full bg-botanique-green text-white font-semibold hover:opacity-90 transition"
           >
             Start Your Project Enquiry
           </button>
-          <a
-            href={waLink(buildQuoteMessage())}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/services"
             className="px-8 py-3 rounded-full border-2 border-botanique-green text-botanique-green font-semibold hover:bg-botanique-green hover:text-white transition"
           >
-            WhatsApp Us
-          </a>
+            Explore Services
+          </Link>
         </div>
       </section>
 
@@ -212,6 +209,13 @@ export default function Projects() {
           onClose={closeLightbox}
           onNext={goNext}
           onPrev={goPrev}
+          onEnquire={() => {
+            const title = filtered[lightboxIndex]?.title;
+            closeLightbox();
+            openQuoteWizard("", {
+              source: title ? `Projects gallery — ${title}` : "Projects gallery",
+            });
+          }}
         />
       )}
     </div>
@@ -284,7 +288,7 @@ function ProjectCard({ project, onClick }) {
   );
 }
 
-function Lightbox({ project, index, total, onClose, onNext, onPrev }) {
+function Lightbox({ project, index, total, onClose, onNext, onPrev, onEnquire }) {
   const categoryColor = {
     residential:    "bg-emerald-100 text-emerald-700",
     estate:         "bg-amber-100 text-amber-700",
@@ -372,14 +376,12 @@ function Lightbox({ project, index, total, onClose, onNext, onPrev }) {
               </p>
             )}
           </div>
-          <a
-            href={waLink(buildProjectMessage(project.title))}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={onEnquire}
             className="shrink-0 px-5 py-2.5 rounded-full bg-botanique-green text-white text-sm font-semibold hover:opacity-90 transition whitespace-nowrap"
           >
-            I want this →
-          </a>
+            Request Similar Project →
+          </button>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import FadeIn from "../components/FadeIn";
 import faqs from "../data/faqs";
+import { waLink } from "../utils/whatsapp";
 
 function AccordionItem({ question, answer, isOpen, onToggle }) {
   return (
@@ -120,7 +121,7 @@ export default function FAQ() {
               Contact Us
             </Link>
             <a
-              href="https://wa.me/254720861592?text=Hi%20Botanique%20Designers%2C%20I%20have%20a%20question."
+              href={waLink("Hello Botanique Designers, I have a question.")}
               target="_blank"
               rel="noopener noreferrer"
               className="border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition"
