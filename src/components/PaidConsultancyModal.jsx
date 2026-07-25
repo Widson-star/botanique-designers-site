@@ -9,27 +9,48 @@ import { BACKEND_URL, CONTACT } from "../utils/backend";
 // honest manual payment instructions (Till / Bank) instead.
 const MPESA_STK_ENABLED = import.meta.env.VITE_MPESA_STK_ENABLED === "true";
 
-export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) {
-  const [inputKm, setInputKm] = useState(distanceKm);
+export default function PaidConsultancyModal({
+  open,
+  onClose,
+  distanceKm = 0,
+  // Whether distanceKm was confidently resolved from a Kenyan geocode. When false,
+  // the modal must NOT show a payable fee — it asks the visitor to enter the
+  // distance manually first (an uncertain lookup must never display a fee derived
+  // from a misleading 0 km or a foreign result).
+  distanceResolved = false,
+}) {
+  // Held as a string so the field can be genuinely blank when a manual distance is
+  // required (rather than a misleading 0). Fee calculation is derived from it.
+  const [inputKm, setInputKm] = useState("");
   const [phone, setPhone] = useState("");
   const [status, setStatus] = useState("idle"); // idle | loading | sent | error
   const [errorMsg, setErrorMsg] = useState("");
   const [showManual, setShowManual] = useState(false);
 
-  // The modal instance stays mounted (it just renders null while closed), so the
-  // useState initialiser above only ever captured the first distanceKm. Sync the
-  // displayed distance whenever the modal (re)opens with a freshly calculated
-  // value, while still allowing manual edits afterwards. Fee calculation is
-  // unchanged — it is always derived from the km shown in the field.
+  // The modal instance stays mounted (it just renders null while closed). On each
+  // (re)open, prefill the field only when the distance was confidently resolved;
+  // otherwise leave it blank so no fee is shown until the visitor enters a distance.
   useEffect(() => {
-    if (open) setInputKm(distanceKm);
-  }, [open, distanceKm]);
+    if (open) {
+      setInputKm(
+        distanceResolved && Number.isFinite(distanceKm) && distanceKm >= 0
+          ? String(distanceKm)
+          : ""
+      );
+    }
+  }, [open, distanceKm, distanceResolved]);
 
   if (!open) return null;
 
+  // A finite, non-negative distance is required before any fee or payment action.
+  const parsedKm = inputKm.trim() === "" ? NaN : Number(inputKm);
+  const hasValidDistance = Number.isFinite(parsedKm) && parsedKm >= 0;
   const baseFee = 3500;
-  const extraKm = Math.max(0, inputKm - 5);
+  const extraKm = hasValidDistance ? Math.max(0, parsedKm - 5) : 0;
   const total = baseFee + extraKm * 60;
+  // Show the "estimate you can correct" hint only while the resolved value is
+  // still displayed unchanged.
+  const showingEstimate = distanceResolved && hasValidDistance && inputKm === String(distanceKm);
 
   async function handleStkPush() {
     const trimmed = phone.trim();
@@ -80,7 +101,7 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
         </div>
 
         {/* Distance calculator */}
-        <div className="mb-4">
+        <div className="mb-2">
           <label className="block text-sm font-medium mb-1">
             Distance from Nairobi CBD (km)
           </label>
@@ -88,13 +109,39 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
             type="number"
             className="w-full border border-gray-300 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-botanique-green/40"
             value={inputKm}
-            onChange={(e) => setInputKm(Number(e.target.value) || 0)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "") {
+                setInputKm("");
+                return;
+              }
+              const n = Number(v);
+              // Ignore invalid or negative entries so the field can never drive a
+              // NaN/negative fee.
+              if (Number.isFinite(n) && n >= 0) setInputKm(v);
+            }}
             min="0"
             step="1"
+            placeholder="e.g. 12"
             disabled={status === "loading" || status === "sent"}
           />
+          {showingEstimate && (
+            <p className="text-xs text-gray-500 mt-1">
+              Estimated from your location — please correct it if it looks wrong.
+            </p>
+          )}
         </div>
 
+        {!hasValidDistance ? (
+          /* Uncertain / not-yet-entered distance: NO fee and NO payment actions
+             until a finite, non-negative distance is entered. */
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-2 text-sm text-gray-700">
+            {distanceResolved
+              ? "Enter the distance from Nairobi CBD (km) to see the site-visit fee."
+              : "We could not confidently calculate the distance from your location. Please enter the approximate distance from Nairobi CBD (km) so we can prepare the site-visit fee."}
+          </div>
+        ) : (
+        <>
         {/* Total */}
         <div className="bg-botanique-beige rounded-xl px-4 py-3 mb-5 text-sm space-y-1">
           <p className="text-gray-600">Base fee (within 5 km): <strong>Ksh 3,500</strong></p>
@@ -210,6 +257,8 @@ export default function PaidConsultancyModal({ open, onClose, distanceKm = 0 }) 
               </div>
             )}
           </>
+        )}
+        </>
         )}
       </div>
     </div>

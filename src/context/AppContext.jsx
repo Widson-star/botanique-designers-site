@@ -13,6 +13,10 @@ export function AppProvider({ children }) {
   const [paidService, setPaidService] = useState("");
   const [consultancyOpen, setConsultancyOpen] = useState(false);
   const [distanceKm, setDistanceKm] = useState(0);
+  // Whether `distanceKm` was confidently resolved from a Kenyan geocode. When
+  // false, the consultation modal must ask for a manual distance rather than
+  // showing a fee (see PaidConsultancyModal).
+  const [distanceResolved, setDistanceResolved] = useState(false);
 
   function openQuoteWizard(service = "", context = null) {
     setPrefilledService(service);
@@ -37,6 +41,8 @@ export function AppProvider({ children }) {
         setConsultancyOpen,
         distanceKm,
         setDistanceKm,
+        distanceResolved,
+        setDistanceResolved,
         openQuoteWizard,
       }}
     >

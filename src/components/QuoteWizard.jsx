@@ -134,20 +134,23 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
     // consultancy modal instead of continuing to the project-scoping steps.
     if (step === 3 && form.service === CONSULTATION) {
       setSubmitting(true);
-      let km = null;
+      // getDistanceKm always resolves to an explicit { status, km } and never
+      // throws; the try/catch is a belt-and-braces guard only.
+      let result = { status: "uncertain", km: null };
       try {
-        km = await getDistanceKm(form.location);
+        result = await getDistanceKm(form.location);
       } catch {
-        km = null;
+        result = { status: "uncertain", km: null };
       }
       // If the wizard was closed/unmounted while the lookup was in flight, drop
       // the result — do not reopen the paid-consultancy modal for a stale request.
       if (!activeRef.current) return;
       setSubmitting(false);
       setOpen(false);
-      // If the automatic lookup fails, open the modal with 0 km so the visitor
-      // can enter the distance manually (the modal keeps that fallback field).
-      onConsultancyRequired(km ? Math.round(km) : 0);
+      // Hand the modal an explicit resolution: a confidently-resolved Kenyan
+      // distance, or "uncertain" so it asks the visitor for a manual distance
+      // instead of showing a misleading fee. Never coerce a failure to 0 km.
+      onConsultancyRequired(result);
       return;
     }
 
@@ -229,13 +232,15 @@ export default function QuoteWizard({ open, setOpen, onConsultancyRequired, pref
             <input
               id="qw-location"
               className="w-full border p-2 rounded mb-4 focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="e.g. Nairobi, Karen"
+              placeholder="e.g. Karen, Nairobi"
               value={form.location}
               onChange={(e) => updateField("location", e.target.value)}
             />
             {form.service === CONSULTATION && (
               <p className="text-xs text-gray-500 mb-4 -mt-2">
-                We&apos;ll use this to work out the site-visit distance from Nairobi CBD.
+                Add the town/area and county (e.g. &quot;Karen, Nairobi&quot; or
+                &quot;Nyeri Town, Nyeri&quot;) so we can estimate the site-visit
+                distance from Nairobi CBD. No exact address needed.
               </p>
             )}
           </>
