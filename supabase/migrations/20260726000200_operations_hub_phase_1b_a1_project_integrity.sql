@@ -207,12 +207,14 @@ alter table public.projects
 -- project INSERT/UPDATE WITH CHECK so an out-of-authority lead can never be set.
 --
 -- Authority encoded (see BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md):
---   * NULL is allowed (unassigned lead is valid).
+--   * Only owner/manager callers may set a lead at all; the caller role is
+--     resolved and gated FIRST, so a staff/viewer/no-profile caller receives
+--     false even for a NULL (unassigned) target.
+--   * NULL is allowed (unassigned lead is valid) — but only for owner/manager.
 --   * Owner may assign any ACTIVE profile whose role is owner/manager/staff.
 --   * Manager may assign HIMSELF, or any ACTIVE staff profile — never the owner,
 --     another manager, a viewer, an inactive/nonexistent profile, or an auth
 --     user with no profile.
---   * staff / viewer / no-profile callers: always false.
 -- =====================================================================
 create or replace function public.can_assign_project_lead(target_user_id uuid)
 returns boolean
@@ -226,12 +228,18 @@ declare
   target_role text;
   target_active boolean;
 begin
-  -- Unassigned lead is always permitted.
+  -- (a/b) Resolve caller role first; only owner/manager may set a lead value.
+  -- A staff/viewer/no-profile caller is rejected here, even for NULL.
+  if caller_role is null or caller_role not in ('owner', 'manager') then
+    return false;
+  end if;
+
+  -- (c) Unassigned lead is permitted for owner/manager.
   if target_user_id is null then
     return true;
   end if;
 
-  -- The target must be a real profile; capture its role/active state.
+  -- (d) The target must be a real, active profile; capture its role/active state.
   select role, is_active
     into target_role, target_active
   from public.profiles
@@ -244,12 +252,9 @@ begin
 
   if caller_role = 'owner' then
     return target_role in ('owner', 'manager', 'staff');
-  elsif caller_role = 'manager' then
-    -- Manager may assign an active staff member, or himself.
-    return target_role = 'staff' or target_user_id = auth.uid();
   else
-    -- staff / viewer / no active profile.
-    return false;
+    -- caller_role = 'manager': an active staff member, or himself.
+    return target_role = 'staff' or target_user_id = auth.uid();
   end if;
 end;
 $$;
@@ -259,9 +264,9 @@ revoke execute on function public.can_assign_project_lead(uuid) from public;
 revoke execute on function public.can_assign_project_lead(uuid) from anon;
 grant execute on function public.can_assign_project_lead(uuid) to authenticated;
 
--- Replace the project INSERT/UPDATE policies so they keep the existing
--- owner/manager authority AND additionally require a valid project lead.
--- SELECT and staff assignment-scoped visibility are intentionally untouched.
+-- Project INSERT: keep owner/manager authority AND validate the initial lead.
+-- On INSERT there is no "unchanged lead" case, so the WITH CHECK is the right
+-- place to enforce the assignment rule for a brand-new project.
 drop policy if exists "projects_insert_owner_manager" on public.projects;
 create policy "projects_insert_owner_manager"
 on public.projects
@@ -272,16 +277,56 @@ with check (
   and public.can_assign_project_lead(lead_person_id)
 );
 
+-- Project UPDATE: keep owner/manager authority for the row, but do NOT re-validate
+-- the lead on every edit. Re-validating the resulting lead_person_id on any update
+-- would wrongly block a manager from editing notes/dates/stage/status/next-action
+-- of a project whose (unchanged) lead is the owner, another manager, or a person
+-- who has since become inactive. Lead-CHANGE authority is instead enforced by the
+-- transition-scoped BEFORE UPDATE OF lead_person_id trigger below, which only fires
+-- when the lead actually changes.
 drop policy if exists "projects_update_owner_manager" on public.projects;
 create policy "projects_update_owner_manager"
 on public.projects
 for update
 to authenticated
 using (public.is_owner() or public.is_manager())
-with check (
-  (public.is_owner() or public.is_manager())
-  and public.can_assign_project_lead(lead_person_id)
-);
+with check (public.is_owner() or public.is_manager());
+
+-- Transition-scoped project-lead guard. Fires ONLY when lead_person_id is part of
+-- the UPDATE targets, and only rejects when the lead value genuinely changes to one
+-- the caller is not authorised to assign. Retaining an existing lead (even the owner,
+-- another manager, or a now-inactive profile) never blocks unrelated operational edits.
+create or replace function public.tg_guard_project_lead()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- No genuine change to the lead -> allow (this is what lets a manager edit
+  -- operational fields while the existing lead is retained, including an owner
+  -- lead or a lead that has since become inactive).
+  if new.lead_person_id is not distinct from old.lead_person_id then
+    return new;
+  end if;
+
+  -- The lead is genuinely changing: the new value must be one the caller may assign.
+  if not public.can_assign_project_lead(new.lead_person_id) then
+    raise exception
+      'not authorised to assign this project lead'
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.tg_guard_project_lead() from public;
+revoke execute on function public.tg_guard_project_lead() from anon;
+
+create trigger projects_lead_guard
+before update of lead_person_id on public.projects
+for each row execute function public.tg_guard_project_lead();
 
 -- =====================================================================
 -- 4. Harden EXECUTE privileges on the foundation RLS helpers.
@@ -319,11 +364,14 @@ grant  execute on function public.user_has_role(uuid, text) to authenticated;
 -- =====================================================================
 -- 5. Immutable, system-generated project-change ledger.
 -- ---------------------------------------------------------------------
--- This is a SYSTEM ledger, not a user-editable activity feed. There is NO
--- authenticated INSERT/UPDATE/DELETE policy: rows are written ONLY by the
--- SECURITY DEFINER trigger below (which runs as the table owner and so bypasses
--- RLS). Any future human-entered operational note requires a separate reviewed
--- mechanism / controlled RPC — clients must not be able to fabricate audit
+-- This is a SYSTEM ledger, not a user-editable activity feed. Authenticated
+-- application roles cannot write project_activities directly: there is NO
+-- authenticated INSERT/UPDATE/DELETE policy, so the normal application path can
+-- only READ it and instead writes through the project-history trigger below.
+-- Trusted database-owner or service-role operations remain outside RLS and must
+-- stay restricted (they are not exposed to application roles). Any future
+-- human-entered operational note requires a separate reviewed mechanism /
+-- controlled RPC — application clients must not be able to fabricate audit
 -- events through this table.
 -- =====================================================================
 create table if not exists public.project_activities (
@@ -333,13 +381,16 @@ create table if not exists public.project_activities (
   -- Nullable so an event is never lost if the acting auth user is later removed.
   actor_id uuid null references auth.users(id) on delete set null,
   occurred_at timestamptz not null default now(),
-  -- Names of the operational fields that changed for this event (never empty
-  -- for a recorded event; a no-op update writes no row at all).
+  -- Names of the operational fields that changed for this event. The history
+  -- trigger never writes a no-op event; this constraint additionally guarantees
+  -- (even for a trusted/direct write) that a recorded event names >=1 field.
   changed_fields text[] not null,
   previous_values jsonb null,
   new_values jsonb null,
   reason text null check (reason is null or char_length(reason) <= 2000),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint project_activities_changed_fields_nonempty
+    check (cardinality(changed_fields) > 0)
 );
 
 alter table public.project_activities enable row level security;
@@ -357,8 +408,10 @@ using (
   or (public.is_staff() and public.is_assigned_to_project(project_id))
 );
 
--- No INSERT/UPDATE/DELETE policies are intentionally created. The ledger is
--- append-only and written exclusively by public.tg_project_history().
+-- No INSERT/UPDATE/DELETE policies are intentionally created. Authenticated
+-- application roles therefore cannot write this table directly; the normal
+-- application write path is the project-history trigger. Trusted database-owner
+-- and service-role writes remain outside RLS and must stay restricted.
 
 -- =====================================================================
 -- 6. Automatic project-history trigger.

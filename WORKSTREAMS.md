@@ -1800,31 +1800,56 @@ Status: **Phase 1B-A entry-gate audit complete; Phase 1B-A1 (project integrity +
 history) migration authored in a DRAFT PR — NOT applied to hosted Supabase, NOT merged,
 NO UI built.**
 
-- **Entry-gate audit (read-only):** confirmed the hosted `botanique-admin` schema/RLS is
-  byte-for-byte identical to the two committed migrations (zero drift); that the production
-  Project Tracker is read-only by **frontend choice, not by RLS** (owner and manager already
-  hold `INSERT`/`UPDATE` on `projects`); that no role can hard-delete; and that the finance
-  boundary is database-enforced. It also identified the gaps 1B-A1 now closes: missing
-  schedule/blocker fields, no system change-history, and audit `created_by` using
-  `coalesce(new.created_by, auth.uid())`.
+- **Entry-gate audit (read-only): complete.** Confirmed the hosted `botanique-admin`
+  schema/RLS **structurally matched the committed authority across columns, types,
+  constraints, functions, triggers, indexes and RLS policies, with no material drift found**;
+  that the production Project Tracker is read-only by **frontend choice, not by RLS** (owner
+  and manager already hold `INSERT`/`UPDATE` on `projects`); that no role can hard-delete;
+  and that the finance boundary is database-enforced. It also identified the gaps 1B-A1 now
+  closes: missing schedule/blocker fields, no system change-history, and audit `created_by`
+  using `coalesce(new.created_by, auth.uid())`.
 - **Phase 1B-A1 migration (`20260726000200_operations_hub_phase_1b_a1_project_integrity.sql`,
   additive/forward-only):** (1) hardens the foundation audit triggers so a client-supplied
   `created_by` can never survive an authenticated insert (`created_by = auth.uid()`);
   (2) adds nullable `actual_start_date`, `target_completion_date`, `actual_completion_date`,
-  `blocker` with date-order and blocker checks; (3) adds `can_assign_project_lead()` and
-  requires it in the project `INSERT`/`UPDATE` `WITH CHECK` (owner may assign active
-  owner/manager/staff; manager may assign self or active staff only); (4) revokes `EXECUTE`
-  on the foundation RLS helpers from `public`/`anon`, granting `authenticated`; (5) adds the
-  immutable, system-generated `public.project_activities` ledger (no authenticated
-  INSERT/UPDATE/DELETE policy) plus an `AFTER INSERT OR UPDATE` history trigger that diffs
-  operational fields only (never finance); (6) adds project/ledger indexes.
-- **Runtime status:** validated against an isolated PostgreSQL 17 instance with a synthetic
-  Supabase `auth` shim — all audit-identity, lead-validation, field-constraint, ledger,
-  boundary and non-destructive-apply tests passed applying `20260614000100` →
-  `20260726000100` → `20260726000200` in order. **Unmerged, unapplied to hosted, and no UI
-  implemented.** No production project, profile, assignment or activity was created or
-  changed. The Tsavo split, staff onboarding/assignment UI, and Supabase Realtime remain
-  separately gated and deferred.
+  `blocker` with date-order and blocker checks; (3) adds `can_assign_project_lead()` (caller
+  role gated first, so staff/viewer/no-profile get false even for NULL; owner may assign
+  active owner/manager/staff; manager may assign self or active staff only) — required in the
+  **project INSERT `WITH CHECK`**, while lead-CHANGE authority on UPDATE is enforced by a
+  **transition-scoped `BEFORE UPDATE OF lead_person_id` trigger** so retaining an unchanged
+  lead never blocks unrelated operational edits; (4) revokes `EXECUTE` on the foundation RLS
+  helpers from `public`/`anon`, granting `authenticated`; (5) adds the immutable,
+  system-generated `public.project_activities` ledger (RLS SELECT only — authenticated
+  application roles cannot write it directly; the normal path writes through the history
+  trigger; trusted owner/service-role writes remain outside RLS and restricted) with a
+  `cardinality(changed_fields) > 0` constraint, plus an `AFTER INSERT OR UPDATE` history
+  trigger diffing operational fields only (never finance); (6) adds project/ledger indexes.
+- **Recorded operating authority (documentation only, no implementation):** Widson =
+  **Owner / final operational + financial approver** (approve/reject/amend/override/reverse,
+  all recorded immutably with before/after). Martine = **portfolio-wide Operations Manager**
+  (coordinates all active projects, mobilises staff/tools/materials, may execute delegated
+  payments under approved commitments, submits exceptions to Widson) — his authority is not
+  limited to the site he is physically at. Distinct roles: Owner/Approver · Portfolio
+  Operations Manager · Accountable Project Lead (`projects.lead_person_id`) · Site Lead /
+  Field Reporter · Project Crew. Routine operational updates (progress, next actions,
+  blockers, deployment, notes, routine date/stage changes) do **not** all wait for owner
+  approval; **material** decisions (activation, scope/commitment changes, completion,
+  cancellation, archive, exceptional/retrospective payments) follow a future
+  Pending → Approved/Rejected/Amendment-requested workflow.
+- **Documented but NOT implemented in PR #32:** daily project-update schema/UI, the owner
+  approval/amendment workflow, and delegated-payment + reconciliation (commitment / payment
+  execution / evidence / reconciliation; Simple Invoice Manager stays the client-finance
+  authority). No `daily_updates`, approval, payment, engagement or expense table is created
+  here. The dashboard is **not** implemented in this PR; dashboard implementation **begins in
+  Phase 1B-A2** and expands through later slices.
+- **Runtime status:** re-validated after correction against an isolated PostgreSQL 17
+  instance with a synthetic Supabase `auth` shim — all audit-identity, NULL helper-contract,
+  transition-scoped lead-change, field-constraint, ledger (incl. empty-`changed_fields`
+  rejection), boundary and non-destructive-apply tests passed applying `20260614000100` →
+  `20260726000100` → `20260726000200` in order. **Unmerged, unapplied to hosted, and no UI /
+  dashboard / daily-update / approval / payment schema implemented.** No production project,
+  profile, assignment or activity was created or changed. The Tsavo split, staff
+  onboarding/assignment UI, and Supabase Realtime remain separately gated and deferred.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 

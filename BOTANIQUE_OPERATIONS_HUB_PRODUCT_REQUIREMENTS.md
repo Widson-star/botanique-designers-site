@@ -316,12 +316,18 @@ binding decisions:
 - **Responsible person:** `projects.lead_person_id` is the **single accountable project
   lead** (the field that drives dashboards and workload). `project_assignments` is the
   **wider project team / future visibility model**, not the accountable-lead field.
-- **Assignment authority (enforced by `can_assign_project_lead()` in the project
-  `INSERT`/`UPDATE` `WITH CHECK`):** the **owner** may assign any **active** owner, manager
-  or staff profile; a **manager** may assign **himself or an active staff profile only** —
-  never the owner, another manager, a viewer, an inactive/nonexistent profile, or an auth
-  user with no profile. `NULL` (unassigned) is always allowed. Staff/viewer/no-profile
-  callers may assign no one.
+- **Assignment authority (enforced by `can_assign_project_lead()`):** the caller role is
+  gated **first**, so a staff/viewer/no-profile caller is denied even for a `NULL` target.
+  The **owner** may assign any **active** owner, manager or staff profile; a **manager** may
+  assign **himself or an active staff profile only** — never the owner, another manager, a
+  viewer, an inactive/nonexistent profile, or an auth user with no profile. `NULL`
+  (unassigned) is allowed for owner/manager. **Enforcement points:** on **INSERT** the rule
+  is in the project `WITH CHECK`; on **UPDATE** it is enforced by a **transition-scoped
+  `BEFORE UPDATE OF lead_person_id` trigger** that fires only when the lead genuinely
+  changes. Retaining an unchanged lead — even the owner, another manager, or a lead that has
+  since become **inactive** — must **not** block unrelated operational edits (notes, dates,
+  stage, status, next action). A retained inactive lead must be cleared or replaced only when
+  `lead_person_id` is next changed.
 - **Overdue action** and **Delayed project** are **separate derived concepts**. A **Delayed
   project is derived from `target_completion_date`** (planned vs actual/now), **not** a
   status value — **no `Delayed` status is added**.
@@ -347,6 +353,172 @@ Retained as a future requirement, but the split requires its own reviewed plan d
 - how **duplicate reporting is prevented**.
 
 No automatic Tsavo split is authorised by this documentation PR.
+
+## O.3 Operating authority and roles (recorded)
+
+This records the Botanique operating authority. **Documentation only — none of the
+workflows below are implemented in PR #32.**
+
+### A. Owner authority — Widson
+
+Widson is the **Owner** and the **final operational approver** and **final financial and
+commitment approver**. He is authorised to **approve**, **reject**, **request amendment**,
+and **override or reverse** any operational decision, and may **review every project,
+update, commitment, payment and exception**.
+
+Every approval, rejection, amendment request, override or reversal must be recorded
+**immutably** with: actor; time; record affected; original value; proposed value; decision;
+and reason/comment where required. **An override must not erase the original record** — the
+original and the amended state both remain in history.
+
+### B. Portfolio Operations Manager authority — Martine
+
+Martine is the **portfolio-wide Operations Manager**. His role is **not limited to the site
+where he is physically present**. Martine: coordinates all active projects; mobilises
+project staff; mobilises tools and equipment; coordinates materials and site requirements;
+reviews project progress; assigns operational responsibilities within authorised limits;
+coordinates sites remotely or physically; may **execute delegated payments under approved
+commitments**; and submits material exceptions and amendments to Widson.
+
+Martine may operate across the whole portfolio whether he is physically at a project,
+Widson is physically at a project, another staff member is acting as site lead, or the
+project is coordinated remotely.
+
+### C. Distinct operational roles
+
+1. **Owner / Final Approver** — Widson.
+2. **Portfolio Operations Manager** — Martine; portfolio-wide coordination and mobilisation.
+3. **Accountable Project Lead** — `projects.lead_person_id`; one responsible operational
+   lead per project; may be Widson, Martine or an authorised staff profile.
+4. **Site Lead / Field Reporter** — the person physically supervising or reporting from a
+   site on a given day; may differ from the project lead and the operations manager.
+5. **Project Crew** — assigned work only; no project-master or approval authority.
+
+(The currently nurtured field staff member is referenced only by the role
+**“site lead / field reporter”**; no personal name is recorded in repository documentation.)
+
+### D. Routine operational updates
+
+Routine project updates should **not** all wait for Widson’s approval. Martine may directly
+record or coordinate: daily progress; next actions; blockers; staff deployment;
+tools/equipment mobilisation; material requirements; operational notes; work completed;
+next-day plan; and routine date/stage updates within authorised project scope.
+
+Widson must be able to **review, accept, flag, request amendment, override or correct** any
+of these. The original and amended records must both remain in history.
+
+### E. Material decisions requiring owner approval (future workflow)
+
+Future formal workflow: **Pending approval → Approved / Rejected / Amendment requested.**
+Material decisions include: activating a newly created project; approving a material scope
+change; approving additional work; approving or revising a labour/project commitment;
+materially changing the completion target; approving exceptional expenditure; approving
+payment beyond an authorised commitment; marking a project completed; cancelling a project;
+archiving a project; final closure/handover; and retrospective approval of an emergency
+field payment. **Not implemented in PR #32.**
+
+## O.4 Daily project reporting (future — separately gated)
+
+Future requirement: **one daily project update for every active working site.** A site with
+no work that day may submit **“No work today”** or **“Paused today”** with a reason.
+
+A future daily update captures: project; reporting date; reporter; site lead; people
+physically present; work completed; staff attendance / labour count; materials received or
+used; tools/equipment mobilised; photos/evidence references; blockers; decisions required;
+next-day plan; submitted time; Martine review status; and escalation to Widson where
+necessary.
+
+Workflow: **Draft → Submitted → Reviewed by Martine → Accepted / Amendment requested /
+Escalated to Widson.** Widson may review any update, but routine updates must not all remain
+blocked awaiting owner approval. **This is a future, separately gated schema and UI slice —
+no `daily_updates` table is created in PR #32.**
+
+## O.5 Delegated payments and financial reconciliation (future — separately gated)
+
+Framed as **financial reconciliation and traceability** (not a dispute). Four distinct
+concepts:
+
+1. **Approved commitment** — authorised amount / expenditure envelope for labour, transport,
+   materials, tools, subcontractors or another project need.
+2. **Payment execution** — Martine may execute payments under delegated authority.
+3. **Payment evidence** — recipient; date; amount; method; transaction/reference;
+   receipt/photo/proof; and who executed the payment.
+4. **Reconciliation** — approved amount; additions approved; amount paid; remaining balance;
+   variance; reconciliation status.
+
+Future workflow: **Proposed → Approved → Partially paid → Fully paid → Reconciled.** If an
+amount must exceed the approved commitment: **Amendment requested → Approved / Rejected /
+Returned for clarification.** Emergency field payment: **Emergency payment recorded →
+Retrospective approval required.**
+
+Rules: no payment record may be silently overwritten or deleted; Widson holds final
+approval/rejection/amendment authority; Martine may execute approved payments; payments
+outside approved authority require escalation; payment proof is mandatory where reasonably
+available; reconciliation must show commitment, additions, paid and balance separately.
+
+**Authority boundary preserved:** Simple Invoice Manager remains the **client-finance
+authority**; the Operations Hub holds **internal** commitments, delegated payments, evidence
+and reconciliation only. Do **not** add client quotations, invoices, receipts, margins or
+banking data to manager-readable project records. **No payment, engagement or expense table
+is created in PR #32.**
+
+## O.6 Integrated implementation sequence (dashboard evolves with every slice)
+
+The Operations Hub dashboard is **not** an isolated future item; it evolves with each
+authorised slice.
+
+- **Phase 1B-A1 — Project integrity & history foundation (CURRENT PR #32):**
+  audit-identity correction; project schedule/blocker fields; responsible-person validation
+  (INSERT check + transition-scoped lead-change trigger); immutable project-activity ledger;
+  indexes. **No UI.**
+- **Phase 1B-A2 — Admin Shell, Essential Project CRUD & Initial Live Dashboard:** persistent
+  desktop sidebar; responsive mobile nav; top bar; role badge; global project search;
+  working create/edit/archive/restore; status/stage/dates/next-action/blocker/notes;
+  accountable project-lead selection; save success/failure; refetch/invalidation after save;
+  last-modified display; initial live KPI cards (total, active, pending, completed, overdue
+  actions, upcoming starts); initial charts (projects by status, by stage, by service type).
+  No fabricated figures; empty states use **“No data yet”**; functions are working or hidden;
+  no dead “future” buttons.
+- **Phase 1B-A3 — Daily Project Updates & Field Coordination:** daily site-reporting
+  schema/UI; site lead/reporter; attendance; progress; tools; materials; evidence/photos;
+  blockers; next-day plan; Martine review; escalation to Widson. Dashboard adds: projects
+  updated today; projects missing today’s update; last update per project; current site lead;
+  projects with blockers; updates awaiting Martine review; updates escalated to Widson.
+- **Phase 1B-A4 — Owner Approval & Amendment Workflow:** approve; reject; request amendment;
+  override; immutable decision history; material project changes; completion/cancellation/
+  archive approvals; exceptional/retrospective-payment approvals where applicable later.
+  Dashboard adds: approvals awaiting Widson; amendment requests; rejected/returned items;
+  overdue approvals; exceptional items requiring owner attention.
+- **Phase 1B-A5 — Project Detail Refinement & Activity History:** Overview; Timeline; Tasks;
+  People; Project Engagements placeholder policy; Expenses placeholder policy; Files &
+  Evidence; Activity History (who changed what and when). No module shown as a dead
+  placeholder. Supabase Realtime remains optional and separately gated after save/refetch is
+  stable.
+- **Phase 1B-B — Leads Interface:** campaigns; leads; qualification; follow-up queue; lead
+  activity history; lead-source dashboard charts.
+- **Phase 1B-C — Site Visits & Lead-to-Project Conversion:** site visits; assessment
+  workflow; calendar; won-lead-to-project conversion; upcoming site-visit dashboard.
+- **Phase 2 — Advanced Project Delivery:** milestones; tasks; design/implementation
+  workflow; delivery dependencies; advanced blockers; completion forecasting; project
+  workload.
+- **Phase 3 — People, Project Engagements & Delegated Payments:** People & Resourcing;
+  engagement agreements; original agreed amount; approved additions; payments executed by
+  Martine or another authorised person; proof; paid/outstanding balances; reconciliation;
+  owner approval & exception workflow; staff workload; own-payment visibility. Dashboard
+  adds: labour committed vs paid; staff payment balances; approved but unpaid commitments;
+  unreconciled payments; exceptions awaiting Widson; staff/project workload.
+- **Phase 4 — Expenses, Assets, Applications & Advanced Reporting:** operational expenses;
+  tools/equipment/assets; branded attire; transport/fuel; advertising costs; applications
+  register; charts and owner reports; project cost reporting; receipt completeness;
+  expenditure by category/project/month.
+- **Phase 5 — External Intake & Integrations:** website/ad lead ingestion; Work With Us;
+  Google Calendar; authorised notifications; approved external integrations; optional
+  controlled realtime synchronisation.
+
+**Preserved across all slices:** Botanique palette; Quicksand typography; professional
+dashboard hierarchy; no copying Power BI or third-party templates; no fabricated data;
+owner-only financial charts; role-appropriate dashboards; **no GPS, location tracking or
+employee surveillance.**
 
 ## P. Project-page information architecture (future)
 
