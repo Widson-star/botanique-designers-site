@@ -1794,6 +1794,38 @@ be maintained through the UI, then **1B-B (Leads UI)** and **1B-C (site visits +
 won-lead conversion)**. Full authority: `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md`
 §N–§T.
 
+### Phase 1B-A — Admin Shell + Essential Project Management (entry gate + 1B-A1)
+
+Status: **Phase 1B-A entry-gate audit complete; Phase 1B-A1 (project integrity +
+history) migration authored in a DRAFT PR — NOT applied to hosted Supabase, NOT merged,
+NO UI built.**
+
+- **Entry-gate audit (read-only):** confirmed the hosted `botanique-admin` schema/RLS is
+  byte-for-byte identical to the two committed migrations (zero drift); that the production
+  Project Tracker is read-only by **frontend choice, not by RLS** (owner and manager already
+  hold `INSERT`/`UPDATE` on `projects`); that no role can hard-delete; and that the finance
+  boundary is database-enforced. It also identified the gaps 1B-A1 now closes: missing
+  schedule/blocker fields, no system change-history, and audit `created_by` using
+  `coalesce(new.created_by, auth.uid())`.
+- **Phase 1B-A1 migration (`20260726000200_operations_hub_phase_1b_a1_project_integrity.sql`,
+  additive/forward-only):** (1) hardens the foundation audit triggers so a client-supplied
+  `created_by` can never survive an authenticated insert (`created_by = auth.uid()`);
+  (2) adds nullable `actual_start_date`, `target_completion_date`, `actual_completion_date`,
+  `blocker` with date-order and blocker checks; (3) adds `can_assign_project_lead()` and
+  requires it in the project `INSERT`/`UPDATE` `WITH CHECK` (owner may assign active
+  owner/manager/staff; manager may assign self or active staff only); (4) revokes `EXECUTE`
+  on the foundation RLS helpers from `public`/`anon`, granting `authenticated`; (5) adds the
+  immutable, system-generated `public.project_activities` ledger (no authenticated
+  INSERT/UPDATE/DELETE policy) plus an `AFTER INSERT OR UPDATE` history trigger that diffs
+  operational fields only (never finance); (6) adds project/ledger indexes.
+- **Runtime status:** validated against an isolated PostgreSQL 17 instance with a synthetic
+  Supabase `auth` shim — all audit-identity, lead-validation, field-constraint, ledger,
+  boundary and non-destructive-apply tests passed applying `20260614000100` →
+  `20260726000100` → `20260726000200` in order. **Unmerged, unapplied to hosted, and no UI
+  implemented.** No production project, profile, assignment or activity was created or
+  changed. The Tsavo split, staff onboarding/assignment UI, and Supabase Realtime remain
+  separately gated and deferred.
+
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
 Status: **Launch pack prepared — external campaign setup NOT performed; no advert

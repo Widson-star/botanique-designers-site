@@ -306,6 +306,36 @@ archive / restore provenance; created / updated provenance.
 This preflight is a **formal entry gate for Phase 1B-A** — implementation may not begin
 until it is completed and reviewed.
 
+### O.1a Phase 1B-A1 founder decisions (recorded, binding)
+
+The entry-gate audit is **complete** and the Phase 1B-A1 project-integrity migration
+(`20260726000200_operations_hub_phase_1b_a1_project_integrity.sql`) is **authored,
+runtime-tested and awaiting review** (unmerged, not applied to hosted). It records these
+binding decisions:
+
+- **Responsible person:** `projects.lead_person_id` is the **single accountable project
+  lead** (the field that drives dashboards and workload). `project_assignments` is the
+  **wider project team / future visibility model**, not the accountable-lead field.
+- **Assignment authority (enforced by `can_assign_project_lead()` in the project
+  `INSERT`/`UPDATE` `WITH CHECK`):** the **owner** may assign any **active** owner, manager
+  or staff profile; a **manager** may assign **himself or an active staff profile only** —
+  never the owner, another manager, a viewer, an inactive/nonexistent profile, or an auth
+  user with no profile. `NULL` (unassigned) is always allowed. Staff/viewer/no-profile
+  callers may assign no one.
+- **Overdue action** and **Delayed project** are **separate derived concepts**. A **Delayed
+  project is derived from `target_completion_date`** (planned vs actual/now), **not** a
+  status value — **no `Delayed` status is added**.
+- **Full, system-generated project change history begins in Phase 1B-A1** via the immutable
+  `public.project_activities` ledger, written **only** by a trigger (no user INSERT/UPDATE/
+  DELETE). Audit-provenance columns alone are **not** the history.
+- **`last_updated` is deprecated from future forms**; **`updated_at` is the authoritative
+  last-modification timestamp**. `start_date` = planned/expected start; `actual_start_date`,
+  `target_completion_date`, `actual_completion_date` are the new schedule fields.
+- The **Tsavo split remains separately gated** (§O.2) and is not part of Phase 1B-A1.
+- **Staff onboarding / assignment UI remains deferred** (no staff profiles exist yet).
+- **Initial save + refetch** behaviour precedes any **Supabase Realtime**; realtime is a
+  later, separately authorised enhancement.
+
 ### O.2 Tsavo split — separately reviewed reconciliation plan
 
 Retained as a future requirement, but the split requires its own reviewed plan defining:
