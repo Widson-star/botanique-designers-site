@@ -1,15 +1,22 @@
 # Botanique Operations Hub — Architecture Blueprint (BD-OPERATIONS-HUB-01)
 
 **Workstream:** BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation.
-**Status:** **Architecture recorded — NO implementation started.** No database
-migrations, UI, storage buckets, integrations, or external setup are authorised or
-performed here. Phase 1 (Operational spine) is the recommended next implementation
-**after** the Monday campaign-launch work.
-**Baseline `main`:** `1b53ba3ac6fd79f0423eb64ec1497161363867c1`.
+**Status:** **Architecture recorded. Implementation has now BEGUN with Phase 1A (Lead
+Data and RLS Foundation) — database schema + RLS only, in an unmerged draft PR.** No
+UI, storage buckets, integrations, external setup, remote migration, or production
+deployment are authorised or performed. Phase 1A is the first slice of Phase 1
+(Operational spine); the remaining Phase 1 scope (site visits/calendar, dashboard
+action queues, won-lead-to-project conversion) is deferred to later slices (Phase 1B+).
+**Baseline `main`:** `1b53ba3ac6fd79f0423eb64ec1497161363867c1` (blueprint) /
+`95d32e639a873a0094b404b74e4200134592cf14` (Phase 1A).
 
-> **Blueprint only.** This document records the intended long-term operating model so
-> future implementation can proceed from an agreed architecture. It changes no code,
-> schema, RLS, or configuration, and it preserves every existing operational system.
+> **Blueprint plus first implementation slice.** This document records the intended
+> long-term operating model. The architecture itself changes no code; the separately
+> reviewed **Phase 1A** migration
+> (`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`) adds
+> the `campaigns` / `leads` / `lead_activities` tables and their RLS additively, without
+> weakening any existing table, policy, function, or the owner-only finance boundary.
+> See `WORKSTREAMS.md` → *BD-OPERATIONS-HUB-01 → Phase 1A* for the implemented scope.
 
 ## Objective — the long-term operating model
 
@@ -170,7 +177,10 @@ Proposed tables and their relationship to the existing `projects`/`profiles`/
 
 Relationship summary: `projects` remains the delivery record; `leads` is the new
 front-of-funnel record that **links to** a project when won; `profiles`/roles remain
-the identity/permission spine. **No migrations are written in this workstream.**
+the identity/permission spine. **The `campaigns`, `leads` and `lead_activities` tables
+are implemented (additively, schema + RLS only) by the Phase 1A migration
+`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`; the
+remaining proposed tables above have no migrations yet.**
 
 ## 5. Roles and access (preserve existing; do not weaken RLS or finance restrictions)
 

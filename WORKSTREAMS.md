@@ -1642,6 +1642,61 @@ tracker, GardenCare policy, the enquiry funnel, measurement, or the contact numb
 Changed files: `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (new) and this `WORKSTREAMS.md`
 entry only.
 
+### Phase 1A — Lead Data and RLS Foundation
+
+Status: **Database schema + RLS foundation implemented (PR draft, unmerged) — NO admin
+lead UI, NO site-visits/calendar module, NO dashboard queues, NO won-lead conversion
+action, NO website ingestion or advertising integration, and NO remote migration or
+production deployment.** This is the **first implementation slice** under the existing
+`BD-OPERATIONS-HUB-01` authority — a continuation phase of Phase 1 (Operational spine),
+**not** a new `BD-OPERATIONS-HUB-02` workstream.
+
+Baseline `main`: `95d32e639a873a0094b404b74e4200134592cf14`
+(`BD-CAMPAIGN-LAUNCH-01 (#29)`). Branch:
+`claude/bd-operations-hub-01-phase-1a-lead-data-rls`.
+
+Adds one additive migration
+(`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`)
+creating three new tables with audit triggers and RLS:
+
+* `campaigns` — minimal canonical campaign-definition table (name, source platform,
+  objective, service focus, audience, period, active state, notes). Names follow the
+  `LEAD_OPERATIONS_PLAYBOOK.md` §7 standard. **No live campaign rows are seeded.**
+* `leads` — front-of-funnel record preserving the manual register's information model
+  (`templates/BOTANIQUE_LEAD_REGISTER.csv`, 37 columns) with deliberate normalisation.
+  Controlled values (source platform, qualification status, current stage, outcome,
+  photos status) match the playbook §4 / §6.2 exactly. Manually-supplied, validated
+  `BD-LEAD-YYYY-NNN` identifier (no auto-generation). Nullable `campaign_id`,
+  `project_id` (won-lead link; no conversion logic here) and `owner_id` (unassigned
+  queue by design). Assessment position held as constrained text; assessment **dates**
+  deferred to the future site-visits slice. **No financial amounts** (quotation,
+  awarded value, gross margin) are stored — Simple Invoice Manager remains the
+  financial source of truth; the Hub holds references only.
+* `lead_activities` — append-only activity-history events (`lead_id` → `leads`).
+  Reconciled activity types; **no update or delete policy** (immutable history).
+
+RLS (narrowest defensible matrix, reusing the existing `is_owner()`/`is_manager()`/
+`is_staff()` helpers plus a new narrowly-scoped `is_assigned_to_lead(uuid)`):
+
+* campaigns — owner/manager select+insert+update; staff read-only; viewer none.
+* leads — owner/manager select+insert+update; staff select **only** own-assigned leads
+  (staff mutation deferred); viewer none. Manager gains **no** finance access (no
+  finance columns exist on the table).
+* lead_activities — owner/manager select+insert; assigned staff select+insert own
+  leads only; **no** update/delete for any role; viewer none.
+* **No delete policy** on any of the three tables (archive/append-only).
+
+Preserved: Simple Invoice Manager (finance source of truth) and the Project Tracking
+System remain authoritative; existing `profiles`/`projects`/`project_assignments`/
+`project_financial_references` tables, policies, functions and the owner-only finance
+boundary are unchanged. The migration is additive and non-destructive.
+
+**Not done in Phase 1A:** admin lead routes/components, lead list/detail/edit screens,
+site-visits, operational calendar, dashboard queues, won-lead project creation, website
+lead ingestion, UTM parsing, Google/Meta/WhatsApp/Calendar integrations, remote
+migration application, and production deployment. **The migration has NOT been applied
+to any remote Supabase project.** The PR remains unmerged until independent review.
+
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
 Status: **Launch pack prepared — external campaign setup NOT performed; no advert
