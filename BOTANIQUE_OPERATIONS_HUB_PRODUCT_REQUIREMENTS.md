@@ -309,8 +309,10 @@ until it is completed and reviewed.
 ### O.1a Phase 1B-A1 founder decisions (recorded, binding)
 
 The entry-gate audit is **complete** and the Phase 1B-A1 project-integrity migration
-(`20260726000200_operations_hub_phase_1b_a1_project_integrity.sql`) is **authored,
-runtime-tested and awaiting review** (unmerged, not applied to hosted). It records these
+(`20260726000200_operations_hub_phase_1b_a1_project_integrity.sql`) is **merged (PR #32,
+merge commit `24d84d0a72fef50e57088c5d35e2c05f191e008c`) and applied to hosted
+`botanique-admin`** via the linked Supabase CLI, with hosted structural and rollback-only
+runtime verification passed and the exact migration version preserved. It records these
 binding decisions:
 
 - **Responsible person:** `projects.lead_person_id` is the **single accountable project
