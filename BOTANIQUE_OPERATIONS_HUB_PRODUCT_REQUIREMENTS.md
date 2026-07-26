@@ -2,9 +2,12 @@
 
 **Status:** **Authority and planning document only — no implementation.** This records the
 expanded Operations Hub product requirements discussed by the founder so that future
-phases have a single, reviewed reference. Nothing here is built yet. It does **not**
-authorise any UI, migration, expense module, payment module, application register, chart,
-report, or integration; each remains subject to separate phase review.
+phases have a single, reviewed reference. **The requirements beyond the existing hosted
+Project Tracker and the completed Phase 1A database foundation are not implemented. This
+document authorises no new implementation; each future UI, schema, report or integration
+remains separately gated.** It does **not** authorise any UI, migration, expense module,
+payment module, application register, chart, report, or integration; each remains subject
+to separate phase review.
 
 **Companion authorities:** `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (architecture),
 `WORKSTREAMS.md` → *BD-OPERATIONS-HUB-01* (status + hosted application record),
@@ -27,7 +30,7 @@ remains the current production `/admin` interface; there is **no Leads UI yet**.
 ## A. Current operating context
 
 - Botanique has **no permanent general staff yet**.
-- **Martine Lotom** is the male Operations Manager (he/him).
+- **Martine Lotom** is the Operations Manager (he/him).
 - Additional workers are generally **engaged and paid per project** (casual / project-based),
   not on a standing payroll.
 - The system must be **ready** for more consistent staffing and regular office/team
@@ -101,12 +104,13 @@ For Martine and every other project-paid person, record:
   preserved as a distinct, immutable record.
 - Distinguish **original commitment**, **approved additions**, **total commitment**,
   **paid**, and **balance**.
-- Support disagreement resolution through **dated evidence**.
+- Support reconciliation through **dated evidence**.
 - Allow **project-level** and **person-level** reports.
 
-> This module is prioritised early in Phase 3 because the founder has identified repeated
-> disagreement between Widson and Martine over agreed project-labour budgets versus amounts
-> ultimately paid; dated, immutable records are the control that resolves it.
+> This module is prioritised early in Phase 3 because Botanique has experienced recurring
+> reconciliation gaps between original project-labour commitments, approved additions,
+> payments made and outstanding balances. Dated, immutable agreement and payment records
+> are therefore a priority control.
 
 ## G. Operational expenses (future)
 
@@ -194,7 +198,10 @@ campaigns · leads · lead activities · RLS and audit foundation.
   basic **audit-aware forms** (preserving `created_by`/`updated_by`/`archived_by` +
   timestamps and change history); an improved project dashboard using **live** data.
   *Prioritised because the existing production Project Tracker holds real hosted data but
-  cannot currently be maintained through the UI (see §N).*
+  cannot currently be maintained through the UI (see §N).* **Gated by the mandatory
+  schema/RLS/migration preflight in §O.1 — implementation may not begin until that
+  field-by-field inspection and any required additive migration are reviewed and
+  runtime-tested.**
 - **Phase 1B-B — Leads Interface:** Leads menu; campaigns; qualification; follow-up
   queues; lead activity history.
 - **Phase 1B-C — Site Visits and Conversion:** site visits / calendar; assessment
@@ -205,8 +212,9 @@ tasks · blockers · project dates · advanced real-time project tracking (per �
 
 **Phase 3:** People & Resourcing · **project engagement agreements** · agreed amounts,
 revisions, payments and balances · staff workload · maintenance scheduling.
-*Prioritise project engagement / payment control early in this phase* (see §F — repeated
-Widson/Martine disagreement over agreed labour budgets versus amounts paid).
+*Prioritise project engagement / payment control early in this phase* (see §F — recurring
+reconciliation gaps between original labour commitments, approved additions, payments made
+and outstanding balances).
 
 **Phase 4:** operational expenses · tools / equipment / assets · attire · advertising
 costs · owner reporting and charts · applications / opportunities register.
@@ -218,18 +226,13 @@ Google Calendar · approved notifications and external integrations.
 
 ## M. Deferred public-credibility item
 
-A separate **public-site** item remains pending (not built, not authorised here):
-
-> **"Selected Clients & Organisations We've Worked With."**
-
-Potential organisations supplied by the founder include **Craft Silicon Ltd, Tsavo,
-Zaara Park (design-only), Mwiko Gardens / Krave, 3Dee Grove, Olerai Conservancy,
-Kraft Room, and Roam**.
-
-**Do not publish or implement these names yet.** Each requires, before any public use:
-engagement attribution, official name, scope, **direct-Botanique versus founder
-experience** distinction, and **logo-use verification**. Zaara Park in particular is
-**design-only** and must never be presented as an implementation.
+A separate **"Selected Clients & Organisations We've Worked With"** public-credibility
+workstream remains pending. **Candidate organisations and supporting evidence are
+maintained in the founder's private working record** (not in this repository). Before any
+public use, each candidate requires verification of **official name, engagement
+attribution, scope, direct-Botanique versus founder experience, design-only versus
+implementation status, and logo-use permission**. No candidate has passed verification, and
+none may be published or implemented until it has.
 
 ---
 
@@ -267,7 +270,53 @@ The future portal must support, with all mutations enforced by RLS/server policy
 - preserve an **auditable change history**.
 
 The **Tsavo** temporary holding row ("Tsavo Company Projects") should later be **splittable
-into distinct project records** without losing the originating record or its audit history.
+into distinct project records** — but this requires a **separately reviewed
+data-reconciliation plan** (see §O.2), and is **not** authorised as an automatic split by
+this document.
+
+### O.1 Phase 1B-A entry gate — mandatory schema/RLS/migration preflight
+
+Phase 1B-A is **not UI-only work**. Before any form or mutation control is implemented, the
+implementation task **must** inspect the live/repository state:
+
+- the current **hosted `projects` table**;
+- the repository **foundation migration** (`20260614000100_admin_foundation.sql`);
+- existing **project RLS** policies;
+- current **triggers** (e.g. `tg_audit_projects`);
+- **`project_assignments`**;
+- the **`project_financial_references`** separation (owner-only).
+
+It must then produce a **field-by-field and capability matrix** covering: project name;
+client / site label; type; location; county; status; stage; responsible person; expected
+start; actual start; target completion; actual completion; next action; next-action due
+date; blocker; notes; portfolio eligibility; portfolio permission; archived state;
+archive / restore provenance; created / updated provenance.
+
+**Clarifications (binding):**
+
+- Audit-provenance fields (`created_by`/`updated_by`/`archived_by` + timestamps) are **not
+  automatically a complete change-history ledger**. If full change history is required, it
+  needs an **explicitly designed append-only project-activity or revision mechanism**.
+- Any **missing field, index, constraint, trigger, RLS policy or history mechanism**
+  requires a **separate additive migration** — reviewed and **runtime-tested before** the
+  corresponding UI is enabled.
+- **No UI-only security.** **No hard deletion.** **No direct modification of protected
+  `project_financial_references` by manager-facing forms.**
+
+This preflight is a **formal entry gate for Phase 1B-A** — implementation may not begin
+until it is completed and reviewed.
+
+### O.2 Tsavo split — separately reviewed reconciliation plan
+
+Retained as a future requirement, but the split requires its own reviewed plan defining:
+
+- which **new project rows** are created;
+- which **fields are inherited** from the holding row;
+- how the **original holding record is archived or retained**;
+- how **history and references** are preserved;
+- how **duplicate reporting is prevented**.
+
+No automatic Tsavo split is authorised by this documentation PR.
 
 ## P. Project-page information architecture (future)
 
