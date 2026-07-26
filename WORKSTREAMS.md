@@ -1644,16 +1644,42 @@ entry only.
 
 ### Phase 1A — Lead Data and RLS Foundation
 
-Status: **Phase 1A migration complete and runtime-validated under PR #30; repository
-merge completed, Supabase application pending.** The additive migration was validated by
-isolated PostgreSQL runtime execution (not merely static inspection) and merged to
-`main`; it has **not** yet been applied to Botanique's hosted Supabase project, so the
-schema/RLS is **not** live in Supabase. NO admin lead UI, NO site-visits/calendar
+Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`
+project.** The additive migration was validated by isolated PostgreSQL runtime execution,
+merged to `main` under PR #30, and has now been **applied to the hosted Supabase project
+via the supported CLI workflow** with full post-apply verification — so the schema/RLS
+**is now live** in Supabase. NO admin lead UI exists yet, NO site-visits/calendar
 module, NO dashboard queues, NO won-lead conversion action, NO website ingestion or
-advertising integration, and NO production deployment. This is the **first
+advertising integration, and NO production frontend deployment. This is the **first
 implementation slice** under the existing `BD-OPERATIONS-HUB-01` authority — a
 continuation phase of Phase 1 (Operational spine), **not** a new `BD-OPERATIONS-HUB-02`
 workstream.
+
+**Hosted application and verification (after PR #30):** the original admin-foundation
+schema (`20260614000100`) was already **live** on the hosted `botanique-admin` project
+(Supabase **Pro** organisation, `ACTIVE_HEALTHY`) but **absent from tracked migration
+history, indicating it was applied outside the normal migration workflow**. Using the
+supported Supabase CLI against the verified project, the foundation history record was
+repaired (`migration repair 20260614000100 --status applied`) — a history-only operation
+that runs no foundation SQL — and **only** Phase 1A (`20260726000100`) was then applied
+via `db push`. Migration history is now **reconciled for both versions**
+(`20260614000100` and `20260726000100` applied; no stray entry). Post-apply hosted
+verification confirmed: `campaigns`, `leads`, `lead_activities` exist and are **empty**;
+RLS enabled on all three; exactly the eight expected policies (no DELETE anywhere; no
+UPDATE/DELETE on `lead_activities`; staff have no campaign access); five SECURITY DEFINER
+functions with controlled `search_path` and helper `EXECUTE` restricted to
+`authenticated`; all triggers/indexes present; the campaign/lead/Lost/Nurture/owner
+constraints and immutable `lead_identifier` behave correctly; no finance/document columns
+on Phase 1A tables; and owner/manager/no-profile role tests passed under rolled-back
+transactions (staff/viewer deferred structurally — no such profiles exist). The existing
+**2 profiles and 7 projects were unchanged** (identical deterministic checksums before and
+after), the owner-only `project_financial_references` boundary is unchanged, and **no seed
+or test record remains**. **Restore-timing correction:** an earlier interim report that
+found an "empty schema / zero users" was a **transient read taken before the restored data
+volume finished mounting** — not data loss; the settled database contains the real
+foundation, accounts and projects. `src/admin/data/projectSeed.js` is a **development
+fixture only** and is **not** the source of the current production rows (production reads
+the hosted `projects` table).
 
 **Runtime validation (PR #30):** both migrations were executed from an empty database in
 their original order (`20260614000100_admin_foundation.sql` then
@@ -1754,10 +1780,11 @@ boundary are unchanged. The migration is additive and non-destructive.
 
 **Not done in Phase 1A:** admin lead routes/components, lead list/detail/edit screens,
 site-visits, operational calendar, dashboard queues, won-lead project creation, website
-lead ingestion, UTM parsing, Google/Meta/WhatsApp/Calendar integrations, and production
-deployment. **The migration has NOT been applied to any remote/hosted Supabase project**
-— repository merge does not apply schema; the controlled Supabase application (and
-immediate post-apply schema/RLS/role verification) remains the next gate.
+lead ingestion, UTM parsing, Google/Meta/WhatsApp/Calendar integrations, and any frontend
+production deployment. The hosted schema/RLS **is now live** (see the hosted-application
+record above); what remains for Phase 1B is the **user-facing** Leads work. The existing
+seven-project **Project Tracker remains the current production `/admin` interface** — the
+new Phase 1A tables have **no visible UI yet**.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
