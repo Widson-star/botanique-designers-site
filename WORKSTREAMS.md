@@ -1838,13 +1838,18 @@ NO UI built.**
   Pending → Approved/Rejected/Amendment-requested workflow.
 - **Interim owner/material-decision boundary (in PR #32):** a database-enforced
   `tg_guard_project_material_authority()` `BEFORE INSERT OR UPDATE` trigger makes the
-  owner-reserved project transitions (activate; Completed; Cancelled; Design-only;
-  archive/restore; `target_completion_date`; `actual_completion_date`) **effective before the
-  Phase 1B-A2 UI** — a manager may create only a Pending/non-archived/non-completed project
-  and otherwise edit routine operational fields (incl. Ongoing↔Paused), with reserved
-  transitions rejected at the database. This is **not** the approval workflow and stores no
-  proposals; the formal proposal/approve/reject/amendment workflow remains **Phase 1B-A4 and
-  unimplemented**, and may later replace this interim restriction.
+  owner-reserved project actions **effective before the Phase 1B-A2 UI**. It protects:
+  material **status** transitions (manager limited to Ongoing↔Paused); **Completed/Archived
+  stage** transitions in **both directions**; the **archived** flag (archive/restore);
+  **`target_completion_date`** (after creation) and **`actual_completion_date`**; and
+  **portfolio eligibility and publication permission** (`portfolio_eligible`,
+  `portfolio_permission_status`). A manager may create only a Pending, non-archived project at
+  a non-Completed/Archived stage with portfolio state Not Reviewed (a *proposed*
+  target date is allowed), and otherwise edits routine operational fields; reserved
+  transitions are rejected at the database, and unchanged protected values never block
+  unrelated edits. This is **not** the approval workflow and stores no proposals; the formal
+  proposal/approve/reject/amendment workflow remains **Phase 1B-A4 and unimplemented**, and
+  may later replace this interim restriction.
 - **Documented but NOT implemented in PR #32:** daily project-update schema/UI, the owner
   approval/amendment workflow, and delegated-payment + reconciliation (commitment / payment
   execution / evidence / reconciliation; Simple Invoice Manager stays the client-finance

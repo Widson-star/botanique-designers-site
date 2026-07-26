@@ -388,6 +388,12 @@ Martine may operate across the whole portfolio whether he is physically at a pro
 Widson is physically at a project, another staff member is acting as site lead, or the
 project is coordinated remotely.
 
+Martine may **enter a proposed target completion date** on a Pending project (§O.5a) and may
+**supply photos, evidence and project information** for later portfolio review. He may **not**
+approve portfolio publication, may **not** change portfolio eligibility or permission status,
+and may **not** complete/uncomplete or archive-stage/unarchive-stage a project — those remain
+owner-only (§O.3-E).
+
 ### C. Distinct operational roles
 
 1. **Owner / Final Approver** — Widson.
@@ -414,21 +420,30 @@ of these. The original and amended records must both remain in history.
 ### E. Material decisions requiring owner approval
 
 Material decisions include: activating a newly created project; classifying a project
-Design-only; marking a project Completed; cancelling a project; archiving or restoring a
-project; setting or materially revising the target completion; recording final actual
-completion; approving a material scope change / additional work; approving or revising a
-labour/project commitment; approving exceptional expenditure; approving payment beyond an
-authorised commitment; final closure/handover; and retrospective approval of an emergency
-field payment.
+Design-only; marking a project Completed (status); **setting or reversing a Completed or
+Archived project stage**; cancelling a project; archiving or restoring a project (the
+`archived` flag); **portfolio eligibility and portfolio permission / publication status**;
+setting or materially revising the target completion; recording final actual completion;
+approving a material scope change / additional work; approving or revising a labour/project
+commitment; approving exceptional expenditure; approving payment beyond an authorised
+commitment; final closure/handover; and retrospective approval of an emergency field payment.
 
-**Interim enforcement (in PR #32, active before the Phase 1B-A2 UI):** the project-level
-material transitions above (activate; Completed; Cancelled; Design-only; archive/restore;
-`target_completion_date`; `actual_completion_date`) are **database-enforced as owner-only**
-by the `tg_guard_project_material_authority()` `BEFORE INSERT OR UPDATE` trigger. A manager
-may create only a **Pending, non-archived, non-completed** project and may otherwise perform
-routine operational edits (including toggling an already-active project **Ongoing↔Paused**);
-a manager attempting a reserved transition is rejected with a database exception — this is
-**not** dependent on hidden buttons. This interim boundary stores **no proposals** and is
+**Interim enforcement (in PR #32, active before the Phase 1B-A2 UI)** — the
+`tg_guard_project_material_authority()` `BEFORE INSERT OR UPDATE` trigger makes these
+**owner-only at the database** (not hidden-button-only):
+- **status** transitions (manager limited to `Ongoing↔Paused`; activation, Completed,
+  Cancelled and Design-only are owner-only);
+- **stage** = `Completed` or `Archived` in **either direction** (only the owner may set or
+  reverse a Completed/Archived stage; other operational stage changes stay open to the manager);
+- the **`archived`** flag in either direction (archive/restore);
+- **`portfolio_eligible`** and **`portfolio_permission_status`** (portfolio publication);
+- **`target_completion_date`** after creation, and **`actual_completion_date`**.
+
+A manager may create only a **Pending, non-archived** project at a **non-Completed/Archived
+stage** with portfolio state **Not Reviewed** (a *proposed* `target_completion_date` is
+allowed — see §O.5a), and may otherwise perform routine operational edits; a reserved
+transition is rejected with a database exception. Unchanged protected values never block a
+manager's unrelated operational edits. This interim boundary stores **no proposals** and is
 **not** the approval workflow.
 
 **Future formal workflow (Phase 1B-A4, NOT in PR #32):** **Pending approval → Approved /
@@ -484,6 +499,20 @@ and reconciliation only. Do **not** add client quotations, invoices, receipts, m
 banking data to manager-readable project records. **No payment, engagement or expense table
 is created in PR #32.**
 
+## O.5a Manager-entered (provisional) target completion date
+
+A manager may enter `target_completion_date` **only when creating a Pending project**. It is:
+
+- a **proposed operational planning date** while the project remains Pending;
+- **not** an independently approved commitment;
+- **accepted when Widson activates** the project — unless Widson revises or clears it first;
+- **owner-only after activation:** once the project leaves Pending, only Widson may directly
+  change `target_completion_date`, until the Phase 1B-A4 proposal/approval mechanism exists.
+
+Phase 1B-A2 must display the proposed date clearly on the owner’s **Pending-activation
+review**. **No separate proposal table is created in PR #32** — the value simply lives on the
+project row and is governed by the interim material-authority boundary (§O.3-E).
+
 ## O.6 Integrated implementation sequence (dashboard evolves with every slice)
 
 The Operations Hub dashboard is **not** an isolated future item; it evolves with each
@@ -502,17 +531,23 @@ authorised slice.
   **Role-scoped authority in this slice (enforced by the interim database boundary in
   §O.1a / the Phase 1B-A1 migration, not by hidden buttons):**
   - **Owner (Widson):** full project create/edit; **activate** Pending projects; mark
-    **Completed**; **cancel**; **archive/restore**; set **target** and **actual completion**
-    dates.
-  - **Manager (Martine):** create **Pending** projects; routine operational editing
-    (notes, next action + date, blocker, `actual_start_date`, operational stages,
-    Ongoing↔Paused, location/county/type/descriptions, lead within the transition guard);
-    **no material-transition controls until Phase 1B-A4.**
+    **Completed**; **cancel**; classify **Design-only**; set/reverse **Completed/Archived
+    stage**; **archive/restore**; set **target** and **actual completion** dates; set
+    **portfolio eligibility** and **portfolio permission/publication status**.
+  - **Manager (Martine):** create **Pending** projects (portfolio state fixed **Not
+    Reviewed**; a *proposed* target date allowed, §O.5a); routine operational editing
+    (notes, next action + date, blocker, `actual_start_date`, non-Completed/Archived
+    operational stages, Ongoing↔Paused, location/county/type/descriptions, lead within the
+    transition guard); may supply photos/evidence/info for later portfolio review; **no
+    material-transition, stage-Completed/Archived, portfolio-publication or
+    completion-date controls until Phase 1B-A4.**
   - The interface **shows** controls appropriate to the current role and **hides** manager
     controls not yet authorised — it must not render disabled “future” buttons.
-  - Include an **owner-facing “Pending activation” list / KPI** built from **live** data so
-    Widson can see and activate Pending projects. This is **not** a formal approvals queue —
-    that does not exist before Phase 1B-A4 and must not be implied.
+  - Include an **owner-facing “Pending activation” list / KPI** built from **live** data,
+    showing per project: **proposed target completion date**, **proposed accountable lead**,
+    **stage**, **project type**, and **portfolio state (fixed Not Reviewed)**, with an owner
+    ability to **edit before activation**. This is **not** a formal approvals queue — that
+    does not exist before Phase 1B-A4 and must not be implied.
 - **Phase 1B-A3 — Daily Project Updates & Field Coordination:** daily site-reporting
   schema/UI; site lead/reporter; attendance; progress; tools; materials; evidence/photos;
   blockers; next-day plan; Martine review; escalation to Widson. Dashboard adds: projects

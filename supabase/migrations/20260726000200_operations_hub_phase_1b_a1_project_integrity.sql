@@ -14,8 +14,9 @@
 --   1. Tighten the admin-foundation audit triggers so a client-supplied
 --      created_by can never survive an authenticated INSERT.
 --   2. Add the missing project schedule/blocker fields (all nullable).
---   3. Add a validated responsible-person assignment helper and require it in
---      the project INSERT/UPDATE WITH CHECK.
+--   3. Add a validated responsible-person assignment helper, enforced on INSERT
+--      via the project RLS WITH CHECK and on UPDATE via a transition-scoped
+--      BEFORE UPDATE OF lead_person_id trigger (only when the lead changes).
 --   4. Harden EXECUTE privileges on the foundation RLS helper functions.
 --   5. Add an immutable, system-generated project-change ledger
 --      (public.project_activities) plus the trigger that appends to it.
@@ -208,8 +209,10 @@ alter table public.projects
 -- projects.lead_person_id remains the canonical SINGLE accountable project
 -- lead. project_assignments remains the wider project-team / future visibility
 -- model. This migration does NOT change the existing lead_person_id -> auth.users
--- foreign key. It adds a narrow SECURITY DEFINER validator and requires it in the
--- project INSERT/UPDATE WITH CHECK so an out-of-authority lead can never be set.
+-- foreign key. It adds a narrow SECURITY DEFINER validator, enforced on INSERT via
+-- the project RLS WITH CHECK and on UPDATE via a transition-scoped BEFORE UPDATE OF
+-- lead_person_id trigger (only when the lead actually changes), so an out-of-authority
+-- lead can never be set while unrelated edits to an unchanged lead are never blocked.
 --
 -- Authority encoded (see BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md):
 --   * Only owner/manager callers may set a lead at all; the caller role is
@@ -366,13 +369,19 @@ begin
 
   if (tg_op = 'INSERT') then
     -- A manager may only create a NEW project in the Pending intake state: not
-    -- already active/completed/cancelled/Design-only, not archived, not completed.
+    -- already active/completed/cancelled/Design-only, not archived, not completed,
+    -- not at a Completed/Archived stage, and with portfolio publication authority
+    -- left in the owner-reserved default (not eligible, Not Reviewed). A proposed
+    -- target_completion_date is allowed (see docs §O.5a) — it is a planning value
+    -- accepted only when the owner activates the project.
     if new.status <> 'Pending'
        or new.archived is true
-       or new.stage = 'Completed'
-       or new.actual_completion_date is not null then
+       or new.stage in ('Completed', 'Archived')
+       or new.actual_completion_date is not null
+       or new.portfolio_eligible is true
+       or new.portfolio_permission_status <> 'Not Reviewed' then
       raise exception
-        'manager may only create a Pending, non-archived, non-completed project; owner approval is required to activate, complete, cancel, classify Design-only or archive'
+        'manager may only create a Pending, non-archived project at a non-Completed/Archived stage with portfolio state Not Reviewed; owner approval is required to activate, complete, cancel, classify Design-only, archive or set portfolio publication'
         using errcode = 'check_violation';
     end if;
     return new;
@@ -388,8 +397,13 @@ begin
     end if;
   end if;
 
-  if new.stage is distinct from old.stage and new.stage = 'Completed' then
-    raise exception 'manager may not set project stage to Completed; owner approval required'
+  -- Completed/Archived stages are owner-reserved in BOTH directions: only the
+  -- owner may set OR reverse a Completed or Archived stage. Normal operational
+  -- stage changes (between the other stages) remain open to the manager, and an
+  -- unchanged Completed/Archived stage never blocks unrelated edits.
+  if new.stage is distinct from old.stage
+     and (old.stage in ('Completed', 'Archived') or new.stage in ('Completed', 'Archived')) then
+    raise exception 'manager may not set or reverse a Completed or Archived project stage; this is owner-only'
       using errcode = 'check_violation';
   end if;
 
@@ -398,8 +412,19 @@ begin
       using errcode = 'check_violation';
   end if;
 
+  -- Portfolio publication authority is owner-only (eligibility + permission status).
+  if new.portfolio_eligible is distinct from old.portfolio_eligible then
+    raise exception 'manager may not change portfolio_eligible; portfolio publication is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.portfolio_permission_status is distinct from old.portfolio_permission_status then
+    raise exception 'manager may not change portfolio_permission_status; portfolio publication is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
   if new.target_completion_date is distinct from old.target_completion_date then
-    raise exception 'manager may not set or revise target_completion_date; this is owner-only'
+    raise exception 'manager may not set or revise target_completion_date after creation; this is owner-only until the Phase 1B-A4 proposal mechanism'
       using errcode = 'check_violation';
   end if;
 
