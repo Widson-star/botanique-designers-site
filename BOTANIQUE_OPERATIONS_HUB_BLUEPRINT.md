@@ -1,16 +1,21 @@
 # Botanique Operations Hub — Architecture Blueprint (BD-OPERATIONS-HUB-01)
 
 **Workstream:** BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation.
-**Status:** **Architecture recorded. Phase 1A (Lead Data and RLS Foundation) migration
-completed under PR #30 and validated through isolated PostgreSQL execution. Repository
-integration is complete; controlled Supabase application remains pending.** The schema/RLS
-is merged to `main` but is **not** live in the hosted Supabase project (repository merge
-does not apply schema). No UI, storage buckets, integrations, external setup, or
-production deployment are performed. A Vercel preview was produced for the PR branch — a
-frontend preview only; it does **not** execute or validate the Supabase migration, which
-is a separate database concern. Phase 1A is the first slice of Phase 1 (Operational
-spine); the remaining Phase 1 scope (site visits/calendar, dashboard action queues,
-won-lead-to-project conversion) is deferred to later slices (Phase 1B+).
+**Status:** **Architecture recorded. Phase 1A (Lead Data and RLS Foundation) is applied
+and runtime-verified on the hosted `botanique-admin` project.** The admin-foundation
+schema and Phase 1A are both **live** in hosted Supabase (Pro organisation,
+`ACTIVE_HEALTHY`); migration history is reconciled for both versions
+(`20260614000100`, `20260726000100`). Phase 1A has **no visible UI yet** — the existing
+seven-project **Project Tracker remains the current production `/admin` interface**. No UI
+for leads/campaigns, storage buckets, integrations, external setup, or frontend production
+deployment are performed. Phase 1A is the first slice of Phase 1 (Operational spine).
+**Current UI limitation:** the production Project Tracker is **read-only** — it displays
+real hosted projects but has **no create/edit/archive/restore or next-action editing** (its
+"Add project / Archive / Assign staff / Edit next action" controls are disabled "future"
+placeholders). **Phase 1B-A (Admin Shell + Essential Project Management) is the next
+proposed implementation slice**, followed by Phase 1B-B (Leads UI) and Phase 1B-C (site
+visits + won-lead conversion) — all subject to separate review. See
+`BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md` §N–§T.
 **Baseline `main`:** `1b53ba3ac6fd79f0423eb64ec1497161363867c1` (blueprint) /
 `95d32e639a873a0094b404b74e4200134592cf14` (Phase 1A).
 
@@ -20,11 +25,15 @@ won-lead-to-project conversion) is deferred to later slices (Phase 1B+).
 > (`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`) adds
 > the `campaigns` / `leads` / `lead_activities` tables and their RLS additively, without
 > weakening any existing table, policy, function, or the owner-only finance boundary.
-> See `WORKSTREAMS.md` → *BD-OPERATIONS-HUB-01 → Phase 1A* for the completed, runtime-
-> validated Phase 1A scope. That migration was validated by isolated PostgreSQL execution
-> and merged to `main` under PR #30; it is **not** yet applied to the hosted Supabase
-> project (repository merge does not apply schema), and the Vercel preview is a frontend
-> preview that does not execute the migration.
+> See `WORKSTREAMS.md` → *BD-OPERATIONS-HUB-01 → Phase 1A* for the full hosted-application
+> and verification record. That migration was validated by isolated PostgreSQL execution,
+> merged to `main` under PR #30, and has since been **applied to the hosted `botanique-admin`
+> project** via the supported Supabase CLI workflow (foundation history repaired, then only
+> Phase 1A pushed), with full post-apply verification and the existing 2 profiles / 7
+> projects proven unchanged. The **Phase 1A schema/RLS is now live**. The remaining
+> user-facing operational work is separately gated as **Phase 1B-A** (Admin Shell and
+> Essential Project Management), **Phase 1B-B** (Leads Interface), and **Phase 1B-C** (Site
+> Visits and Conversion).
 
 ## Objective — the long-term operating model
 
@@ -188,8 +197,9 @@ front-of-funnel record that **links to** a project when won; `profiles`/roles re
 the identity/permission spine. **The `campaigns`, `leads` and `lead_activities` tables
 are defined (additively, schema + RLS only) by the Phase 1A migration
 `supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql` — merged
-to `main` under PR #30 and runtime-validated, but not yet applied to the hosted Supabase
-project; the remaining proposed tables above have no migrations yet.**
+to `main` under PR #30 and now **applied and verified on the hosted `botanique-admin`
+project** (all three empty; RLS live). The remaining proposed tables above have no
+migrations yet.**
 
 ## 5. Roles and access (preserve existing; do not weaken RLS or finance restrictions)
 
