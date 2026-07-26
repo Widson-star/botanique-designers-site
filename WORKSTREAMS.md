@@ -1641,3 +1641,40 @@ setup**; no change to `/admin`, Supabase schema/RLS, finance references, the pro
 tracker, GardenCare policy, the enquiry funnel, measurement, or the contact number.
 Changed files: `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (new) and this `WORKSTREAMS.md`
 entry only.
+
+## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
+
+Status: **Launch pack prepared — external campaign setup NOT performed; no advert
+launched.** Dedicated SIM pending unless supplied · register template exists but
+adoption pending until confirmed · lead owner pending until confirmed · Google
+conversion measurement pending · creative approval pending · campaign NOT launched.
+Documentation/content only. New narrow campaign-preparation workstream; no
+`BD-CAMPAIGN-LAUNCH` identifier conflict.
+
+Baseline `main`: `d9754faffcca8a3b4e4ad5ebad792478a3219c37`
+(`BD-OPERATIONS-HUB-01 (#28)`). Branch: `claude/bd-campaign-launch-01-monday-pack`.
+
+Prepares the Monday 27 July 2026 launch materials and a final GO/NO-GO decision — it
+does **not** configure or activate any external campaign. Full pack in
+**`CAMPAIGN_LAUNCH_PACK_2026-07-27.md`**: channel priority (Meta P1, high-intent
+Google Search P2, X optional P3 — no Performance Max); two lanes (residential design &
+implementation; commercial/institutional); a creative-inventory audit of verified
+repository assets with provenance (Karen/Muthithi/KSMS/Tsavo = built; the Muthithi
+entrance is the only verified before/after; Zaara Park + Serenity Diani are **design
+concepts — not to be shown as built**); BD-LEADOPS-01 campaign naming + UTM examples;
+Meta and Google Search structures; an X pack; the Monday register-adoption checklist;
+the dedicated-SIM gate (unmet; cutover steps prepared, not executed); the measurement
+gate (Meta manual reconciliation acceptable for a small test, Google Search NO-GO
+until conversion measurement); budget authority (**no approved future budget exists**;
+only historical spends cited; owner-decision fields); an evidence-based ad-copy pack;
+a GO/NO-GO matrix; and the Sunday 26 July owner action sheet.
+
+GO/NO-GO (authority-aligned): Meta residential + commercial **CONDITIONAL GO** (once
+SIM/WhatsApp, named owner, operational register, naming and creative are met); Google
+Search **NO-GO** until conversion measurement; Performance Max **NO-GO**; Meta
+retargeting **NO-GO**; X organic **CONDITIONAL GO**; X paid **OWNER ACTION REQUIRED**.
+
+Boundaries: no external advertising account configured, no advert launched, no
+contact-number change, no tracking/tags/cookies, no website code change, no Operations
+Hub code/database. Changed files: `CAMPAIGN_LAUNCH_PACK_2026-07-27.md` (new),
+`CAMPAIGN_READINESS_AUDIT.md`, and this `WORKSTREAMS.md` entry.

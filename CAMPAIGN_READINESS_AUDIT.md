@@ -519,6 +519,17 @@ merged and production-verified.)*
 > **Gate 0 (consultation-location defect) is MET** — resolved and production-verified
 > under BD-CONSULTATION-01 (`c112ca2`). The decisions below reflect the remaining
 > blockers only.
+>
+> **Launch pack (BD-CAMPAIGN-LAUNCH-01):** a Monday 27 July 2026 launch pack now
+> exists — see **`CAMPAIGN_LAUNCH_PACK_2026-07-27.md`** (channel priority, two lanes,
+> creative-asset audit with provenance, campaign naming/UTMs, Meta & Google Search
+> structures, X pack, register-adoption checklist, budget-decision fields, ad-copy
+> pack, GO/NO-GO matrix, and the Sunday owner action sheet). It is **preparation
+> only**: no external campaign was configured or launched. The channel readiness below
+> is unchanged — Meta prospecting is **conditional** on the operational gates (SIM,
+> WhatsApp Business, named lead owner, operational register, naming, approved
+> creative), Google Search remains **NO-GO** until conversion measurement, Performance
+> Max/retargeting remain **NO-GO**.
 
 - **Instagram/Meta launch:** **Not ready** — remaining blockers: dedicated Botanique
   SIM (pending), WhatsApp Business (not configured), manual lead register (not
