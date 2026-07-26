@@ -8,10 +8,14 @@ schema and Phase 1A are both **live** in hosted Supabase (Pro organisation,
 (`20260614000100`, `20260726000100`). Phase 1A has **no visible UI yet** — the existing
 seven-project **Project Tracker remains the current production `/admin` interface**. No UI
 for leads/campaigns, storage buckets, integrations, external setup, or frontend production
-deployment are performed. Phase 1A is the first slice of Phase 1 (Operational spine);
-**Phase 1B is the next implementation slice, subject to separate review** (site
-visits/calendar, dashboard action queues, won-lead-to-project conversion, and the Leads
-UI).
+deployment are performed. Phase 1A is the first slice of Phase 1 (Operational spine).
+**Current UI limitation:** the production Project Tracker is **read-only** — it displays
+real hosted projects but has **no create/edit/archive/restore or next-action editing** (its
+"Add project / Archive / Assign staff / Edit next action" controls are disabled "future"
+placeholders). **Phase 1B-A (Admin Shell + Essential Project Management) is the next
+proposed implementation slice**, followed by Phase 1B-B (Leads UI) and Phase 1B-C (site
+visits + won-lead conversion) — all subject to separate review. See
+`BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md` §N–§T.
 **Baseline `main`:** `1b53ba3ac6fd79f0423eb64ec1497161363867c1` (blueprint) /
 `95d32e639a873a0094b404b74e4200134592cf14` (Phase 1A).
 

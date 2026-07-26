@@ -1782,9 +1782,17 @@ boundary are unchanged. The migration is additive and non-destructive.
 site-visits, operational calendar, dashboard queues, won-lead project creation, website
 lead ingestion, UTM parsing, Google/Meta/WhatsApp/Calendar integrations, and any frontend
 production deployment. The hosted schema/RLS **is now live** (see the hosted-application
-record above); what remains for Phase 1B is the **user-facing** Leads work. The existing
+record above); what remains for Phase 1B is the **user-facing** work. The existing
 seven-project **Project Tracker remains the current production `/admin` interface** — the
-new Phase 1A tables have **no visible UI yet**.
+new Phase 1A tables have **no visible UI yet**. **Current UI limitation (verified from
+founder screenshots):** the production Project Tracker is **read-only** — it supports
+search/filter/detail viewing but has **no project create/edit/archive/restore, staff
+assignment or next-action editing** (those controls are disabled "future" placeholders).
+Phase 1B is therefore split into controlled sub-slices, with **Phase 1B-A (Admin Shell +
+Essential Project Management)** prioritised next because the real hosted records cannot yet
+be maintained through the UI, then **1B-B (Leads UI)** and **1B-C (site visits +
+won-lead conversion)**. Full authority: `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md`
+§N–§T.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 

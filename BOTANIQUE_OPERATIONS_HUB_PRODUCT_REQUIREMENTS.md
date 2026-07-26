@@ -185,11 +185,23 @@ require it).
 **Phase 1A — complete (live + verified on hosted `botanique-admin`):**
 campaigns · leads · lead activities · RLS and audit foundation.
 
-**Phase 1B:** Leads UI · qualification and follow-up queues · site visits ·
-won-lead-to-project workflow · improved action dashboard.
+**Phase 1B — split into controlled sub-slices** (see §N–§T for the driving requirements):
 
-**Phase 2:** project milestones · design and implementation workflow · tasks · blockers ·
-project dates · real-time project tracking (per §C's "real time" clarification).
+- **Phase 1B-A — Admin Shell and Essential Project Management** *(prioritised next)*:
+  persistent sidebar / top-bar admin shell; project **create / edit / archive / restore**;
+  operational project updates (status, stage, responsible person, location/county, type,
+  dates, next action + due date, blocker, notes, portfolio eligibility/permission);
+  basic **audit-aware forms** (preserving `created_by`/`updated_by`/`archived_by` +
+  timestamps and change history); an improved project dashboard using **live** data.
+  *Prioritised because the existing production Project Tracker holds real hosted data but
+  cannot currently be maintained through the UI (see §N).*
+- **Phase 1B-B — Leads Interface:** Leads menu; campaigns; qualification; follow-up
+  queues; lead activity history.
+- **Phase 1B-C — Site Visits and Conversion:** site visits / calendar; assessment
+  workflow; won-lead-to-project conversion.
+
+**Phase 2:** full timelines · project milestones · design and implementation workflow ·
+tasks · blockers · project dates · advanced real-time project tracking (per §S).
 
 **Phase 3:** People & Resourcing · **project engagement agreements** · agreed amounts,
 revisions, payments and balances · staff workload · maintenance scheduling.
@@ -218,3 +230,119 @@ Kraft Room, and Roam**.
 engagement attribution, official name, scope, **direct-Botanique versus founder
 experience** distinction, and **logo-use verification**. Zaara Park in particular is
 **design-only** and must never be presented as an implementation.
+
+---
+
+## N. Current Production Usability Gap (verified from founder screenshots)
+
+The founder reviewed the **live production `/admin`** interface. Verified current state:
+
+- Hosted **authentication, RLS and the seven project records are real** (live hosted data,
+  not a fixture — see `WORKSTREAMS.md`).
+- The current Project Tracker is **predominantly read-only**: it displays real projects and
+  supports **search / filter / detail viewing**, but **no mutation**.
+- The following controls are **present but deliberately disabled**, labelled "future":
+  **Add project**, **Archive**, **Assign staff**, **Edit next action**.
+- There is **no general Edit project** action.
+- Conclusion: the **database foundation is operational, but the interface is not yet a
+  complete operational management tool** — it cannot currently maintain the real records it
+  displays.
+
+**Design rule:** production **should not retain disabled "future" buttons indefinitely.**
+Future functionality should be **either functional or hidden** until its implementation is
+authorised. Avoid a production interface dominated by dead/decorative controls.
+
+## O. Essential Project Management (future — the core of Phase 1B-A)
+
+The future portal must support, with all mutations enforced by RLS/server policy (§Q):
+
+- **create project**; **edit project**; **archive project**; **restore** archived project;
+- **no permanent delete** in the initial system (archive/restore only);
+- update **status**; update **stage**; update **responsible / lead person**;
+- update **location** and **county**; update **project type**;
+- update **expected and actual dates**;
+- update **next action** and **due date**; update **blocker**; update **notes**;
+- update **portfolio eligibility** and **permission**;
+- preserve `created_by`, `updated_by`, `archived_by` and timestamps;
+- preserve an **auditable change history**.
+
+The **Tsavo** temporary holding row ("Tsavo Company Projects") should later be **splittable
+into distinct project records** without losing the originating record or its audit history.
+
+## P. Project-page information architecture (future)
+
+Future project-detail structure (tabs / modules):
+
+- **Overview** · **Timeline** · **Tasks** · **People** · **Project Engagements** ·
+  **Expenses** · **Files and Evidence** · **Activity History**.
+
+Modules are **revealed only when implemented and authorised** — never shown as empty/dead
+placeholders (per §N).
+
+## Q. Access model — project CRUD (extends §I; RLS-enforced, not UI-hidden only)
+
+- **Owner (Widson):** full create / edit / archive / restore; complete operational and
+  protected owner-only views.
+- **Manager (Martine, he/him):** create / edit / archive / restore **operational** project
+  records; assign operational responsibility; **no** access to protected client finance,
+  margins, banking, or owner-only references.
+- **Project staff:** **no** project-master creation/editing initially; **later** may update
+  **only** their assigned tasks, milestones, visits and evidence; **no** access to unrelated
+  projects or private rates.
+
+**All permissions remain enforced through RLS and server/database policy — not only hidden
+UI.** A disabled or hidden control is a convenience, never the security boundary.
+
+## R. Admin-shell and dashboard design authority (future)
+
+Desired future interface:
+
+- persistent **desktop sidebar**; responsive **mobile / tablet** navigation;
+- **top bar** with global search, notifications and user / profile controls; clear **role
+  badge**;
+- **KPI cards**; **filterable / sortable tables**; role-appropriate **dashboards**;
+- **chart drill-down** or link to the underlying records;
+- **printable / exportable briefing reports**;
+- clear **empty, loading, error and offline** states;
+- **save confirmation** and **validation errors**; **last-updated / synchronisation** status.
+
+**Design rules:**
+
+- Botanique brand palette; **Quicksand** operational typography; restrained, professional
+  visual hierarchy.
+- **Do not copy third-party templates**; **do not reproduce Power BI styling**; no
+  fabricated figures or decorative fake data.
+- Empty datasets show **"No data yet"** rather than mock values.
+- **Finance charts are owner-only** where required (§H/§I).
+
+> The founder-supplied dashboards (sidebar nav, top bar, KPI cards, charts, tables,
+> reports, filters, briefing views) are **design-direction references only** — do not copy
+> their branding, layout, numbers or assets.
+
+## S. Dashboard metrics (future — no chart exists today)
+
+**General operational dashboard (KPIs):** total projects · active · pending · delayed ·
+completed · upcoming starts · overdue actions · leads awaiting follow-up · upcoming site
+visits.
+
+**General charts:** projects by status · projects by stage · start / completion trend ·
+overdue actions by project · workload by responsible person · projects by service type ·
+leads by source and outcome.
+
+**Owner-only reporting:** labour committed versus paid · staff / project payment balances ·
+internal expenses by category · project operating costs · approved but unpaid commitments ·
+advertising expenditure · (later) owner-only project performance reporting.
+
+> None of these charts or metrics exists today; this is future authority only. Empty data
+> shows "No data yet", never mock figures.
+
+## T. "Real-time" — two levels
+
+**Initial (single-user reflection):** after a **successful save**, all affected
+project / dashboard views update **immediately without a manual browser refresh**; save
+**success / failure is explicit**.
+
+**Later (multi-user synchronisation):** Supabase Realtime (or an equivalent **authorised**
+subscription) may update Widson's and Martine's open sessions; display **last-updated and
+connection status**. This means **persisted database changes reflected in the UI** — it does
+**not** authorise **GPS, location tracking, or any employee surveillance**.
