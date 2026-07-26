@@ -332,8 +332,12 @@ binding decisions:
   project is derived from `target_completion_date`** (planned vs actual/now), **not** a
   status value — **no `Delayed` status is added**.
 - **Full, system-generated project change history begins in Phase 1B-A1** via the immutable
-  `public.project_activities` ledger, written **only** by a trigger (no user INSERT/UPDATE/
-  DELETE). Audit-provenance columns alone are **not** the history.
+  `public.project_activities` ledger. **Authenticated application roles cannot write
+  `project_activities` directly. The normal application path writes through the
+  project-history trigger; trusted database-owner or service-role operations remain outside
+  RLS and must stay restricted.** A `cardinality(changed_fields) > 0` constraint guarantees
+  every recorded event names at least one changed field, and there is no application-role
+  INSERT/UPDATE/DELETE. Audit-provenance columns alone are **not** the history.
 - **`last_updated` is deprecated from future forms**; **`updated_at` is the authoritative
   last-modification timestamp**. `start_date` = planned/expected start; `actual_start_date`,
   `target_completion_date`, `actual_completion_date` are the new schedule fields.
@@ -407,15 +411,33 @@ next-day plan; and routine date/stage updates within authorised project scope.
 Widson must be able to **review, accept, flag, request amendment, override or correct** any
 of these. The original and amended records must both remain in history.
 
-### E. Material decisions requiring owner approval (future workflow)
+### E. Material decisions requiring owner approval
 
-Future formal workflow: **Pending approval → Approved / Rejected / Amendment requested.**
-Material decisions include: activating a newly created project; approving a material scope
-change; approving additional work; approving or revising a labour/project commitment;
-materially changing the completion target; approving exceptional expenditure; approving
-payment beyond an authorised commitment; marking a project completed; cancelling a project;
-archiving a project; final closure/handover; and retrospective approval of an emergency
-field payment. **Not implemented in PR #32.**
+Material decisions include: activating a newly created project; classifying a project
+Design-only; marking a project Completed; cancelling a project; archiving or restoring a
+project; setting or materially revising the target completion; recording final actual
+completion; approving a material scope change / additional work; approving or revising a
+labour/project commitment; approving exceptional expenditure; approving payment beyond an
+authorised commitment; final closure/handover; and retrospective approval of an emergency
+field payment.
+
+**Interim enforcement (in PR #32, active before the Phase 1B-A2 UI):** the project-level
+material transitions above (activate; Completed; Cancelled; Design-only; archive/restore;
+`target_completion_date`; `actual_completion_date`) are **database-enforced as owner-only**
+by the `tg_guard_project_material_authority()` `BEFORE INSERT OR UPDATE` trigger. A manager
+may create only a **Pending, non-archived, non-completed** project and may otherwise perform
+routine operational edits (including toggling an already-active project **Ongoing↔Paused**);
+a manager attempting a reserved transition is rejected with a database exception — this is
+**not** dependent on hidden buttons. This interim boundary stores **no proposals** and is
+**not** the approval workflow.
+
+**Future formal workflow (Phase 1B-A4, NOT in PR #32):** **Pending approval → Approved /
+Rejected / Amendment requested.** A manager may **submit proposed** material changes; Widson
+may approve, reject or request amendment; approved decisions are applied through a controlled
+mechanism; immutable proposal and decision history is retained. When 1B-A4 lands, the interim
+direct-owner restriction above may be replaced by the reviewed approval model. Phase 1B-A2
+does **not** provide manager approval-request buttons and no approvals queue exists before
+1B-A4.
 
 ## O.4 Daily project reporting (future — separately gated)
 
@@ -472,22 +494,37 @@ authorised slice.
   (INSERT check + transition-scoped lead-change trigger); immutable project-activity ledger;
   indexes. **No UI.**
 - **Phase 1B-A2 — Admin Shell, Essential Project CRUD & Initial Live Dashboard:** persistent
-  desktop sidebar; responsive mobile nav; top bar; role badge; global project search;
-  working create/edit/archive/restore; status/stage/dates/next-action/blocker/notes;
-  accountable project-lead selection; save success/failure; refetch/invalidation after save;
-  last-modified display; initial live KPI cards (total, active, pending, completed, overdue
-  actions, upcoming starts); initial charts (projects by status, by stage, by service type).
-  No fabricated figures; empty states use **“No data yet”**; functions are working or hidden;
-  no dead “future” buttons.
+  desktop sidebar; responsive mobile nav; top bar; role badge; global project search; save
+  success/failure; refetch/invalidation after save; last-modified display; initial live KPI
+  cards (total, active, pending, completed, overdue actions, upcoming starts); initial charts
+  (projects by status, by stage, by service type). No fabricated figures; empty states use
+  **“No data yet”**; functions are working or hidden; **no dead “future” buttons**.
+  **Role-scoped authority in this slice (enforced by the interim database boundary in
+  §O.1a / the Phase 1B-A1 migration, not by hidden buttons):**
+  - **Owner (Widson):** full project create/edit; **activate** Pending projects; mark
+    **Completed**; **cancel**; **archive/restore**; set **target** and **actual completion**
+    dates.
+  - **Manager (Martine):** create **Pending** projects; routine operational editing
+    (notes, next action + date, blocker, `actual_start_date`, operational stages,
+    Ongoing↔Paused, location/county/type/descriptions, lead within the transition guard);
+    **no material-transition controls until Phase 1B-A4.**
+  - The interface **shows** controls appropriate to the current role and **hides** manager
+    controls not yet authorised — it must not render disabled “future” buttons.
+  - Include an **owner-facing “Pending activation” list / KPI** built from **live** data so
+    Widson can see and activate Pending projects. This is **not** a formal approvals queue —
+    that does not exist before Phase 1B-A4 and must not be implied.
 - **Phase 1B-A3 — Daily Project Updates & Field Coordination:** daily site-reporting
   schema/UI; site lead/reporter; attendance; progress; tools; materials; evidence/photos;
   blockers; next-day plan; Martine review; escalation to Widson. Dashboard adds: projects
   updated today; projects missing today’s update; last update per project; current site lead;
   projects with blockers; updates awaiting Martine review; updates escalated to Widson.
-- **Phase 1B-A4 — Owner Approval & Amendment Workflow:** approve; reject; request amendment;
-  override; immutable decision history; material project changes; completion/cancellation/
-  archive approvals; exceptional/retrospective-payment approvals where applicable later.
-  Dashboard adds: approvals awaiting Widson; amendment requests; rejected/returned items;
+- **Phase 1B-A4 — Owner Approval & Amendment Workflow:** manager **submits proposed** material
+  changes; owner may approve; reject; request amendment; override; immutable proposal +
+  decision history; material project changes; completion/cancellation/archive approvals;
+  exceptional/retrospective-payment approvals where applicable later. **This slice may replace
+  the PR #32 interim direct-owner material-authority boundary with the reviewed approval
+  model.** Dashboard adds: approvals awaiting Widson; amendment requests; rejected/returned
+  items;
   overdue approvals; exceptional items requiring owner attention.
 - **Phase 1B-A5 — Project Detail Refinement & Activity History:** Overview; Timeline; Tasks;
   People; Project Engagements placeholder policy; Expenses placeholder policy; Files &

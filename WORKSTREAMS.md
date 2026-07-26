@@ -1836,20 +1836,33 @@ NO UI built.**
   approval; **material** decisions (activation, scope/commitment changes, completion,
   cancellation, archive, exceptional/retrospective payments) follow a future
   Pending → Approved/Rejected/Amendment-requested workflow.
+- **Interim owner/material-decision boundary (in PR #32):** a database-enforced
+  `tg_guard_project_material_authority()` `BEFORE INSERT OR UPDATE` trigger makes the
+  owner-reserved project transitions (activate; Completed; Cancelled; Design-only;
+  archive/restore; `target_completion_date`; `actual_completion_date`) **effective before the
+  Phase 1B-A2 UI** — a manager may create only a Pending/non-archived/non-completed project
+  and otherwise edit routine operational fields (incl. Ongoing↔Paused), with reserved
+  transitions rejected at the database. This is **not** the approval workflow and stores no
+  proposals; the formal proposal/approve/reject/amendment workflow remains **Phase 1B-A4 and
+  unimplemented**, and may later replace this interim restriction.
 - **Documented but NOT implemented in PR #32:** daily project-update schema/UI, the owner
   approval/amendment workflow, and delegated-payment + reconciliation (commitment / payment
   execution / evidence / reconciliation; Simple Invoice Manager stays the client-finance
   authority). No `daily_updates`, approval, payment, engagement or expense table is created
-  here. The dashboard is **not** implemented in this PR; dashboard implementation **begins in
-  Phase 1B-A2** and expands through later slices.
-- **Runtime status:** re-validated after correction against an isolated PostgreSQL 17
+  here. Martine retains routine portfolio-wide operational authority (coordination,
+  mobilisation, delegated payments under approved commitments, daily-update review). The
+  dashboard is **not** implemented in this PR; dashboard implementation **begins in Phase
+  1B-A2** (role-scoped: owner activate/complete/cancel/archive + a live "Pending activation"
+  list; manager routine editing only) and expands through later slices.
+- **Runtime status:** re-validated after each correction against an isolated PostgreSQL 17
   instance with a synthetic Supabase `auth` shim — all audit-identity, NULL helper-contract,
   transition-scoped lead-change, field-constraint, ledger (incl. empty-`changed_fields`
-  rejection), boundary and non-destructive-apply tests passed applying `20260614000100` →
-  `20260726000100` → `20260726000200` in order. **Unmerged, unapplied to hosted, and no UI /
-  dashboard / daily-update / approval / payment schema implemented.** No production project,
-  profile, assignment or activity was created or changed. The Tsavo split, staff
-  onboarding/assignment UI, and Supabase Realtime remain separately gated and deferred.
+  rejection), **interim owner/material-authority (manager INSERT + UPDATE transition
+  matrix, owner unrestricted)**, boundary and non-destructive-apply tests passed applying
+  `20260614000100` → `20260726000100` → `20260726000200` in order. **Unmerged, unapplied to
+  hosted, and no UI / dashboard / daily-update / approval / payment schema implemented.** No
+  production project, profile, assignment or activity was created or changed. The Tsavo split,
+  staff onboarding/assignment UI, and Supabase Realtime remain separately gated and deferred.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 

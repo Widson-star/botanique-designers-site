@@ -20,6 +20,11 @@
 --   5. Add an immutable, system-generated project-change ledger
 --      (public.project_activities) plus the trigger that appends to it.
 --   6. Add indexes for upcoming project CRUD and dashboard queries.
+--   7. Add an INTERIM, database-enforced owner/material-decision boundary that
+--      stops a manager from performing owner-reserved project transitions
+--      (activate/complete/cancel/Design-only/archive/restore/completion dates)
+--      until the Phase 1B-A4 approval workflow replaces it. Not an approval
+--      workflow; stores no proposals.
 --
 -- Field-semantics note recorded here for future forms:
 --   * projects.start_date            = planned / expected start date.
@@ -327,6 +332,92 @@ revoke execute on function public.tg_guard_project_lead() from anon;
 create trigger projects_lead_guard
 before update of lead_person_id on public.projects
 for each row execute function public.tg_guard_project_lead();
+
+-- Interim owner/material-decision authority boundary.
+-- ---------------------------------------------------------------------
+-- The authority documentation lists certain project transitions as MATERIAL
+-- decisions reserved to the owner (activation; Completed; Cancelled; Design-only
+-- classification; archive/restore; setting/revising target completion; recording
+-- actual completion). The formal proposal/approval/amendment workflow that will
+-- let a manager REQUEST these is deferred to Phase 1B-A4. Until then, this is a
+-- temporary DATABASE-ENFORCED boundary (not UI-only) that stops the future
+-- Phase 1B-A2 manager UI from performing those material transitions directly.
+-- It is deliberately NOT an approval workflow and stores no proposals; when
+-- 1B-A4 lands, this interim restriction can be replaced by the reviewed model.
+--
+-- Only the MANAGER role is gated here. The owner is unrestricted (existing RLS
+-- and the project-lead guard still apply). Unchanged protected values never
+-- block unrelated operational edits — only a genuine change to a protected value
+-- is rejected.
+create or replace function public.tg_guard_project_material_authority()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_role text := public.current_user_role();
+begin
+  -- Owner (and any non-manager caller; RLS still governs whether they may write
+  -- at all) is not restricted by this interim boundary.
+  if caller_role is distinct from 'manager' then
+    return new;
+  end if;
+
+  if (tg_op = 'INSERT') then
+    -- A manager may only create a NEW project in the Pending intake state: not
+    -- already active/completed/cancelled/Design-only, not archived, not completed.
+    if new.status <> 'Pending'
+       or new.archived is true
+       or new.stage = 'Completed'
+       or new.actual_completion_date is not null then
+      raise exception
+        'manager may only create a Pending, non-archived, non-completed project; owner approval is required to activate, complete, cancel, classify Design-only or archive'
+        using errcode = 'check_violation';
+    end if;
+    return new;
+  end if;
+
+  -- UPDATE: gate only GENUINE changes to protected values.
+  if new.status is distinct from old.status then
+    -- Managers may only toggle an already-active project between Ongoing/Paused.
+    if not (old.status in ('Ongoing', 'Paused') and new.status in ('Ongoing', 'Paused')) then
+      raise exception
+        'manager may not change project status except Ongoing<->Paused; owner approval is required to activate, complete, cancel or classify Design-only'
+        using errcode = 'check_violation';
+    end if;
+  end if;
+
+  if new.stage is distinct from old.stage and new.stage = 'Completed' then
+    raise exception 'manager may not set project stage to Completed; owner approval required'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.archived is distinct from old.archived then
+    raise exception 'manager may not archive or restore a project; this is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.target_completion_date is distinct from old.target_completion_date then
+    raise exception 'manager may not set or revise target_completion_date; this is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.actual_completion_date is distinct from old.actual_completion_date then
+    raise exception 'manager may not set or change actual_completion_date; this is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.tg_guard_project_material_authority() from public;
+revoke execute on function public.tg_guard_project_material_authority() from anon;
+
+create trigger projects_material_authority
+before insert or update on public.projects
+for each row execute function public.tg_guard_project_material_authority();
 
 -- =====================================================================
 -- 4. Harden EXECUTE privileges on the foundation RLS helpers.
