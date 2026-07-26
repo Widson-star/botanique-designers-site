@@ -30,8 +30,10 @@ visits + won-lead conversion) — all subject to separate review. See
 > merged to `main` under PR #30, and has since been **applied to the hosted `botanique-admin`
 > project** via the supported Supabase CLI workflow (foundation history repaired, then only
 > Phase 1A pushed), with full post-apply verification and the existing 2 profiles / 7
-> projects proven unchanged. The schema/RLS is now **live**; only the user-facing Leads UI
-> remains (Phase 1B).
+> projects proven unchanged. The **Phase 1A schema/RLS is now live**. The remaining
+> user-facing operational work is separately gated as **Phase 1B-A** (Admin Shell and
+> Essential Project Management), **Phase 1B-B** (Leads Interface), and **Phase 1B-C** (Site
+> Visits and Conversion).
 
 ## Objective — the long-term operating model
 
