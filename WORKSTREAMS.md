@@ -1607,3 +1607,37 @@ client data, and the playbook column inventory (§6.1) matches the CSV exactly; 
 files are documentation/template only (`LEAD_OPERATIONS_PLAYBOOK.md`,
 `templates/BOTANIQUE_LEAD_REGISTER.csv`, `CAMPAIGN_READINESS_AUDIT.md`, this
 `WORKSTREAMS.md` entry).
+
+## BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation
+
+Status: **Architecture recorded — NO implementation started.** Existing operational
+systems preserved; **Phase 1 (Operational spine) is the recommended next
+implementation after the campaign-launch work.** Documentation only. New narrow
+architecture/documentation workstream; no existing workstream covered the future
+Operations Hub design and no `BD-OPERATIONS-HUB` identifier conflict exists.
+
+Baseline `main`: `1b53ba3ac6fd79f0423eb64ec1497161363867c1`. Branch:
+`claude/bd-operations-hub-01-architecture`.
+
+Records the intended long-term operating model — *Campaign → Lead → Qualification →
+Site visit → Quotation → Awarded project → Design & implementation → Maintenance →
+Commercial reporting* — with the existing `/admin` + Supabase foundation evolving into
+Botanique's internal Operations Hub. Full record in
+**`BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md`**: verified existing foundation (`/admin`,
+Supabase auth, `profiles`/`projects`/`project_assignments`/`project_financial_references`
+with RLS, owner/manager/staff/viewer roles, owner-only finance, the admin projects
+tracker) vs `NO EVIDENCE FOUND` items (no DB lead intake — the public QuoteWizard is
+WhatsApp-only; no leads/campaigns/visits/maintenance/expenses/applications/assets
+tables); twelve proposed modules; a system-of-record matrix (Simple Invoice Manager =
+finance source of truth, hub holds references only; project tracker separate); proposed
+data domains (`leads` with a nullable `project_id` until won, `campaigns`,
+`lead_activities`, `site_visits`, `project_milestones`, `tasks`,
+`maintenance_schedules`, `applications`, `operational_expenses`, `company_assets` — no
+migrations written); preserved owner/manager/staff RLS and finance restrictions; and a
+five-phase order (spine → delivery → recurring ops → business admin → integrations).
+
+Boundaries: **no database migrations, UI, storage bucket, integration, or external
+setup**; no change to `/admin`, Supabase schema/RLS, finance references, the project
+tracker, GardenCare policy, the enquiry funnel, measurement, or the contact number.
+Changed files: `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (new) and this `WORKSTREAMS.md`
+entry only.
