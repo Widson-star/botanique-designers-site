@@ -1,10 +1,12 @@
 # Botanique Operations Hub — Architecture Blueprint (BD-OPERATIONS-HUB-01)
 
 **Workstream:** BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation.
-**Status:** **Architecture recorded. Implementation has now BEGUN with Phase 1A (Lead
-Data and RLS Foundation) — database schema + RLS only, in an unmerged draft PR.** No
-UI, storage buckets, integrations, external setup, remote migration, or production
-deployment are authorised or performed. Phase 1A is the first slice of Phase 1
+**Status:** **Architecture recorded. Phase 1A (Lead Data and RLS Foundation) migration
+authored in draft PR #30 — unmerged, not applied to Supabase, and not runtime-validated
+(schema/RLS not yet on `main` or in Supabase).** No UI, storage buckets, integrations,
+external setup, remote migration, or production deployment are authorised or performed.
+A Vercel preview deployment was produced automatically for the PR branch; it does **not**
+execute or validate the Supabase migration. Phase 1A is the first slice of Phase 1
 (Operational spine); the remaining Phase 1 scope (site visits/calendar, dashboard
 action queues, won-lead-to-project conversion) is deferred to later slices (Phase 1B+).
 **Baseline `main`:** `1b53ba3ac6fd79f0423eb64ec1497161363867c1` (blueprint) /
@@ -178,9 +180,10 @@ Proposed tables and their relationship to the existing `projects`/`profiles`/
 Relationship summary: `projects` remains the delivery record; `leads` is the new
 front-of-funnel record that **links to** a project when won; `profiles`/roles remain
 the identity/permission spine. **The `campaigns`, `leads` and `lead_activities` tables
-are implemented (additively, schema + RLS only) by the Phase 1A migration
-`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`; the
-remaining proposed tables above have no migrations yet.**
+are defined (additively, schema + RLS only) by the Phase 1A migration
+`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql` — draft
+PR #30, unmerged and not yet applied to Supabase; the remaining proposed tables above
+have no migrations yet.**
 
 ## 5. Roles and access (preserve existing; do not weaken RLS or finance restrictions)
 

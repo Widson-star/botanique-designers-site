@@ -1644,12 +1644,17 @@ entry only.
 
 ### Phase 1A — Lead Data and RLS Foundation
 
-Status: **Database schema + RLS foundation implemented (PR draft, unmerged) — NO admin
-lead UI, NO site-visits/calendar module, NO dashboard queues, NO won-lead conversion
-action, NO website ingestion or advertising integration, and NO remote migration or
-production deployment.** This is the **first implementation slice** under the existing
-`BD-OPERATIONS-HUB-01` authority — a continuation phase of Phase 1 (Operational spine),
-**not** a new `BD-OPERATIONS-HUB-02` workstream.
+Status: **Phase 1A migration authored in draft PR #30; unmerged, not applied to Supabase
+and not runtime-validated.** The schema/RLS is **not** yet implemented on `main` or in
+Supabase — it exists only as an additive migration file on the PR branch, verified by
+static inspection and a passing repository build (a Vercel preview deployment was
+produced for the PR branch, but the preview does **not** execute or validate the
+Supabase migration). NO admin lead UI, NO site-visits/calendar module, NO dashboard
+queues, NO won-lead conversion action, NO website ingestion or advertising integration,
+and NO production deployment or remote migration application. This is the **first
+implementation slice** under the existing `BD-OPERATIONS-HUB-01` authority — a
+continuation phase of Phase 1 (Operational spine), **not** a new `BD-OPERATIONS-HUB-02`
+workstream.
 
 Baseline `main`: `95d32e639a873a0094b404b74e4200134592cf14`
 (`BD-CAMPAIGN-LAUNCH-01 (#29)`). Branch:
@@ -1660,31 +1665,46 @@ Adds one additive migration
 creating three new tables with audit triggers and RLS:
 
 * `campaigns` — minimal canonical campaign-definition table (name, source platform,
-  objective, service focus, audience, period, active state, notes). Names follow the
-  `LEAD_OPERATIONS_PLAYBOOK.md` §7 standard. **No live campaign rows are seeded.**
+  objective, service focus, audience, period, active state, notes). `campaign_name` is
+  constrained to the `LEAD_OPERATIONS_PLAYBOOK.md` §7 lowercase underscore-delimited
+  standard (a regex check, not just length); a `start_date`/`end_date` order check is
+  enforced. **No live campaign rows are seeded.**
 * `leads` — front-of-funnel record preserving the manual register's information model
   (`templates/BOTANIQUE_LEAD_REGISTER.csv`, 37 columns) with deliberate normalisation.
   Controlled values (source platform, qualification status, current stage, outcome,
-  photos status) match the playbook §4 / §6.2 exactly. Manually-supplied, validated
-  `BD-LEAD-YYYY-NNN` identifier (no auto-generation). Nullable `campaign_id`,
-  `project_id` (won-lead link; no conversion logic here) and `owner_id` (unassigned
-  queue by design). Assessment position held as constrained text; assessment **dates**
-  deferred to the future site-visits slice. **No financial amounts** (quotation,
-  awarded value, gross margin) are stored — Simple Invoice Manager remains the
-  financial source of truth; the Hub holds references only.
+  photos status) match the playbook §4 / §6.2 exactly. Manually-supplied, validated,
+  **immutable** `BD-LEAD-YYYY-NNN` identifier (preserved on every update; no
+  auto-generation). `client_name` is **nullable** (an incomplete first enquiry is
+  capturable without a fabricated name) but must be non-blank when supplied. Operational
+  state fields are **non-null with safe defaults** (`photos_received`='No',
+  `qualification_status`='Unqualified', `current_stage`='New enquiry',
+  `assessment_state`='Not proposed', `outcome`='Open'); service/location/size/budget stay
+  optional so qualification can complete over time. Nullable `campaign_id`, `project_id`
+  (won-lead link; no conversion logic here) and `owner_id` (unassigned queue by design);
+  a non-null `owner_id` must reference an **active** owner/manager/staff profile
+  (enforced via `is_valid_lead_owner()`). Cross-field checks: Lost requires a lost
+  reason; Nurture requires a next follow-up date. Assessment position held as constrained
+  text; assessment **dates** deferred to the future site-visits slice. **No financial
+  amounts** (quotation, awarded value, gross margin) are stored — Simple Invoice Manager
+  remains the financial source of truth; the Hub holds references only.
 * `lead_activities` — append-only activity-history events (`lead_id` → `leads`).
   Reconciled activity types; **no update or delete policy** (immutable history).
 
 RLS (narrowest defensible matrix, reusing the existing `is_owner()`/`is_manager()`/
-`is_staff()` helpers plus a new narrowly-scoped `is_assigned_to_lead(uuid)`):
+`is_staff()` helpers plus new narrowly-scoped `is_assigned_to_lead(uuid)` and
+`is_valid_lead_owner(uuid)` SECURITY DEFINER helpers):
 
-* campaigns — owner/manager select+insert+update; staff read-only; viewer none.
-* leads — owner/manager select+insert+update; staff select **only** own-assigned leads
-  (staff mutation deferred); viewer none. Manager gains **no** finance access (no
-  finance columns exist on the table).
+* campaigns — owner/manager select+insert+update; **staff no access** (no staff
+  lead-management UI in Phase 1A); viewer none.
+* leads — owner/manager select+insert+update (insert/update WITH CHECK also validates
+  the owner target); staff select **only** own-assigned leads (staff mutation deferred);
+  viewer none. Manager gains **no** finance access (no finance columns exist on the
+  table).
 * lead_activities — owner/manager select+insert; assigned staff select+insert own
   leads only; **no** update/delete for any role; viewer none.
-* **No delete policy** on any of the three tables (archive/append-only).
+* **No delete policy** on any of the three tables (archive/append-only). History-safe
+  FKs: `campaign_id`/`project_id`/`lead_activities.lead_id` are `ON DELETE RESTRICT`;
+  `owner_id` is `ON DELETE SET NULL` (a departed user never deletes a lead).
 
 Preserved: Simple Invoice Manager (finance source of truth) and the Project Tracking
 System remain authoritative; existing `profiles`/`projects`/`project_assignments`/
