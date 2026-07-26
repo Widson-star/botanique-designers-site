@@ -1534,3 +1534,60 @@ BD-CREATIVE-01, BD-LOCAL-01, BD-LEADOPS-01.
 Changed files (this workstream): `CAMPAIGN_READINESS_AUDIT.md` (new) and this
 `WORKSTREAMS.md` entry only. No application code, configuration, or protected system
 was touched.
+
+## BD-LEADOPS-01 — Manual Lead Operations Foundation
+
+Status: **Playbook complete · manual-register template complete · external setup
+pending · operational adoption pending founder confirmation · dedicated SIM pending.**
+Documentation/template only — **no implementation is marked operational.** New narrow
+workstream anticipated by `CAMPAIGN_READINESS_AUDIT.md` §19 (there proposed as
+"WhatsApp Business configuration and the manual lead register / lead-handling
+operating routine, interim to the future Operations Workflow System"); no existing
+workstream covered it and no identifier conflict exists.
+
+Baseline `main`: `dc6c8ccf058bacd79ece9d977b08345f7df2b061`
+(`BD-CAMPAIGN-READINESS-01 (#25)`). Branch:
+`claude/bd-leadops-01-manual-lead-operations`.
+
+Establishes the **interim manual lead-operations control** required before the next
+Instagram/Google campaign — capturing every serious enquiry, its source, sales stage,
+owner and follow-up, and connecting spend to commercial outcomes — without a CRM,
+database, analytics, or any change to the future Operations Workflow System.
+
+Deliverables:
+
+* **`LEAD_OPERATIONS_PLAYBOOK.md`** (new) — lead definitions; the four-field minimum
+  qualification standard (service, location, size, budget) that a WhatsApp click does
+  **not** by itself meet; one authoritative 13-stage list (mapped to WhatsApp labels)
+  with entry/action/exit/evidence/owner/follow-up per stage; a proposed ownership
+  model (operations owner vs founder, unconfirmed assignments labelled *Proposed —
+  pending founder approval*); follow-up control rules; the campaign-source naming
+  standard (platform · `platform_objective_service_audience_period` campaign format ·
+  human-readable landing context) with a documented future UTM mapping (no parsing
+  implemented); the **WhatsApp Business readiness + SIM-cutover checklist** (external,
+  nothing configured here; no PINs/secrets stored); a short response-template library
+  (one–three sentences, no founder/pending number); the weekly + campaign reporting
+  routine (decision-grade KPIs vs diagnostic vanity metrics); and the relationship to
+  future systems (Simple Invoice Manager = finance source of truth; Project Tracking
+  separate; no Supabase/`/admin`).
+* **`templates/BOTANIQUE_LEAD_REGISTER.csv`** (new) — headers-only reusable register
+  (30 columns), `KSh` throughout, `BD-LEAD-YYYY-NNN` IDs (assigned manually), with
+  data definitions in the playbook §7.1. No real or fabricated client records.
+
+Boundaries respected (unchanged): no public website React code, **no contact-number
+change** (founder number stays until the dedicated SIM is supplied; the new number is
+not invented), no external WhatsApp configuration, no CRM/Supabase/`/admin`, no
+finance/payment change, no analytics/cookies/pixels/tags/GTM, no Google/Meta
+configuration, no campaign creatives, no GardenCare policy change, no Operations
+Workflow System change.
+
+Owner decisions still required: dedicated SIM number; WhatsApp Business activation;
+lead-response owner; follow-up timing approval; register adoption in daily use; staff
+access/escalation model. **Launch gates remain unmet** until the register is adopted
+and WhatsApp Business is configured (see `CAMPAIGN_READINESS_AUDIT.md`).
+
+Validation: `git diff --check` clean; CSV verified as a single header row, no
+duplicate headers, consistent 30-column count, valid UTF-8, no client data; changed
+files are documentation/template only (`LEAD_OPERATIONS_PLAYBOOK.md`,
+`templates/BOTANIQUE_LEAD_REGISTER.csv`, `CAMPAIGN_READINESS_AUDIT.md`, this
+`WORKSTREAMS.md` entry).

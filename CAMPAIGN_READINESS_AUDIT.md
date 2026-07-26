@@ -297,6 +297,16 @@ issued · Quotation amount · Outcome · Revenue · Estimated gross margin · Lo
 This register is the **interim source of truth** for the commercial KPIs in §12 and
 for reconciling ad spend to revenue until measurement events exist.
 
+> **Update (BD-LEADOPS-01):** the full lead-operations playbook and a headers-only
+> register template now exist — see **`LEAD_OPERATIONS_PLAYBOOK.md`** and
+> **`templates/BOTANIQUE_LEAD_REGISTER.csv`** (with lead definitions, the 4-field
+> qualification standard, stages, ownership, follow-up rules, source naming, WhatsApp
+> Business/SIM-cutover checklist, response templates and the reporting routine). This
+> is **documentation/template only**: the related launch gates (manual lead register
+> *operational*, lead-response ownership, WhatsApp Business configured, dedicated SIM)
+> **remain unmet** until the founder adopts the register in daily use and completes the
+> external WhatsApp Business setup.
+
 ---
 
 ## 8. Lead-handling principle (recorded)
@@ -590,7 +600,10 @@ Each is a **separate, scoped** task:
   hospitality sets) to brand standards.
 - **BD-LOCAL-01** — Google Business Profile correction, review generation, and a
   NAP/citation/directory plan.
-- **BD-LEADOPS-01** — WhatsApp Business configuration and the manual lead register /
-  lead-handling operating routine (interim to the future Operations Workflow System).
+- **BD-LEADOPS-01** — Manual Lead Operations Foundation (interim to the future
+  Operations Workflow System). **Playbook + register template DELIVERED**
+  (`LEAD_OPERATIONS_PLAYBOOK.md`, `templates/BOTANIQUE_LEAD_REGISTER.csv`); external
+  WhatsApp Business setup, dedicated SIM, lead-response ownership and daily register
+  adoption remain **pending founder action**.
 
 > These names are proposals; assign IDs at each task's own authority preflight.
