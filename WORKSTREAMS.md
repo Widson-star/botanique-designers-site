@@ -1642,6 +1642,123 @@ tracker, GardenCare policy, the enquiry funnel, measurement, or the contact numb
 Changed files: `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (new) and this `WORKSTREAMS.md`
 entry only.
 
+### Phase 1A — Lead Data and RLS Foundation
+
+Status: **Phase 1A migration complete and runtime-validated under PR #30; repository
+merge completed, Supabase application pending.** The additive migration was validated by
+isolated PostgreSQL runtime execution (not merely static inspection) and merged to
+`main`; it has **not** yet been applied to Botanique's hosted Supabase project, so the
+schema/RLS is **not** live in Supabase. NO admin lead UI, NO site-visits/calendar
+module, NO dashboard queues, NO won-lead conversion action, NO website ingestion or
+advertising integration, and NO production deployment. This is the **first
+implementation slice** under the existing `BD-OPERATIONS-HUB-01` authority — a
+continuation phase of Phase 1 (Operational spine), **not** a new `BD-OPERATIONS-HUB-02`
+workstream.
+
+**Runtime validation (PR #30):** both migrations were executed from an empty database in
+their original order (`20260614000100_admin_foundation.sql` then
+`20260726000100_operations_hub_phase_1a_lead_data_rls.sql`) against a disposable,
+isolated **Homebrew PostgreSQL 17.10** cluster (private socket, port 5599) with a
+Supabase-compatible test bootstrap (`auth.users`, `auth.uid()` reading
+`request.jwt.claim.sub`, and the `anon`/`authenticated`/`service_role` roles). The
+clean-chain rerun completed with **zero SQL errors and all seven expected tables**.
+Role-by-role RLS and integrity tests passed: schema creation; RLS enablement and the
+documented policy matrix; owner/manager/staff/viewer/no-profile behaviour; campaign
+name/date constraints; lead defaults and controlled-value constraints; Lost/Nurture
+cross-field constraints; audit-identity overwrite (`created_by = auth.uid()`); immutable
+`lead_identifier`; archive provenance; legitimate activity backdating; valid-owner
+enforcement; assignment-scoped lead and activity access; append-only activity behaviour;
+helper-function `EXECUTE` restrictions (anon denied, authenticated allowed);
+history-preserving `RESTRICT` foreign keys; owner-profile deletion producing
+`owner_id = NULL`; owner-only `project_financial_references`; and the absence of protected
+quotation/finance columns from Phase 1A tables. **Fidelity caveat:** this was real
+PostgreSQL runtime and RLS execution, but it used a Supabase-compatible auth/role **stub**
+rather than the full GoTrue/PostgREST local stack, and PostgreSQL 17 rather than the
+hosted-Supabase version; no Phase 1A feature is known to depend on that version
+difference. A controlled Supabase application and post-apply verification remain required.
+
+**Accepted Phase 1A behaviour:** (1) *Inactive-owner:* `is_valid_lead_owner(owner_id)` is
+enforced on lead UPDATE, so an unrelated update is rejected while the assigned owner is
+inactive until the lead is reassigned or `owner_id` cleared — accepted (inactive profiles
+should not remain valid assignees; no trigger rewrite in PR #30). (2) *Owner FK:*
+`owner_id uuid references public.profiles(id) on delete set null` is kept — ownership
+belongs to the active profile/role spine (`profiles.id` = `auth.users.id`).
+**Deferred governance (non-blocking):** `leads.notes` and `lead_activities.summary` must
+not be used for quotation/payment/invoice/receipt identifiers, PDF links or other
+protected financial references; the future admin UI and operating instructions must
+enforce this — no schema/regex change is made in Phase 1A. No production data seeded;
+Phase 1B not started.
+
+Baseline `main`: `95d32e639a873a0094b404b74e4200134592cf14`
+(`BD-CAMPAIGN-LAUNCH-01 (#29)`). Branch:
+`claude/bd-operations-hub-01-phase-1a-lead-data-rls`.
+
+Adds one additive migration
+(`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`)
+creating three new tables with audit triggers and RLS:
+
+* `campaigns` — minimal canonical campaign-definition table (name, source platform,
+  objective, service focus, audience, period, active state, notes). `campaign_name` is
+  constrained to the `LEAD_OPERATIONS_PLAYBOOK.md` §7 lowercase underscore-delimited
+  standard (a regex check, not just length); a `start_date`/`end_date` order check is
+  enforced. **No live campaign rows are seeded.**
+* `leads` — front-of-funnel record preserving the manual register's information model
+  (`templates/BOTANIQUE_LEAD_REGISTER.csv`, 37 columns) with deliberate normalisation.
+  Controlled values (source platform, qualification status, current stage, outcome,
+  photos status) match the playbook §4 / §6.2 exactly. Manually-supplied, validated,
+  **immutable** `BD-LEAD-YYYY-NNN` identifier (preserved on every update; no
+  auto-generation). `client_name` is **nullable** (an incomplete first enquiry is
+  capturable without a fabricated name) but must be non-blank when supplied. Operational
+  state fields are **non-null with safe defaults** (`photos_received`='No',
+  `qualification_status`='Unqualified', `current_stage`='New enquiry',
+  `assessment_state`='Not proposed', `outcome`='Open'); service/location/size/budget stay
+  optional so qualification can complete over time. Nullable `campaign_id`, `project_id`
+  (won-lead link; no conversion logic here) and `owner_id` (unassigned queue by design);
+  a non-null `owner_id` must reference an **active** owner/manager/staff profile
+  (enforced via `is_valid_lead_owner()`). Cross-field checks: Lost requires a lost
+  reason; Nurture requires a next follow-up date. Assessment position held as constrained
+  text; assessment **dates** deferred to the future site-visits slice. **No financial
+  amounts** (quotation, awarded value, gross margin) are stored, and the **quotation
+  reference (identifier) is deferred** to a future **owner-only** protected mechanism —
+  `leads` is manager- and assigned-staff-readable, so a quotation document number must
+  not live on it; managers/assigned staff receive only operational quotation *state*
+  (`current_stage` = `Quotation preparing`/`Quotation sent`, and the `Quotation issued`
+  activity type). Simple Invoice Manager remains the financial source of truth. The only
+  reference retained on `leads` is the non-financial `project_reference`/`project_id`
+  (Project Tracking System — already within manager operational authority).
+* `lead_activities` — append-only activity-history events (`lead_id` → `leads`).
+  Reconciled activity types; **no update or delete policy** (immutable history).
+
+RLS (narrowest defensible matrix, reusing the existing `is_owner()`/`is_manager()`/
+`is_staff()` helpers plus new narrowly-scoped `is_assigned_to_lead(uuid)` and
+`is_valid_lead_owner(uuid)` SECURITY DEFINER helpers — both with `EXECUTE` **revoked from
+`public`/`anon` and granted only to `authenticated`**, since they are internal RLS
+helpers rather than public API):
+
+* campaigns — owner/manager select+insert+update; **staff no access** (no staff
+  lead-management UI in Phase 1A); viewer none.
+* leads — owner/manager select+insert+update (insert/update WITH CHECK also validates
+  the owner target); staff select **only** own-assigned leads (staff mutation deferred);
+  viewer none. Manager gains **no** finance access (no finance columns exist on the
+  table).
+* lead_activities — owner/manager select+insert; assigned staff select+insert own
+  leads only; **no** update/delete for any role; viewer none.
+* **No delete policy** on any of the three tables (archive/append-only). History-safe
+  FKs: `campaign_id`/`project_id`/`lead_activities.lead_id` are `ON DELETE RESTRICT`;
+  `owner_id` is `ON DELETE SET NULL` (a departed user never deletes a lead).
+
+Preserved: Simple Invoice Manager (finance source of truth) and the Project Tracking
+System remain authoritative; existing `profiles`/`projects`/`project_assignments`/
+`project_financial_references` tables, policies, functions and the owner-only finance
+boundary are unchanged. The migration is additive and non-destructive.
+
+**Not done in Phase 1A:** admin lead routes/components, lead list/detail/edit screens,
+site-visits, operational calendar, dashboard queues, won-lead project creation, website
+lead ingestion, UTM parsing, Google/Meta/WhatsApp/Calendar integrations, and production
+deployment. **The migration has NOT been applied to any remote/hosted Supabase project**
+— repository merge does not apply schema; the controlled Supabase application (and
+immediate post-apply schema/RLS/role verification) remains the next gate.
+
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
 Status: **Launch pack prepared — external campaign setup NOT performed; no advert
