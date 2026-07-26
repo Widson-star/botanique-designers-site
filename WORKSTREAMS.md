@@ -1537,13 +1537,14 @@ was touched.
 
 ## BD-LEADOPS-01 — Manual Lead Operations Foundation
 
-Status: **Playbook complete · manual-register template complete · external setup
-pending · operational adoption pending founder confirmation · dedicated SIM pending.**
+Status: **Playbook complete · manual-register template complete · operational adoption
+NOT complete · actual lead owner NOT confirmed · external WhatsApp Business NOT
+configured · dedicated SIM NOT supplied · campaign gates still unmet.**
 Documentation/template only — **no implementation is marked operational.** New narrow
-workstream anticipated by `CAMPAIGN_READINESS_AUDIT.md` §19 (there proposed as
-"WhatsApp Business configuration and the manual lead register / lead-handling
-operating routine, interim to the future Operations Workflow System"); no existing
-workstream covered it and no identifier conflict exists.
+workstream anticipated by `CAMPAIGN_READINESS_AUDIT.md` (there proposed as "WhatsApp
+Business configuration and the manual lead register / lead-handling operating routine,
+interim to the future Operations Workflow System"); no existing workstream covered it
+and no identifier conflict exists.
 
 Baseline `main`: `dc6c8ccf058bacd79ece9d977b08345f7df2b061`
 (`BD-CAMPAIGN-READINESS-01 (#25)`). Branch:
@@ -1556,23 +1557,37 @@ database, analytics, or any change to the future Operations Workflow System.
 
 Deliverables:
 
-* **`LEAD_OPERATIONS_PLAYBOOK.md`** (new) — lead definitions; the four-field minimum
-  qualification standard (service, location, size, budget) that a WhatsApp click does
-  **not** by itself meet; one authoritative 13-stage list (mapped to WhatsApp labels)
-  with entry/action/exit/evidence/owner/follow-up per stage; a proposed ownership
-  model (operations owner vs founder, unconfirmed assignments labelled *Proposed —
-  pending founder approval*); follow-up control rules; the campaign-source naming
-  standard (platform · `platform_objective_service_audience_period` campaign format ·
-  human-readable landing context) with a documented future UTM mapping (no parsing
-  implemented); the **WhatsApp Business readiness + SIM-cutover checklist** (external,
-  nothing configured here; no PINs/secrets stored); a short response-template library
-  (one–three sentences, no founder/pending number); the weekly + campaign reporting
-  routine (decision-grade KPIs vs diagnostic vanity metrics); and the relationship to
-  future systems (Simple Invoice Manager = finance source of truth; Project Tracking
-  separate; no Supabase/`/admin`).
+* **`LEAD_OPERATIONS_PLAYBOOK.md`** (new; sequential §1–§12) — lead definitions; the
+  four-field minimum qualification standard (service, location, size, budget) that a
+  WhatsApp click does **not** by itself meet; one authoritative **13-stage** list
+  mapped to WhatsApp labels with entry/action/exit/evidence/owner/follow-up per stage,
+  including the corrected assessment sequence (**Assessment proposed → Assessment
+  pending payment → Assessment booked**) and an explicit **direct-quotation path**
+  (`Qualified → Quotation preparing`); an **ownership-accountability rule** — every
+  open lead must have a **real** owner (`Widson`, a founder-approved named operations
+  owner, or a founder-approved assigned team member); **no placeholder owner**, and
+  the register is not operationally adopted until a real owner is confirmed; follow-up
+  control rules; the campaign-source naming standard with the corrected **UTM mapping**
+  (`utm_source`/`utm_medium`/`utm_campaign`/`utm_content`=creative variant/`utm_term`;
+  landing context derived from URL/wizard source/manual entry — `utm_content` is not
+  the landing page; documentation only, no parsing); the **WhatsApp Business readiness
+  + SIM-cutover checklist** (external, nothing configured here; no PINs/secrets
+  stored); a short response-template library in Botanique's **"we" voice** (one–three
+  sentences, no public/founder number); the **full commercial KPI model** (enquiries,
+  qualified leads, qualification rate, cost per qualified lead, assessments proposed/
+  booked/completed, cost per booked assessment, booked-to-completed rate,
+  assessment-to-quotation rate, quotations, quotation value, quotation-to-win rate,
+  won projects, awarded value, gross margin, attributed revenue, ROAS, lost reasons —
+  with formulas and `N/A` for division by zero) kept distinct from diagnostic vanity
+  metrics; and the relationship to future systems (Simple Invoice Manager = finance
+  source of truth; Project Tracking separate; no Supabase/`/admin`).
 * **`templates/BOTANIQUE_LEAD_REGISTER.csv`** (new) — headers-only reusable register
-  (30 columns), `KSh` throughout, `BD-LEAD-YYYY-NNN` IDs (assigned manually), with
-  data definitions in the playbook §7.1. No real or fabricated client records.
+  (**37 columns**), `KSh` throughout, `BD-LEAD-YYYY-NNN` IDs (assigned manually), with
+  data definitions in the playbook §6.2. Adds campaign-attribution fields (**Ad set /
+  audience, Creative / ad variant, Keyword / search term**), assessment-completion
+  evidence (**Assessment completed, Assessment completion date**), and reconciliation
+  references (**Quotation reference, Project reference** — reference only, not
+  duplicated finance/project records). No real or fabricated client records.
 
 Boundaries respected (unchanged): no public website React code, **no contact-number
 change** (founder number stays until the dedicated SIM is supplied; the new number is
@@ -1587,7 +1602,8 @@ access/escalation model. **Launch gates remain unmet** until the register is ado
 and WhatsApp Business is configured (see `CAMPAIGN_READINESS_AUDIT.md`).
 
 Validation: `git diff --check` clean; CSV verified as a single header row, no
-duplicate headers, consistent 30-column count, valid UTF-8, no client data; changed
+duplicate headers, no blank headers, consistent **37-column** count, valid UTF-8, no
+client data, and the playbook column inventory (§6.1) matches the CSV exactly; changed
 files are documentation/template only (`LEAD_OPERATIONS_PLAYBOOK.md`,
 `templates/BOTANIQUE_LEAD_REGISTER.csv`, `CAMPAIGN_READINESS_AUDIT.md`, this
 `WORKSTREAMS.md` entry).
