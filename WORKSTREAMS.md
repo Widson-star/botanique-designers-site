@@ -1685,14 +1685,22 @@ creating three new tables with audit triggers and RLS:
   (enforced via `is_valid_lead_owner()`). Cross-field checks: Lost requires a lost
   reason; Nurture requires a next follow-up date. Assessment position held as constrained
   text; assessment **dates** deferred to the future site-visits slice. **No financial
-  amounts** (quotation, awarded value, gross margin) are stored — Simple Invoice Manager
-  remains the financial source of truth; the Hub holds references only.
+  amounts** (quotation, awarded value, gross margin) are stored, and the **quotation
+  reference (identifier) is deferred** to a future **owner-only** protected mechanism —
+  `leads` is manager- and assigned-staff-readable, so a quotation document number must
+  not live on it; managers/assigned staff receive only operational quotation *state*
+  (`current_stage` = `Quotation preparing`/`Quotation sent`, and the `Quotation issued`
+  activity type). Simple Invoice Manager remains the financial source of truth. The only
+  reference retained on `leads` is the non-financial `project_reference`/`project_id`
+  (Project Tracking System — already within manager operational authority).
 * `lead_activities` — append-only activity-history events (`lead_id` → `leads`).
   Reconciled activity types; **no update or delete policy** (immutable history).
 
 RLS (narrowest defensible matrix, reusing the existing `is_owner()`/`is_manager()`/
 `is_staff()` helpers plus new narrowly-scoped `is_assigned_to_lead(uuid)` and
-`is_valid_lead_owner(uuid)` SECURITY DEFINER helpers):
+`is_valid_lead_owner(uuid)` SECURITY DEFINER helpers — both with `EXECUTE` **revoked from
+`public`/`anon` and granted only to `authenticated`**, since they are internal RLS
+helpers rather than public API):
 
 * campaigns — owner/manager select+insert+update; **staff no access** (no staff
   lead-management UI in Phase 1A); viewer none.

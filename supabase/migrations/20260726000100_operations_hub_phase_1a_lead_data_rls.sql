@@ -9,8 +9,12 @@
 -- Boundaries preserved (see BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md and
 -- LEAD_OPERATIONS_PLAYBOOK.md):
 --   * Simple Invoice Manager remains the financial source of truth. No
---     quotation/invoice/receipt/payment/balance amounts or awarded-value /
---     gross-margin figures are stored here — only reference strings.
+--     quotation/invoice/receipt/payment/balance amounts, awarded-value or
+--     gross-margin figures are stored here. The quotation IDENTIFIER is also
+--     NOT stored in Phase 1A: leads is manager/staff-readable, so the quotation
+--     reference is deferred to a future OWNER-ONLY mechanism. Only the
+--     non-financial project-tracking reference (project_reference/project_id,
+--     already within manager operational authority) is kept.
 --   * The existing projects table remains the project-delivery authority.
 --     leads.project_id is a NULLABLE reference only; no conversion logic
 --     is implemented in this phase.
@@ -83,10 +87,13 @@ create table if not exists public.campaigns (
 --    LEAD_OPERATIONS_PLAYBOOK.md §4 / §6.2 exactly.
 -- ---------------------------------------------------------------------
 -- Deliberately NOT stored (Simple Invoice Manager is the financial
--- source of truth; the Hub holds references only):
+-- source of truth):
 --   * Quotation amount   (register col 27)
 --   * Awarded project value (register col 30)
 --   * Estimated gross margin (register col 32)
+-- Deferred to a future OWNER-ONLY protected reference mechanism (leads is
+-- manager/staff-readable, so a quotation document number must not live here):
+--   * Quotation reference (register col 28)
 -- Deferred to the future site-visits slice (Phase 1B):
 --   * Assessment date (col 21) and Assessment completion date (col 24).
 --   assessment_state below holds only the lead's CURRENT position.
@@ -182,9 +189,16 @@ create table if not exists public.leads (
     'Booked',
     'Completed'
   )),
-  -- Quotation reference only (the quotation itself lives in Simple Invoice
-  -- Manager). No quotation amount is stored here.
-  quotation_reference text check (quotation_reference is null or char_length(quotation_reference) <= 120),
+  -- NOTE: no quotation_reference column exists on this table by design.
+  -- `public.leads` is manager-readable and assigned-staff-readable, and the
+  -- Botanique admin authority prohibits managers/staff from receiving
+  -- quotation/financial document numbers. The Simple Invoice Manager quotation
+  -- IDENTIFIER (register col 28) is therefore DEFERRED to a future OWNER-ONLY
+  -- lead-commercial-reference mechanism (not built in Phase 1A), preserving the
+  -- existing owner-only finance boundary. Only NON-financial quotation
+  -- WORKFLOW STATE is represented here: current_stage 'Quotation preparing' /
+  -- 'Quotation sent' and lead_activities.activity_type 'Quotation issued' —
+  -- never a quotation number, amount, PDF link, payment reference or document id.
   -- Nullable link to the existing project-delivery record. Set on Won; the
   -- lead row persists so campaign/sales history is never lost. No conversion
   -- logic is implemented in this phase. ON DELETE RESTRICT preserves the
@@ -431,6 +445,19 @@ as $$
       and role in ('owner', 'manager', 'staff')
   )
 $$;
+
+-- Execution is restricted: these are INTERNAL RLS helpers, not public API
+-- endpoints. Anonymous callers must not execute them; authenticated users may
+-- because the RLS policies below depend on them. This does not broaden the data
+-- they return, and they retain their explicit search_path and fully-qualified
+-- table references.
+revoke execute on function public.is_assigned_to_lead(uuid) from public;
+revoke execute on function public.is_assigned_to_lead(uuid) from anon;
+grant execute on function public.is_assigned_to_lead(uuid) to authenticated;
+
+revoke execute on function public.is_valid_lead_owner(uuid) from public;
+revoke execute on function public.is_valid_lead_owner(uuid) from anon;
+grant execute on function public.is_valid_lead_owner(uuid) to authenticated;
 
 -- =====================================================================
 -- 6. Row Level Security.

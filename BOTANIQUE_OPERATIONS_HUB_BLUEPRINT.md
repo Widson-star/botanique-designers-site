@@ -18,7 +18,10 @@ action queues, won-lead-to-project conversion) is deferred to later slices (Phas
 > (`supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql`) adds
 > the `campaigns` / `leads` / `lead_activities` tables and their RLS additively, without
 > weakening any existing table, policy, function, or the owner-only finance boundary.
-> See `WORKSTREAMS.md` → *BD-OPERATIONS-HUB-01 → Phase 1A* for the implemented scope.
+> See `WORKSTREAMS.md` → *BD-OPERATIONS-HUB-01 → Phase 1A* for the draft-authored Phase
+> 1A scope. That migration exists only in draft PR #30 — unmerged, not applied to
+> Supabase, and not runtime-validated; schema/RLS is not yet on `main` or in production,
+> and the Vercel preview does not execute the migration.
 
 ## Objective — the long-term operating model
 
