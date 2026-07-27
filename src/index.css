@@ -11,6 +11,15 @@
   }
 }
 
+/* The Operations Hub is a Quicksand-only working interface. Public editorial
+   pages retain the Fraunces display boundary above. */
+.admin-shell,
+.admin-shell h1,
+.admin-shell h2,
+.admin-shell h3 {
+  font-family: "Quicksand", ui-sans-serif, system-ui, sans-serif;
+}
+
 @keyframes softPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(63, 95, 88, 0.35);

@@ -1,8 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateDashboardMetrics,
+  calculateAttentionSummary,
   applyProjectView,
+  operationalSummary,
   overdueActionProjects,
+  projectAttentionReasons,
   projectsByStatus,
   todayIsoDate,
   upcomingStartProjects,
@@ -36,6 +39,7 @@ describe("calculateDashboardMetrics", () => {
     // Pending (non-archived) = rows 2 and 3.
     expect(m.pending).toBe(2);
     expect(m.completed).toBe(1);
+    expect(m.designOnly).toBe(0);
     // Overdue = non-archived, has next action, date < today, not Completed/Cancelled.
     // Row 0 (2026-07-01) and row 2 (2026-06-01). Row 4 is Completed; row 5 archived.
     expect(m.overdueActions).toBe(2);
@@ -83,6 +87,51 @@ describe("calculateDashboardMetrics", () => {
     expect(applyProjectView(projects, "upcoming-starts", TODAY)).toEqual(
       upcomingStartProjects(projects, TODAY)
     );
+  });
+});
+
+describe("operational summary and attention", () => {
+  it("generates a live operational narrative from exact metrics", () => {
+    const summary = operationalSummary(projects, TODAY);
+    expect(summary.overview).toBe(
+      "6 total projects: 2 active, 2 pending activation, 1 completed, 2 with overdue actions and 1 upcoming starts."
+    );
+    expect(summary.attention).toContain("2 awaiting activation");
+    expect(summary.attention).toContain("2 overdue actions");
+  });
+
+  it("does not fabricate a summary when no project data exists", () => {
+    expect(operationalSummary([], TODAY)).toBeNull();
+    expect(calculateAttentionSummary([], TODAY)).toEqual({
+      awaitingActivation: 0,
+      withoutLead: 0,
+      withoutNextAction: 0,
+      withBlockers: 0,
+      overdueActions: 0,
+      upcomingStarts: 0,
+    });
+  });
+
+  it("classifies attention only from explicit project fields", () => {
+    const reasons = projectAttentionReasons(
+      {
+        status: "Pending",
+        archived: false,
+        leadPersonId: "",
+        nextAction: "Confirm mobilisation",
+        nextActionDate: "2026-07-01",
+        startDate: "2026-08-01",
+        blocker: "Client brief missing",
+      },
+      TODAY
+    );
+    expect(reasons).toEqual([
+      "Pending activation",
+      "Overdue next action",
+      "Blocker: Client brief missing",
+      "Accountable lead missing",
+      "Upcoming start: 2026-08-01",
+    ]);
   });
 });
 

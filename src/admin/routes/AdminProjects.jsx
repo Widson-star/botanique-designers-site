@@ -10,9 +10,14 @@ import { useAdminData } from "../context/adminData";
 import {
   canCreateProjects,
   canEditProjects,
+  canSeePendingActivation,
   leadOptionsForRole,
 } from "../utils/projectCapabilities";
-import { applyProjectView, PROJECT_VIEW_LABELS } from "../utils/dashboardMetrics";
+import {
+  applyProjectView,
+  projectAttentionReasons,
+  PROJECT_VIEW_LABELS,
+} from "../utils/dashboardMetrics";
 
 const FILTER_KEYS = ["search", "status", "stage", "lead", "projectType", "portfolio", "archived"];
 
@@ -43,6 +48,10 @@ export default function AdminProjects() {
 
   const canCreate = canCreateProjects(role);
   const canEdit = canEditProjects(role);
+  const attentionForProject = (project) =>
+    projectAttentionReasons(project, undefined, {
+      includePendingActivation: canSeePendingActivation(role),
+    });
 
   const updateFilter = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -139,17 +148,18 @@ export default function AdminProjects() {
         role={role}
       />
 
-      <div className="overflow-x-auto bg-white border border-stone-200 rounded-lg">
+      <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
         <table className="min-w-full divide-y divide-stone-200 text-sm">
           <caption className="sr-only">Live project records</caption>
           <thead className="bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
               <th scope="col" className="px-4 py-3">Project</th>
-              <th scope="col" className="px-4 py-3">Location</th>
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3">Stage</th>
-              <th scope="col" className="px-4 py-3">Lead</th>
+              <th scope="col" className="px-4 py-3">Accountable lead</th>
               <th scope="col" className="px-4 py-3">Next action</th>
+              <th scope="col" className="px-4 py-3">Target completion</th>
+              <th scope="col" className="px-4 py-3">Attention</th>
               <th scope="col" className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -166,11 +176,10 @@ export default function AdminProjects() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{project.clientSiteName || "Site label not set"}</p>
-                  <p className="text-xs text-gray-400 mt-1">{project.projectType}</p>
-                </td>
-                <td className="px-4 py-4 text-gray-600">
-                  <p>{project.location || "Not set"}</p>
-                  <p className="text-xs text-gray-400 mt-1">{project.county || "County not set"}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {project.projectType}
+                    {project.location ? ` · ${project.location}` : ""}
+                  </p>
                 </td>
                 <td className="px-4 py-4"><ProjectBadge value={project.status} /></td>
                 <td className="px-4 py-4"><ProjectBadge value={project.stage} /></td>
@@ -178,6 +187,25 @@ export default function AdminProjects() {
                 <td className="px-4 py-4 text-gray-600 max-w-xs">
                   <p>{project.nextAction || "No next action set"}</p>
                   <p className="text-xs text-gray-400 mt-1">{project.nextActionDate || "Not dated"}</p>
+                </td>
+                <td className="px-4 py-4 text-gray-600">
+                  {project.targetCompletionDate || "Not set"}
+                </td>
+                <td className="px-4 py-4">
+                  {attentionForProject(project).length === 0 ? (
+                    <span className="text-xs text-gray-400">None</span>
+                  ) : (
+                    <div className="flex max-w-[13rem] flex-wrap gap-1.5">
+                      {attentionForProject(project).map((reason) => (
+                        <span
+                          key={reason}
+                          className="rounded-md bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800"
+                        >
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex flex-col gap-1">

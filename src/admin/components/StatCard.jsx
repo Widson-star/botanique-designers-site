@@ -1,11 +1,18 @@
 // Small KPI card. Optionally links to a filtered Projects view.
 import { Link } from "react-router-dom";
 
-export default function StatCard({ label, value, href, hint }) {
+export default function StatCard({ label, value, href, hint, tone = "default" }) {
+  const accent =
+    tone === "attention"
+      ? "border-amber-200 bg-amber-50/60"
+      : "border-stone-200 bg-white";
   const body = (
     <>
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="text-3xl font-bold text-botanique-charcoal mt-2 tabular-nums">{value}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">{label}</p>
+        <span className="h-2 w-2 rounded-full bg-botanique-green" aria-hidden="true" />
+      </div>
+      <p className="mt-3 text-2xl font-bold tabular-nums text-botanique-charcoal">{value}</p>
       {hint && <p className="text-xs text-gray-400 mt-1">{hint}</p>}
     </>
   );
@@ -14,12 +21,12 @@ export default function StatCard({ label, value, href, hint }) {
     return (
       <Link
         to={href}
-        className="block bg-white border border-stone-200 rounded-lg p-4 hover:border-botanique-green transition focus:outline-none focus:ring-2 focus:ring-botanique-green/30"
+        className={`block rounded-xl border p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-botanique-green hover:shadow-md focus:outline-none focus:ring-2 focus:ring-botanique-green/30 ${accent}`}
       >
         {body}
       </Link>
     );
   }
 
-  return <div className="bg-white border border-stone-200 rounded-lg p-4">{body}</div>;
+  return <div className={`rounded-xl border p-4 shadow-sm ${accent}`}>{body}</div>;
 }

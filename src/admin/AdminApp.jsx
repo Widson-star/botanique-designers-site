@@ -80,9 +80,11 @@ export default function AdminApp() {
   }, [session]);
 
   const profileLabel = useMemo(() => {
-    if (isDemo) return "Dev seed preview";
+    if (isDemo) {
+      return role === ROLES.OWNER ? "Widson Omutelema Ambaisi" : "Martine Lotom";
+    }
     return profile?.full_name || profile?.email || "Authenticated admin";
-  }, [isDemo, profile]);
+  }, [isDemo, profile, role]);
 
   async function handleLogin(event) {
     event.preventDefault();
