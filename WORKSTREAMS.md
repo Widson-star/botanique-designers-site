@@ -1877,6 +1877,24 @@ unstarted.**
   profiles = 2 and projects = 7. No
   production project, profile, assignment or activity was created or changed. The Tsavo split,
   staff onboarding/assignment UI, and Supabase Realtime remain separately gated and deferred.
+- **Hosted integrity checksums (dual-checksum authority, `'|'`-delimited
+  `md5(string_agg(row::text, '|' ORDER BY id))`):** the **profiles** full-row checksum
+  remained `95c144896661e2c827e881c2e5f12149`. For **projects** two distinct values are
+  retained, because Phase 1B-A1 appended four nullable columns and the full-row `projects::text`
+  representation therefore changed **structurally even though every existing value is
+  unchanged**: (1) the **original 23-column project-data continuity checksum** — computed over
+  exactly the pre-Phase-1B-A1 columns (`id, project_name, client_site_name, location, county,
+  project_type, status, stage, lead_person_id, start_date, last_updated, next_action,
+  next_action_date, portfolio_eligible, portfolio_permission_status, notes, archived,
+  archived_at, archived_by, created_by, updated_by, created_at, updated_at`) — remained
+  `705f124eda20d081c7c31b77743763cb`, proving **no pre-existing project value changed**; and
+  (2) the **post-Phase-1B-A1 full-row structural baseline** (current complete row, including
+  the four new NULL columns) is `459557531472faf27bc06a0a1a0cf736`, which becomes the baseline
+  for future full-row integrity checks under the current schema. All four new project fields
+  are NULL on all seven existing projects. The difference between the two project checksums is
+  **expected schema evolution, not data mutation**; future integrity reports **must name the
+  column set / schema version used** and must not compare full-row checksums across
+  schema-changing migrations without normalising the projected columns.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
