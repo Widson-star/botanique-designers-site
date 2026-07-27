@@ -1,52 +1,68 @@
-import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+// Projects screen: a working New action, a live project table (responsive card
+// stacking on narrow screens via the same rows), filters synced to URL search
+// parameters, and edit/detail actions. Archived records are visibly
+// distinguished. No dead "future" buttons; no bulk archive; no hard delete.
+import { useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import ProjectBadge from "../components/ProjectBadge";
 import ProjectFilters from "../components/ProjectFilters";
-import { canViewFinancialReferences } from "../utils/permissions";
+import { useAdminData } from "../context/adminData";
+import { leadOptionsForRole } from "../utils/projectCapabilities";
 
-const defaultFilters = {
-  search: "",
-  status: "",
-  stage: "",
-  leadPerson: "",
-  projectType: "",
-  portfolioPermissionStatus: "",
-  paymentStatus: "",
-};
+const FILTER_KEYS = ["search", "status", "stage", "lead", "projectType", "portfolio", "archived"];
 
-function matchesSearch(project, search, includeFinancial) {
-  const normalizedSearch = search.trim().toLowerCase();
-  if (!normalizedSearch) return true;
-
-  const searchableValues = [
+function matchesSearch(project, search) {
+  const needle = search.trim().toLowerCase();
+  if (!needle) return true;
+  return [
     project.projectName,
     project.clientSiteName,
     project.location,
     project.county,
     project.projectType,
-    includeFinancial ? project.simpleInvoiceClientName : "",
-  ];
-
-  return searchableValues.some((value) => String(value || "").toLowerCase().includes(normalizedSearch));
+  ].some((value) => String(value || "").toLowerCase().includes(needle));
 }
 
-export default function AdminProjects({ role, projects, dataStatus, dataError, isDemo }) {
-  const [filters, setFilters] = useState(defaultFilters);
-  const includeFinancial = isDemo && canViewFinancialReferences(role);
-  const leadPeople = [...new Set(projects.map((project) => project.leadPerson).filter(Boolean))];
+export default function AdminProjects() {
+  const { role, projects, profiles, currentUserId, dataStatus, dataError } = useAdminData();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const filteredProjects = useMemo(() => {
+  const filters = FILTER_KEYS.reduce((acc, key) => {
+    acc[key] = searchParams.get(key) || "";
+    return acc;
+  }, {});
+
+  const updateFilter = (key, value) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
+
+  const resetFilters = () => setSearchParams(new URLSearchParams(), { replace: true });
+
+  const leadOptions = useMemo(
+    () => leadOptionsForRole(role, profiles, currentUserId),
+    [role, profiles, currentUserId]
+  );
+
+  const filtered = useMemo(() => {
     return projects.filter((project) => {
-      if (!matchesSearch(project, filters.search, includeFinancial)) return false;
+      if (!matchesSearch(project, filters.search)) return false;
       if (filters.status && project.status !== filters.status) return false;
       if (filters.stage && project.stage !== filters.stage) return false;
-      if (filters.leadPerson && project.leadPerson !== filters.leadPerson) return false;
       if (filters.projectType && project.projectType !== filters.projectType) return false;
-      if (filters.portfolioPermissionStatus && project.portfolioPermissionStatus !== filters.portfolioPermissionStatus) return false;
-      if (includeFinancial && filters.paymentStatus && project.paymentStatus !== filters.paymentStatus) return false;
+      if (filters.portfolio && project.portfolioPermissionStatus !== filters.portfolio) return false;
+      if (filters.lead) {
+        if (filters.lead === "unassigned" ? project.leadPersonId : project.leadPersonId !== filters.lead) {
+          return false;
+        }
+      }
+      if (filters.archived === "active" && project.archived) return false;
+      if (filters.archived === "archived" && !project.archived) return false;
       return true;
     });
-  }, [filters, includeFinancial, projects]);
+  }, [filters, projects]);
 
   return (
     <div className="space-y-5">
@@ -54,63 +70,63 @@ export default function AdminProjects({ role, projects, dataStatus, dataError, i
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {isDemo
-              ? "Search and filter the safe seed project tracker."
-              : "Search and filter authenticated operational project records."}
+            Search, filter and maintain live operational project records.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled
-            className="rounded-md border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed"
-          >
-            Add project - future
-          </button>
-          <button
-            type="button"
-            disabled
-            className="rounded-md border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed"
-          >
-            Archive - future
-          </button>
-        </div>
+        <Link
+          to="/admin/projects/new"
+          className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark transition"
+        >
+          New project
+        </Link>
       </div>
 
       {dataStatus === "loading" && (
         <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">
-          Loading project records...
+          Loading project records…
         </div>
       )}
 
       {dataStatus === "error" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {dataError || "Unable to load project records."}
         </div>
       )}
 
-      <ProjectFilters filters={filters} setFilters={setFilters} leadPeople={leadPeople} role={role} />
+      <ProjectFilters
+        filters={filters}
+        updateFilter={updateFilter}
+        resetFilters={resetFilters}
+        leadOptions={leadOptions}
+        role={role}
+      />
 
       <div className="overflow-x-auto bg-white border border-stone-200 rounded-lg">
         <table className="min-w-full divide-y divide-stone-200 text-sm">
+          <caption className="sr-only">Live project records</caption>
           <thead className="bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-4 py-3">Project</th>
-              <th className="px-4 py-3">Location</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Stage</th>
-              <th className="px-4 py-3">Lead</th>
-              <th className="px-4 py-3">Portfolio</th>
-              {includeFinancial && <th className="px-4 py-3">Payment</th>}
-              <th className="px-4 py-3">Next action</th>
-              <th className="px-4 py-3">Detail</th>
+              <th scope="col" className="px-4 py-3">Project</th>
+              <th scope="col" className="px-4 py-3">Location</th>
+              <th scope="col" className="px-4 py-3">Status</th>
+              <th scope="col" className="px-4 py-3">Stage</th>
+              <th scope="col" className="px-4 py-3">Lead</th>
+              <th scope="col" className="px-4 py-3">Next action</th>
+              <th scope="col" className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {filteredProjects.map((project) => (
-              <tr key={project.id} className="align-top">
+            {filtered.map((project) => (
+              <tr key={project.id} className={`align-top ${project.archived ? "bg-stone-50/70" : ""}`}>
                 <td className="px-4 py-4">
-                  <p className="font-semibold text-botanique-charcoal">{project.projectName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-botanique-charcoal">{project.projectName}</p>
+                    {project.archived && (
+                      <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-600">
+                        Archived
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">{project.clientSiteName || "Site label not set"}</p>
                   <p className="text-xs text-gray-400 mt-1">{project.projectType}</p>
                 </td>
@@ -120,29 +136,29 @@ export default function AdminProjects({ role, projects, dataStatus, dataError, i
                 </td>
                 <td className="px-4 py-4"><ProjectBadge value={project.status} /></td>
                 <td className="px-4 py-4"><ProjectBadge value={project.stage} /></td>
-                <td className="px-4 py-4 text-gray-600">{project.leadPerson}</td>
-                <td className="px-4 py-4"><ProjectBadge value={project.portfolioPermissionStatus} /></td>
-                {includeFinancial && <td className="px-4 py-4"><ProjectBadge value={project.paymentStatus} /></td>}
+                <td className="px-4 py-4 text-gray-600">{project.leadPersonName}</td>
                 <td className="px-4 py-4 text-gray-600 max-w-xs">
                   <p>{project.nextAction || "No next action set"}</p>
                   <p className="text-xs text-gray-400 mt-1">{project.nextActionDate || "Not dated"}</p>
                 </td>
                 <td className="px-4 py-4">
-                  <Link
-                    to={`/admin/projects/${project.id}`}
-                    className="text-botanique-green font-semibold hover:underline"
-                  >
-                    Open
-                  </Link>
+                  <div className="flex flex-col gap-1">
+                    <Link to={`/admin/projects/${project.id}`} className="text-botanique-green font-semibold hover:underline">
+                      Open
+                    </Link>
+                    <Link to={`/admin/projects/${project.id}/edit`} className="text-gray-500 hover:underline">
+                      Edit
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {filteredProjects.length === 0 && (
+        {filtered.length === 0 && (
           <div className="p-8 text-center text-sm text-gray-500">
-            No projects match the current filters.
+            {projects.length === 0 ? "No data yet" : "No projects match the current filters."}
           </div>
         )}
       </div>

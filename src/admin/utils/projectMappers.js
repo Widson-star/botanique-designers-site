@@ -1,4 +1,20 @@
-export function mapDatabaseProject(project) {
+// Maps raw database rows into the camelCase shape the admin UI consumes.
+//
+// `updated_at` is the authoritative last-modified value; `last_updated` is the
+// DEPRECATED legacy column and is intentionally NOT surfaced as an editable or
+// displayed field (see the Phase 1B-A1 migration field-semantics note).
+
+// Resolve a lead's display name without ever exposing the raw UUID. When the
+// profile is not readable through RLS, a safe protected label is shown while the
+// raw id is preserved internally (leadPersonId) so unrelated edits never drop it.
+function resolveLeadName(leadPersonId, profilesById) {
+  if (!leadPersonId) return "Not assigned";
+  const profile = profilesById?.[leadPersonId];
+  if (profile) return profile.full_name || profile.email || "Team member";
+  return "Current assigned lead — protected profile";
+}
+
+export function mapDatabaseProject(project, profilesById = {}) {
   return {
     id: project.id,
     projectName: project.project_name,
@@ -8,24 +24,44 @@ export function mapDatabaseProject(project) {
     projectType: project.project_type,
     status: project.status,
     stage: project.stage,
-    leadPerson: project.lead_person_id ? "Assigned user" : "Not assigned",
+    // Raw accountable-lead id is preserved for patch-diffing and safe display;
+    // leadPersonName is the resolved (RLS-permitting) human label.
+    leadPersonId: project.lead_person_id || "",
+    leadPersonName: resolveLeadName(project.lead_person_id, profilesById),
+    // Whether this role can actually read the assigned lead's profile row.
+    leadPersonResolved: Boolean(
+      project.lead_person_id && profilesById?.[project.lead_person_id]
+    ),
     startDate: project.start_date || "",
-    lastUpdated: project.last_updated || project.updated_at?.slice(0, 10) || "",
+    actualStartDate: project.actual_start_date || "",
+    targetCompletionDate: project.target_completion_date || "",
+    actualCompletionDate: project.actual_completion_date || "",
     nextAction: project.next_action || "",
     nextActionDate: project.next_action_date || "",
+    blocker: project.blocker || "",
     portfolioEligible: Boolean(project.portfolio_eligible),
     portfolioPermissionStatus: project.portfolio_permission_status,
     notes: project.notes || "",
     archived: Boolean(project.archived),
-    // Staff assigned-only access is currently enforced by Supabase RLS: the
-    // projects SELECT policy only returns rows a staff user is assigned to, so
-    // every row this mapper sees is already permitted. assignments/accessGranted
-    // are therefore set permissively for the client-side filter.
-    // TODO(staff): when staff profiles ship, fetch project_assignments and
-    // populate `assignments` + derive `accessGranted` per row so the client-side
-    // canViewProject() check mirrors RLS as defence-in-depth (do not widen access).
+    archivedAt: project.archived_at || "",
+    createdAt: project.created_at || "",
+    // updated_at is the authoritative last-modified value.
+    updatedAt: project.updated_at || "",
+    // Staff assigned-only access is enforced by Supabase RLS; every row this
+    // mapper sees is already permitted (see projectMappers history note).
+    // TODO(staff): populate assignments from project_assignments when staff ship.
     assignments: [],
     accessGranted: true,
+  };
+}
+
+export function mapDatabaseProfile(profile) {
+  return {
+    id: profile.id,
+    email: profile.email || "",
+    full_name: profile.full_name || "",
+    role: profile.role,
+    is_active: Boolean(profile.is_active),
   };
 }
 

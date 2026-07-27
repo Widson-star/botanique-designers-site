@@ -530,6 +530,10 @@ authorised slice.
   cards (total, active, pending, completed, overdue actions, upcoming starts); initial charts
   (projects by status, by stage, by service type). No fabricated figures; empty states use
   **“No data yet”**; functions are working or hidden; **no dead “future” buttons**.
+  Project detail in this slice provides a **project Overview** and a **read-only Activity
+  History** (from the immutable `project_activities` ledger; field labels + before/after,
+  no raw UUIDs or JSON) — founder-authorised as the minimum useful detail view. No other
+  detail tabs are rendered; timeline/files/Tasks/People refinements remain **Phase 1B-A5**.
   **Role-scoped authority in this slice (enforced by the interim database boundary in
   §O.1a / the Phase 1B-A1 migration, not by hidden buttons):**
   - **Owner (Widson):** full project create/edit; **activate** Pending projects; mark
@@ -563,11 +567,12 @@ authorised slice.
   model.** Dashboard adds: approvals awaiting Widson; amendment requests; rejected/returned
   items;
   overdue approvals; exceptional items requiring owner attention.
-- **Phase 1B-A5 — Project Detail Refinement & Activity History:** Overview; Timeline; Tasks;
-  People; Project Engagements placeholder policy; Expenses placeholder policy; Files &
-  Evidence; Activity History (who changed what and when). No module shown as a dead
-  placeholder. Supabase Realtime remains optional and separately gated after save/refetch is
-  stable.
+- **Phase 1B-A5 — Project Detail Refinement:** builds on the Overview + read-only Activity
+  History already delivered in Phase 1B-A2. Adds the **richer timeline**; **Files &
+  Evidence**; supported **Tasks** and **People** views; **Project Engagements** placeholder
+  policy; **Expenses** placeholder policy; and **Activity-History refinements** (grouping,
+  filtering, richer actor/context resolution). No module shown as a dead placeholder.
+  Supabase Realtime remains optional and separately gated after save/refetch is stable.
 - **Phase 1B-B — Leads Interface:** campaigns; leads; qualification; follow-up queue; lead
   activity history; lead-source dashboard charts.
 - **Phase 1B-C — Site Visits & Lead-to-Project Conversion:** site visits; assessment

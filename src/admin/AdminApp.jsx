@@ -8,26 +8,21 @@ import AdminSetupRequired from "./components/AdminSetupRequired";
 import AdminDashboard from "./routes/AdminDashboard";
 import AdminProjects from "./routes/AdminProjects";
 import AdminProjectDetail from "./routes/AdminProjectDetail";
+import AdminProjectForm from "./routes/AdminProjectForm";
+import { AdminDataProvider } from "./context/AdminDataContext";
 import { ROLES } from "./constants/roles";
-import { projectSeed } from "./data/projectSeed";
 import {
   clearStoredSession,
   fetchCurrentProfile,
-  fetchFinancialReferences,
-  fetchProjects,
   getStoredSession,
   signInWithPassword,
   signOut,
   storeSession,
   supabaseConfigured,
 } from "./lib/supabase";
-import {
-  mapDatabaseFinancialReference,
-  mapDatabaseProject,
-  mapSeedFinancialReference,
-} from "./utils/projectMappers";
-import { canViewFinancialReferences, getVisibleProjects } from "./utils/permissions";
 
+// AdminApp owns AUTHENTICATION only. Project/profile data loading, mutations and
+// save feedback are delegated to AdminDataProvider (see context/AdminDataContext).
 export default function AdminApp() {
   const [demoRole, setDemoRole] = useState(null);
   const [session, setSession] = useState(() => (supabaseConfigured ? getStoredSession() : null));
@@ -36,10 +31,6 @@ export default function AdminApp() {
   const [authError, setAuthError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [projects, setProjects] = useState([]);
-  const [financialReferences, setFinancialReferences] = useState({});
-  const [dataStatus, setDataStatus] = useState("idle");
-  const [dataError, setDataError] = useState("");
 
   const isDemo = !supabaseConfigured;
   const role = isDemo ? demoRole : profile?.role;
@@ -88,82 +79,10 @@ export default function AdminApp() {
     };
   }, [session]);
 
-  useEffect(() => {
-    if (isDemo) return;
-
-    if (!session?.access_token || !profile?.role) return;
-
-    let cancelled = false;
-
-    async function loadAdminData() {
-      setDataStatus("loading");
-      setDataError("");
-      try {
-        const databaseProjects = await fetchProjects(session.access_token);
-        if (cancelled) return;
-
-        const mappedProjects = databaseProjects.map(mapDatabaseProject);
-        setProjects(mappedProjects);
-
-        if (profile.role === ROLES.OWNER) {
-          const references = await fetchFinancialReferences(
-            session.access_token,
-            mappedProjects.map((project) => project.id)
-          );
-          if (cancelled) return;
-
-          setFinancialReferences(
-            Object.fromEntries(
-              references.map((reference) => [
-                reference.project_id,
-                mapDatabaseFinancialReference(reference),
-              ])
-            )
-          );
-        } else {
-          setFinancialReferences({});
-        }
-
-        setDataStatus("ready");
-      } catch (error) {
-        if (!cancelled) {
-          setProjects([]);
-          setFinancialReferences({});
-          setDataStatus("error");
-          setDataError(error.message || "Unable to load admin data.");
-        }
-      }
-    }
-
-    loadAdminData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isDemo, demoRole, profile?.role, session?.access_token]);
-
   const profileLabel = useMemo(() => {
     if (isDemo) return "Dev seed preview";
     return profile?.full_name || profile?.email || "Authenticated admin";
   }, [isDemo, profile]);
-
-  const demoProjects = useMemo(
-    () => (demoRole ? getVisibleProjects(projectSeed, demoRole) : []),
-    [demoRole]
-  );
-
-  const demoFinancialReferences = useMemo(() => {
-    if (!canViewFinancialReferences(demoRole)) return {};
-
-    return Object.fromEntries(
-      projectSeed.map((project) => [project.id, mapSeedFinancialReference(project)])
-    );
-  }, [demoRole]);
-
-  const displayedProjects = isDemo ? demoProjects : projects;
-  const displayedFinancialReferences = isDemo ? demoFinancialReferences : financialReferences;
-  const displayedDataStatus = isDemo ? "ready" : dataStatus;
-  const displayedDataError = isDemo ? "" : dataError;
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -191,8 +110,6 @@ export default function AdminApp() {
     clearStoredSession();
     setSession(null);
     setProfile(null);
-    setProjects([]);
-    setFinancialReferences({});
     setAuthStatus("idle");
   }
 
@@ -236,67 +153,26 @@ export default function AdminApp() {
   }
 
   return (
-    <Routes>
-      <Route
-        element={
-          <AdminLayout
-            role={role}
-            profileLabel={profileLabel}
-            isDemo={isDemo}
-            onSignOut={handleSignOut}
-          />
-        }
-      >
+    <AdminDataProvider session={session} role={role} profile={profile} isDemo={isDemo}>
+      <Routes>
         <Route
-          path="/admin"
           element={
-            <AdminDashboard
+            <AdminLayout
               role={role}
-              projects={displayedProjects}
-              dataStatus={displayedDataStatus}
-              dataError={displayedDataError}
+              profileLabel={profileLabel}
               isDemo={isDemo}
+              onSignOut={handleSignOut}
             />
           }
-        />
-        <Route
-          path="/admin/projects"
-          element={
-            <AdminProjects
-              role={role}
-              projects={displayedProjects}
-              dataStatus={displayedDataStatus}
-              dataError={displayedDataError}
-              isDemo={isDemo}
-            />
-          }
-        />
-        <Route
-          path="/admin/projects/:id"
-          element={
-            <AdminProjectDetail
-              role={role}
-              projects={displayedProjects}
-              financialReferences={displayedFinancialReferences}
-              dataStatus={displayedDataStatus}
-              dataError={displayedDataError}
-              isDemo={isDemo}
-            />
-          }
-        />
-        <Route
-          path="/admin/*"
-          element={
-            <AdminDashboard
-              role={role}
-              projects={displayedProjects}
-              dataStatus={displayedDataStatus}
-              dataError={displayedDataError}
-              isDemo={isDemo}
-            />
-          }
-        />
-      </Route>
-    </Routes>
+        >
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/projects" element={<AdminProjects />} />
+          <Route path="/admin/projects/new" element={<AdminProjectForm mode="create" />} />
+          <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />
+          <Route path="/admin/projects/:id/edit" element={<AdminProjectForm mode="edit" />} />
+          <Route path="/admin/*" element={<AdminDashboard />} />
+        </Route>
+      </Routes>
+    </AdminDataProvider>
   );
 }

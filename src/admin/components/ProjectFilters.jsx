@@ -1,13 +1,14 @@
+// Project list filters. State is owned by the Projects route (synced to URL
+// search parameters) so dashboard/chart links can open filtered views.
 import {
-  PAYMENT_STATUSES,
   PORTFOLIO_PERMISSION_STATUSES,
   PROJECT_STAGES,
   PROJECT_STATUSES,
   PROJECT_TYPES,
 } from "../constants/projectStatus";
-import { canViewFinancialReferences } from "../utils/permissions";
+import { isOwner } from "../utils/projectCapabilities";
 
-function SelectFilter({ label, value, onChange, options }) {
+function SelectFilter({ label, value, onChange, options, allLabel = "All" }) {
   return (
     <label className="block">
       <span className="block text-xs font-medium text-gray-500 mb-1">{label}</span>
@@ -16,10 +17,10 @@ function SelectFilter({ label, value, onChange, options }) {
         onChange={(event) => onChange(event.target.value)}
         className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm focus:border-botanique-green focus:outline-none"
       >
-        <option value="">All</option>
+        <option value="">{allLabel}</option>
         {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
+          <option key={option.value ?? option} value={option.value ?? option}>
+            {option.label ?? option}
           </option>
         ))}
       </select>
@@ -27,10 +28,14 @@ function SelectFilter({ label, value, onChange, options }) {
   );
 }
 
-export default function ProjectFilters({ filters, setFilters, leadPeople, role }) {
-  const updateFilter = (key, value) => {
-    setFilters((current) => ({ ...current, [key]: value }));
-  };
+export default function ProjectFilters({ filters, updateFilter, resetFilters, leadOptions, role }) {
+  const leadSelectOptions = [
+    { value: "unassigned", label: "Unassigned" },
+    ...leadOptions.map((option) => ({
+      value: option.id,
+      label: option.full_name || option.email,
+    })),
+  ];
 
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-4">
@@ -41,20 +46,45 @@ export default function ProjectFilters({ filters, setFilters, leadPeople, role }
             type="search"
             value={filters.search}
             onChange={(event) => updateFilter("search", event.target.value)}
-            placeholder="Search projects, site labels, location..."
+            placeholder="Search projects, site labels, location…"
             className="w-full rounded-md border border-stone-200 px-3 py-2 text-sm focus:border-botanique-green focus:outline-none"
           />
         </label>
 
-        <SelectFilter label="Status" value={filters.status} onChange={(value) => updateFilter("status", value)} options={PROJECT_STATUSES} />
-        <SelectFilter label="Stage" value={filters.stage} onChange={(value) => updateFilter("stage", value)} options={PROJECT_STAGES} />
-        <SelectFilter label="Lead person" value={filters.leadPerson} onChange={(value) => updateFilter("leadPerson", value)} options={leadPeople} />
-        <SelectFilter label="Project type" value={filters.projectType} onChange={(value) => updateFilter("projectType", value)} options={PROJECT_TYPES} />
-        <SelectFilter label="Portfolio" value={filters.portfolioPermissionStatus} onChange={(value) => updateFilter("portfolioPermissionStatus", value)} options={PORTFOLIO_PERMISSION_STATUSES} />
+        <SelectFilter label="Status" value={filters.status} onChange={(v) => updateFilter("status", v)} options={PROJECT_STATUSES} />
+        <SelectFilter label="Stage" value={filters.stage} onChange={(v) => updateFilter("stage", v)} options={PROJECT_STAGES} />
+        <SelectFilter label="Accountable lead" value={filters.lead} onChange={(v) => updateFilter("lead", v)} options={leadSelectOptions} />
+        <SelectFilter label="Project type" value={filters.projectType} onChange={(v) => updateFilter("projectType", v)} options={PROJECT_TYPES} />
 
-        {canViewFinancialReferences(role) && (
-          <SelectFilter label="Payment" value={filters.paymentStatus} onChange={(value) => updateFilter("paymentStatus", value)} options={PAYMENT_STATUSES} />
+        {isOwner(role) && (
+          <SelectFilter
+            label="Portfolio permission"
+            value={filters.portfolio}
+            onChange={(v) => updateFilter("portfolio", v)}
+            options={PORTFOLIO_PERMISSION_STATUSES}
+          />
         )}
+
+        <SelectFilter
+          label="Archived state"
+          value={filters.archived}
+          onChange={(v) => updateFilter("archived", v)}
+          options={[
+            { value: "active", label: "Active only" },
+            { value: "archived", label: "Archived only" },
+          ]}
+          allLabel="All"
+        />
+      </div>
+
+      <div className="mt-3">
+        <button
+          type="button"
+          onClick={resetFilters}
+          className="text-xs font-semibold text-botanique-green hover:underline"
+        >
+          Reset filters
+        </button>
       </div>
     </div>
   );

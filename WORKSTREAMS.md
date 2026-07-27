@@ -1896,6 +1896,61 @@ unstarted.**
   column set / schema version used** and must not compare full-row checksums across
   schema-changing migrations without normalising the projected columns.
 
+### Phase 1B-A2 — Admin Shell, Essential Project CRUD & Initial Live Dashboard
+
+Status: **Implemented on a feature branch and opened as a DRAFT PR — NOT merged and NOT
+production-live.** No database migration; no hosted schema change; no hosted data mutation.
+The production `/admin` interface remains the earlier read-only Project Tracker until this
+PR is reviewed, merged and production-verified.
+
+- **Baseline:** exact `main` `9666a2803c916eb5f5a188176806aaeb049dc9cd`.
+  **Branch:** `feat/bd-operations-hub-phase1b-a2`. **Draft PR:** `BD-OPERATIONS-HUB-01:
+  implement Phase 1B-A2 admin operations` (draft, not merged, auto-merge not enabled).
+- **Implemented scope (UI only, on the existing Phase 1B-A1 schema):** a professional
+  responsive admin **shell** (persistent desktop sidebar, keyboard-operable mobile drawer,
+  top bar, authenticated profile + role badge — Owner / Operations Manager, URL-parameter
+  project search; only working Dashboard + Projects destinations, no dead "future" links,
+  no notifications icon); **essential project CRUD** via one shared create/edit form
+  (`/admin/projects/new`, `/admin/projects/:id/edit`) with role-scoped fields, DB-matching
+  validation, changed-fields-only PATCH, and blank→null normalisation; **owner material
+  quick actions** (activate / mark completed / cancel / classify Design-only / archive /
+  restore) each explicit + confirmed via an accessible dialog, sending only the changing
+  field(s); **manager routine editing** only (forced-Pending intake create; Ongoing↔Paused;
+  non-Completed/Archived stages; no material/portfolio/completion-date controls); an
+  **initial live dashboard** (KPI cards total/active/pending/completed/overdue-actions/
+  upcoming-starts + owner-only pending-activation; accessible native CSS bar charts by
+  status/stage/type; empty states "No data yet"); a project **Overview**; and a **read-only
+  Activity History** from the immutable `project_activities` ledger (readable field labels,
+  before/after values, Yes/No booleans, "Not set" nulls, resolved profile names with safe
+  role fallbacks — never a raw UUID or raw JSON). Refetch/invalidation runs after every
+  successful mutation; failed saves preserve entered values and surface the database error.
+- **Architecture:** authentication stays in `AdminApp`; a focused `AdminDataProvider`
+  (`src/admin/context/`) owns visible projects, role-visible profiles, loading/error, save
+  feedback, refetch and create/update mutations; REST logic stays in `src/admin/lib/supabase.js`
+  (added `fetchVisibleProfiles`, `fetchProjectActivities`, `createProject`, `updateProject`,
+  all with `Prefer: return=representation` and error surfacing; never sending audit/finance
+  columns or `last_updated`); pure helpers hold capability, payload/patch, KPI and
+  activity-format logic. No Supabase Realtime.
+- **Tests:** new Vitest + React Testing Library setup (test-infra devDependencies only).
+  **48 tests pass** across pure role/capability, create/patch payload (changed-fields-only,
+  blank→null, no audit fields, manager forced-Pending, preserved inaccessible lead),
+  date-order validation, KPI definitions, empty-chart "No data yet", activity formatting
+  (no UUID / no primary raw JSON), and component role tests (owner controls + pending
+  activation present; manager restrictions; failed-save preserves state; success triggers
+  the refetch mutation). No test writes to hosted production records.
+- **Lint / build:** every changed/new JS/JSX file is ESLint-clean. `npm run lint` reports
+  **19 inherited errors in unchanged files only** (`server/index.js` Node-global `no-undef`,
+  `src/components/FadeIn.jsx` `set-state-in-effect`, `src/context/AppContext.jsx`
+  `react-refresh/only-export-components`) — none introduced by this slice. `npm run build`
+  (clean `npm ci` install) succeeds and still prerenders the 43 public routes incl. `404.html`;
+  admin routes remain client-only.
+- **Preview verification:** the authenticated hosted-role matrix is verified through the
+  automated tests + local dev-seed fixtures (owner vs Operations Manager shells, controls,
+  pending activation, restricted manager create). Any Vercel preview verification against
+  hosted Supabase is **read-only**; no create/edit/archive/activation is run against hosted
+  records. **No migration. No hosted schema change. No hosted data mutation. Not merged. Not
+  production-live.**
+
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
 Status: **Launch pack prepared — external campaign setup NOT performed; no advert

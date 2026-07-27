@@ -1,0 +1,93 @@
+// Phase 1B-A2 dashboard KPI + chart aggregations — PURE functions.
+//
+// All metrics are computed from the currently VISIBLE live project records
+// (camelCase, from projectMappers). Definitions follow the product requirements
+// exactly. Dates are compared as ISO (YYYY-MM-DD) strings against the browser's
+// LOCAL calendar date, without any UTC conversion that could shift the day.
+import { PROJECT_STAGES, PROJECT_STATUSES, PROJECT_TYPES } from "../constants/projectStatus";
+
+// Local calendar date as YYYY-MM-DD (no UTC round-trip).
+export function todayIsoDate(now = new Date()) {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const isActiveProject = (p) => !p.archived && ["Ongoing", "Paused"].includes(p.status);
+const isPendingProject = (p) => !p.archived && p.status === "Pending";
+const isCompletedProject = (p) => !p.archived && p.status === "Completed";
+
+export function overdueActionProjects(projects, today = todayIsoDate()) {
+  return projects.filter(
+    (p) =>
+      !p.archived &&
+      p.nextAction &&
+      p.nextAction.trim().length > 0 &&
+      p.nextActionDate &&
+      p.nextActionDate < today &&
+      !["Completed", "Cancelled"].includes(p.status)
+  );
+}
+
+export function upcomingStartProjects(projects, today = todayIsoDate()) {
+  return projects.filter(
+    (p) => isPendingProject(p) && p.startDate && p.startDate >= today
+  );
+}
+
+// Owner-only: every non-archived Pending project awaiting activation.
+export function pendingActivationProjects(projects) {
+  return projects.filter(isPendingProject);
+}
+
+export function calculateDashboardMetrics(projects, today = todayIsoDate()) {
+  return {
+    total: projects.length,
+    active: projects.filter(isActiveProject).length,
+    pending: projects.filter(isPendingProject).length,
+    completed: projects.filter(isCompletedProject).length,
+    overdueActions: overdueActionProjects(projects, today).length,
+    upcomingStarts: upcomingStartProjects(projects, today).length,
+    pendingActivation: pendingActivationProjects(projects).length,
+  };
+}
+
+// Group a set of projects into ordered {label, value} chart rows. Categories
+// keep their canonical order; empty categories are omitted, and an entirely
+// empty project set yields [] so the caller can render "No data yet".
+function groupByCategory(projects, keyOf, categories) {
+  const counts = new Map();
+  for (const project of projects) {
+    const key = keyOf(project);
+    if (key === undefined || key === null || key === "") continue;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  const rows = [];
+  const seen = new Set();
+  for (const category of categories) {
+    const value = counts.get(category) || 0;
+    if (value > 0) {
+      rows.push({ label: category, value });
+      seen.add(category);
+    }
+  }
+  // Any value outside the known categories (defensive) is appended.
+  for (const [key, value] of counts) {
+    if (!seen.has(key)) rows.push({ label: key, value });
+  }
+  return rows;
+}
+
+export function projectsByStatus(projects) {
+  return groupByCategory(projects, (p) => p.status, PROJECT_STATUSES);
+}
+
+export function projectsByStage(projects) {
+  return groupByCategory(projects, (p) => p.stage, PROJECT_STAGES);
+}
+
+export function projectsByType(projects) {
+  return groupByCategory(projects, (p) => p.projectType, PROJECT_TYPES);
+}

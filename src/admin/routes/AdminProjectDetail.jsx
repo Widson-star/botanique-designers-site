@@ -1,7 +1,14 @@
-import { Link, useParams } from "react-router-dom";
+// Project detail: Overview + read-only Activity History only (no empty future
+// tabs). Owner material actions and the owner-only finance reference panel are
+// shown where permitted. Section shown via a `tab` URL search parameter.
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import FinancialReferencesPanel from "../components/FinancialReferencesPanel";
 import ProjectBadge from "../components/ProjectBadge";
-import { canManageStaff, canViewProject } from "../utils/permissions";
+import OwnerProjectActions from "../components/OwnerProjectActions";
+import ActivityHistory from "../components/ActivityHistory";
+import { useAdminData } from "../context/adminData";
+import { canViewProject } from "../utils/permissions";
+import { formatDateTime } from "../utils/activityFormat";
 
 function DetailCard({ title, children }) {
   return (
@@ -21,8 +28,17 @@ function DetailRow({ label, value }) {
   );
 }
 
-export default function AdminProjectDetail({ role, projects, financialReferences, dataStatus, dataError, isDemo }) {
+const TABS = [
+  { key: "overview", label: "Overview" },
+  { key: "activity", label: "Activity History" },
+];
+
+export default function AdminProjectDetail() {
   const { id } = useParams();
+  const { role, projects, financialReferences, isDemo, dataStatus, dataError } = useAdminData();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "activity" ? "activity" : "overview";
+
   const project = projects.find((item) => item.id === id);
   const financialReference = financialReferences[project?.id] || {};
 
@@ -42,99 +58,128 @@ export default function AdminProjectDetail({ role, projects, financialReferences
     );
   }
 
+  function selectTab(key) {
+    const next = new URLSearchParams(searchParams);
+    if (key === "overview") next.delete("tab");
+    else next.set("tab", key);
+    setSearchParams(next, { replace: true });
+  }
+
   return (
     <div className="space-y-5">
       <div>
         <Link to="/admin/projects" className="text-sm text-botanique-green font-semibold hover:underline">
-          Back to projects
+          ← Back to projects
         </Link>
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mt-3">
           <div>
-            <h1 className="text-2xl font-bold">{project.projectName}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{project.projectName}</h1>
+              {project.archived && (
+                <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-stone-600">
+                  Archived
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-500 mt-1">{project.clientSiteName || "Site label not set"}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start gap-2">
             <ProjectBadge value={project.status} />
             <ProjectBadge value={project.stage} />
-            <ProjectBadge value={project.portfolioPermissionStatus} />
+            <Link
+              to={`/admin/projects/${project.id}/edit`}
+              className="rounded-md bg-botanique-green px-3 py-1.5 text-sm font-semibold text-white hover:bg-botanique-dark"
+            >
+              Edit
+            </Link>
           </div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 space-y-5">
-          <DetailCard title="Operational details">
-            <dl className="grid md:grid-cols-2 gap-x-6">
-              <DetailRow label="Project type" value={project.projectType} />
-              <DetailRow label="Lead person" value={project.leadPerson} />
-              <DetailRow label="Location" value={project.location} />
-              <DetailRow label="County" value={project.county} />
-              <DetailRow label="Start date" value={project.startDate} />
-              <DetailRow label="Last updated" value={project.lastUpdated} />
-              <DetailRow label="Archived" value={project.archived ? "Yes" : "No"} />
-              <DetailRow label="Portfolio eligible" value={project.portfolioEligible ? "Yes" : "No"} />
-            </dl>
-          </DetailCard>
-
-          <DetailCard title="Notes">
-            <p className="text-sm text-gray-600 leading-relaxed">{project.notes || "No notes recorded."}</p>
-          </DetailCard>
-
-          <DetailCard title="Assignments">
-            <div className="flex flex-wrap gap-2">
-              {(project.assignments || []).map((assignment) => (
-                <span
-                  key={assignment}
-                  className="rounded-full bg-botanique-beige px-3 py-1 text-xs font-medium text-botanique-green"
-                >
-                  {assignment}
-                </span>
-              ))}
-            </div>
-            {canManageStaff(role) && (
-              <button
-                type="button"
-                disabled
-                className="mt-4 rounded-md border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed"
-              >
-                Assign staff - future
-              </button>
-            )}
-          </DetailCard>
-        </div>
-
-        <div className="space-y-5">
-          <DetailCard title="Next action">
-            <p className="text-sm text-gray-700 leading-relaxed">{project.nextAction || "No next action set."}</p>
-            <p className="text-xs text-gray-400 mt-3">Date: {project.nextActionDate || "Not dated"}</p>
+      {/* Tabs */}
+      <div className="border-b border-stone-200" role="tablist" aria-label="Project sections">
+        <div className="flex gap-2">
+          {TABS.map((item) => (
             <button
+              key={item.key}
               type="button"
-              disabled
-              className="mt-4 w-full rounded-md border border-stone-200 bg-stone-100 px-4 py-2 text-sm font-semibold text-gray-400 cursor-not-allowed"
+              role="tab"
+              aria-selected={tab === item.key}
+              onClick={() => selectTab(item.key)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                tab === item.key
+                  ? "border-botanique-green text-botanique-green"
+                  : "border-transparent text-gray-500 hover:text-botanique-charcoal"
+              }`}
             >
-              Edit next action - future
+              {item.label}
             </button>
-          </DetailCard>
-
-          <DetailCard title="Portfolio">
-            <dl>
-              <DetailRow label="Eligible" value={project.portfolioEligible ? "Yes" : "No"} />
-              <DetailRow label="Permission status" value={project.portfolioPermissionStatus} />
-            </dl>
-          </DetailCard>
+          ))}
         </div>
       </div>
 
-      <FinancialReferencesPanel financialReference={financialReference} role={role} isDemo={isDemo} />
+      {tab === "overview" ? (
+        <div className="space-y-5" role="tabpanel">
+          <OwnerProjectActions role={role} project={project} />
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5">
-        <h2 className="font-bold text-lg mb-2">Simple Invoice boundary</h2>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          This admin preview stores no official financial documents and does not create
-          estimates, invoices, receipts, payment records, PDFs, or document numbers.
-          Simple Invoice Manager remains the financial source of truth.
-        </p>
-      </section>
+          <div className="grid lg:grid-cols-3 gap-5">
+            <div className="lg:col-span-2 space-y-5">
+              <DetailCard title="Operational details">
+                <dl className="grid md:grid-cols-2 gap-x-6">
+                  <DetailRow label="Status" value={project.status} />
+                  <DetailRow label="Stage" value={project.stage} />
+                  <DetailRow label="Project type" value={project.projectType} />
+                  <DetailRow label="Accountable lead" value={project.leadPersonName} />
+                  <DetailRow label="Location" value={project.location} />
+                  <DetailRow label="County" value={project.county} />
+                  <DetailRow label="Planned start" value={project.startDate} />
+                  <DetailRow label="Actual start" value={project.actualStartDate} />
+                  <DetailRow label="Target completion" value={project.targetCompletionDate} />
+                  <DetailRow label="Actual completion" value={project.actualCompletionDate} />
+                  <DetailRow label="Archived" value={project.archived ? "Yes" : "No"} />
+                  <DetailRow label="Last modified" value={formatDateTime(project.updatedAt)} />
+                </dl>
+              </DetailCard>
+
+              <DetailCard title="Notes">
+                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                  {project.notes || "No notes recorded."}
+                </p>
+              </DetailCard>
+            </div>
+
+            <div className="space-y-5">
+              <DetailCard title="Next action">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {project.nextAction || "No next action set."}
+                </p>
+                <p className="text-xs text-gray-400 mt-3">Date: {project.nextActionDate || "Not dated"}</p>
+              </DetailCard>
+
+              <DetailCard title="Blocker">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {project.blocker || "None recorded."}
+                </p>
+              </DetailCard>
+
+              <DetailCard title="Portfolio">
+                <dl>
+                  <DetailRow label="Eligible" value={project.portfolioEligible ? "Yes" : "No"} />
+                  <DetailRow label="Permission status" value={project.portfolioPermissionStatus} />
+                </dl>
+              </DetailCard>
+            </div>
+          </div>
+
+          <FinancialReferencesPanel financialReference={financialReference} role={role} isDemo={isDemo} />
+        </div>
+      ) : (
+        <div role="tabpanel">
+          <DetailCard title="Activity History">
+            <ActivityHistory projectId={project.id} />
+          </DetailCard>
+        </div>
+      )}
     </div>
   );
 }

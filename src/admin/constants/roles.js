@@ -5,9 +5,11 @@ export const ROLES = {
   VIEWER: "viewer",
 };
 
+// Display labels only; the database role VALUES (owner/manager/staff/viewer)
+// are never changed. Manager is presented as "Operations Manager".
 export const ROLE_LABELS = {
   [ROLES.OWNER]: "Owner",
-  [ROLES.MANAGER]: "Manager",
+  [ROLES.MANAGER]: "Operations Manager",
   [ROLES.STAFF]: "Staff",
   [ROLES.VIEWER]: "Viewer",
 };

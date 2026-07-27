@@ -1,14 +1,18 @@
 # Botanique Operations Hub — Architecture Blueprint (BD-OPERATIONS-HUB-01)
 
 **Workstream:** BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation.
-**Status:** **Architecture recorded. Phase 1A (Lead Data and RLS Foundation) is applied
-and runtime-verified on the hosted `botanique-admin` project.** The admin-foundation
-schema and Phase 1A are both **live** in hosted Supabase (Pro organisation,
-`ACTIVE_HEALTHY`); migration history is reconciled for both versions
-(`20260614000100`, `20260726000100`). Phase 1A has **no visible UI yet** — the existing
-seven-project **Project Tracker remains the current production `/admin` interface**. No UI
-for leads/campaigns, storage buckets, integrations, external setup, or frontend production
-deployment are performed. Phase 1A is the first slice of Phase 1 (Operational spine).
+**Status:** **Architecture recorded. Phase 1A (Lead Data and RLS Foundation) and Phase
+1B-A1 (Project integrity & change history) are both applied and runtime-verified on the
+hosted `botanique-admin` project.** The admin-foundation schema, Phase 1A and Phase 1B-A1
+are all **live** in hosted Supabase (Pro organisation, `ACTIVE_HEALTHY`); migration history
+now contains all three versions (`20260614000100`, `20260726000100`, `20260726000200`).
+The **Phase 1B-A2 admin UI slice** (admin shell, essential project CRUD, initial live
+dashboard, project Overview + read-only Activity History) is the current implementation
+slice, developed on `feat/bd-operations-hub-phase1b-a2` and **not yet merged** — see
+`WORKSTREAMS.md` for its authoritative status. Until it merges, the existing seven-project
+**Project Tracker remains the current production `/admin` interface**. No UI for
+leads/campaigns, storage buckets, integrations, external setup, or frontend production
+deployment are performed here. Phase 1A is the first slice of Phase 1 (Operational spine).
 **Current UI limitation:** the production Project Tracker is **read-only** — it displays
 real hosted projects but has **no create/edit/archive/restore or next-action editing** (its
 "Add project / Archive / Assign staff / Edit next action" controls are disabled "future"

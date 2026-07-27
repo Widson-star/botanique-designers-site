@@ -78,30 +78,41 @@ export async function fetchCurrentProfile(accessToken, userId) {
   return profiles?.[0] || null;
 }
 
+// All current operational project fields are fetched. `last_updated` is
+// intentionally excluded (deprecated); `updated_at` is the authoritative
+// last-modified value. No finance columns are read here.
+const PROJECT_SELECT = [
+  "id",
+  "project_name",
+  "client_site_name",
+  "location",
+  "county",
+  "project_type",
+  "status",
+  "stage",
+  "lead_person_id",
+  "start_date",
+  "actual_start_date",
+  "target_completion_date",
+  "actual_completion_date",
+  "next_action",
+  "next_action_date",
+  "blocker",
+  "portfolio_eligible",
+  "portfolio_permission_status",
+  "notes",
+  "archived",
+  "archived_at",
+  "archived_by",
+  "created_by",
+  "updated_by",
+  "created_at",
+  "updated_at",
+].join(",");
+
 export async function fetchProjects(accessToken) {
   const params = new URLSearchParams({
-    select: [
-      "id",
-      "project_name",
-      "client_site_name",
-      "location",
-      "county",
-      "project_type",
-      "status",
-      "stage",
-      "lead_person_id",
-      "start_date",
-      "last_updated",
-      "next_action",
-      "next_action_date",
-      "portfolio_eligible",
-      "portfolio_permission_status",
-      "notes",
-      "archived",
-      "archived_at",
-      "created_at",
-      "updated_at",
-    ].join(","),
+    select: PROJECT_SELECT,
     order: "updated_at.desc",
   });
 
@@ -110,6 +121,84 @@ export async function fetchProjects(accessToken) {
   });
 
   return readJsonResponse(response);
+}
+
+// Profiles visible to the caller through existing RLS: owner sees all; manager
+// sees himself + active staff; used to populate accountable-lead choices and to
+// resolve lead/actor names in the UI. Never bypasses RLS.
+export async function fetchVisibleProfiles(accessToken) {
+  const params = new URLSearchParams({
+    select: "id,email,full_name,role,is_active",
+    order: "full_name.asc",
+  });
+
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/profiles?${params.toString()}`, {
+    headers: getHeaders(accessToken),
+  });
+
+  return readJsonResponse(response);
+}
+
+// Read-only access to the immutable project-change ledger for one project.
+export async function fetchProjectActivities(accessToken, projectId) {
+  const params = new URLSearchParams({
+    select: [
+      "id",
+      "project_id",
+      "action",
+      "actor_id",
+      "occurred_at",
+      "changed_fields",
+      "previous_values",
+      "new_values",
+      "reason",
+    ].join(","),
+    project_id: `eq.${projectId}`,
+    order: "occurred_at.desc",
+  });
+
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/project_activities?${params.toString()}`,
+    { headers: getHeaders(accessToken) }
+  );
+
+  return readJsonResponse(response);
+}
+
+// Create a project. Audit/finance columns are never in `payload` (see
+// projectForm helpers). Returns the created row so the UI can refetch/refresh.
+export async function createProject(accessToken, payload) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/projects`, {
+    method: "POST",
+    headers: {
+      ...getHeaders(accessToken),
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const rows = await readJsonResponse(response);
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+// Patch only genuinely changed operational fields for one project. PostgREST /
+// database errors surface through readJsonResponse.
+export async function updateProject(accessToken, projectId, patch) {
+  const params = new URLSearchParams({ id: `eq.${projectId}` });
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/projects?${params.toString()}`,
+    {
+      method: "PATCH",
+      headers: {
+        ...getHeaders(accessToken),
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(patch),
+    }
+  );
+
+  const rows = await readJsonResponse(response);
+  return Array.isArray(rows) ? rows[0] : rows;
 }
 
 export async function fetchFinancialReferences(accessToken, projectIds) {
