@@ -40,17 +40,17 @@ describe("formatActivity", () => {
   };
 
   it("produces human before/after rows without raw JSON or UUIDs", () => {
-    const profilesById = { [UUID]: { full_name: "Widson Ambaisi" } };
+    const profilesById = { [UUID]: { full_name: "Widson Omutelema Ambaisi" } };
     const formatted = formatActivity(activity, profilesById);
     expect(formatted.actionLabel).toBe("Project updated");
-    expect(formatted.actor).toBe("Widson Ambaisi");
+    expect(formatted.actor).toBe("Widson Omutelema Ambaisi");
 
     const statusChange = formatted.changes.find((c) => c.field === "status");
     expect(statusChange.before).toBe("Pending");
     expect(statusChange.after).toBe("Ongoing");
 
     const leadChange = formatted.changes.find((c) => c.field === "lead_person_id");
-    expect(leadChange.after).toBe("Widson Ambaisi");
+    expect(leadChange.after).toBe("Widson Omutelema Ambaisi");
 
     const portfolioChange = formatted.changes.find((c) => c.field === "portfolio_eligible");
     expect(portfolioChange.before).toBe("No");
@@ -64,5 +64,18 @@ describe("formatActivity", () => {
   it("falls back to a safe actor label when the profile is unreadable", () => {
     const formatted = formatActivity(activity, {});
     expect(formatted.actor).toBe("Owner or authorised manager");
+  });
+
+  it("does not return deprecated last_updated changes for display", () => {
+    const formatted = formatActivity(
+      {
+        ...activity,
+        changed_fields: ["last_updated", "status"],
+        previous_values: { last_updated: "2026-07-01", status: "Pending" },
+        new_values: { last_updated: "2026-07-02", status: "Ongoing" },
+      },
+      {}
+    );
+    expect(formatted.changes.map((change) => change.field)).toEqual(["status"]);
   });
 });

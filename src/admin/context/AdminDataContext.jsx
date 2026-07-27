@@ -37,12 +37,12 @@ function toProfilesById(profiles) {
 
 // ---- Demo (seed) adapter --------------------------------------------------
 const DEMO_LEAD_IDS = {
-  Widson: "demo-owner",
+  "Widson Omutelema Ambaisi": "demo-owner",
   Martine: "demo-manager",
 };
 
 const DEMO_PROFILES = [
-  { id: "demo-owner", email: "owner@example.test", full_name: "Widson Ambaisi", role: "owner", is_active: true },
+  { id: "demo-owner", email: "owner@example.test", full_name: "Widson Omutelema Ambaisi", role: "owner", is_active: true },
   { id: "demo-manager", email: "manager@example.test", full_name: "Martine Lotom", role: "manager", is_active: true },
 ];
 
@@ -157,6 +157,17 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
 
   const profilesById = useMemo(() => toProfilesById(profiles), [profiles]);
 
+  // Insert or replace a single mapped project in local state (never clears).
+  const upsertProject = useCallback((mapped) => {
+    setProjects((prev) => {
+      const index = prev.findIndex((project) => project.id === mapped.id);
+      if (index === -1) return [mapped, ...prev];
+      const next = prev.slice();
+      next[index] = mapped;
+      return next;
+    });
+  }, []);
+
   // Apply a fetched bundle (or an error) to state. Called from the in-effect
   // loader and from refetch — both outside the synchronous effect body.
   const applyBundle = useCallback((bundle) => {
@@ -202,19 +213,26 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
     };
   }, [isDemo, accessToken, role, applyBundle, applyLoadError]);
 
+  // Reconcile projects with the server WITHOUT clearing existing data on
+  // failure. Returns { ok } so callers can surface a refresh warning while
+  // keeping already-loaded (and optimistically-merged) projects. The INITIAL
+  // load uses the effect above (which may hard-fail via applyLoadError); this
+  // is the post-load / retry path and must preserve prior data.
   const refetchProjects = useCallback(async () => {
     if (isDemo) {
       refreshDemoState();
-      return;
+      return { ok: true };
     }
-    if (!accessToken || !role) return;
-    setDataStatus("loading");
+    if (!accessToken || !role) return { ok: true };
     try {
       applyBundle(await loadAdminBundle(accessToken, role));
+      return { ok: true };
     } catch (error) {
-      applyLoadError(error);
+      // Preserve previously loaded data; only ensure we are not stuck loading.
+      setDataStatus("ready");
+      return { ok: false, error };
     }
-  }, [isDemo, accessToken, role, applyBundle, applyLoadError, refreshDemoState]);
+  }, [isDemo, accessToken, role, applyBundle, refreshDemoState]);
 
   const fetchActivities = useCallback(
     async (projectId) => {
@@ -247,9 +265,23 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
         }
 
         const created = await apiCreateProject(accessToken, payload);
-        await refetchProjects();
-        setSaveFeedback({ type: "success", message: "Project created." });
-        return { ok: true, id: created?.id };
+        // Immediately reflect the returned representation so navigation to the
+        // new detail route always finds it, even if the refresh below fails.
+        if (created) {
+          upsertProject(mapDatabaseProject(created, profilesById));
+        }
+        const refresh = await refetchProjects();
+        if (refresh.ok) {
+          setSaveFeedback({ type: "success", message: "Project created." });
+          return { ok: true, id: created?.id };
+        }
+        // The write persisted; only the follow-up refresh failed.
+        setSaveFeedback({
+          type: "warning",
+          message:
+            "The project was saved, but the latest project list could not be refreshed. Retry refresh.",
+        });
+        return { ok: true, id: created?.id, refreshWarning: true };
       } catch (error) {
         setSaveFeedback({
           type: "error",
@@ -258,7 +290,7 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
         return { ok: false, error: error.message };
       }
     },
-    [accessToken, isDemo, refetchProjects]
+    [accessToken, isDemo, profilesById, refetchProjects, upsertProject]
   );
 
   const updateProject = useCallback(
@@ -316,10 +348,23 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
           return { ok: true, id: projectId };
         }
 
-        await apiUpdateProject(accessToken, projectId, patch);
-        await refetchProjects();
-        setSaveFeedback({ type: "success", message: "Changes saved." });
-        return { ok: true, id: projectId };
+        const updated = await apiUpdateProject(accessToken, projectId, patch);
+        // Reflect the returned representation immediately so the detail/list
+        // views stay correct even if the reconciling refresh fails.
+        if (updated) {
+          upsertProject(mapDatabaseProject(updated, profilesById));
+        }
+        const refresh = await refetchProjects();
+        if (refresh.ok) {
+          setSaveFeedback({ type: "success", message: "Changes saved." });
+          return { ok: true, id: projectId };
+        }
+        setSaveFeedback({
+          type: "warning",
+          message:
+            "The project was saved, but the latest project list could not be refreshed. Retry refresh.",
+        });
+        return { ok: true, id: projectId, refreshWarning: true };
       } catch (error) {
         setSaveFeedback({
           type: "error",
@@ -328,7 +373,7 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
         return { ok: false, error: error.message };
       }
     },
-    [accessToken, isDemo, refetchProjects]
+    [accessToken, isDemo, profilesById, refetchProjects, upsertProject]
   );
 
   const clearSaveFeedback = useCallback(() => setSaveFeedback(null), []);

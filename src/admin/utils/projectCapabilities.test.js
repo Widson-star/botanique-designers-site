@@ -3,6 +3,8 @@ import {
   canActivate,
   canArchive,
   canCancel,
+  canCreateProjects,
+  canEditProjects,
   canMarkCompleted,
   canRestore,
   canSeePendingActivation,
@@ -15,6 +17,8 @@ import { PROJECT_STAGES, PROJECT_STATUSES } from "../constants/projectStatus";
 
 const OWNER = "owner";
 const MANAGER = "manager";
+const STAFF = "staff";
+const VIEWER = "viewer";
 
 const pending = { status: "Pending", stage: "Inquiry", archived: false };
 const ongoing = { status: "Ongoing", stage: "Implementation", archived: false };
@@ -87,6 +91,15 @@ describe("manager capabilities", () => {
 
     const createCaps = projectFormCapabilities(MANAGER, "create", null);
     expect(createCaps.targetCompletionEditable).toBe(true);
+  });
+});
+
+describe("staff and viewer capabilities", () => {
+  it("cannot create or edit project-master records", () => {
+    for (const role of [STAFF, VIEWER]) {
+      expect(canCreateProjects(role)).toBe(false);
+      expect(canEditProjects(role)).toBe(false);
+    }
   });
 });
 

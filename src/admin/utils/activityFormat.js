@@ -27,7 +27,6 @@ export const FIELD_LABELS = {
   portfolio_eligible: "Portfolio eligible",
   portfolio_permission_status: "Portfolio permission status",
   archived: "Archived",
-  last_updated: "Last updated (legacy)",
 };
 
 export const ACTION_LABELS = {
@@ -84,7 +83,6 @@ const DATE_FIELDS = new Set([
   "target_completion_date",
   "actual_completion_date",
   "next_action_date",
-  "last_updated",
 ]);
 
 const BOOLEAN_FIELDS = new Set(["portfolio_eligible", "archived"]);
@@ -117,7 +115,9 @@ export function formatActivity(activity, profilesById = {}) {
     ? activity.changed_fields
     : [];
 
-  const changes = changed.map((field) => ({
+  // `last_updated` is deprecated and never returns to the UI, including when
+  // an older ledger event contains it.
+  const changes = changed.filter((field) => field !== "last_updated").map((field) => ({
     field,
     label: fieldLabel(field),
     before: formatFieldValue(field, previous[field] ?? null, profilesById),

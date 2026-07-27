@@ -7,7 +7,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import ProjectBadge from "../components/ProjectBadge";
 import ProjectFilters from "../components/ProjectFilters";
 import { useAdminData } from "../context/adminData";
-import { leadOptionsForRole } from "../utils/projectCapabilities";
+import {
+  canCreateProjects,
+  canEditProjects,
+  leadOptionsForRole,
+} from "../utils/projectCapabilities";
+import { applyProjectView, PROJECT_VIEW_LABELS } from "../utils/dashboardMetrics";
 
 const FILTER_KEYS = ["search", "status", "stage", "lead", "projectType", "portfolio", "archived"];
 
@@ -31,6 +36,13 @@ export default function AdminProjects() {
     acc[key] = searchParams.get(key) || "";
     return acc;
   }, {});
+  // A dashboard KPI opens Projects with a `view` derived from the SAME metric
+  // definition it counts, so the opened list always matches the number shown.
+  const view = searchParams.get("view") || "";
+  const viewLabel = PROJECT_VIEW_LABELS[view];
+
+  const canCreate = canCreateProjects(role);
+  const canEdit = canEditProjects(role);
 
   const updateFilter = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -40,6 +52,11 @@ export default function AdminProjects() {
   };
 
   const resetFilters = () => setSearchParams(new URLSearchParams(), { replace: true });
+  const clearView = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("view");
+    setSearchParams(next, { replace: true });
+  };
 
   const leadOptions = useMemo(
     () => leadOptionsForRole(role, profiles, currentUserId),
@@ -47,7 +64,11 @@ export default function AdminProjects() {
   );
 
   const filtered = useMemo(() => {
-    return projects.filter((project) => {
+    // Apply the derived KPI view first (exact metric set), then the dropdown
+    // filters. Arriving from a KPI link with no other filters yields exactly
+    // that metric's dataset.
+    const base = applyProjectView(projects, view);
+    return base.filter((project) => {
       if (!matchesSearch(project, filters.search)) return false;
       if (filters.status && project.status !== filters.status) return false;
       if (filters.stage && project.stage !== filters.stage) return false;
@@ -62,7 +83,7 @@ export default function AdminProjects() {
       if (filters.archived === "archived" && !project.archived) return false;
       return true;
     });
-  }, [filters, projects]);
+  }, [filters, projects, view]);
 
   return (
     <div className="space-y-5">
@@ -73,13 +94,30 @@ export default function AdminProjects() {
             Search, filter and maintain live operational project records.
           </p>
         </div>
-        <Link
-          to="/admin/projects/new"
-          className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark transition"
-        >
-          New project
-        </Link>
+        {canCreate && (
+          <Link
+            to="/admin/projects/new"
+            className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark transition"
+          >
+            New project
+          </Link>
+        )}
       </div>
+
+      {viewLabel && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-botanique-green/30 bg-botanique-beige px-4 py-2 text-sm">
+          <span className="text-botanique-charcoal">
+            Showing <strong>{viewLabel}</strong> (from the dashboard).
+          </span>
+          <button
+            type="button"
+            onClick={clearView}
+            className="text-xs font-semibold text-botanique-green hover:underline"
+          >
+            Clear view
+          </button>
+        </div>
+      )}
 
       {dataStatus === "loading" && (
         <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">
@@ -146,9 +184,11 @@ export default function AdminProjects() {
                     <Link to={`/admin/projects/${project.id}`} className="text-botanique-green font-semibold hover:underline">
                       Open
                     </Link>
-                    <Link to={`/admin/projects/${project.id}/edit`} className="text-gray-500 hover:underline">
-                      Edit
-                    </Link>
+                    {canEdit && (
+                      <Link to={`/admin/projects/${project.id}/edit`} className="text-gray-500 hover:underline">
+                        Edit
+                      </Link>
+                    )}
                   </div>
                 </td>
               </tr>

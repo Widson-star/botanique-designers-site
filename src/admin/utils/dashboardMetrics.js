@@ -18,6 +18,20 @@ const isActiveProject = (p) => !p.archived && ["Ongoing", "Paused"].includes(p.s
 const isPendingProject = (p) => !p.archived && p.status === "Pending";
 const isCompletedProject = (p) => !p.archived && p.status === "Completed";
 
+// Exact metric datasets — shared by both the dashboard KPI counts and the
+// Projects drill-down filters so a KPI always opens precisely its own set.
+export function activeProjects(projects) {
+  return projects.filter(isActiveProject);
+}
+
+export function pendingProjects(projects) {
+  return projects.filter(isPendingProject);
+}
+
+export function completedProjects(projects) {
+  return projects.filter(isCompletedProject);
+}
+
 export function overdueActionProjects(projects, today = todayIsoDate()) {
   return projects.filter(
     (p) =>
@@ -44,13 +58,39 @@ export function pendingActivationProjects(projects) {
 export function calculateDashboardMetrics(projects, today = todayIsoDate()) {
   return {
     total: projects.length,
-    active: projects.filter(isActiveProject).length,
-    pending: projects.filter(isPendingProject).length,
-    completed: projects.filter(isCompletedProject).length,
+    active: activeProjects(projects).length,
+    pending: pendingProjects(projects).length,
+    completed: completedProjects(projects).length,
     overdueActions: overdueActionProjects(projects, today).length,
     upcomingStarts: upcomingStartProjects(projects, today).length,
     pendingActivation: pendingActivationProjects(projects).length,
   };
+}
+
+// The named drill-down views a dashboard KPI can open. Each returns exactly the
+// set counted by the matching KPI, so the opened list matches the number shown.
+export const PROJECT_VIEWS = {
+  active: activeProjects,
+  pending: pendingProjects,
+  completed: completedProjects,
+  "overdue-actions": overdueActionProjects,
+  "upcoming-starts": upcomingStartProjects,
+  "pending-activation": pendingActivationProjects,
+};
+
+export const PROJECT_VIEW_LABELS = {
+  active: "Active projects",
+  pending: "Pending projects",
+  completed: "Completed projects",
+  "overdue-actions": "Projects with overdue actions",
+  "upcoming-starts": "Projects with upcoming starts",
+  "pending-activation": "Projects pending activation",
+};
+
+// Apply a named view to a project set (identity when the view is unknown/empty).
+export function applyProjectView(projects, view, today = todayIsoDate()) {
+  const fn = PROJECT_VIEWS[view];
+  return fn ? fn(projects, today) : projects;
 }
 
 // Group a set of projects into ordered {label, value} chart rows. Categories

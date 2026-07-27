@@ -8,6 +8,7 @@ import OwnerProjectActions from "../components/OwnerProjectActions";
 import ActivityHistory from "../components/ActivityHistory";
 import { useAdminData } from "../context/adminData";
 import { canViewProject } from "../utils/permissions";
+import { canEditProjects, isOwner } from "../utils/projectCapabilities";
 import { formatDateTime } from "../utils/activityFormat";
 
 function DetailCard({ title, children }) {
@@ -38,6 +39,8 @@ export default function AdminProjectDetail() {
   const { role, projects, financialReferences, isDemo, dataStatus, dataError } = useAdminData();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get("tab") === "activity" ? "activity" : "overview";
+  const canEdit = canEditProjects(role);
+  const showPortfolio = isOwner(role);
 
   const project = projects.find((item) => item.id === id);
   const financialReference = financialReferences[project?.id] || {};
@@ -86,12 +89,14 @@ export default function AdminProjectDetail() {
           <div className="flex flex-wrap items-start gap-2">
             <ProjectBadge value={project.status} />
             <ProjectBadge value={project.stage} />
-            <Link
-              to={`/admin/projects/${project.id}/edit`}
-              className="rounded-md bg-botanique-green px-3 py-1.5 text-sm font-semibold text-white hover:bg-botanique-dark"
-            >
-              Edit
-            </Link>
+            {canEdit && (
+              <Link
+                to={`/admin/projects/${project.id}/edit`}
+                className="rounded-md bg-botanique-green px-3 py-1.5 text-sm font-semibold text-white hover:bg-botanique-dark"
+              >
+                Edit
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -162,12 +167,14 @@ export default function AdminProjectDetail() {
                 </p>
               </DetailCard>
 
-              <DetailCard title="Portfolio">
-                <dl>
-                  <DetailRow label="Eligible" value={project.portfolioEligible ? "Yes" : "No"} />
-                  <DetailRow label="Permission status" value={project.portfolioPermissionStatus} />
-                </dl>
-              </DetailCard>
+              {showPortfolio && (
+                <DetailCard title="Portfolio Overview">
+                  <dl>
+                    <DetailRow label="Eligible" value={project.portfolioEligible ? "Yes" : "No"} />
+                    <DetailRow label="Permission status" value={project.portfolioPermissionStatus} />
+                  </dl>
+                </DetailCard>
+              )}
             </div>
           </div>
 

@@ -234,10 +234,24 @@ export function buildActivatePatch() {
 }
 
 export function buildMarkCompletedPatch(actualCompletionDate) {
+  const date = normalizeDate(actualCompletionDate);
+  if (!date) {
+    throw new Error("An actual completion date is required.");
+  }
   return {
     status: "Completed",
-    actual_completion_date: normalizeDate(actualCompletionDate),
+    actual_completion_date: date,
   };
+}
+
+export function validateActualCompletionDate(actualCompletionDate, actualStartDate) {
+  const date = normalizeDate(actualCompletionDate);
+  if (!date) return "An actual completion date is required.";
+  const start = normalizeDate(actualStartDate);
+  if (start && date < start) {
+    return `Actual completion cannot be before the actual start date (${start}).`;
+  }
+  return "";
 }
 
 export function buildCancelPatch() {

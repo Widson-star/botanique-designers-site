@@ -4,7 +4,7 @@
 // Projects views via URL search parameters.
 import { Link } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
-import { canSeePendingActivation } from "../utils/projectCapabilities";
+import { canCreateProjects, canSeePendingActivation } from "../utils/projectCapabilities";
 import {
   calculateDashboardMetrics,
   projectsByStage,
@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const { role, projects, dataStatus, dataError } = useAdminData();
   const metrics = calculateDashboardMetrics(projects);
   const showPendingActivation = canSeePendingActivation(role);
+  const showNewProject = canCreateProjects(role);
 
   return (
     <div className="space-y-6">
@@ -29,12 +30,14 @@ export default function AdminDashboard() {
             Live operational overview for Botanique Designers projects.
           </p>
         </div>
-        <Link
-          to="/admin/projects/new"
-          className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark transition"
-        >
-          New project
-        </Link>
+        {showNewProject && (
+          <Link
+            to="/admin/projects/new"
+            className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark transition"
+          >
+            New project
+          </Link>
+        )}
       </div>
 
       {dataStatus === "loading" && (
@@ -51,13 +54,13 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Total projects" value={metrics.total} href="/admin/projects" />
-        <StatCard label="Active" value={metrics.active} href="/admin/projects?status=Ongoing" hint="Ongoing or Paused" />
-        <StatCard label="Pending" value={metrics.pending} href="/admin/projects?status=Pending" />
-        <StatCard label="Completed" value={metrics.completed} href="/admin/projects?status=Completed" />
-        <StatCard label="Overdue actions" value={metrics.overdueActions} href="/admin/projects" />
-        <StatCard label="Upcoming starts" value={metrics.upcomingStarts} href="/admin/projects?status=Pending" />
+        <StatCard label="Active" value={metrics.active} href="/admin/projects?view=active" hint="Ongoing or Paused" />
+        <StatCard label="Pending" value={metrics.pending} href="/admin/projects?view=pending" />
+        <StatCard label="Completed" value={metrics.completed} href="/admin/projects?view=completed" />
+        <StatCard label="Overdue actions" value={metrics.overdueActions} href="/admin/projects?view=overdue-actions" />
+        <StatCard label="Upcoming starts" value={metrics.upcomingStarts} href="/admin/projects?view=upcoming-starts" />
         {showPendingActivation && (
-          <StatCard label="Pending activation" value={metrics.pendingActivation} href="/admin/projects?status=Pending" />
+          <StatCard label="Pending activation" value={metrics.pendingActivation} href="/admin/projects?view=pending-activation" />
         )}
       </div>
 

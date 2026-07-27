@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateDashboardMetrics,
+  applyProjectView,
   overdueActionProjects,
   projectsByStatus,
   todayIsoDate,
@@ -60,6 +61,28 @@ describe("calculateDashboardMetrics", () => {
       TODAY
     );
     expect(rows).toHaveLength(1);
+  });
+
+  it("uses the exact Active predicate for the active drill-down", () => {
+    expect(applyProjectView(projects, "active", TODAY)).toHaveLength(
+      calculateDashboardMetrics(projects, TODAY).active
+    );
+    expect(applyProjectView(projects, "active", TODAY).map((p) => p.status)).toEqual([
+      "Ongoing",
+      "Paused",
+    ]);
+  });
+
+  it("uses the exact overdue-actions predicate for its drill-down", () => {
+    expect(applyProjectView(projects, "overdue-actions", TODAY)).toEqual(
+      overdueActionProjects(projects, TODAY)
+    );
+  });
+
+  it("uses the exact upcoming-starts predicate for its drill-down", () => {
+    expect(applyProjectView(projects, "upcoming-starts", TODAY)).toEqual(
+      upcomingStartProjects(projects, TODAY)
+    );
   });
 });
 

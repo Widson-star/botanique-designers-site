@@ -15,7 +15,7 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_DESCRIPTIONS = {
-  [ROLES.OWNER]: "Widson view: full operational access plus owner-only financial references.",
+  [ROLES.OWNER]: "Widson Omutelema Ambaisi: full operational access plus owner-only financial references.",
   [ROLES.MANAGER]: "Martine view: operational project access with all financial references hidden.",
   [ROLES.STAFF]: "Staff/casual view: limited assigned project visibility with financial references hidden.",
   [ROLES.VIEWER]: "Read-only view for permitted records, with financial references hidden.",

@@ -1,7 +1,7 @@
 // Owner-only material project quick-actions. Each action is explicit and
 // confirmed through an accessible dialog, sends ONLY the field(s) that change
 // (no silent coupling), and relies on the provider to refetch after success.
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useAdminData } from "../context/adminData";
 import {
   canActivate,
@@ -19,6 +19,7 @@ import {
   buildDesignOnlyPatch,
   buildMarkCompletedPatch,
   buildRestorePatch,
+  validateActualCompletionDate,
 } from "../utils/projectForm";
 import { todayIsoDate } from "../utils/dashboardMetrics";
 import ConfirmDialog from "./ConfirmDialog";
@@ -32,6 +33,7 @@ export default function OwnerProjectActions({ role, project }) {
   const [completionDate, setCompletionDate] = useState(todayIsoDate());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const completionDateId = useId();
 
   if (!hasOwnerMaterialActions(role, project)) return null;
 
@@ -58,6 +60,19 @@ export default function OwnerProjectActions({ role, project }) {
     }
   }
 
+  // Client-side business-rule validation; the database date-order CHECK remains
+  // defence-in-depth, while the UI additionally requires a non-empty date.
+  const completionError =
+    active === "complete"
+      ? validateActualCompletionDate(completionDate, project.actualStartDate)
+      : "";
+
+  function confirmComplete() {
+    // Guard before the API call; never submit a blank or out-of-order date.
+    if (validateActualCompletionDate(completionDate, project.actualStartDate)) return;
+    run(buildMarkCompletedPatch(completionDate));
+  }
+
   const dialogs = {
     activate: {
       title: "Activate project",
@@ -69,19 +84,29 @@ export default function OwnerProjectActions({ role, project }) {
       title: "Mark project completed",
       description: `Record an actual completion date and set "${project.projectName}" to Completed. The project stage is not changed automatically.`,
       confirmLabel: "Mark completed",
-      onConfirm: () => run(buildMarkCompletedPatch(completionDate)),
+      confirmDisabled: Boolean(completionError),
+      onConfirm: confirmComplete,
       body: (
-        <label className="block text-sm">
-          <span className="block text-xs font-medium text-gray-600 mb-1">
-            Actual completion date <span className="text-red-600">*</span>
-          </span>
-          <input
-            type="date"
-            value={completionDate}
-            onChange={(e) => setCompletionDate(e.target.value)}
-            className="w-full rounded-md border border-stone-200 px-3 py-2 text-sm focus:border-botanique-green focus:outline-none"
-          />
-        </label>
+        <div className="block text-sm">
+          <label className="block" htmlFor={completionDateId}>
+            <span className="block text-xs font-medium text-gray-600 mb-1">
+              Actual completion date <span className="text-red-600">*</span>
+            </span>
+            <input
+              id={completionDateId}
+              type="date"
+              value={completionDate}
+              onChange={(e) => setCompletionDate(e.target.value)}
+              aria-invalid={Boolean(completionError)}
+              className="w-full rounded-md border border-stone-200 px-3 py-2 text-sm focus:border-botanique-green focus:outline-none"
+            />
+          </label>
+          {completionError && (
+            <p className="mt-1 text-xs text-red-600" role="alert">
+              {completionError}
+            </p>
+          )}
+        </div>
       ),
     },
     cancel: {
@@ -101,6 +126,7 @@ export default function OwnerProjectActions({ role, project }) {
       title: "Archive project",
       description: `Archive "${project.projectName}". Only the archived flag changes; the record is preserved and can be restored.`,
       confirmLabel: "Archive",
+      confirmTone: "danger",
       onConfirm: () => run(buildArchivePatch()),
     },
     restore: {
@@ -159,6 +185,7 @@ export default function OwnerProjectActions({ role, project }) {
           description={current.description}
           confirmLabel={current.confirmLabel}
           confirmTone={current.confirmTone}
+          confirmDisabled={current.confirmDisabled}
           busy={busy}
           onConfirm={current.onConfirm}
           onCancel={close}

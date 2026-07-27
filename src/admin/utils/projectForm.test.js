@@ -5,6 +5,7 @@ import {
   buildUpdatePatch,
   normalizeOptional,
   projectToFormState,
+  validateActualCompletionDate,
   validateProjectForm,
 } from "./projectForm";
 
@@ -156,6 +157,24 @@ describe("buildMarkCompletedPatch", () => {
     const patch = buildMarkCompletedPatch("2026-12-01");
     expect(patch).toEqual({ status: "Completed", actual_completion_date: "2026-12-01" });
     expect(patch).not.toHaveProperty("stage");
+  });
+
+  it("refuses to construct a completion patch without a date", () => {
+    expect(() => buildMarkCompletedPatch("")).toThrow(
+      "An actual completion date is required."
+    );
+  });
+});
+
+describe("validateActualCompletionDate", () => {
+  it("requires a date and rejects a date before actual start", () => {
+    expect(validateActualCompletionDate("", "2026-07-10")).toBe(
+      "An actual completion date is required."
+    );
+    expect(validateActualCompletionDate("2026-07-09", "2026-07-10")).toMatch(
+      /cannot be before the actual start date/
+    );
+    expect(validateActualCompletionDate("2026-07-10", "2026-07-10")).toBe("");
   });
 });
 

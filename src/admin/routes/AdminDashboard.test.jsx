@@ -41,4 +41,43 @@ describe("AdminDashboard pending activation", () => {
     renderDashboard({ role: "owner", projects: [] });
     expect(screen.getAllByText("No data yet").length).toBeGreaterThan(0);
   });
+
+  it("links each derived KPI to its exact named project view", () => {
+    renderDashboard({ role: "owner", projects });
+    expect(screen.getByText("Active").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/projects?view=active"
+    );
+    expect(screen.getByText("Overdue actions").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/projects?view=overdue-actions"
+    );
+    expect(screen.getByText("Upcoming starts").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/projects?view=upcoming-starts"
+    );
+  });
+
+  it("hides New project from staff and viewer roles", () => {
+    const { rerender } = renderDashboard({ role: "staff", projects });
+    expect(screen.queryByRole("link", { name: "New project" })).not.toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <AdminDataContext.Provider
+          value={{
+            role: "viewer",
+            projects,
+            profilesById: {},
+            dataStatus: "ready",
+            dataError: "",
+            fetchActivities: vi.fn(),
+          }}
+        >
+          <AdminDashboard />
+        </AdminDataContext.Provider>
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole("link", { name: "New project" })).not.toBeInTheDocument();
+  });
 });

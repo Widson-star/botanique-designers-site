@@ -5,7 +5,7 @@ import { AdminDataContext } from "../context/adminData";
 import ProjectForm from "./ProjectForm";
 
 const PROFILES = [
-  { id: "owner-1", role: "owner", is_active: true, full_name: "Widson Ambaisi", email: "" },
+  { id: "owner-1", role: "owner", is_active: true, full_name: "Widson Omutelema Ambaisi", email: "" },
   { id: "manager-1", role: "manager", is_active: true, full_name: "Martine Lotom", email: "" },
   { id: "staff-1", role: "staff", is_active: true, full_name: "Staff A", email: "" },
 ];
@@ -72,6 +72,9 @@ describe("manager create", () => {
     expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Actual completion")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Portfolio eligible")).not.toBeInTheDocument();
+    expect(screen.getByText(/fixed to/)).toHaveTextContent(
+      "not portfolio eligible and Not Reviewed"
+    );
 
     fireEvent.change(screen.getByLabelText(/Project name/), {
       target: { value: "New Intake Project" },
@@ -115,6 +118,12 @@ describe("manager edit", () => {
     expect(patch).toEqual({ next_action: "Call the client" });
     expect(patch).not.toHaveProperty("lead_person_id");
   });
+
+  it("does not show portfolio eligibility or permission state", () => {
+    renderForm({ role: "manager", mode: "edit", project: editableProject });
+    expect(screen.queryByRole("heading", { name: "Portfolio" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Permission Needed")).not.toBeInTheDocument();
+  });
 });
 
 describe("save feedback", () => {
@@ -139,5 +148,28 @@ describe("save feedback", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Create project" }));
     await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+  });
+
+  it("blocks duplicate submission while a write is pending", async () => {
+    let resolveWrite;
+    const pendingWrite = new Promise((resolve) => {
+      resolveWrite = resolve;
+    });
+    const createProject = vi.fn(() => pendingWrite);
+    renderForm({
+      role: "owner",
+      mode: "create",
+      overrides: { createProject },
+    });
+    fireEvent.change(screen.getByLabelText(/Project name/), {
+      target: { value: "One submission" },
+    });
+    const submit = screen.getByRole("button", { name: "Create project" });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+    expect(createProject).toHaveBeenCalledTimes(1);
+
+    resolveWrite({ ok: true, id: "new-id" });
+    await waitFor(() => expect(submit).not.toBeDisabled());
   });
 });

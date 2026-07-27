@@ -1,7 +1,11 @@
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES } from "../constants/roles";
 
 export default function AdminAccessGate({ onSelectRole }) {
-  const roles = [ROLES.OWNER, ROLES.MANAGER, ROLES.STAFF];
+  // Only the roles with an authorised Phase 1B-A2 UI are offered. A Staff
+  // preview is intentionally omitted until its assigned-project-only read-only
+  // slice ships — a preview that showed all seed projects with mutation links
+  // that only end in "Not available" would be misleading.
+  const roles = [ROLES.OWNER, ROLES.MANAGER];
 
   return (
     <div className="min-h-screen bg-stone-100 text-botanique-charcoal flex items-center justify-center px-4 py-10">

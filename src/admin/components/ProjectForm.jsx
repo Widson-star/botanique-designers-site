@@ -402,9 +402,10 @@ export default function ProjectForm({ mode, project }) {
         </Field>
       </section>
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
-        <h2 className="font-bold text-base">Portfolio</h2>
-        {caps.portfolioEditable ? (
+      {(caps.portfolioEditable || mode === "create") && (
+        <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
+          <h2 className="font-bold text-base">Portfolio</h2>
+          {caps.portfolioEditable ? (
           <div className="grid md:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm" htmlFor="portfolioEligible">
               <input
@@ -432,19 +433,15 @@ export default function ProjectForm({ mode, project }) {
               </select>
             </Field>
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 gap-4">
-            <ReadOnlyValue
-              label="Portfolio eligible"
-              value={form.portfolioEligible ? "Yes" : "No"}
-            />
-            <ReadOnlyValue
-              label="Portfolio permission status"
-              value={`${form.portfolioPermissionStatus} (owner-only)`}
-            />
-          </div>
-        )}
-      </section>
+          ) : (
+            <div className="rounded-md border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-gray-600">
+              New manager-created projects are fixed to <strong>not portfolio eligible</strong>{" "}
+              and <strong>Not Reviewed</strong>. The owner reviews any later portfolio
+              eligibility or publication permission decision.
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="flex items-center gap-3">
         <button
