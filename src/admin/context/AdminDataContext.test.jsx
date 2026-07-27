@@ -82,6 +82,69 @@ function Harness() {
   );
 }
 
+const DEMO_PROJECT_ID = "karen-residence-fountain-garden";
+
+function DemoHarness() {
+  const data = useAdminData();
+  const project = data.projects.find((item) => item.id === DEMO_PROJECT_ID);
+
+  return (
+    <div>
+      <output aria-label="demo-project">{JSON.stringify(project)}</output>
+      <button
+        type="button"
+        onClick={() => data.updateProject(DEMO_PROJECT_ID, { next_action: null })}
+      >
+        Clear text
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          data.updateProject(DEMO_PROJECT_ID, { start_date: "2026-08-01" })
+        }
+      >
+        Set date
+      </button>
+      <button
+        type="button"
+        onClick={() => data.updateProject(DEMO_PROJECT_ID, { start_date: null })}
+      >
+        Clear date
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          data.updateProject(DEMO_PROJECT_ID, { notes: "Updated demo notes" })
+        }
+      >
+        Change notes
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          data.updateProject(DEMO_PROJECT_ID, { project_name: "Renamed demo project" })
+        }
+      >
+        Unrelated update
+      </button>
+      <button
+        type="button"
+        onClick={() => data.updateProject(DEMO_PROJECT_ID, { lead_person_id: null })}
+      >
+        Clear lead
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          data.updateProject(DEMO_PROJECT_ID, { portfolio_eligible: false })
+        }
+      >
+        Set boolean false
+      </button>
+    </div>
+  );
+}
+
 function renderProvider() {
   return render(
     <AdminDataProvider
@@ -93,6 +156,23 @@ function renderProvider() {
       <Harness />
     </AdminDataProvider>
   );
+}
+
+function renderDemoProvider() {
+  return render(
+    <AdminDataProvider
+      session={null}
+      role="owner"
+      profile={null}
+      isDemo
+    >
+      <DemoHarness />
+    </AdminDataProvider>
+  );
+}
+
+function demoProject() {
+  return JSON.parse(screen.getByLabelText("demo-project").textContent);
 }
 
 async function waitForInitialLoad() {
@@ -246,5 +326,71 @@ describe("AdminDataProvider mutation reconciliation", () => {
       expect(screen.getByLabelText("status")).toHaveTextContent("error")
     );
     expect(screen.getByLabelText("projects")).toHaveTextContent("");
+  });
+});
+
+describe("AdminDataProvider demo PATCH fidelity", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("clears an optional text field when null is explicitly patched", async () => {
+    renderDemoProvider();
+    expect(demoProject().nextAction).not.toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear text" }));
+    await waitFor(() => expect(demoProject().nextAction).toBe(""));
+  });
+
+  it("clears an optional date when null is explicitly patched", async () => {
+    renderDemoProvider();
+    fireEvent.click(screen.getByRole("button", { name: "Set date" }));
+    await waitFor(() => expect(demoProject().startDate).toBe("2026-08-01"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear date" }));
+    await waitFor(() => expect(demoProject().startDate).toBe(""));
+  });
+
+  it("persists changed notes", async () => {
+    renderDemoProvider();
+    fireEvent.click(screen.getByRole("button", { name: "Change notes" }));
+    await waitFor(() => expect(demoProject().notes).toBe("Updated demo notes"));
+  });
+
+  it("preserves existing notes during an unrelated update", async () => {
+    renderDemoProvider();
+    const originalNotes = demoProject().notes;
+    expect(originalNotes).not.toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Unrelated update" }));
+    await waitFor(() =>
+      expect(demoProject().projectName).toBe("Renamed demo project")
+    );
+    expect(demoProject().notes).toBe(originalNotes);
+  });
+
+  it("clears the accountable lead", async () => {
+    renderDemoProvider();
+    expect(demoProject().leadPersonId).toBe("demo-owner");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear lead" }));
+    await waitFor(() => expect(demoProject().leadPersonId).toBe(""));
+  });
+
+  it("applies boolean false rather than preserving the old value", async () => {
+    renderDemoProvider();
+    expect(demoProject().portfolioEligible).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Set boolean false" }));
+    await waitFor(() => expect(demoProject().portfolioEligible).toBe(false));
+  });
+
+  it("never calls a Supabase mutation", async () => {
+    renderDemoProvider();
+    fireEvent.click(screen.getByRole("button", { name: "Change notes" }));
+    await waitFor(() => expect(demoProject().notes).toBe("Updated demo notes"));
+
+    expect(api.createProject).not.toHaveBeenCalled();
+    expect(api.updateProject).not.toHaveBeenCalled();
   });
 });

@@ -35,6 +35,14 @@ function toProfilesById(profiles) {
   return Object.fromEntries(profiles.map((profile) => [profile.id, profile]));
 }
 
+// Demo PATCH fidelity: an omitted field preserves its current value, while an
+// explicitly supplied null/false is a real update and must not be discarded.
+function patchedValue(patch, key, currentValue) {
+  return Object.prototype.hasOwnProperty.call(patch, key)
+    ? patch[key]
+    : currentValue;
+}
+
 // ---- Demo (seed) adapter --------------------------------------------------
 const DEMO_LEAD_IDS = {
   "Widson Omutelema Ambaisi": "demo-owner",
@@ -308,31 +316,69 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
             const remapped = mapDatabaseProject(
               {
                 id: project.id,
-                project_name: patch.project_name ?? project.projectName,
-                client_site_name: patch.client_site_name ?? project.clientSiteName,
-                location: patch.location ?? project.location,
-                county: patch.county ?? project.county,
-                project_type: patch.project_type ?? project.projectType,
-                status: patch.status ?? project.status,
-                stage: patch.stage ?? project.stage,
-                lead_person_id:
-                  "lead_person_id" in patch ? patch.lead_person_id : project.leadPersonId,
-                start_date: patch.start_date ?? project.startDate,
-                actual_start_date: patch.actual_start_date ?? project.actualStartDate,
-                target_completion_date:
-                  patch.target_completion_date ?? project.targetCompletionDate,
-                actual_completion_date:
-                  patch.actual_completion_date ?? project.actualCompletionDate,
-                next_action: patch.next_action ?? project.nextAction,
-                next_action_date: patch.next_action_date ?? project.nextActionDate,
-                blocker: patch.blocker ?? project.blocker,
-                portfolio_eligible:
-                  "portfolio_eligible" in patch
-                    ? patch.portfolio_eligible
-                    : project.portfolioEligible,
-                portfolio_permission_status:
-                  patch.portfolio_permission_status ?? project.portfolioPermissionStatus,
-                archived: "archived" in patch ? patch.archived : project.archived,
+                project_name: patchedValue(
+                  patch,
+                  "project_name",
+                  project.projectName
+                ),
+                client_site_name: patchedValue(
+                  patch,
+                  "client_site_name",
+                  project.clientSiteName
+                ),
+                location: patchedValue(patch, "location", project.location),
+                county: patchedValue(patch, "county", project.county),
+                project_type: patchedValue(
+                  patch,
+                  "project_type",
+                  project.projectType
+                ),
+                status: patchedValue(patch, "status", project.status),
+                stage: patchedValue(patch, "stage", project.stage),
+                lead_person_id: patchedValue(
+                  patch,
+                  "lead_person_id",
+                  project.leadPersonId
+                ),
+                start_date: patchedValue(patch, "start_date", project.startDate),
+                actual_start_date: patchedValue(
+                  patch,
+                  "actual_start_date",
+                  project.actualStartDate
+                ),
+                target_completion_date: patchedValue(
+                  patch,
+                  "target_completion_date",
+                  project.targetCompletionDate
+                ),
+                actual_completion_date: patchedValue(
+                  patch,
+                  "actual_completion_date",
+                  project.actualCompletionDate
+                ),
+                next_action: patchedValue(
+                  patch,
+                  "next_action",
+                  project.nextAction
+                ),
+                next_action_date: patchedValue(
+                  patch,
+                  "next_action_date",
+                  project.nextActionDate
+                ),
+                blocker: patchedValue(patch, "blocker", project.blocker),
+                notes: patchedValue(patch, "notes", project.notes),
+                portfolio_eligible: patchedValue(
+                  patch,
+                  "portfolio_eligible",
+                  project.portfolioEligible
+                ),
+                portfolio_permission_status: patchedValue(
+                  patch,
+                  "portfolio_permission_status",
+                  project.portfolioPermissionStatus
+                ),
+                archived: patchedValue(patch, "archived", project.archived),
                 created_at: project.createdAt,
                 updated_at: new Date().toISOString(),
               },
