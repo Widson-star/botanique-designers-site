@@ -1904,7 +1904,7 @@ The production `/admin` interface remains the earlier read-only Project Tracker 
 PR is reviewed, merged and production-verified.
 
 - **Baseline:** exact `main` `9666a2803c916eb5f5a188176806aaeb049dc9cd`.
-  **Branch:** `feat/bd-operations-hub-phase1b-a2`. **Draft PR:** `BD-OPERATIONS-HUB-01:
+  **Branch:** `feat/bd-operations-hub-phase1b-a2`. **Draft PR #34:** `BD-OPERATIONS-HUB-01:
   implement Phase 1B-A2 admin operations` (draft, not merged, auto-merge not enabled).
 - **Implemented scope (UI only, on the existing Phase 1B-A1 schema):** a professional
   responsive admin **shell** (persistent desktop sidebar, keyboard-operable mobile drawer,
