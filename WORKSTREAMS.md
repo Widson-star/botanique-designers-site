@@ -1942,6 +1942,14 @@ PR is reviewed, merged and production-verified.
   explains the fixed non-eligible / Not Reviewed defaults, while manager edit exposes no
   portfolio state. Development founder labels now use **Widson Omutelema Ambaisi**.
   Deprecated `last_updated` changes are not returned for Activity History display.
+- **Demo-adapter fidelity correction:** implementation commit
+  `cc3276a148e8cec470a27700c8a06ebaeedc9865` makes demo PATCH reconstruction
+  distinguish an omitted property from an explicitly supplied `null` or `false` across
+  operational fields. Nullable text/date/lead values can now be cleared, boolean false is
+  applied, and `notes` is explicitly reconstructed so note edits persist and unrelated
+  updates preserve existing notes. The production Supabase create/update path is unchanged.
+  Exact-commit Vercel deployment `dpl_AodSDKXY3jpkUMyXXYLt1igMpcpc` is **READY** at
+  `botanique-designers-site-gpm1-lxwt5ouhe.vercel.app`.
 - **Architecture:** authentication stays in `AdminApp`; a focused `AdminDataProvider`
   (`src/admin/context/`) owns visible projects, role-visible profiles, loading/error, save
   feedback, refetch and create/update mutations; REST logic stays in `src/admin/lib/supabase.js`
@@ -1950,15 +1958,16 @@ PR is reviewed, merged and production-verified.
   columns or `last_updated`); pure helpers hold capability, payload/patch, KPI and
   activity-format logic. No Supabase Realtime.
 - **Tests:** new Vitest + React Testing Library setup (test-infra devDependencies only).
-  **85 tests pass across 12 test files**, including pure role/capability, create/patch
+  **92 tests pass across 12 test files**, including pure role/capability, create/patch
   payload (changed-fields-only, blank→null, no audit fields, manager forced-Pending,
   preserved inaccessible lead), completion integrity and dialog focus, returned-row local
   upsert before refetch, preserved state + warning/retry after reconciliation failure,
   genuine create/update failure contracts, duplicate-submit blocking, role-gated controls
   and routes, owner-only Portfolio Overview, exact KPI view predicates/links, resettable
   filters, empty-chart “No data yet”, and activity formatting (no UUID / no primary raw
-  JSON / no deprecated `last_updated` display). No test writes to hosted production
-  records.
+  JSON / no deprecated `last_updated` display), plus demo-mode null clearing for optional
+  text/date/lead fields, note persistence/preservation, boolean false handling, and proof
+  that no Supabase mutation is called. No test writes to hosted production records.
 - **Lint / build:** every changed/new JS/JSX file is ESLint-clean. `npm run lint` reports
   **19 inherited errors in unchanged files only** (`server/index.js` Node-global `no-undef`,
   `src/components/FadeIn.jsx` `set-state-in-effect`, `src/context/AppContext.jsx`
@@ -1966,7 +1975,7 @@ PR is reviewed, merged and production-verified.
   (clean `npm ci` install) succeeds and still prerenders the 43 public routes incl. `404.html`;
   admin routes remain client-only. The correction pass re-ran the same Vitest, ESLint,
   Vite-build and prerender entrypoints directly with the bundled Node runtime because this
-  execution shell did not expose an `npm` launcher; results remained 85/85 tests, zero
+  execution shell did not expose an `npm` launcher; results are now 92/92 tests, zero
   changed-file lint findings, the same 19 inherited full-lint findings, and a successful
   43-route + `404.html` prerender with admin routes client-only.
 - **Preview verification:** the authenticated hosted-role matrix is verified through the
