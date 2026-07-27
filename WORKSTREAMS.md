@@ -1797,8 +1797,10 @@ won-lead conversion)**. Full authority: `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIR
 ### Phase 1B-A — Admin Shell + Essential Project Management (entry gate + 1B-A1)
 
 Status: **Phase 1B-A entry-gate audit complete; Phase 1B-A1 (project integrity +
-history) migration authored in a DRAFT PR — NOT applied to hosted Supabase, NOT merged,
-NO UI built.**
+history) migration MERGED (PR #32, merge commit `24d84d0a72fef50e57088c5d35e2c05f191e008c`)
+and APPLIED to hosted `botanique-admin` via the linked Supabase CLI, hosted-verified
+(structure + rollback-only runtime matrix) — NO UI built; Phase 1B-A2 is next and
+unstarted.**
 
 - **Entry-gate audit (read-only): complete.** Confirmed the hosted `botanique-admin`
   schema/RLS **structurally matched the committed authority across columns, types,
@@ -1864,10 +1866,35 @@ NO UI built.**
   transition-scoped lead-change, field-constraint, ledger (incl. empty-`changed_fields`
   rejection), **interim owner/material-authority (manager INSERT + UPDATE transition
   matrix, owner unrestricted)**, boundary and non-destructive-apply tests passed applying
-  `20260614000100` → `20260726000100` → `20260726000200` in order. **Unmerged, unapplied to
-  hosted, and no UI / dashboard / daily-update / approval / payment schema implemented.** No
+  `20260614000100` → `20260726000100` → `20260726000200` in order. **Now MERGED (PR #32) and
+  APPLIED to hosted `botanique-admin` through the linked Supabase CLI (`db push --linked`,
+  exact version `20260726000200` preserved — no repair, no raw-SQL apply, no seed); then
+  re-verified directly against hosted with structural checks and a rollback-only runtime
+  matrix, and no UI / dashboard / daily-update / approval / payment schema implemented.**
+  Hosted migration history is exactly `20260614000100` → `20260726000100` → `20260726000200`;
+  the four new project fields exist and are NULL on all seven existing projects;
+  `project_activities` exists and is empty; every rollback-only test reverted, leaving
+  profiles = 2 and projects = 7. No
   production project, profile, assignment or activity was created or changed. The Tsavo split,
   staff onboarding/assignment UI, and Supabase Realtime remain separately gated and deferred.
+- **Hosted integrity checksums (dual-checksum authority, `'|'`-delimited
+  `md5(string_agg(row::text, '|' ORDER BY id))`):** the **profiles** full-row checksum
+  remained `95c144896661e2c827e881c2e5f12149`. For **projects** two distinct values are
+  retained, because Phase 1B-A1 appended four nullable columns and the full-row `projects::text`
+  representation therefore changed **structurally even though every existing value is
+  unchanged**: (1) the **original 23-column project-data continuity checksum** — computed over
+  exactly the pre-Phase-1B-A1 columns (`id, project_name, client_site_name, location, county,
+  project_type, status, stage, lead_person_id, start_date, last_updated, next_action,
+  next_action_date, portfolio_eligible, portfolio_permission_status, notes, archived,
+  archived_at, archived_by, created_by, updated_by, created_at, updated_at`) — remained
+  `705f124eda20d081c7c31b77743763cb`, proving **no pre-existing project value changed**; and
+  (2) the **post-Phase-1B-A1 full-row structural baseline** (current complete row, including
+  the four new NULL columns) is `459557531472faf27bc06a0a1a0cf736`, which becomes the baseline
+  for future full-row integrity checks under the current schema. All four new project fields
+  are NULL on all seven existing projects. The difference between the two project checksums is
+  **expected schema evolution, not data mutation**; future integrity reports **must name the
+  column set / schema version used** and must not compare full-row checksums across
+  schema-changing migrations without normalising the projected columns.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
