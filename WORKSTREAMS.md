@@ -1924,6 +1924,24 @@ PR is reviewed, merged and production-verified.
   before/after values, Yes/No booleans, "Not set" nulls, resolved profile names with safe
   role fallbacks — never a raw UUID or raw JSON). Refetch/invalidation runs after every
   successful mutation; failed saves preserve entered values and surface the database error.
+- **Phase 1B-A2 correction pass:** implementation commit
+  `32f61036cb192ff3a9dcb6cf7e8cd42bbcf5d162` repairs the existing draft without
+  reopening its architecture. “Mark completed” now requires a non-empty actual-completion
+  date, rejects dates before actual start, sends exactly `status` +
+  `actual_completion_date`, leaves stage independent, and uses stable accessible dialog
+  focus (date-first for completion, safe Cancel-first otherwise, focus trap, Escape,
+  opener restoration, unique IDs). Successful POST/PATCH representations are mapped into
+  local state before reconciliation; a failed post-write refresh preserves all usable
+  project data and returns a saved-with-refresh-warning contract with a working retry
+  control instead of clearing state or claiming unconditional success. Visible New/Edit
+  controls now use the existing role capabilities; unsupported Staff/Viewer forms remain
+  route-guarded, and the misleading Staff development preview is removed until its
+  assignment-scoped read-only UI is authorised. Dashboard Active, overdue-actions and
+  upcoming-starts drill-downs reuse the exact pure metric predicates through named URL
+  views (with resettable state). Portfolio Overview is owner-only; manager create still
+  explains the fixed non-eligible / Not Reviewed defaults, while manager edit exposes no
+  portfolio state. Development founder labels now use **Widson Omutelema Ambaisi**.
+  Deprecated `last_updated` changes are not returned for Activity History display.
 - **Architecture:** authentication stays in `AdminApp`; a focused `AdminDataProvider`
   (`src/admin/context/`) owns visible projects, role-visible profiles, loading/error, save
   feedback, refetch and create/update mutations; REST logic stays in `src/admin/lib/supabase.js`
@@ -1932,24 +1950,31 @@ PR is reviewed, merged and production-verified.
   columns or `last_updated`); pure helpers hold capability, payload/patch, KPI and
   activity-format logic. No Supabase Realtime.
 - **Tests:** new Vitest + React Testing Library setup (test-infra devDependencies only).
-  **48 tests pass** across pure role/capability, create/patch payload (changed-fields-only,
-  blank→null, no audit fields, manager forced-Pending, preserved inaccessible lead),
-  date-order validation, KPI definitions, empty-chart "No data yet", activity formatting
-  (no UUID / no primary raw JSON), and component role tests (owner controls + pending
-  activation present; manager restrictions; failed-save preserves state; success triggers
-  the refetch mutation). No test writes to hosted production records.
+  **85 tests pass across 12 test files**, including pure role/capability, create/patch
+  payload (changed-fields-only, blank→null, no audit fields, manager forced-Pending,
+  preserved inaccessible lead), completion integrity and dialog focus, returned-row local
+  upsert before refetch, preserved state + warning/retry after reconciliation failure,
+  genuine create/update failure contracts, duplicate-submit blocking, role-gated controls
+  and routes, owner-only Portfolio Overview, exact KPI view predicates/links, resettable
+  filters, empty-chart “No data yet”, and activity formatting (no UUID / no primary raw
+  JSON / no deprecated `last_updated` display). No test writes to hosted production
+  records.
 - **Lint / build:** every changed/new JS/JSX file is ESLint-clean. `npm run lint` reports
   **19 inherited errors in unchanged files only** (`server/index.js` Node-global `no-undef`,
   `src/components/FadeIn.jsx` `set-state-in-effect`, `src/context/AppContext.jsx`
   `react-refresh/only-export-components`) — none introduced by this slice. `npm run build`
   (clean `npm ci` install) succeeds and still prerenders the 43 public routes incl. `404.html`;
-  admin routes remain client-only.
+  admin routes remain client-only. The correction pass re-ran the same Vitest, ESLint,
+  Vite-build and prerender entrypoints directly with the bundled Node runtime because this
+  execution shell did not expose an `npm` launcher; results remained 85/85 tests, zero
+  changed-file lint findings, the same 19 inherited full-lint findings, and a successful
+  43-route + `404.html` prerender with admin routes client-only.
 - **Preview verification:** the authenticated hosted-role matrix is verified through the
   automated tests + local dev-seed fixtures (owner vs Operations Manager shells, controls,
   pending activation, restricted manager create). Any Vercel preview verification against
   hosted Supabase is **read-only**; no create/edit/archive/activation is run against hosted
   records. **No migration. No hosted schema change. No hosted data mutation. Not merged. Not
-  production-live.**
+  production-live.** PR #34 remains draft, open and unmerged; auto-merge remains disabled.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
