@@ -54,13 +54,13 @@ function LocationProbe() {
   return <output aria-label="location">{location.search}</output>;
 }
 
-function renderProjects(role, initialEntry = "/admin/projects") {
+function renderProjects(role, initialEntry = "/admin/projects", projectRows = projects) {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <AdminDataContext.Provider
         value={{
           role,
-          projects,
+          projects: projectRows,
           profiles: [],
           currentUserId: "",
           dataStatus: "ready",
@@ -108,4 +108,28 @@ describe("AdminProjects", () => {
       expect(within(row).queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
     }
   );
+
+  it("shows no Attention reasons for a completed non-operational project", () => {
+    renderProjects("owner", "/admin/projects", [
+      {
+        id: "completed",
+        projectName: "Completed Project",
+        status: "Completed",
+        stage: "Completed",
+        projectType: "Residential",
+        archived: false,
+        nextAction: "",
+        nextActionDate: "",
+        startDate: "",
+        leadPersonId: "",
+        leadPersonName: "Not assigned",
+        blocker: "Historical blocker",
+        portfolioPermissionStatus: "Not Reviewed",
+      },
+    ]);
+
+    const row = screen.getByText("Completed Project").closest("tr");
+    expect(within(row).getByText("None")).toBeInTheDocument();
+    expect(within(row).queryByText(/missing|blocker/i)).not.toBeInTheDocument();
+  });
 });

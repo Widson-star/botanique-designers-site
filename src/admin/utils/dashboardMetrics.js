@@ -19,6 +19,12 @@ const isPendingProject = (p) => !p.archived && p.status === "Pending";
 const isCompletedProject = (p) => !p.archived && p.status === "Completed";
 const isDesignOnlyProject = (p) => !p.archived && p.status === "Design-only";
 
+// Operational attention is intentionally limited to open delivery records.
+// Closed, design-only and archived records remain visible elsewhere but must
+// never be presented as requiring operational follow-up.
+export const isOpenOperationalProject = (project) =>
+  !project.archived && ["Pending", "Ongoing", "Paused"].includes(project.status);
+
 // Exact metric datasets — shared by both the dashboard KPI counts and the
 // Projects drill-down filters so a KPI always opens precisely its own set.
 export function activeProjects(projects) {
@@ -40,12 +46,11 @@ export function designOnlyProjects(projects) {
 export function overdueActionProjects(projects, today = todayIsoDate()) {
   return projects.filter(
     (p) =>
-      !p.archived &&
+      isOpenOperationalProject(p) &&
       p.nextAction &&
       p.nextAction.trim().length > 0 &&
       p.nextActionDate &&
-      p.nextActionDate < today &&
-      !["Completed", "Cancelled"].includes(p.status)
+      p.nextActionDate < today
   );
 }
 
@@ -104,7 +109,7 @@ export function applyProjectView(projects, view, today = todayIsoDate()) {
 // Deterministic operational attention reasons, derived only from fields already
 // present on the visible project row. No health/risk inference or percentages.
 export function projectAttentionReasons(project, today = todayIsoDate(), options = {}) {
-  if (project.archived) return [];
+  if (!isOpenOperationalProject(project)) return [];
 
   const includePendingActivation = options.includePendingActivation !== false;
   const reasons = [];
@@ -115,8 +120,7 @@ export function projectAttentionReasons(project, today = todayIsoDate(), options
     project.nextAction &&
     project.nextAction.trim().length > 0 &&
     project.nextActionDate &&
-    project.nextActionDate < today &&
-    !["Completed", "Cancelled"].includes(project.status)
+    project.nextActionDate < today
   ) {
     reasons.push("Overdue next action");
   }
@@ -145,32 +149,52 @@ export function projectsNeedingAttention(projects, today = todayIsoDate(), optio
 }
 
 export function calculateAttentionSummary(projects, today = todayIsoDate()) {
-  const visible = projects.filter((project) => !project.archived);
+  const operational = projects.filter(isOpenOperationalProject);
   return {
-    awaitingActivation: pendingActivationProjects(projects).length,
-    withoutLead: visible.filter((project) => !project.leadPersonId).length,
-    withoutNextAction: visible.filter(
+    pendingProjects: operational.filter((project) => project.status === "Pending").length,
+    withoutLead: operational.filter((project) => !project.leadPersonId).length,
+    withoutNextAction: operational.filter(
       (project) => !project.nextAction || project.nextAction.trim().length === 0
     ).length,
-    withBlockers: visible.filter(
+    withBlockers: operational.filter(
       (project) => project.blocker && project.blocker.trim().length > 0
     ).length,
-    overdueActions: overdueActionProjects(projects, today).length,
-    upcomingStarts: upcomingStartProjects(projects, today).length,
+    overdueActions: operational.filter(
+      (project) =>
+        project.nextAction &&
+        project.nextAction.trim().length > 0 &&
+        project.nextActionDate &&
+        project.nextActionDate < today
+    ).length,
+    upcomingStarts: operational.filter(
+      (project) =>
+        project.status === "Pending" &&
+        project.startDate &&
+        project.startDate >= today
+    ).length,
   };
 }
 
-export function operationalSummary(projects, today = todayIsoDate()) {
+export function operationalSummary(
+  projects,
+  { today = todayIsoDate(), includePendingActivation = true } = {}
+) {
   if (projects.length === 0) return null;
   const metrics = calculateDashboardMetrics(projects, today);
   const attention = calculateAttentionSummary(projects, today);
+  const pendingOverview = includePendingActivation
+    ? `${metrics.pendingActivation} pending activation`
+    : `${metrics.pending} pending projects`;
+  const pendingAttention = includePendingActivation
+    ? `${attention.pendingProjects} awaiting activation, `
+    : "";
   return {
     overview:
       `${metrics.total} total projects: ${metrics.active} active, ` +
-      `${metrics.pendingActivation} pending activation, ${metrics.completed} completed, ` +
+      `${pendingOverview}, ${metrics.completed} completed, ` +
       `${metrics.overdueActions} with overdue actions and ${metrics.upcomingStarts} upcoming starts.`,
     attention:
-      `${attention.awaitingActivation} awaiting activation, ${attention.withoutLead} without accountable leads, ` +
+      `${pendingAttention}${attention.withoutLead} without accountable leads, ` +
       `${attention.withoutNextAction} without next actions, ${attention.withBlockers} with blockers, ` +
       `${attention.overdueActions} overdue actions and ${attention.upcomingStarts} upcoming starts.`,
   };

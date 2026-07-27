@@ -3,6 +3,7 @@ import {
   calculateDashboardMetrics,
   calculateAttentionSummary,
   applyProjectView,
+  isOpenOperationalProject,
   operationalSummary,
   overdueActionProjects,
   projectAttentionReasons,
@@ -40,7 +41,7 @@ describe("calculateDashboardMetrics", () => {
     expect(m.pending).toBe(2);
     expect(m.completed).toBe(1);
     expect(m.designOnly).toBe(0);
-    // Overdue = non-archived, has next action, date < today, not Completed/Cancelled.
+    // Overdue = open operational, has next action, date < today.
     // Row 0 (2026-07-01) and row 2 (2026-06-01). Row 4 is Completed; row 5 archived.
     expect(m.overdueActions).toBe(2);
     // Upcoming starts = non-archived Pending with start >= today = row 2 only.
@@ -48,10 +49,29 @@ describe("calculateDashboardMetrics", () => {
     expect(m.pendingActivation).toBe(2);
   });
 
-  it("excludes archived and completed/cancelled from overdue actions", () => {
-    const overdue = overdueActionProjects(projects, TODAY);
+  it("excludes archived, closed and design-only projects from overdue actions", () => {
+    const overdue = overdueActionProjects(
+      [
+        ...projects,
+        {
+          status: "Cancelled",
+          archived: false,
+          nextAction: "Old",
+          nextActionDate: "2026-01-01",
+        },
+        {
+          status: "Design-only",
+          archived: false,
+          nextAction: "Old",
+          nextActionDate: "2026-01-01",
+        },
+      ],
+      TODAY
+    );
     expect(overdue.every((p) => !p.archived)).toBe(true);
     expect(overdue.some((p) => p.status === "Completed")).toBe(false);
+    expect(overdue.some((p) => p.status === "Cancelled")).toBe(false);
+    expect(overdue.some((p) => p.status === "Design-only")).toBe(false);
   });
 
   it("does not count Pending as active", () => {
@@ -92,7 +112,7 @@ describe("calculateDashboardMetrics", () => {
 
 describe("operational summary and attention", () => {
   it("generates a live operational narrative from exact metrics", () => {
-    const summary = operationalSummary(projects, TODAY);
+    const summary = operationalSummary(projects, { today: TODAY });
     expect(summary.overview).toBe(
       "6 total projects: 2 active, 2 pending activation, 1 completed, 2 with overdue actions and 1 upcoming starts."
     );
@@ -101,9 +121,9 @@ describe("operational summary and attention", () => {
   });
 
   it("does not fabricate a summary when no project data exists", () => {
-    expect(operationalSummary([], TODAY)).toBeNull();
+    expect(operationalSummary([], { today: TODAY })).toBeNull();
     expect(calculateAttentionSummary([], TODAY)).toEqual({
-      awaitingActivation: 0,
+      pendingProjects: 0,
       withoutLead: 0,
       withoutNextAction: 0,
       withBlockers: 0,
@@ -132,6 +152,136 @@ describe("operational summary and attention", () => {
       "Accountable lead missing",
       "Upcoming start: 2026-08-01",
     ]);
+  });
+
+  it.each(["Completed", "Cancelled", "Design-only"])(
+    "gives a non-operational %s project zero attention reasons",
+    (status) => {
+      expect(
+        projectAttentionReasons(
+          {
+            status,
+            archived: false,
+            leadPersonId: "",
+            nextAction: "",
+            blocker: "Historical blocker",
+          },
+          TODAY
+        )
+      ).toEqual([]);
+    }
+  );
+
+  it("gives an archived project zero attention reasons", () => {
+    expect(
+      projectAttentionReasons(
+        {
+          status: "Ongoing",
+          archived: true,
+          leadPersonId: "",
+          nextAction: "",
+          blocker: "Archived blocker",
+        },
+        TODAY
+      )
+    ).toEqual([]);
+  });
+
+  it("keeps deterministic owner reasons for an open Pending project", () => {
+    const pending = {
+      status: "Pending",
+      archived: false,
+      leadPersonId: "",
+      nextAction: "",
+      blocker: "",
+    };
+    expect(projectAttentionReasons(pending, TODAY)).toEqual([
+      "Pending activation",
+      "Accountable lead missing",
+      "Next action missing",
+    ]);
+    expect(isOpenOperationalProject(pending)).toBe(true);
+  });
+
+  it("omits Pending activation from manager attention reasons", () => {
+    expect(
+      projectAttentionReasons(
+        {
+          status: "Pending",
+          archived: false,
+          leadPersonId: "",
+          nextAction: "",
+          blocker: "",
+        },
+        TODAY,
+        { includePendingActivation: false }
+      )
+    ).toEqual(["Accountable lead missing", "Next action missing"]);
+  });
+
+  it("uses role-aware Pending wording in operational summaries", () => {
+    const owner = operationalSummary(projects, {
+      today: TODAY,
+      includePendingActivation: true,
+    });
+    const manager = operationalSummary(projects, {
+      today: TODAY,
+      includePendingActivation: false,
+    });
+
+    expect(owner.overview).toContain("2 pending activation");
+    expect(owner.attention).toContain("2 awaiting activation");
+    expect(manager.overview).toContain("2 pending projects");
+    expect(`${manager.overview} ${manager.attention}`).not.toMatch(/activation/i);
+  });
+
+  it("excludes closed, design-only and archived records from attention counts", () => {
+    const rows = [
+      {
+        status: "Pending",
+        archived: false,
+        leadPersonId: "",
+        nextAction: "",
+        blocker: "Open blocker",
+      },
+      {
+        status: "Completed",
+        archived: false,
+        leadPersonId: "",
+        nextAction: "",
+        blocker: "Closed blocker",
+      },
+      {
+        status: "Cancelled",
+        archived: false,
+        leadPersonId: "",
+        nextAction: "",
+        blocker: "Cancelled blocker",
+      },
+      {
+        status: "Design-only",
+        archived: false,
+        leadPersonId: "",
+        nextAction: "",
+        blocker: "Design blocker",
+      },
+      {
+        status: "Ongoing",
+        archived: true,
+        leadPersonId: "",
+        nextAction: "",
+        blocker: "Archived blocker",
+      },
+    ];
+
+    expect(calculateAttentionSummary(rows, TODAY)).toEqual({
+      pendingProjects: 1,
+      withoutLead: 1,
+      withoutNextAction: 1,
+      withBlockers: 1,
+      overdueActions: 0,
+      upcomingStarts: 0,
+    });
   });
 });
 

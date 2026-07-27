@@ -14,15 +14,6 @@ import BarChart from "../components/BarChart";
 import ProjectAttentionList from "../components/ProjectAttentionList";
 import RecentActivity from "../components/RecentActivity";
 
-const ATTENTION_LABELS = [
-  ["awaitingActivation", "Awaiting activation"],
-  ["withoutLead", "Without leads"],
-  ["withoutNextAction", "Without next actions"],
-  ["withBlockers", "With blockers"],
-  ["overdueActions", "Overdue actions"],
-  ["upcomingStarts", "Upcoming starts"],
-];
-
 export default function AdminDashboard() {
   const {
     role,
@@ -32,10 +23,20 @@ export default function AdminDashboard() {
     dataError,
     fetchActivities,
   } = useAdminData();
+  const showPendingActivation = canSeePendingActivation(role);
   const metrics = calculateDashboardMetrics(projects);
   const attention = calculateAttentionSummary(projects);
-  const summary = operationalSummary(projects);
-  const showPendingActivation = canSeePendingActivation(role);
+  const summary = operationalSummary(projects, {
+    includePendingActivation: showPendingActivation,
+  });
+  const attentionLabels = [
+    ["pendingProjects", showPendingActivation ? "Awaiting activation" : "Pending projects"],
+    ["withoutLead", "Without leads"],
+    ["withoutNextAction", "Without next actions"],
+    ["withBlockers", "With blockers"],
+    ["overdueActions", "Overdue actions"],
+    ["upcomingStarts", "Upcoming starts"],
+  ];
   const showNewProject = canCreateProjects(role);
 
   return (
@@ -104,7 +105,7 @@ export default function AdminDashboard() {
           </div>
 
           <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
-            {ATTENTION_LABELS.map(([key, label]) => (
+            {attentionLabels.map(([key, label]) => (
               <div key={key} className="rounded-lg bg-white/10 px-3 py-2.5">
                 <dt className="text-[10px] font-semibold uppercase tracking-wide text-white/55">
                   {label}

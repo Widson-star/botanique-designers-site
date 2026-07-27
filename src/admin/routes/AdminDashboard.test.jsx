@@ -75,6 +75,16 @@ describe("AdminDashboard composition", () => {
     expect(screen.getByText(/1 awaiting activation/)).toBeInTheDocument();
   });
 
+  it("uses ordinary Pending-project language for the manager summary", () => {
+    renderDashboard({ role: "manager", projects });
+    const summary = screen.getByRole("heading", {
+      name: "Current project position",
+    }).closest("section");
+
+    expect(within(summary).getAllByText(/Pending projects/i).length).toBeGreaterThan(0);
+    expect(within(summary).queryByText(/activation/i)).not.toBeInTheDocument();
+  });
+
   it("links each derived KPI to its exact named project view", () => {
     renderDashboard({ role: "owner", projects });
     const indicators = screen.getByRole("region", {
