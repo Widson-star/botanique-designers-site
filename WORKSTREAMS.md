@@ -2020,8 +2020,13 @@ PR is reviewed, merged and production-verified.
   automated tests + local dev-seed fixtures (owner vs Operations Manager shells, controls,
   pending activation, restricted manager create). Any Vercel preview verification against
   hosted Supabase is **read-only**; no create/edit/archive/activation is run against hosted
-  records. **No migration. No hosted schema change. No hosted data mutation. Not merged. Not
-  production-live.** PR #34 remains draft, open and unmerged; auto-merge remains disabled.
+  records. The final semantics preview passed Vercel protection but reached the application
+  Sign in screen, so the authenticated founder label was not observable and the hosted
+  `profiles.full_name` value could not be determined; no credential was entered and no
+  profile correction was attempted. The source fallback remains
+  `profile?.full_name || profile?.email || "Authenticated admin"`. **No migration. No hosted
+  schema change. No hosted data mutation. Not merged. Not production-live.** PR #34 remains
+  draft, open and unmerged; auto-merge remains disabled.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
