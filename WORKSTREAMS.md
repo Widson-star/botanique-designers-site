@@ -2227,18 +2227,20 @@ Reviewed implementation head:
   The legacy profiles MD5 remains `95c144896661e2c827e881c2e5f12149`.
   Therefore all nine projects, including Zizu Investments Ltd and Alego Usonga, are
   unchanged; no profile, assignment, project activity or financial reference changed.
-- **Role/deployment verification and limitation:** read-only hosted RLS execution under
-  the existing active owner and manager identities returned one profile, all nine
-  projects and an empty approvals queue for each. Authenticated has SELECT but no direct
-  INSERT/UPDATE/DELETE table privileges; anon has none. Vercel production deployment
-  `dpl_BHqpRn1Ujss6nqN6GWGQ2kPqRXWv` is READY at exact main
-  `6f500b424d020b41ef192a77fbaff57c201d7f99`. Signed-out `/admin` renders at 1440×900 and
-  390×844 with visible email/password controls and no horizontal overflow. Authenticated
-  owner/manager UI checks could not be completed because no reusable browser session was
-  available, and each production load logged minified React error `#418`. No failed
-  approvals request was observed, but authenticated approvals navigation, controls and
-  request-dialog behavior remain runtime-deferred. Operational use stays paused until
-  these non-destructive checks pass. Staff/viewer runtime verification remains deferred
+- **Role/deployment verification and limitation (pre-PR #38 snapshot — HISTORICAL,
+  superseded by the hydration and session-restoration repair subsection below):** at the
+  time of hosted application, read-only hosted RLS execution under the existing active
+  owner and manager identities returned one profile, all nine projects and an empty
+  approvals queue for each. Authenticated has SELECT but no direct INSERT/UPDATE/DELETE
+  table privileges; anon has none. The then-current Vercel production deployment
+  `dpl_BHqpRn1Ujss6nqN6GWGQ2kPqRXWv` was READY at the pre-repair main
+  `6f500b424d020b41ef192a77fbaff57c201d7f99`. Signed-out `/admin` rendered at 1440×900 and
+  390×844 with visible email/password controls and no horizontal overflow. At that point
+  authenticated owner/manager UI checks could not be completed because no reusable browser
+  session was available, and each production load logged minified React error `#418` — the
+  route-aware hydration defect that PR #38 has since repaired (see below), so this `#418`
+  and the "operational use paused" state below no longer describe current production. No
+  failed approvals request was observed. Staff/viewer runtime verification remains deferred
   because no existing safe account/session was available; their policy/grant boundary is
   structurally verified. No production request/project mutation was attempted.
 
