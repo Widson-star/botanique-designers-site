@@ -40,7 +40,13 @@ describe("formatActivity", () => {
   };
 
   it("produces human before/after rows without raw JSON or UUIDs", () => {
-    const profilesById = { [UUID]: { full_name: "Widson Omutelema Ambaisi" } };
+    const profilesById = {
+      [UUID]: {
+        role: "owner",
+        email: "widson@botaniquedesigners.com",
+        full_name: "Widson Ambaisi",
+      },
+    };
     const formatted = formatActivity(activity, profilesById);
     expect(formatted.actionLabel).toBe("Project updated");
     expect(formatted.actor).toBe("Widson Omutelema Ambaisi");

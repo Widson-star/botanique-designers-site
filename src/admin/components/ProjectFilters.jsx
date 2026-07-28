@@ -7,6 +7,7 @@ import {
   PROJECT_TYPES,
 } from "../constants/projectStatus";
 import { isOwner } from "../utils/projectCapabilities";
+import { profilePresentationName } from "../utils/personName";
 
 function SelectFilter({ label, value, onChange, options, allLabel = "All" }) {
   return (
@@ -33,7 +34,7 @@ export default function ProjectFilters({ filters, updateFilter, resetFilters, le
     { value: "unassigned", label: "Unassigned" },
     ...leadOptions.map((option) => ({
       value: option.id,
-      label: option.full_name || option.email,
+      label: profilePresentationName(option, "Team member"),
     })),
   ];
 

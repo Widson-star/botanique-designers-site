@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ROLE_LABELS } from "./constants/roles";
 import SaveFeedback from "./components/SaveFeedback";
+import { profilePresentationName } from "./utils/personName";
 
 const NAV_ITEMS = [
   {
@@ -98,10 +99,13 @@ function ProjectSearch({ id }) {
   );
 }
 
-export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
+export default function AdminLayout({ role, profile, profileLabel, isDemo, onSignOut }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef(null);
   const roleLabel = ROLE_LABELS[role] || role;
+  const visibleProfileLabel = profile
+    ? profilePresentationName(profile)
+    : profileLabel || "Authenticated admin";
 
   // Close the mobile drawer on Escape for keyboard operability.
   useEffect(() => {
@@ -167,7 +171,7 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
                   {roleLabel}
                 </span>
                 <span className="hidden whitespace-nowrap text-xs font-medium text-gray-600 md:inline">
-                  {profileLabel}
+                  {visibleProfileLabel}
                 </span>
                 <button
                   type="button"

@@ -5,7 +5,13 @@ import { AdminDataContext } from "../context/adminData";
 import ProjectForm from "./ProjectForm";
 
 const PROFILES = [
-  { id: "owner-1", role: "owner", is_active: true, full_name: "Widson Omutelema Ambaisi", email: "" },
+  {
+    id: "owner-1",
+    role: "owner",
+    is_active: true,
+    full_name: "Widson Ambaisi",
+    email: "widson@botaniquedesigners.com",
+  },
   { id: "manager-1", role: "manager", is_active: true, full_name: "Martine Lotom", email: "" },
   { id: "staff-1", role: "staff", is_active: true, full_name: "Staff A", email: "" },
 ];

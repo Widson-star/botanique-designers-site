@@ -27,8 +27,16 @@ describe("ActivityHistory", () => {
       <AdminDataContext.Provider
         value={{
           profilesById: {
-            "owner-1": { full_name: "Widson Omutelema Ambaisi" },
-            "manager-1": { full_name: "Martine Lotom" },
+            "owner-1": {
+              role: "owner",
+              email: "widson@botaniquedesigners.com",
+              full_name: "Widson Ambaisi",
+            },
+            "manager-1": {
+              role: "manager",
+              email: "martine@botaniquedesigners.com",
+              full_name: "Martine Lotom",
+            },
           },
           fetchActivities: vi.fn().mockResolvedValue([activity, managerActivity]),
         }}

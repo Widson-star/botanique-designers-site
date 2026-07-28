@@ -7,6 +7,8 @@ import AdminLayout from "./AdminLayout";
 function renderLayout({
   role = "owner",
   profileLabel = "Widson O. Ambaisi",
+  profile = null,
+  isDemo = true,
 } = {}) {
   return render(
     <MemoryRouter initialEntries={["/admin"]}>
@@ -18,8 +20,9 @@ function renderLayout({
             element={
               <AdminLayout
                 role={role}
+                profile={profile}
                 profileLabel={profileLabel}
-                isDemo
+                isDemo={isDemo}
                 onSignOut={vi.fn()}
               />
             }
@@ -61,6 +64,36 @@ describe("AdminLayout visual boundary", () => {
       screen.getByText("Financial documents remain managed in Simple Invoice Manager.")
     ).toBeInTheDocument();
     expect(screen.queryByText(/PDFs|document numbers|payments/i)).not.toBeInTheDocument();
+  });
+
+  it("normalises the shortened authenticated founder profile in the top navigation", () => {
+    renderLayout({
+      isDemo: false,
+      profileLabel: undefined,
+      profile: {
+        role: "owner",
+        email: "widson@botaniquedesigners.com",
+        full_name: "Widson Ambaisi",
+      },
+    });
+    expect(screen.getByText("Widson O. Ambaisi")).toBeInTheDocument();
+    expect(screen.getByText("Principal")).toBeInTheDocument();
+    expect(screen.queryByText("Widson Ambaisi")).not.toBeInTheDocument();
+  });
+
+  it("does not alter Martine Lotom in authenticated navigation", () => {
+    renderLayout({
+      role: "manager",
+      isDemo: false,
+      profileLabel: undefined,
+      profile: {
+        role: "manager",
+        email: "martine@botaniquedesigners.com",
+        full_name: "Martine Lotom",
+      },
+    });
+    expect(screen.getByText("Martine Lotom")).toBeInTheDocument();
+    expect(screen.getByText("Operations Manager")).toBeInTheDocument();
   });
 
   it.each([

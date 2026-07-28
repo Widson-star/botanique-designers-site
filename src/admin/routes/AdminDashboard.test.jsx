@@ -106,10 +106,38 @@ describe("AdminDashboard composition", () => {
     expect(screen.getByText("Concept Design")).toBeInTheDocument();
   });
 
-  it("does not use attention styling for a zero metric", () => {
+  it("renders one integrated management metrics rail without card ribbons", () => {
     renderDashboard({ role: "owner", projects });
-    const overdueCard = screen.getByText("Overdue actions").closest("a");
-    expect(overdueCard).not.toHaveClass("border-amber-300");
+    const rail = screen.getByRole("group", { name: "Management metrics" });
+    const regions = rail.querySelectorAll("[data-metric-region]");
+
+    expect(regions).toHaveLength(4);
+    expect(rail).toHaveClass("grid-cols-2", "lg:grid-cols-4");
+    expect(rail).toHaveClass("border", "border-stone-200");
+    regions.forEach((region) => {
+      expect(region).not.toHaveClass("border-l-4");
+      expect(region).not.toHaveClass("shadow");
+    });
+  });
+
+  it("keeps zero metrics neutral and gives non-zero activation restrained emphasis", () => {
+    renderDashboard({ role: "owner", projects });
+    const overdueRegion = screen.getByText("Overdue actions").closest("[data-metric-region]");
+    const pendingRegion = screen.getByText("Pending activation").closest("[data-metric-region]");
+
+    expect(overdueRegion).toHaveAttribute("data-attention", "false");
+    expect(overdueRegion.querySelector("[data-attention-indicator]")).toBeNull();
+    expect(pendingRegion).toHaveAttribute("data-attention", "true");
+    expect(pendingRegion.querySelector("[data-attention-indicator]")).toBeInTheDocument();
+    expect(pendingRegion).not.toHaveClass("border-amber-300", "bg-amber-50");
+  });
+
+  it("preserves visible keyboard focus on every metrics drill-down", () => {
+    renderDashboard({ role: "owner", projects });
+    const rail = screen.getByRole("group", { name: "Management metrics" });
+    within(rail).getAllByRole("link").forEach((link) => {
+      expect(link).toHaveClass("focus-visible:ring-2");
+    });
   });
 
   it("uses a compact row for an empty attention queue", () => {
@@ -137,6 +165,10 @@ describe("AdminDashboard composition", () => {
       "href",
       "/admin/projects?view=active"
     );
+    expect(within(indicators).getByText("Pending activation").closest("a")).toHaveAttribute(
+      "href",
+      "/admin/projects?view=pending-activation"
+    );
     expect(within(indicators).getByText("Overdue actions").closest("a")).toHaveAttribute(
       "href",
       "/admin/projects?view=overdue-actions"
@@ -145,6 +177,14 @@ describe("AdminDashboard composition", () => {
       "href",
       "/admin/projects?view=upcoming-starts"
     );
+  });
+
+  it("retains one four-region semantic group for the mobile 2-by-2 layout", () => {
+    renderDashboard({ role: "owner", projects });
+    const rail = screen.getByRole("group", { name: "Management metrics" });
+    expect(within(rail).getAllByRole("link")).toHaveLength(4);
+    expect(rail).toHaveClass("grid-cols-2");
+    expect(rail.querySelectorAll("[data-metric-region]")).toHaveLength(4);
   });
 
   it("shows the exact recent-activity empty state", async () => {

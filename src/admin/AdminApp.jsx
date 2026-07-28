@@ -1,5 +1,5 @@
 import { Route, Routes } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import AdminAccessDenied from "./components/AdminAccessDenied";
 import AdminConfigError from "./components/AdminConfigError";
 import AdminLogin from "./components/AdminLogin";
@@ -11,7 +11,6 @@ import AdminProjectDetail from "./routes/AdminProjectDetail";
 import AdminProjectForm from "./routes/AdminProjectForm";
 import { AdminDataProvider } from "./context/AdminDataContext";
 import { ROLES } from "./constants/roles";
-import { compactPersonName } from "./utils/personName";
 import {
   clearStoredSession,
   fetchCurrentProfile,
@@ -80,14 +79,11 @@ export default function AdminApp() {
     };
   }, [session]);
 
-  const profileLabel = useMemo(() => {
-    if (isDemo) {
-      return role === ROLES.OWNER ? "Widson O. Ambaisi" : "Martine Lotom";
-    }
-    return compactPersonName(
-      profile?.full_name || profile?.email || "Authenticated admin"
-    );
-  }, [isDemo, profile, role]);
+  const profileLabel = isDemo
+    ? role === ROLES.OWNER
+      ? "Widson O. Ambaisi"
+      : "Martine Lotom"
+    : undefined;
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -164,6 +160,7 @@ export default function AdminApp() {
           element={
             <AdminLayout
               role={role}
+              profile={profile}
               profileLabel={profileLabel}
               isDemo={isDemo}
               onSignOut={handleSignOut}

@@ -1995,6 +1995,22 @@ PR is reviewed, merged and production-verified.
   Production Supabase mutation code is unchanged. Exact-commit Vercel deployment
   `dpl_GxfMhWDp6dwC3VNUSwgHw7Jva9qt` is **READY** at
   `botanique-designers-site-gpm1-hlbb50jxy.vercel.app`.
+- **Senior KPI-rail and identity-presentation polish:** the four primary indicators now
+  occupy one compact management metrics rail with a single subtle outer border, neutral
+  internal dividers, no independent card outlines, ribbons, coloured edge strips, shadows
+  or lift animation. Desktop uses four equal regions; mobile uses one semantic 2×2 surface.
+  Zero values remain neutral; only a genuine non-zero attention value receives a restrained
+  amber value/dot treatment. The existing Active, Pending activation/Pending projects,
+  Overdue actions and Upcoming starts predicates and exact filtered destinations are
+  unchanged, with visible keyboard focus retained. Total, Completed and Design-only remain
+  a restrained typographic summary line below the rail. Authenticated founder presentation
+  now resolves the shortened hosted profile **Widson Ambaisi** to **Widson O. Ambaisi** only
+  when both the `owner` role and exact founder authentication email match. Formal contexts
+  continue to resolve **Widson Omutelema Ambaisi**, **Martine Lotom** is unaffected, and no
+  stored profile row was changed. Visual verification used the exact local implementation
+  at 1440×900 and 390×844, including a metrics close crop and Principal/header identity
+  crop. No dashboard logic, CRUD, capability, project-activity, Simple Invoice, navigation,
+  Realtime, migration, RLS, package or production mutation behavior changed.
 - **Architecture:** authentication stays in `AdminApp`; a focused `AdminDataProvider`
   (`src/admin/context/`) owns visible projects, role-visible profiles, loading/error, save
   feedback, refetch and create/update mutations; REST logic stays in `src/admin/lib/supabase.js`
@@ -2003,7 +2019,7 @@ PR is reviewed, merged and production-verified.
   columns or `last_updated`); pure helpers hold capability, payload/patch, KPI and
   activity-format logic. No Supabase Realtime.
 - **Tests:** new Vitest + React Testing Library setup (test-infra devDependencies only).
-  **128 tests pass across 15 test files**, including pure role/capability, create/patch
+  **135 tests pass across 15 test files**, including pure role/capability, create/patch
   payload (changed-fields-only, blank→null, no audit fields, manager forced-Pending,
   preserved inaccessible lead), completion integrity and dialog focus, returned-row local
   upsert before refetch, preserved state + warning/retry after reconciliation failure,
@@ -2019,8 +2035,12 @@ PR is reviewed, merged and production-verified.
   exclusion, owner/manager Pending wording, manager activation-language absence, corrected
   attention-summary counts and Projects-table predicate continuity. Activity History
   regressions prove compact collapsed founder naming, retained formal expanded identity,
-  unchanged Martine Lotom presentation and absence of raw profile UUIDs. No test writes to
-  hosted production records.
+  unchanged Martine Lotom presentation and absence of raw profile UUIDs. KPI-rail
+  regressions prove the single shared group, ribbon-free regions, neutral zero state,
+  restrained non-zero activation emphasis, exact four drill-down destinations, visible
+  keyboard focus and the mobile 2×2 semantic structure. Authenticated-header coverage proves
+  the shortened hosted founder profile resolves compactly while formal identity remains
+  available. No test writes to hosted production records.
 - **Lint / build:** every changed/new JS/JSX file is ESLint-clean. `npm run lint` reports
   **19 inherited errors in unchanged files only** (`server/index.js` Node-global `no-undef`,
   `src/components/FadeIn.jsx` `set-state-in-effect`, `src/context/AppContext.jsx`
@@ -2028,7 +2048,7 @@ PR is reviewed, merged and production-verified.
   (clean `npm ci` install) succeeds and still prerenders the 43 public routes incl. `404.html`;
   admin routes remain client-only. The correction pass re-ran the same Vitest, ESLint,
   Vite-build and prerender entrypoints directly with the bundled Node runtime because this
-  execution shell did not expose an `npm` launcher; results are now 128/128 tests across
+  execution shell did not expose an `npm` launcher; results are now 135/135 tests across
   15 files, zero
   changed-file lint findings, the same 19 inherited full-lint findings, and a successful
   43-route + `404.html` prerender with no `dist/admin` directory and admin routes

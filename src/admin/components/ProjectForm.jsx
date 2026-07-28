@@ -22,6 +22,7 @@ import {
   projectToFormState,
   validateProjectForm,
 } from "../utils/projectForm";
+import { formalProfileName } from "../utils/personName";
 
 function Field({ label, htmlFor, error, hint, children, required }) {
   return (
@@ -282,7 +283,7 @@ export default function ProjectForm({ mode, project }) {
                 <option value="">Unassigned</option>
                 {leadOptions.map((option) => (
                   <option key={option.id} value={option.id}>
-                    {option.full_name || option.email}
+                    {formalProfileName(option)}
                   </option>
                 ))}
               </select>

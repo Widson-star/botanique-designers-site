@@ -78,7 +78,10 @@ export default function ActivityHistory({ projectId }) {
     <ol className="divide-y divide-stone-200">
       {activities.map((raw) => {
         const activity = formatActivity(raw, profilesById);
-        const compactActor = compactPersonName(activity.actor);
+        const compactActor = compactPersonName(
+          activity.actor,
+          profilesById[raw.actor_id]
+        );
         return (
           <li key={activity.id} className="py-4 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-baseline justify-between gap-2">

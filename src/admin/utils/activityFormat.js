@@ -5,6 +5,7 @@
 // booleans -> Yes/No, null -> "Not set", dates/timestamps formatted, and
 // profile references resolved to names where profile RLS permits. UUIDs are
 // NEVER surfaced, and raw JSON is never the primary interface.
+import { formalProfileName } from "./personName";
 
 // Human labels for the operational fields the ledger diffs.
 export const FIELD_LABELS = {
@@ -49,7 +50,7 @@ export function actionLabel(action) {
 export function resolveProfileLabel(userId, profilesById = {}) {
   if (!userId) return "Not set";
   const profile = profilesById[userId];
-  if (profile) return profile.full_name || profile.email || "Team member";
+  if (profile) return formalProfileName(profile);
   // Profile not readable through RLS — never show the raw id.
   return "Protected profile";
 }
@@ -58,7 +59,7 @@ export function resolveProfileLabel(userId, profilesById = {}) {
 export function resolveActorLabel(actorId, profilesById = {}) {
   if (!actorId) return "System";
   const profile = profilesById[actorId];
-  if (profile) return profile.full_name || profile.email || "Team member";
+  if (profile) return formalProfileName(profile);
   // An owner activity whose profile row is not readable to a manager shows a
   // safe label rather than the id (see product requirements §19).
   return "Owner or authorised manager";

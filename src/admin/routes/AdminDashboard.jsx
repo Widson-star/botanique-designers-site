@@ -72,12 +72,17 @@ export default function AdminDashboard() {
       )}
 
       <section aria-label="Primary project indicators">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div
+          className="grid grid-cols-2 overflow-hidden rounded-lg border border-stone-200 bg-white lg:grid-cols-4"
+          role="group"
+          aria-label="Management metrics"
+        >
           <StatCard
             label="Active projects"
             value={metrics.active}
             href="/admin/projects?view=active"
             hint="Ongoing or paused"
+            className="border-b border-r border-stone-200 lg:border-b-0"
           />
           <StatCard
             label={showPendingActivation ? "Pending activation" : "Pending projects"}
@@ -88,12 +93,14 @@ export default function AdminDashboard() {
                 : "/admin/projects?view=pending"
             }
             tone="attention"
+            className="border-b border-stone-200 lg:border-b-0 lg:border-r"
           />
           <StatCard
             label="Overdue actions"
             value={metrics.overdueActions}
             href="/admin/projects?view=overdue-actions"
             tone={metrics.overdueActions > 0 ? "attention" : "default"}
+            className="border-r border-stone-200"
           />
           <StatCard
             label="Upcoming starts"

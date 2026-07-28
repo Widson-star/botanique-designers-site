@@ -94,7 +94,10 @@ export default function RecentActivity({ projects, profilesById, fetchActivities
                       {activity.actionLabel}
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {compactPersonName(activity.actor)} ·{" "}
+                      {compactPersonName(
+                        activity.actor,
+                        profilesById[raw.actor_id]
+                      )} ·{" "}
                       <Link
                         to={`/admin/projects/${raw.projectId}?tab=activity`}
                         className="font-semibold text-botanique-green hover:underline"

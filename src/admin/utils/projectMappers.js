@@ -3,6 +3,7 @@
 // `updated_at` is the authoritative last-modified value; `last_updated` is the
 // DEPRECATED legacy column and is intentionally NOT surfaced as an editable or
 // displayed field (see the Phase 1B-A1 migration field-semantics note).
+import { profilePresentationName } from "./personName";
 
 // Resolve a lead's display name without ever exposing the raw UUID. When the
 // profile is not readable through RLS, a safe protected label is shown while the
@@ -10,7 +11,7 @@
 function resolveLeadName(leadPersonId, profilesById) {
   if (!leadPersonId) return "Not assigned";
   const profile = profilesById?.[leadPersonId];
-  if (profile) return profile.full_name || profile.email || "Team member";
+  if (profile) return profilePresentationName(profile, "Team member");
   return "Current assigned lead — protected profile";
 }
 
