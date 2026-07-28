@@ -231,19 +231,24 @@ defined; not implemented.** It sits under `BD-OPERATIONS-HUB-01` and is not a ne
 workstream.
 
 The domain is a per-project, per-work-date **Daily Site Entry** record capturing the
-morning operational plan — working / no-work / paused disposition, expected worker count
-and optional crew reference, rate or agreed labour total and derived planned labour cost,
-work planned, funds already available, additional amount requested, notes, and
-system-stamped submitter and time — with reserved (unimplemented) day-end actual fields
-(actual workers, actual labour cost, actual work completed, day-end notes, unresolved
-difference).
+morning operational plan — a `working` or `no_work` disposition (with a no-work reason:
+`rain`, `weekend_no_activity`, `temporarily_paused_for_day`, `no_labour_required`,
+`site_access_unavailable` or `other`), expected worker count and optional crew reference,
+rate or agreed labour total and derived planned labour cost, work planned, funds already
+available, additional amount requested, notes, and system-stamped submitter and time — with
+reserved (unimplemented) day-end actual fields (actual workers, actual labour cost, actual
+work completed, day-end notes, unresolved difference).
 
 Architectural invariants:
 
 - **one project per entry** — no entry combines multiple sites; combined multi-project
   totals are derived aggregates only, never a stored shared row;
-- **explicit no-work** — a rain/weekend/paused/no-labour day is recorded as a no-work
-  entry, never as a zero-worker "working" entry, and still satisfies morning compliance;
+- **explicit no-work** — a rain/weekend/paused-for-day/no-labour day is recorded as a
+  `no_work` entry with a reason, never as a zero-worker `working` entry, and still satisfies
+  morning compliance;
+- **no lifecycle mutation** — a Daily Site Entry never activates, pauses, completes,
+  cancels or otherwise changes `projects.status`; the entry disposition (`temporarily_paused_for_day`)
+  is distinct from the official Paused project status;
 - **system-stamped identity** — creator and timestamp are database-stamped; clients cannot
   spoof actor identity;
 - **immutable accountability** — accepted entries are not silently rewritten; corrections
@@ -253,8 +258,17 @@ Architectural invariants:
   voided → superseded; ordinary daily submission is **not** an approval request;
 - **evidence status only** in the first slice (none / promised / provided / not_required);
   file attachments depend on the future Documents & Evidence domain;
-- **soft morning compliance** — the Dashboard flags active projects lacking today's entry;
+- **soft morning compliance** — the Dashboard flags in-scope projects lacking today's entry;
   no destructive lock, no notifications and no Realtime in the first slice.
+
+**Resolved compliance rules (founder authority):** entries are expected before work begins
+and ordinarily by **08:30 EAT** (a management expectation, not a cut-off; later entries may
+be marked late without locking the manager out, retaining the actual timestamp); weekends
+require an entry only when activity is scheduled; compliance covers **Ongoing, operationally
+active projects only** (Pending, Awaiting Approval, Completed, Design-only, Archived and
+Paused excluded); the owner may **waive** one project/date with reason, identity and
+timestamp without implying any workers/cost/work/funds; and persistent non-compliance
+produces visible flags and counts only, with no first-slice access or action restriction.
 
 This domain is separate from Labour Engagements & Payments, Project Funds & Reconciliation
 and Operational Expenditure: it records the operational plan and site actuals, not agreed

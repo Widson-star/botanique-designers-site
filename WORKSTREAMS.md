@@ -2325,15 +2325,20 @@ production verification) is **unchanged** and the Approvals implementation is no
   authority (the authority system explicitly requires no new master register), and elevated
   to the **next implementation workstream** now that Approvals is merged.
 - **Domain definition:** a per-project, per-work-date **Daily Site Entry** capturing the
-  morning operational plan (working / no-work / paused; expected workers and optional crew;
-  rate or agreed labour total and derived planned labour cost; work planned; funds
-  available; additional amount requested; notes; system-stamped submitter/time), with
-  reserved but unimplemented day-end actual fields (actual workers, actual labour cost,
-  actual work completed, day-end notes, unresolved difference).
+  morning operational plan (`working` / `no_work` disposition with a no-work reason —
+  `rain`, `weekend_no_activity`, `temporarily_paused_for_day`, `no_labour_required`,
+  `site_access_unavailable`, `other`; expected workers and optional crew; rate or agreed
+  labour total and derived planned labour cost; work planned; funds available; additional
+  amount requested; notes; system-stamped submitter/time), with reserved but unimplemented
+  day-end actual fields (actual workers, actual labour cost, actual work completed, day-end
+  notes, unresolved difference). A Daily Site Entry never mutates the project lifecycle.
 - **Morning compliance:** Martine's first working-morning Operations Hub task is a Daily
-  Site Entry for every active site under his management; the Dashboard flags each active
+  Site Entry for every in-scope site under his management; the Dashboard flags each in-scope
   project lacking today's entry. First slice is **soft enforcement** — no destructive lock,
-  no notifications, no Realtime, no invented cut-off time.
+  no notifications, no Realtime.
+- **Paused semantics:** the official **Paused** project status (excluded from compliance) is
+  distinct from a `temporarily_paused_for_day` `no_work` disposition on an otherwise Ongoing
+  project (a single-day operational state that does not change `projects.status`).
 - **Domain boundary:** distinct from Labour Engagements & Payments, Project Funds &
   Reconciliation and Operational Expenditure — it records the operational plan and site
   actuals, not commitments, fund movement or the expenditure ledger. No underlying record
@@ -2363,10 +2368,17 @@ production verification) is **unchanged** and the Approvals implementation is no
   suggestion) is deferred to a separate second slice, because combining a new entry table,
   its lifecycle/RLS, the compliance dashboard, a mobile entry flow and a full expenditure
   model in one PR carries excessive migration/RLS/UI/authority risk.
-- **Founder decisions still required:** expected submission time; whether weekends need
-  explicit no-work entries; whether pending-activation projects are covered or only
-  active/ongoing; whether the owner may waive a specific missing entry; whether later
-  actions should be restricted after persistent non-compliance.
+- **Founder decisions resolved:** (1) submission before work begins and ordinarily by
+  **08:30 EAT** — a management expectation, not a cut-off; later entries may be marked late,
+  the manager is never locked out and the actual timestamp is retained; (2) **weekends**
+  require an entry only when activity (work, deployed workers, delivery, site visit) is
+  scheduled; (3) coverage is **Ongoing, operationally active projects only** (Pending,
+  Awaiting Approval, Completed, Design-only, Archived and Paused excluded; pending-activation
+  not required); (4) the **owner may waive** one project/date, preserving project, date,
+  reason, owner identity and timestamp, without implying workers/cost/work/expenditure/funds;
+  (5) persistent non-compliance yields **visible flags and counts only** — no first-slice
+  restriction of access, editing or later actions (any future restriction needs its own
+  evidence, founder approval, authority revision and gate).
 - **Integrity confirmations:** implementation has not started; no hosted data was mutated;
   Simple Invoice Manager was unchanged; no Apicora work occurred; the nine production
   projects (including Zizu Investments Ltd and Alego Usonga) and both approval tables are

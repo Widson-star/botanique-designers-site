@@ -220,10 +220,9 @@ Entry** for each active site, captured before other Operations Hub work.
 #### 4.5.2 First-morning-action expectation and active-project coverage
 
 Martine's first required Operations Hub task on every working morning is to record a Daily
-Site Entry for **every active site under his management** for that work date. Each active
-project without an entry for the current work date remains flagged as outstanding until an
-entry exists. "Active" for coverage purposes is a founder decision still open (see
-§4.5.13).
+Site Entry for **every active site under his management** for that work date. Each in-scope
+project (Ongoing and operationally active — §4.5.8a) without an entry for the current work
+date remains flagged as outstanding until an entry exists.
 
 #### 4.5.3 Conceptual Daily Site Entry
 
@@ -239,13 +238,33 @@ The record must later be capable of holding day-end fields — actual worker cou
 labour cost, actual work completed, day-end notes and any unresolved difference — **without
 these being implemented in the first slice**.
 
-#### 4.5.4 "No work today" handling
+#### 4.5.4 "No work today" handling and disposition
 
 A no-work day must be recorded **explicitly**, never by forcing a false worker count of
-zero into a "working" entry. Supported no-work reasons include: no work today, rain day,
-weekend, site paused, no labour required, and other valid no-work reason. A Daily Site
-Entry therefore carries a working / no-work / paused disposition, and a no-work entry
-still satisfies the morning-compliance obligation for that project and date.
+zero into a "working" entry. A Daily Site Entry carries exactly **two dispositions** —
+`working` or `no_work` — and a `no_work` entry carries a **no-work reason**, one of:
+
+- `rain`;
+- `weekend_no_activity`;
+- `temporarily_paused_for_day`;
+- `no_labour_required`;
+- `site_access_unavailable`;
+- `other`.
+
+A `no_work` entry still satisfies the morning-compliance obligation for that project and
+date.
+
+**Paused semantics — two distinct concepts, deliberately not conflated:**
+
+1. **Project lifecycle status** — an officially **Paused** project (a `projects` status)
+   is normally **excluded** from automatic morning compliance (see §4.5.8a).
+2. **Daily operational disposition** — an otherwise **Ongoing** project may have `no_work`
+   on a particular date with reason `temporarily_paused_for_day`, meaning activity is
+   paused for that day only.
+
+The Daily Site Entry disposition is therefore **not** named "paused", and it must **never**
+activate, pause, complete, cancel or otherwise mutate the project lifecycle. Recording a
+`temporarily_paused_for_day` entry does not change `projects.status`.
 
 #### 4.5.5 Domain distinction
 
@@ -303,12 +322,43 @@ No monetary thresholds are invented in this authority.
 The first slice uses **soft enforcement only**:
 
 - the Dashboard shows a "Morning site entries due" state;
-- each active project without today's entry remains flagged;
+- each in-scope project (see §4.5.8a) without today's entry remains flagged;
 - the manager can still fully view and use the system — **no destructive lock**;
 - the owner can see late or missing entries;
-- an entry disposition may be working, no_work or paused;
-- no external notifications and no Supabase Realtime in the first slice;
-- no cut-off time is invented without founder approval.
+- an entry disposition is `working` or `no_work` (§4.5.4);
+- no external notifications and no Supabase Realtime in the first slice.
+
+**Submission expectation:** a Daily Site Entry should be submitted **before work begins**
+and ordinarily **no later than 08:30 East Africa Time (EAT)**. This is a management
+expectation, **not** a destructive system cut-off. After 08:30 EAT: the entry may be
+marked **late**; the manager can still submit it; the system must **not** lock the manager
+out; and the record retains the **actual submission timestamp**.
+
+#### 4.5.8a Project coverage
+
+Morning compliance applies only to projects that are **Ongoing and operationally active
+under the manager's authority**. The following are **excluded from automatic daily
+compliance**: Pending projects; projects Awaiting Approval; Completed projects; Design-only
+projects; Archived projects; and genuinely **Paused** projects (the lifecycle status,
+distinct from a `temporarily_paused_for_day` disposition — §4.5.4). Pending-activation
+projects are **not** treated as requiring morning entries. An excluded project may still
+receive a **voluntary** Daily Site Entry when an exceptional visit, delivery or operational
+activity occurs.
+
+#### 4.5.8b Owner waiver
+
+The owner may **waive** a missing Daily Site Entry for **one project and one work date**. A
+waiver preserves project, work date, reason, owner identity and timestamp. A waiver
+**satisfies** the compliance requirement for that project/date but does **not** create or
+imply workers, labour cost, work performed, expenditure or funds received.
+
+#### 4.5.8c Persistent non-compliance (first slice)
+
+Persistent missing or late entries produce **visible signals only**: Dashboard flags, a
+missing-entry count, a late-entry count, owner visibility and auditable compliance history.
+The first slice does **not** restrict Dashboard access, project access, editing or any
+later action. Any future action restriction requires evidence from actual operational use,
+separate founder approval, a separate authority revision and its own implementation gate.
 
 #### 4.5.9 Data-integrity principles
 
@@ -347,18 +397,27 @@ must use large touch targets, minimal typing, clear KES display and a simple mob
 layout, with **no** raw UUIDs, no raw JSON, no accounting jargon and no multi-project
 transaction form. Detailed screen design is out of scope for this documentation task.
 
-#### 4.5.13 Founder decisions still required
+#### 4.5.13 Founder decisions resolved
 
-Before implementation, the founder must decide:
+The founder has resolved the five previously open decisions; they are now authority:
 
-- the expected morning submission time (if any);
-- whether weekends require explicit no-work entries;
-- whether only active/ongoing projects are covered, or also pending-activation projects;
-- whether an owner may waive a specific missing entry;
-- whether any later actions should be restricted after persistent non-compliance.
-
-No cut-off time, weekend rule or non-compliance restriction is assumed without this
-decision.
+- **Submission expectation:** before work begins and ordinarily no later than 08:30 EAT — a
+  management expectation, not a destructive cut-off; after 08:30 an entry may be marked late
+  but the manager is never locked out and the actual timestamp is retained (§4.5.8).
+- **Weekends:** no automatic Saturday/Sunday entry is required; a weekend entry is required
+  only when work is planned, workers are deployed, a delivery is expected or a site
+  visit/operational activity is scheduled. A weekend without scheduled activity creates no
+  overdue compliance item (§4.5.4 reason `weekend_no_activity`, §4.5.8a).
+- **Project coverage:** Ongoing, operationally active projects only; Pending, Awaiting
+  Approval, Completed, Design-only, Archived and genuinely Paused projects are excluded, and
+  pending-activation projects do not require morning entries (§4.5.8a).
+- **Owner waiver:** the owner may waive one project/date, preserving project, date, reason,
+  owner identity and timestamp, without implying workers, cost, work, expenditure or funds
+  (§4.5.8b).
+- **Persistent non-compliance:** soft enforcement only — visible flags, counts, owner
+  visibility and auditable history, with no first-slice restriction of access, editing or
+  later actions; any future restriction needs its own evidence, approval and authority
+  revision (§4.5.8c).
 
 ## 5. Approvals foundation — next implementation workstream
 
