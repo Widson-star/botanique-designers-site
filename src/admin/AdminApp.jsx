@@ -28,15 +28,36 @@ import {
 // save feedback are delegated to AdminDataProvider (see context/AdminDataContext).
 export default function AdminApp() {
   const [demoRole, setDemoRole] = useState(null);
-  const [session, setSession] = useState(() => (supabaseConfigured ? getStoredSession() : null));
+  const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [authStatus, setAuthStatus] = useState(supabaseConfigured && session ? "loading" : "idle");
+  const [authStatus, setAuthStatus] = useState("idle");
   const [authError, setAuthError] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const isDemo = !supabaseConfigured;
   const role = isDemo ? demoRole : profile?.role;
+
+  useEffect(() => {
+    if (!supabaseConfigured) return;
+
+    const storedSession = getStoredSession();
+    if (!storedSession) return;
+
+    // Storage is browser-only. Restore it after the deterministic signed-out
+    // first render, and enter the profile-validation screen before exposing any
+    // authenticated admin content.
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setAuthStatus("loading");
+      setSession(storedSession);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!supabaseConfigured || !session?.access_token || !session?.user?.id) return;

@@ -1,7 +1,7 @@
 import React from 'react'
-import { createRoot, hydrateRoot } from 'react-dom/client'
 import { HelmetProvider } from 'react-helmet-async'
 import App from './App.jsx'
+import { mountReactApp } from './clientMount.js'
 import './index.css'
 
 const rootElement = document.getElementById('root')
@@ -14,10 +14,16 @@ const app = (
   </React.StrictMode>
 )
 
-// If the root already has pre-rendered HTML (from the postbuild prerender step),
-// hydrate instead of wiping and re-rendering — this preserves SEO content.
-if (rootElement.hasChildNodes()) {
-  hydrateRoot(rootElement, app)
-} else {
-  createRoot(rootElement).render(app)
+function reportRecoverableError(error, errorInfo) {
+  window.__BOTANIQUE_ON_RECOVERABLE_ERROR__?.(error, errorInfo)
+  console.error(error)
 }
+
+// Public routes hydrate their matching prerendered HTML. Private admin routes
+// are client-rendered because their Vercel SPA fallback serves the prerendered
+// homepage document, not an admin server snapshot.
+mountReactApp({
+  rootElement,
+  app,
+  onRecoverableError: reportRecoverableError,
+})
