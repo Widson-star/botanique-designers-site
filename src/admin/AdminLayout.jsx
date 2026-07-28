@@ -9,6 +9,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ROLE_LABELS } from "./constants/roles";
 import SaveFeedback from "./components/SaveFeedback";
 import { profilePresentationName } from "./utils/personName";
+import { canSeeApprovals } from "./utils/approvalCapabilities";
 
 const NAV_ITEMS = [
   {
@@ -23,6 +24,13 @@ const NAV_ITEMS = [
     end: false,
     icon: "M4 5.5h12v11H4v-11Zm3-2h6v2H7v-2Z",
   },
+  {
+    to: "/admin/approvals",
+    label: "Approvals",
+    end: false,
+    capability: canSeeApprovals,
+    icon: "M5 10.5 8.25 14 15 6.5M3.5 3.5h13v13h-13v-13Z",
+  },
 ];
 
 function navItemClass({ isActive }) {
@@ -33,10 +41,10 @@ function navItemClass({ isActive }) {
   }`;
 }
 
-function NavItems({ onNavigate }) {
+function NavItems({ onNavigate, role }) {
   return (
     <nav className="space-y-1" aria-label="Admin sections">
-      {NAV_ITEMS.map((item) => (
+      {NAV_ITEMS.filter((item) => !item.capability || item.capability(role)).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -139,7 +147,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
             </p>
           </div>
           <div className="flex-1 px-3 py-5">
-            <NavItems />
+            <NavItems role={role} />
           </div>
           <div className="border-t border-stone-200 px-5 py-4 text-[11px] leading-relaxed text-gray-400">
             Financial documents remain managed in Simple Invoice Manager.
@@ -227,7 +235,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
                 </svg>
               </button>
             </div>
-            <NavItems onNavigate={() => setDrawerOpen(false)} />
+            <NavItems role={role} onNavigate={() => setDrawerOpen(false)} />
             <p className="mt-auto border-t border-stone-200 pt-4 text-[11px] leading-relaxed text-gray-400">
               Financial documents remain managed in Simple Invoice Manager.
             </p>

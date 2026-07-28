@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
+import { AdminApprovalsContext } from "../context/adminApprovals";
 import AdminProjectDetail from "./AdminProjectDetail";
 import AdminProjectForm from "./AdminProjectForm";
 
@@ -45,11 +46,15 @@ function renderRoute(role, entry, element, projectRows = [project]) {
           fetchActivities: vi.fn().mockResolvedValue([]),
         }}
       >
-        <Routes>
-          <Route path="/admin/projects/:id" element={element} />
-          <Route path="/admin/projects/:id/edit" element={element} />
-          <Route path="/admin/projects/new" element={element} />
-        </Routes>
+        <AdminApprovalsContext.Provider
+          value={{ requests: [], submit: vi.fn() }}
+        >
+          <Routes>
+            <Route path="/admin/projects/:id" element={element} />
+            <Route path="/admin/projects/:id/edit" element={element} />
+            <Route path="/admin/projects/new" element={element} />
+          </Routes>
+        </AdminApprovalsContext.Provider>
       </AdminDataContext.Provider>
     </MemoryRouter>
   );
@@ -71,6 +76,7 @@ describe("project detail role visibility", () => {
     expect(screen.queryByRole("heading", { name: "Portfolio Overview" })).not.toBeInTheDocument();
     expect(screen.queryByText("Approved For Portfolio")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Edit project" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Protected project changes" })).toBeInTheDocument();
   });
 
   it.each(["staff", "viewer"])("hides Edit from %s", (role) => {

@@ -116,6 +116,21 @@ The current `tg_guard_project_material_authority()` trigger remains an interim e
 boundary. A future approvals implementation must retain equivalent or stronger authority
 before any reviewed replacement of that guard.
 
+The first project-linked slice is now implemented locally through additive migration
+`20260728000100_operations_hub_approvals_foundation.sql`; hosted application remains
+pending review. `approval_requests` is the constrained current-state record and
+`approval_events` is the immutable lifecycle ledger. Narrow SECURITY DEFINER functions
+own submission, withdrawal, amendment/resubmission and owner decision. An approved
+decision locks and revalidates the project, applies one explicit project mutation branch
+and records the decision in the same transaction. The existing project-history trigger
+continues to record the actual project-row mutation.
+
+The reusable schema is intentionally bounded in this slice to the `project` domain and six
+reviewed approval types. It does not create generic table/column mutation, future finance
+domains, evidence, notifications or staff request access. The material-authority and
+project-lead guards are retained unchanged; managers request protected changes rather than
+bypassing those guards.
+
 ### 4.3 Client Commercial Records
 
 Future Operations Hub records may link a project to manually verified commercial

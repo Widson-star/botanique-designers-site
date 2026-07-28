@@ -9,7 +9,10 @@ import AdminDashboard from "./routes/AdminDashboard";
 import AdminProjects from "./routes/AdminProjects";
 import AdminProjectDetail from "./routes/AdminProjectDetail";
 import AdminProjectForm from "./routes/AdminProjectForm";
+import AdminApprovals from "./routes/AdminApprovals";
+import AdminApprovalDetail from "./routes/AdminApprovalDetail";
 import { AdminDataProvider } from "./context/AdminDataContext";
+import AdminApprovalsProvider from "./context/AdminApprovalsContext";
 import { ROLES } from "./constants/roles";
 import {
   clearStoredSession,
@@ -155,26 +158,30 @@ export default function AdminApp() {
 
   return (
     <AdminDataProvider session={session} role={role} profile={profile} isDemo={isDemo}>
-      <Routes>
-        <Route
-          element={
-            <AdminLayout
-              role={role}
-              profile={profile}
-              profileLabel={profileLabel}
-              isDemo={isDemo}
-              onSignOut={handleSignOut}
-            />
-          }
-        >
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/projects" element={<AdminProjects />} />
-          <Route path="/admin/projects/new" element={<AdminProjectForm mode="create" />} />
-          <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />
-          <Route path="/admin/projects/:id/edit" element={<AdminProjectForm mode="edit" />} />
-          <Route path="/admin/*" element={<AdminDashboard />} />
-        </Route>
-      </Routes>
+      <AdminApprovalsProvider session={session} role={role} isDemo={isDemo}>
+        <Routes>
+          <Route
+            element={
+              <AdminLayout
+                role={role}
+                profile={profile}
+                profileLabel={profileLabel}
+                isDemo={isDemo}
+                onSignOut={handleSignOut}
+              />
+            }
+          >
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/projects" element={<AdminProjects />} />
+            <Route path="/admin/projects/new" element={<AdminProjectForm mode="create" />} />
+            <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />
+            <Route path="/admin/projects/:id/edit" element={<AdminProjectForm mode="edit" />} />
+            <Route path="/admin/approvals" element={<AdminApprovals />} />
+            <Route path="/admin/approvals/:approvalId" element={<AdminApprovalDetail />} />
+            <Route path="/admin/*" element={<AdminDashboard />} />
+          </Route>
+        </Routes>
+      </AdminApprovalsProvider>
     </AdminDataProvider>
   );
 }

@@ -2124,6 +2124,69 @@ Explicit exclusions: no code, UI, route, navigation, migration, RLS, function, t
 hosted Supabase, project-data, Simple Invoice Manager integration, financial
 implementation, Approvals implementation, Realtime, public-site or Apicora change.
 
+### Approvals foundation — first project-linked implementation slice
+
+Status: **Implemented and locally validated on
+`feat/bd-operations-hub-approvals-foundation`; draft PR
+[#36](https://github.com/Widson-star/botanique-designers-site/pull/36) is open for
+review. Hosted
+migration and authenticated production verification remain NOT applied / pending.**
+Reviewed implementation baseline:
+`7aa74401f63a9b362881c301643b2a6b40512bd8` (authoritative `origin/main`, exact match).
+
+- **Migration:** additive, forward-only
+  `supabase/migrations/20260728000100_operations_hub_approvals_foundation.sql`.
+  It creates `approval_requests` and immutable, system-written `approval_events`;
+  constrains the domain to `project`; constrains the first-slice types to activation,
+  target-completion change, completion, cancellation, archive and restoration; enforces
+  submitted/awaiting-review/amendment/approved/rejected/withdrawn lifecycle semantics;
+  prevents duplicate active requests per project/type; and exposes only narrow
+  SECURITY DEFINER submission, withdrawal, amendment/resubmission and owner-decision
+  functions. No dynamic SQL or client-controlled identifiers are used.
+- **Authority and atomicity:** owner and manager may submit; only the original requester
+  may withdraw or amend/resubmit; only an active owner may request amendment, approve or
+  reject. Approval locks and revalidates the request and project, rejects stale original
+  values, applies the exact reviewed project mutation in the same transaction and lets
+  the existing `projects_history` trigger append the actual project change. Rejection and
+  amendment do not mutate the project. Terminal decisions remain immutable.
+- **RLS:** owner reads all requests/events; manager reads project-linked requests/events
+  consistent with current portfolio-wide project authority; staff, viewer, inactive and
+  anonymous callers receive no access. Neither table has authenticated direct
+  INSERT/UPDATE/DELETE policy. `approval_events` is not application-writable.
+- **Guard continuity:** `tg_guard_project_material_authority()`,
+  `projects_material_authority`, `tg_guard_project_lead()` and
+  `projects_lead_guard` remain present and unchanged. Managers still cannot directly
+  activate, complete, cancel, archive, restore, change target/actual completion, set or
+  reverse Completed/Archived stage, or alter portfolio authority. Ongoing↔Paused remains
+  permitted.
+- **Admin implementation:** focused approvals REST/data context, owner/manager
+  `/admin/approvals` queue, `/admin/approvals/:approvalId` detail, readable before/proposed
+  values and immutable timeline, owner decision/amendment controls, requester withdrawal
+  and amendment/resubmission, and manager project-linked request actions. Navigation is
+  present only because the module is functional; staff/viewer capability is denied. No
+  raw JSON/UUID display and no Realtime dependency.
+- **Local validation:** the three earlier migrations plus the approvals migration pass
+  from a clean disposable PostgreSQL 17 baseline. The transactional database matrix
+  covers role submission, strict payloads, duplicates, decisions, stale/atomic failure,
+  withdrawal, amendment rounds/events, RLS and direct-guard regression. Frontend:
+  **151/151 tests across 19 files pass**; every changed/new JS/JSX file is ESLint-clean.
+  The repository-wide lint baseline remains **19 inherited errors in unchanged files**
+  (`server/index.js`, `src/components/PaidConsultancyModal.jsx`,
+  `src/context/AppContext.jsx`) and none is introduced by this slice. Vite production
+  build and 43-route + `404.html` prerender pass; `git diff --check` passes. Read-only
+  local demo-browser verification passed at **1440×900** and **390×844** for manager
+  project request actions, accessible request dialog, submitted/pending state, approvals
+  queue, responsive three-column mobile queue, keyboard-operable mobile navigation, zero
+  document-level horizontal overflow and zero browser console errors.
+- **Explicit exclusions:** no Design-only, portfolio permission, arbitrary scope or
+  lead-change approvals; no staff-originated requests; no Project Funds, Labour
+  Engagements, Operational Expenditure, updates, tasks, documents, evidence,
+  notifications, Realtime, Simple Invoice Manager, public-site or Apicora change.
+- **Hosted gate:** no hosted Supabase data was read for tests or mutated, no production
+  project was created/changed, and the migration was not applied to hosted Supabase.
+  Hosted migration review/application and authenticated owner/manager verification remain
+  a separate explicit gate after draft-PR review.
+
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
 Status: **Launch pack prepared — external campaign setup NOT performed; no advert

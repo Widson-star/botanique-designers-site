@@ -43,7 +43,7 @@ describe("AdminLayout visual boundary", () => {
     expect(heading.closest(".admin-shell")).not.toHaveClass("font-sans");
   });
 
-  it("shows only live Dashboard and Projects navigation", () => {
+  it("shows only live Dashboard, Projects and Approvals navigation", () => {
     renderLayout();
     const desktopNav = screen.getAllByRole("navigation", {
       name: "Admin sections",
@@ -51,6 +51,7 @@ describe("AdminLayout visual boundary", () => {
     expect(within(desktopNav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Dashboard",
       "Projects",
+      "Approvals",
     ]);
     expect(screen.queryByRole("link", { name: /Leads|Site visits|Payments|Expenses/i })).not.toBeInTheDocument();
   });
@@ -103,5 +104,10 @@ describe("AdminLayout visual boundary", () => {
   ])("presents the %s role as %s", (role, label) => {
     renderLayout({ role, profileLabel: "Team member" });
     expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
+  it.each(["staff", "viewer"])("does not expose Approvals to %s", (role) => {
+    renderLayout({ role, profileLabel: "Team member" });
+    expect(screen.queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
   });
 });
