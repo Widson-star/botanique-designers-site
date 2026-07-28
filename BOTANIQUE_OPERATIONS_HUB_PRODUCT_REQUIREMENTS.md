@@ -103,6 +103,7 @@ buttons and decorative module placeholders are prohibited.
 - Leads
 - Site Visits
 - Projects
+- Daily Site Operations
 - Project Updates & Discussion
 - Tasks & Assignments
 - Maintenance
@@ -194,6 +195,170 @@ subscriptions, site visits, office costs and other authorised categories.
 An expenditure entry may link to a project fund, labour payment, project, approval or
 general company allocation, but it must not duplicate the originating record. Links and
 derived reporting preserve traceability across domains.
+
+### 4.5 Daily Site Operations & Morning Compliance
+
+**Status: authority defined; implementation not started.** This subsection defines a new
+operational domain under `BD-OPERATIONS-HUB-01`. It is not a new top-level workstream and
+requires no new master register — the existing authority hierarchy governs it. It
+authorises no application, schema, RLS, migration or hosted-data change. Implementation is
+separately gated (see §10).
+
+#### 4.5.1 Purpose and operational problem
+
+Botanique's live site operations are currently coordinated informally over WhatsApp:
+labour is recorded as *worker count × daily rate* (for example 8 workers × KES 500 or
+4 workers × KES 500), varying day to day; deliveries (grass, flowers) and hired-tool,
+handcart-transport and other miscellaneous costs are noted by hand; project advances,
+carried-forward balances, additional deposits, unpaid balances and combined multi-project
+totals are negotiated and corrected in chat; and funds are handled by Martine across
+Lugulu, Siaya/Alego, Kitisuru, Karen, Bungoma and other sites. This process is hard to
+audit, easy to misunderstand and vulnerable to disputed corrections. Daily Site Operations
+replaces the informal morning coordination with a structured, auditable **Daily Site
+Entry** for each active site, captured before other Operations Hub work.
+
+#### 4.5.2 First-morning-action expectation and active-project coverage
+
+Martine's first required Operations Hub task on every working morning is to record a Daily
+Site Entry for **every active site under his management** for that work date. Each active
+project without an entry for the current work date remains flagged as outstanding until an
+entry exists. "Active" for coverage purposes is a founder decision still open (see
+§4.5.13).
+
+#### 4.5.3 Conceptual Daily Site Entry
+
+Each Daily Site Entry conceptually captures, for one project and one work date:
+
+- project; work date; whether work is taking place;
+- number of workers expected; optional named workers or crew reference;
+- rate per worker or an agreed labour total; planned labour cost;
+- work planned for the day; funds already available; additional amount requested; notes;
+- submitted-by and submitted-time (system-stamped).
+
+The record must later be capable of holding day-end fields — actual worker count, actual
+labour cost, actual work completed, day-end notes and any unresolved difference — **without
+these being implemented in the first slice**.
+
+#### 4.5.4 "No work today" handling
+
+A no-work day must be recorded **explicitly**, never by forcing a false worker count of
+zero into a "working" entry. Supported no-work reasons include: no work today, rain day,
+weekend, site paused, no labour required, and other valid no-work reason. A Daily Site
+Entry therefore carries a working / no-work / paused disposition, and a no-work entry
+still satisfies the morning-compliance obligation for that project and date.
+
+#### 4.5.5 Domain distinction
+
+Daily Site Operations is distinct from, and must not be collapsed into, Labour Engagements
+& Payments (§4.3), Project Funds & Reconciliation (§4.2) or Operational Expenditure
+(§4.4). It captures the **operational plan and site actuals** — attendance intent,
+expected and (later) actual workers, work planned and (later) work completed, and no-work
+status. It does **not** own agreed labour commitments and payments, fund transfers and
+reconciliation, or the expenditure ledger. Planned labour cost and "additional amount
+requested" on a Daily Site Entry are operational planning signals, not a payment, a
+commitment record or a fund release. Actual money movement is later governed by the
+finance domains and, where required, by the Approvals foundation.
+
+#### 4.5.6 One-project-per-record invariant
+
+Every Daily Site Entry belongs to exactly one project. No entry, and no future
+expenditure, labour or fund row, may combine Lugulu, Siaya/Alego, Karen or any other sites
+into a single underlying record. Combined multi-project accountability totals are **derived
+aggregates only**, computed from per-project records — never stored as a shared ledger row.
+
+#### 4.5.7 Lifecycle states
+
+The recommended Daily Site Entry lifecycle is: **draft → submitted →
+returned_for_correction → resubmitted → accepted → voided → superseded**. Rules:
+
+- an ordinary daily entry does **not** require owner approval before submission;
+- the owner may review a submitted entry and return it for correction;
+- an accepted entry cannot be silently rewritten;
+- a correction after acceptance must preserve the prior record (supersession, not
+  in-place edit);
+- there is no hard deletion of operational accountability history;
+- a void or supersession requires a reason and the acting identity.
+
+The state machine is documentation only in this task; no SQL state machine is created.
+
+#### 4.5.7a Role authority
+
+- **Owner / Principal (Widson):** full visibility; sees all missing morning entries and
+  late/submitted entries; reviews and may return inaccurate entries; sees company-wide
+  derived summaries; controls future fund release and exceptional/high-risk financial
+  approvals; may authorise a post-acceptance correction.
+- **Operations Manager (Martine):** submits morning entries for projects under his
+  authority; records planned and (later) actual worker counts; records planned and (later)
+  actual work; records no-work days; may correct returned entries; **cannot** silently
+  alter accepted records; **cannot** receive unrestricted finance authority; **cannot** see
+  owner-protected commercial or banking information.
+- **Project Team (staff):** no financial authority in the first slice; future attendance
+  confirmation may be considered as separate, later work; no staff-originated money records
+  unless separately authorised.
+
+No monetary thresholds are invented in this authority.
+
+#### 4.5.8 Morning-compliance model (soft enforcement)
+
+The first slice uses **soft enforcement only**:
+
+- the Dashboard shows a "Morning site entries due" state;
+- each active project without today's entry remains flagged;
+- the manager can still fully view and use the system — **no destructive lock**;
+- the owner can see late or missing entries;
+- an entry disposition may be working, no_work or paused;
+- no external notifications and no Supabase Realtime in the first slice;
+- no cut-off time is invented without founder approval.
+
+#### 4.5.9 Data-integrity principles
+
+- every Daily Site Entry belongs to one project (§4.5.6);
+- creator and timestamp are system-stamped; the client cannot spoof actor identity;
+- accepted records preserve immutable history; corrections require a reason; no direct
+  deletion;
+- no ordinary daily entry is forced through owner approval;
+- money-release and reconciliation acceptance may later reuse `approval_requests` /
+  `approval_events` (see §4.5.10).
+
+#### 4.5.10 Approvals reuse (assessment, not implementation)
+
+The merged Approvals foundation (`approval_requests`, immutable `approval_events`, the
+`project` domain, `subject_record_id`, immutable events and narrow SECURITY DEFINER
+functions) is assessed as **extensible later** to cover fund release, exceptional
+expenditure, reconciliation acceptance and post-reconciliation correction — by adding new
+approval domains/types under its existing pattern. The approval schema is **not** changed
+in this task, and Daily Site Entry submission itself is deliberately **not** an approval:
+ordinary daily entries flow draft → submitted → accepted without an approval request.
+
+#### 4.5.11 Evidence and receipts boundary
+
+First slice: **evidence status only** — one of none, promised, provided, not_required. No
+file upload is built in the first slice. Actual receipts, photos, delivery notes, signed
+attendance and other attachments depend on the future Documents & Evidence domain (§9) and
+are deferred to it.
+
+#### 4.5.12 Mobile-first requirement
+
+The Daily Site Entry must be designed primarily for Martine's phone. Expected interaction:
+select project; choose working or no-work; enter worker count; enter rate or agreed total;
+automatic worker-count × rate calculation; enter planned work; record available funds;
+record additional amount requested; submit; quickly repeat for another site. The design
+must use large touch targets, minimal typing, clear KES display and a simple mobile
+layout, with **no** raw UUIDs, no raw JSON, no accounting jargon and no multi-project
+transaction form. Detailed screen design is out of scope for this documentation task.
+
+#### 4.5.13 Founder decisions still required
+
+Before implementation, the founder must decide:
+
+- the expected morning submission time (if any);
+- whether weekends require explicit no-work entries;
+- whether only active/ongoing projects are covered, or also pending-activation projects;
+- whether an owner may waive a specific missing entry;
+- whether any later actions should be restricted after persistent non-compliance.
+
+No cut-off time, weekend rule or non-compliance restriction is assumed without this
+decision.
 
 ## 5. Approvals foundation — next implementation workstream
 
@@ -370,21 +535,34 @@ Protected client margins, banking details and private rates remain role-restrict
 This is the current governing sequence:
 
 1. **Operations Hub authority revision** — this documentation-only workstream.
-2. **Approvals foundation.**
-3. **Project Funds & Reconciliation.**
-4. **Labour Engagements & Payments.**
-5. **Project Updates & Discussion.**
-6. **Tasks & Assignments.**
-7. **Team & Resourcing.**
-8. **Client Commercial Records.**
-9. **Operational Expenditure.**
-10. **Documents & Evidence.**
-11. **Reports & Management Summary.**
-12. **Leads, Site Visits and Maintenance integration.**
+2. **Approvals foundation.** *(Merged; see §5.1.)*
+3. **Daily Site Operations & Morning Compliance.** *(Authority defined in §4.5;
+   implementation not started.)*
+4. **Operational Expenditure.**
+5. **Project Funds & Reconciliation.**
+6. **Labour Engagements & Payments.**
+7. **Documents & Evidence.**
+8. **Project Updates & Discussion.**
+9. **Tasks & Assignments.**
+10. **Team & Resourcing.**
+11. **Client Commercial Records.**
+12. **Reports & Management Summary.**
+13. **Leads, Site Visits and Maintenance integration.**
 
-Project Funds and Labour Engagements are elevated because recurring allocations,
-reconciliation, agreed-versus-paid amounts and accountability between Widson, Martine and
-project teams are immediate operational pain points.
+Daily Site Operations & Morning Compliance is elevated to the next implementation
+workstream because the informal WhatsApp morning process (§4.5.1) is the most immediate
+operational-accountability gap. Project Funds and Labour Engagements remain elevated
+because recurring allocations, reconciliation and agreed-versus-paid accountability
+between Widson, Martine and project teams are immediate operational pain points.
+
+**Recommended first implementation slice:** Daily Site Entry capture **and** morning
+compliance **only**. Operational Expenditure capture — recommended by the earlier preflight
+as a combined first slice — is on reassessment deferred to a **separate second slice**:
+combining a new entry table, its lifecycle and RLS, the morning-compliance dashboard and a
+mobile-first entry flow with a full expenditure model (categories, cross-domain links,
+its own RLS) would create excessive migration, RLS, UI and authority risk in one PR. A
+narrower first slice ships the founder's first-morning obligation sooner and lets
+expenditure follow on a stable base.
 
 Each item is a separate, reviewed workstream with its own branch and PR. Workstreams must
 not be combined into one migration or implementation branch.
