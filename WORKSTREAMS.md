@@ -2087,20 +2087,24 @@ No separate Operations Hub master workstream register is needed. The revision re
 
 1. Operations Hub authority revision.
 2. Approvals foundation.
-3. Project Funds & Reconciliation.
-4. Labour Engagements & Payments.
-5. Project Updates & Discussion.
-6. Tasks & Assignments.
-7. Team & Resourcing.
-8. Client Commercial Records.
-9. Operational Expenditure.
-10. Documents & Evidence.
-11. Reports & Management Summary.
-12. Leads, Site Visits and Maintenance integration.
+3. Daily Site Operations & Morning Compliance.
+4. Operational Expenditure.
+5. Project Funds & Reconciliation.
+6. Labour Engagements & Payments.
+7. Documents & Evidence.
+8. Project Updates & Discussion.
+9. Tasks & Assignments.
+10. Team & Resourcing.
+11. Client Commercial Records.
+12. Reports & Management Summary.
+13. Leads, Site Visits and Maintenance integration.
 
-The Approvals foundation is the next implementation workstream after this documentation
-revision is reviewed and merged. It must preserve equivalent or stronger authority before
-any separately reviewed replacement of the Phase 1B-A1 interim
+The Approvals foundation was the next implementation workstream after this documentation
+revision and is now merged (see the Approvals foundation subsection). **Daily Site
+Operations & Morning Compliance** is now the next implementation workstream; its authority
+is defined below and in the revised Product Requirements/Blueprint, and its implementation
+has not started. Any future Approvals change must preserve equivalent or stronger authority
+before a separately reviewed replacement of the Phase 1B-A1 interim
 `tg_guard_project_material_authority()` control.
 
 The revised domain model keeps four financial domains separate:
@@ -2298,6 +2302,87 @@ frontend-only fix, merged after founder review.
   projects (including Zizu Investments Ltd and Alego Usonga) remain unchanged. Simple
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
+
+### Daily Site Operations & Morning Compliance — authority defined, implementation not started
+
+Status: **AUTHORITY DEFINED / IMPLEMENTATION NOT STARTED.** This subsection records a new
+operational domain under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream
+and needs no new master register. Documentation-only: no application code, migration,
+Supabase, RLS, route, navigation, UI, hosted-data, approval request/event, Simple Invoice
+Manager, public-site or Apicora change was made. The Approvals classification
+(`APPLIED_WITH_LIMITATION`, remaining limitation: manager authenticated post-merge
+production verification) is **unchanged** and the Approvals implementation is not reopened.
+
+- **Branch / baseline:** documentation branch `docs/bd-daily-site-operations-authority`
+  from authoritative `main`
+  `bde2013f5df107d8ade52d3e008f0aeceb152fb4` (includes PR #36 Approvals foundation, PR #38
+  hydration repair, PR #37 hosted verification reconciliation).
+- **Files changed:** `WORKSTREAMS.md`,
+  `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md` (§4.5 new domain, §3 navigation, §10
+  roadmap) and `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (§3 matrix, §4.9 new domain, §5
+  navigation, §8 roadmap). No other file changed.
+- **Workstream decision:** added as a domain under the existing `BD-OPERATIONS-HUB-01`
+  authority (the authority system explicitly requires no new master register), and elevated
+  to the **next implementation workstream** now that Approvals is merged.
+- **Domain definition:** a per-project, per-work-date **Daily Site Entry** capturing the
+  morning operational plan (`working` / `no_work` disposition with a no-work reason —
+  `rain`, `weekend_no_activity`, `temporarily_paused_for_day`, `no_labour_required`,
+  `site_access_unavailable`, `other`; expected workers and optional crew; rate or agreed
+  labour total and derived planned labour cost; work planned; funds available; additional
+  amount requested; notes; system-stamped submitter/time), with reserved but unimplemented
+  day-end actual fields (actual workers, actual labour cost, actual work completed, day-end
+  notes, unresolved difference). A Daily Site Entry never mutates the project lifecycle.
+- **Morning compliance:** Martine's first working-morning Operations Hub task is a Daily
+  Site Entry for every in-scope site under his management; the Dashboard flags each in-scope
+  project lacking today's entry. First slice is **soft enforcement** — no destructive lock,
+  no notifications, no Realtime.
+- **Paused semantics:** the official **Paused** project status (excluded from compliance) is
+  distinct from a `temporarily_paused_for_day` `no_work` disposition on an otherwise Ongoing
+  project (a single-day operational state that does not change `projects.status`).
+- **Domain boundary:** distinct from Labour Engagements & Payments, Project Funds &
+  Reconciliation and Operational Expenditure — it records the operational plan and site
+  actuals, not commitments, fund movement or the expenditure ledger. No underlying record
+  combines multiple sites; combined multi-project totals are derived aggregates only.
+- **Lifecycle:** draft → submitted → returned_for_correction → resubmitted → accepted →
+  voided → superseded; ordinary daily entries need no owner approval before submission;
+  accepted records are immutable (correction by supersession, with reason and actor); no
+  hard deletion; state machine documented only, not built in SQL.
+- **Roles:** owner (full visibility, sees missing/late entries, may return, authorises
+  post-acceptance correction, controls future fund release); manager/Martine (submits and
+  corrects entries under his authority, cannot silently alter accepted records or gain
+  unrestricted finance authority); staff (no first-slice financial authority). No monetary
+  thresholds invented.
+- **Evidence boundary:** first slice stores evidence status only (none / promised /
+  provided / not_required); file uploads depend on the future Documents & Evidence domain.
+- **Mobile-first:** designed primarily for Martine's phone — select project, working/no-work,
+  worker count, rate/agreed total, automatic count × rate, planned work, available funds,
+  additional requested, submit, repeat; large touch targets, minimal typing, clear KES, no
+  raw UUID/JSON, no accounting jargon, no multi-project transaction form.
+- **Approvals reuse (assessment only):** the existing `approval_requests` /
+  `approval_events` pattern (`project` domain, `subject_record_id`, immutable events, narrow
+  SECURITY DEFINER functions) is assessed as later-extensible for fund release, exceptional
+  expenditure, reconciliation acceptance and post-reconciliation correction. No approval
+  schema change now.
+- **First implementation slice recommendation:** **narrower** — Daily Site Entry capture +
+  morning compliance only. Operational Expenditure (the earlier preflight's combined-slice
+  suggestion) is deferred to a separate second slice, because combining a new entry table,
+  its lifecycle/RLS, the compliance dashboard, a mobile entry flow and a full expenditure
+  model in one PR carries excessive migration/RLS/UI/authority risk.
+- **Founder decisions resolved:** (1) submission before work begins and ordinarily by
+  **08:30 EAT** — a management expectation, not a cut-off; later entries may be marked late,
+  the manager is never locked out and the actual timestamp is retained; (2) **weekends**
+  require an entry only when activity (work, deployed workers, delivery, site visit) is
+  scheduled; (3) coverage is **Ongoing, operationally active projects only** (Pending,
+  Awaiting Approval, Completed, Design-only, Archived and Paused excluded; pending-activation
+  not required); (4) the **owner may waive** one project/date, preserving project, date,
+  reason, owner identity and timestamp, without implying workers/cost/work/expenditure/funds;
+  (5) persistent non-compliance yields **visible flags and counts only** — no first-slice
+  restriction of access, editing or later actions (any future restriction needs its own
+  evidence, founder approval, authority revision and gate).
+- **Integrity confirmations:** implementation has not started; no hosted data was mutated;
+  Simple Invoice Manager was unchanged; no Apicora work occurred; the nine production
+  projects (including Zizu Investments Ltd and Alego Usonga) and both approval tables are
+  untouched.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 

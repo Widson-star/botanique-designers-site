@@ -61,6 +61,7 @@ added progressively after implementation and authorisation.
 | Project delivery state | Operations Hub `projects` | Primary authority |
 | Project change audit | Operations Hub `project_activities` | Immutable trigger-written ledger |
 | Project assignments | Operations Hub `project_assignments` | Delivery visibility/team linkage |
+| Daily site operations (morning plan, attendance intent, no-work status) | Future Operations Hub domain | Primary future authority; per-project, per-date operational record |
 | Client estimates, invoices, receipts, payments and balances | Simple Invoice Manager | Later verified references and authorised summaries only |
 | Project fund transfers, allocations and reconciliations | Future Operations Hub domain | Primary future authority |
 | Labour agreements, additions, payments and balances | Future Operations Hub domain | Primary future authority |
@@ -223,6 +224,68 @@ These relationships require explicit deletion/retention behavior. Removing a fil
 deactivating an identity must not destroy the auditability of historical operational or
 financial records.
 
+### 4.9 Daily Site Operations & Morning Compliance
+
+This is the next implementation domain after the merged Approvals foundation. **Authority
+defined; not implemented.** It sits under `BD-OPERATIONS-HUB-01` and is not a new top-level
+workstream.
+
+The domain is a per-project, per-work-date **Daily Site Entry** record capturing the
+morning operational plan — a `working` or `no_work` disposition (with a no-work reason:
+`rain`, `weekend_no_activity`, `temporarily_paused_for_day`, `no_labour_required`,
+`site_access_unavailable` or `other`), expected worker count and optional crew reference,
+rate or agreed labour total and derived planned labour cost, work planned, funds already
+available, additional amount requested, notes, and system-stamped submitter and time — with
+reserved (unimplemented) day-end actual fields (actual workers, actual labour cost, actual
+work completed, day-end notes, unresolved difference).
+
+Architectural invariants:
+
+- **one project per entry** — no entry combines multiple sites; combined multi-project
+  totals are derived aggregates only, never a stored shared row;
+- **explicit no-work** — a rain/weekend/paused-for-day/no-labour day is recorded as a
+  `no_work` entry with a reason, never as a zero-worker `working` entry, and still satisfies
+  morning compliance;
+- **no lifecycle mutation** — a Daily Site Entry never activates, pauses, completes,
+  cancels or otherwise changes `projects.status`; the entry disposition (`temporarily_paused_for_day`)
+  is distinct from the official Paused project status;
+- **system-stamped identity** — creator and timestamp are database-stamped; clients cannot
+  spoof actor identity;
+- **immutable accountability** — accepted entries are not silently rewritten; corrections
+  after acceptance preserve the prior record by supersession; no hard delete; void or
+  supersession requires reason and actor;
+- **lifecycle** — draft → submitted → returned_for_correction → resubmitted → accepted →
+  voided → superseded; ordinary daily submission is **not** an approval request;
+- **evidence status only** in the first slice (none / promised / provided / not_required);
+  file attachments depend on the future Documents & Evidence domain;
+- **soft morning compliance** — the Dashboard flags in-scope projects lacking today's entry;
+  no destructive lock, no notifications and no Realtime in the first slice.
+
+**Resolved compliance rules (founder authority):** entries are expected before work begins
+and ordinarily by **08:30 EAT** (a management expectation, not a cut-off; later entries may
+be marked late without locking the manager out, retaining the actual timestamp); weekends
+require an entry only when activity is scheduled; compliance covers **Ongoing, operationally
+active projects only** (Pending, Awaiting Approval, Completed, Design-only, Archived and
+Paused excluded); the owner may **waive** one project/date with reason, identity and
+timestamp without implying any workers/cost/work/funds; and persistent non-compliance
+produces visible flags and counts only, with no first-slice access or action restriction.
+
+This domain is separate from Labour Engagements & Payments, Project Funds & Reconciliation
+and Operational Expenditure: it records the operational plan and site actuals, not agreed
+commitments, fund movement or the expenditure ledger. Planned labour cost and "additional
+amount requested" are planning signals, not payments or fund releases.
+
+**Approvals reuse (assessment only):** the existing `approval_requests` /
+`approval_events` pattern — `project` domain, `subject_record_id`, immutable events and
+narrow SECURITY DEFINER functions — can later be extended with new domains/types for fund
+release, exceptional expenditure, reconciliation acceptance and post-reconciliation
+correction. No approval-schema change is made now.
+
+**Recommended first slice:** Daily Site Entry capture plus morning compliance only, with
+Operational Expenditure deferred to a separate second slice to bound migration, RLS, UI
+and authority risk. Founder decisions on submission time, weekend handling, active-project
+scope, owner waiver and non-compliance restrictions remain open before implementation.
+
 ## 5. Progressive navigation architecture
 
 Current production:
@@ -234,7 +297,7 @@ Eventual groups:
 
 | Group | Destinations |
 |---|---|
-| Operations | Dashboard; Leads; Site Visits; Projects; Project Updates & Discussion; Tasks & Assignments; Maintenance; Approvals |
+| Operations | Dashboard; Leads; Site Visits; Projects; Daily Site Operations; Project Updates & Discussion; Tasks & Assignments; Maintenance; Approvals |
 | People and finance | Team & Resourcing; Project Engagements; Project Funds & Reconciliation; Labour Engagements & Payments; Client Commercial Records; Operational Expenditure |
 | Knowledge and reporting | Documents & Evidence; Reports & Management Summary; Settings |
 
@@ -295,20 +358,24 @@ This is an audit model, not a general discussion or approvals model.
 Governing order:
 
 1. Operations Hub authority revision — documentation only.
-2. Approvals foundation.
-3. Project Funds & Reconciliation.
-4. Labour Engagements & Payments.
-5. Project Updates & Discussion.
-6. Tasks & Assignments.
-7. Team & Resourcing.
-8. Client Commercial Records.
-9. Operational Expenditure.
-10. Documents & Evidence.
-11. Reports & Management Summary.
-12. Leads, Site Visits and Maintenance integration.
+2. Approvals foundation. *(Merged.)*
+3. Daily Site Operations & Morning Compliance. *(Authority defined; not implemented — §4.9.)*
+4. Operational Expenditure.
+5. Project Funds & Reconciliation.
+6. Labour Engagements & Payments.
+7. Documents & Evidence.
+8. Project Updates & Discussion.
+9. Tasks & Assignments.
+10. Team & Resourcing.
+11. Client Commercial Records.
+12. Reports & Management Summary.
+13. Leads, Site Visits and Maintenance integration.
 
 Dependency structure:
 
+- Daily Site Operations & Morning Compliance is the next implemented domain; its
+  recommended first slice is Daily Site Entry capture plus morning compliance only, with
+  Operational Expenditure deferred to a separate second slice.
 - Approvals precedes fund reconciliation, labour amendments and exceptional expenditure.
 - Projects, profiles and RLS are the identity/delivery spine for all modules.
 - Evidence decisions are required before complete reconciliation, payment and update
