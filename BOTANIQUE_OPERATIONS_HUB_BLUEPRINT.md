@@ -120,9 +120,13 @@ before any reviewed replacement of that guard.
 The first project-linked slice is merged and its additive migration
 `20260728000100_operations_hub_approvals_foundation.sql` is applied to hosted
 `botanique-admin`. Hosted schema, RLS, function grants and pre-existing-data integrity are
-verified, with both approval tables empty; operational activation remains paused under
-`APPLIED_WITH_LIMITATION` pending authenticated production-UI verification and resolution
-or explicit acceptance of the observed React `#418` console error.
+verified, with both approval tables empty. The observed React `#418` console error was a
+route-aware hydration defect on `/admin`, since repaired and merged under PR #38 (merge
+commit `f95e31f55c0d74844b79aaca3ac831ed3bb1208a`); admin routes now client-render with
+`createRoot` instead of hydrating the Vercel-rewritten homepage shell. Classification
+remains `APPLIED_WITH_LIMITATION`, with the residual limitation narrowed to manager
+authenticated production-UI verification; owner authenticated exact-head verification and
+signed-out production both passed with a clean console.
 `approval_requests` is the constrained current-state record and `approval_events` is the
 immutable lifecycle ledger. Narrow SECURITY DEFINER functions own submission, withdrawal,
 amendment/resubmission and owner decision. An approved decision locks and revalidates the

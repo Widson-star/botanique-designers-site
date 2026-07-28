@@ -242,10 +242,14 @@ rollout.
 The first Approvals implementation slice is merged under PR #36 and its additive
 migration is applied to hosted `botanique-admin`. Hosted schema, RLS, grants and
 pre-existing-data integrity are verified, with all nine projects unchanged and both
-approval tables empty. Final production-UI verification remains limited: authenticated
-owner/manager browser sessions were unavailable and the signed-out production bundle
-logged React error `#418`, so operational use remains paused under
-`APPLIED_WITH_LIMITATION`. The slice remains deliberately limited to project activation,
+approval tables empty. The production React `#418` console error was a route-aware
+hydration defect on `/admin`, since repaired and merged under PR #38 (merge commit
+`f95e31f55c0d74844b79aaca3ac831ed3bb1208a`). Owner authenticated verification passed on the
+exact-head PR #38 preview with a clean console and no `#418`, and signed-out `/admin` is
+verified clean on production desktop and mobile; classification remains
+`APPLIED_WITH_LIMITATION` with the residual limitation narrowed to manager authenticated
+production verification, which the founder explicitly accepted for merge. The slice remains
+deliberately limited to project activation,
 target-completion change, completion, cancellation, archive and restoration. Design-only
 classification, portfolio/publication permission, material scope, project-lead changes,
 staff-originated requests and every financial/future domain remain excluded.

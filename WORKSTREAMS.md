@@ -2130,10 +2130,19 @@ implementation, Approvals implementation, Realtime, public-site or Apicora chang
 Status: **Merged under PR
 [#36](https://github.com/Widson-star/botanique-designers-site/pull/36) at
 `6f500b424d020b41ef192a77fbaff57c201d7f99`; migration applied and structurally /
-integrity-verified on hosted `botanique-admin`. Final classification:
-`APPLIED_WITH_LIMITATION` — operational use remains paused pending authenticated
-owner/manager production-UI verification and resolution or explicit acceptance of the
-production React `#418` console error.**
+integrity-verified on hosted `botanique-admin`. The production React `#418` hydration
+console error identified during authenticated owner/manager UI verification has since been
+repaired and merged under PR
+[#38](https://github.com/Widson-star/botanique-designers-site/pull/38) — see the
+hydration and session-restoration repair subsection below. Final classification:
+`APPLIED_WITH_LIMITATION`, with the remaining limitation now narrowed to **manager
+authenticated production verification (post-merge)**. Owner authenticated verification
+passed on the exact-head PR #38 preview — the byte-identical admin bundle now deployed to
+production — with a clean console and no `#418`; signed-out `/admin` is independently
+verified on production desktop and mobile. Manager authentication, Dashboard, nine-project
+load and empty Approvals queue passed on production, and the sole outstanding item is
+manager authenticated verification against the exact-head/post-merge production admin UI,
+which the founder has explicitly accepted as a residual limitation for merge.**
 Reviewed implementation head:
 `31707e29ea4c3a1b59bcf3e182cd0293c1fa59a3`; merged migration Git blob:
 `9fb9a5d989acdf498081e31ebc0cc72e1152d5f4`.
@@ -2232,6 +2241,61 @@ Reviewed implementation head:
   these non-destructive checks pass. Staff/viewer runtime verification remains deferred
   because no existing safe account/session was available; their policy/grant boundary is
   structurally verified. No production request/project mutation was attempted.
+
+### Hydration and session-restoration repair (PR #38, 28 July 2026)
+
+The production React `#418` console error recorded above was diagnosed and repaired under a
+frontend-only fix, merged after founder review.
+
+- **PR #38 exact reviewed head:** `32df47a6f64540a7d3996c26a903b0e7835bf3df`.
+- **Merge method and merge commit:** merge commit (no squash, no rebase, no auto-merge),
+  guarded against the exact reviewed head —
+  `f95e31f55c0d74844b79aaca3ac831ed3bb1208a`.
+- **Resulting authoritative main:** `f95e31f55c0d74844b79aaca3ac831ed3bb1208a`
+  (parents `6f500b424d020b41ef192a77fbaff57c201d7f99` + `32df47a6…`).
+- **Root cause:** Vercel rewrites `/admin` and `/admin/:path*` to `/`, whose response
+  contains the prerendered homepage tree, while `BrowserRouter` sees the original admin
+  pathname and immediately renders `AdminApp`. React therefore attempted to hydrate the
+  admin tree over public homepage markup, logging minified React error `#418`. A second
+  latent mismatch existed in the stored-session lazy initializer.
+- **Repaired route-aware mounting:** public routes continue to hydrate their matching
+  prerendered HTML; admin routes discard the rewritten homepage shell and mount with
+  `createRoot` (no hydration step, so `#418` cannot occur on admin routes). `AdminApp` now
+  renders a deterministic signed-out first paint, then restores any stored session after
+  that first render and validates the active profile; malformed, structurally invalid or
+  expired stored sessions are cleared safely. No hydration error is suppressed. The change
+  is frontend-only: no migration, schema, RLS, function, trigger, hosted-data, role
+  authority or Apicora change; the approvals foundation and its guards are untouched.
+- **Validation:** 171/171 frontend tests across 22 files; changed-file ESLint clean; Vite
+  production build with 43-route + `404.html` prerender; `/admin` deliberately absent from
+  the prerender inventory.
+- **Owner authenticated preview result (exact head):** PASSED on the PR #38 preview —
+  owner authenticated, profile rendered as Principal (Widson O. Ambaisi), Dashboard loaded,
+  nine-project portfolio loaded, Approvals loaded with an empty queue, sign-out returned to
+  the login screen and re-authentication succeeded. DevTools Console was clean after
+  authenticated use — no errors, no warnings, no React `#418`.
+- **Owner authenticated production result:** the exact-head preview bundle is byte-identical
+  to the admin bundle deployed to production by this merge; a separate post-merge production
+  owner login was not re-run in this task. Signed-out `/admin` is independently verified on
+  production at 1440×900 and 375×812 — login screen renders, no console output, no `#418`,
+  no horizontal overflow.
+- **Manager production result:** PASSED on production — manager authentication works, the
+  manager role is recognised (Operations Manager), Dashboard and the nine projects load,
+  Approvals loads with an empty queue, and owner decision controls are not visible.
+- **Manager exact-head preview limitation:** manager authenticated verification on the
+  exact-head PR #38 preview was not completed, because Vercel deployment protection required
+  separate access approval. Full manager exact-head/post-merge production verification is
+  therefore not claimed and is the sole outstanding runtime check.
+- **Founder decision:** the founder explicitly reviewed this single residual manager
+  limitation and accepted it as sufficient to merge the hydration repair, rather than
+  continuing to block the fix.
+- **Production deployment identity:** the Vercel production deployment for the merge commit
+  reports success (deployment `AKjo7RYjUknwXmUrhTtBs8x85KZm`).
+- **Hosted integrity:** no production request or project mutation was attempted or made in
+  this task; `approval_requests` and `approval_events` remain `0/0`; all nine production
+  projects (including Zizu Investments Ltd and Alego Usonga) remain unchanged. Simple
+  Invoice Manager was not touched; no financial-domain implementation was started; no
+  Apicora work occurred.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
