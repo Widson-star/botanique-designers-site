@@ -48,10 +48,11 @@ The current `/admin` application provides:
 - no direct client mutation of `project_activities`;
 - no commercial-reference editor.
 
-Production currently contains eight legitimate project records. **Alego Usonga** was
-created during authenticated preview verification and is now a real operational record,
-not test or seed data. No planning, documentation or visual-verification task may create
-test projects or mutate hosted project data.
+Production currently contains nine legitimate project records. **Alego Usonga** remains
+a real operational record. **Zizu Investments Ltd**, the Industrial Area
+exterior-corridor landscaping project, is the founder-reconciled ninth operational
+record, not test, demo or seed data. No planning, documentation or visual-verification
+task may create test projects or mutate hosted project data.
 
 The only current functional navigation destinations are **Dashboard** and **Projects**.
 Accepted Phase 1B-A2 visual and functional decisions are not reopened by this authority
@@ -238,12 +239,16 @@ rollout.
 
 ### 5.1 First implemented slice
 
-The first Approvals implementation slice is now present on the dedicated implementation
-branch and locally validated; hosted application remains pending review. It is deliberately
-limited to project activation, target-completion change, completion, cancellation, archive
-and restoration. Design-only classification, portfolio/publication permission, material
-scope, project-lead changes, staff-originated requests and every financial/future domain
-remain excluded.
+The first Approvals implementation slice is merged under PR #36 and its additive
+migration is applied to hosted `botanique-admin`. Hosted schema, RLS, grants and
+pre-existing-data integrity are verified, with all nine projects unchanged and both
+approval tables empty. Final production-UI verification remains limited: authenticated
+owner/manager browser sessions were unavailable and the signed-out production bundle
+logged React error `#418`, so operational use remains paused under
+`APPLIED_WITH_LIMITATION`. The slice remains deliberately limited to project activation,
+target-completion change, completion, cancellation, archive and restoration. Design-only
+classification, portfolio/publication permission, material scope, project-lead changes,
+staff-originated requests and every financial/future domain remain excluded.
 
 The implemented workflow uses constrained project-specific database functions rather than
 a generic mutation engine. It preserves immutable request rounds and events, prevents

@@ -29,8 +29,9 @@ Verified implementation truth:
 | Client commercial documents | External authority | Simple Invoice Manager |
 | Realtime | Not implemented | save/refetch architecture |
 
-Production contains eight legitimate project records. Alego Usonga is an operational
-record, not test or seed data. Documentation and audit tasks must not mutate hosted data.
+Production contains nine legitimate project records. Alego Usonga remains operational,
+and Zizu Investments Ltd is the founder-reconciled ninth operational project, not test,
+demo or seed data. Documentation and audit tasks must not mutate hosted data.
 
 The accepted admin interface exposes only Dashboard and Projects. Future destinations are
 added progressively after implementation and authorisation.
@@ -116,14 +117,18 @@ The current `tg_guard_project_material_authority()` trigger remains an interim e
 boundary. A future approvals implementation must retain equivalent or stronger authority
 before any reviewed replacement of that guard.
 
-The first project-linked slice is now implemented locally through additive migration
-`20260728000100_operations_hub_approvals_foundation.sql`; hosted application remains
-pending review. `approval_requests` is the constrained current-state record and
-`approval_events` is the immutable lifecycle ledger. Narrow SECURITY DEFINER functions
-own submission, withdrawal, amendment/resubmission and owner decision. An approved
-decision locks and revalidates the project, applies one explicit project mutation branch
-and records the decision in the same transaction. The existing project-history trigger
-continues to record the actual project-row mutation.
+The first project-linked slice is merged and its additive migration
+`20260728000100_operations_hub_approvals_foundation.sql` is applied to hosted
+`botanique-admin`. Hosted schema, RLS, function grants and pre-existing-data integrity are
+verified, with both approval tables empty; operational activation remains paused under
+`APPLIED_WITH_LIMITATION` pending authenticated production-UI verification and resolution
+or explicit acceptance of the observed React `#418` console error.
+`approval_requests` is the constrained current-state record and `approval_events` is the
+immutable lifecycle ledger. Narrow SECURITY DEFINER functions own submission, withdrawal,
+amendment/resubmission and owner decision. An approved decision locks and revalidates the
+project, applies one explicit project mutation branch and records the decision in the same
+transaction. The existing project-history trigger continues to record the actual
+project-row mutation.
 
 The reusable schema is intentionally bounded in this slice to the `project` domain and six
 reviewed approval types. It does not create generic table/column mutation, future finance
