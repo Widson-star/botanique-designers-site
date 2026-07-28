@@ -2127,7 +2127,9 @@ implementation, Approvals implementation, Realtime, public-site or Apicora chang
 ### Approvals foundation — first project-linked implementation slice
 
 Status: **Implemented and locally validated on
-`feat/bd-operations-hub-approvals-foundation`; draft PR pending publication. Hosted
+`feat/bd-operations-hub-approvals-foundation`; draft PR
+[#36](https://github.com/Widson-star/botanique-designers-site/pull/36) is open for
+review. Hosted
 migration and authenticated production verification remain NOT applied / pending.**
 Reviewed implementation baseline:
 `7aa74401f63a9b362881c301643b2a6b40512bd8` (authoritative `origin/main`, exact match).
