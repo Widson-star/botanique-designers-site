@@ -227,8 +227,18 @@ financial records.
 ### 4.9 Daily Site Operations & Morning Compliance
 
 This is the next implementation domain after the merged Approvals foundation. **Authority
-defined; not implemented.** It sits under `BD-OPERATIONS-HUB-01` and is not a new top-level
-workstream.
+defined; Phase 1 implemented locally — hosted migration not applied.** The first narrow
+slice (Daily Site Entry capture, review/correction lifecycle, owner compliance waivers,
+morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
+interface) is built and validated locally on `feat/bd-daily-site-operations-phase-1` via
+additive migration `20260728000200_operations_hub_daily_site_operations.sql` — three tables
+(`daily_site_entries`, immutable `daily_site_entry_events`, `daily_site_compliance_waivers`),
+narrow `SECURITY DEFINER` lifecycle functions and a `daily_site_morning_compliance()`
+calculation. Accepted entries are corrected only by supersession (prior row preserved). The
+migration is **not** applied to hosted Supabase and no hosted data was mutated; the module
+is not enabled in production. See WORKSTREAMS.md → *Daily Site Operations & Morning
+Compliance* for the full Phase 1 implementation note. It sits under `BD-OPERATIONS-HUB-01`
+and is not a new top-level workstream.
 
 The domain is a per-project, per-work-date **Daily Site Entry** record capturing the
 morning operational plan — a `working` or `no_work` disposition (with a no-work reason:

@@ -2303,15 +2303,48 @@ frontend-only fix, merged after founder review.
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
 
-### Daily Site Operations & Morning Compliance — authority defined, implementation not started
+### Daily Site Operations & Morning Compliance — authority defined; Phase 1 implemented locally (not in production)
 
-Status: **AUTHORITY DEFINED / IMPLEMENTATION NOT STARTED.** This subsection records a new
-operational domain under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream
-and needs no new master register. Documentation-only: no application code, migration,
-Supabase, RLS, route, navigation, UI, hosted-data, approval request/event, Simple Invoice
-Manager, public-site or Apicora change was made. The Approvals classification
-(`APPLIED_WITH_LIMITATION`, remaining limitation: manager authenticated post-merge
-production verification) is **unchanged** and the Approvals implementation is not reopened.
+Status: **AUTHORITY DEFINED — PHASE 1 IMPLEMENTED LOCALLY; HOSTED MIGRATION NOT APPLIED.**
+The paragraphs below preserve the original authority; the **Phase 1 implementation note**
+that follows records the first narrow slice, built and validated locally on the
+`feat/bd-daily-site-operations-phase-1` branch from authoritative `main`
+`c48a004515234c66b18ac5a062f4bc4da708b929`. The module is **not** enabled in production: the
+migration has **not** been applied to hosted Supabase and no hosted data was mutated. This
+domain remains under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream and
+needs no new master register. The Approvals classification (`APPLIED_WITH_LIMITATION`,
+remaining limitation: manager authenticated post-merge production verification) is
+**unchanged** and the Approvals implementation is not reopened.
+
+**Phase 1 implementation note (local; draft PR).** Scope delivered: Daily Site Entry
+capture, the review/correction lifecycle, owner compliance waivers, morning-compliance
+calculation, a Dashboard attention surface and a mobile-first admin interface. Deliberately
+excluded (unchanged): Operational Expenditure, Project Funds/reconciliation, Labour
+Engagements/payments, actual/day-end fields, payroll, fund transfers, receipts/uploads,
+external email, notifications, Supabase Realtime, reports/exports, Simple Invoice Manager
+integration, public-site and Apicora work.
+
+- **Migration:** `supabase/migrations/20260728000200_operations_hub_daily_site_operations.sql`
+  (additive, forward-only; applied only on a disposable local PostgreSQL 17 database for
+  tests). Creates `daily_site_entries`, immutable `daily_site_entry_events` and
+  `daily_site_compliance_waivers` plus narrow `SECURITY DEFINER` lifecycle functions and a
+  `daily_site_morning_compliance()` calculation.
+- **Versioning/supersession:** one live entry per project/work-date (partial-unique index);
+  accepted entries are corrected only by supersession — the prior row is preserved as
+  `superseded` and a new `accepted` row (version + 1) links back via `supersedes_entry_id`.
+  No hard delete; events are append-only.
+- **RLS/role boundary:** owner and manager read all three tables; all mutation flows through
+  the functions (direct `INSERT/UPDATE/DELETE` revoked from `authenticated`). Owner-only:
+  return, accept, void, supersede, waive/revoke. Manager: create/edit-own-draft, submit,
+  correct-and-resubmit. Staff/viewer/inactive/anon denied. `temporarily_paused_for_day`
+  never mutates `projects.status`.
+- **Compliance:** EAT-explicit (`Africa/Nairobi`), 08:30 EAT is a non-blocking expectation
+  (late is database-derived), weekends create no automatic due items, waivers satisfy
+  compliance without operational totals, Ongoing/operationally-active projects only.
+- **Validation:** isolated PostgreSQL 17 migration/test matrix green
+  (`scripts/test-daily-site-db.sh`); full Vitest suite green; changed-file ESLint clean;
+  production Vite build + full prerender succeed; desktop and 390×844 mobile browser checks
+  and console/network checks clean.
 
 - **Branch / baseline:** documentation branch `docs/bd-daily-site-operations-authority`
   from authoritative `main`

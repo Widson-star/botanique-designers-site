@@ -198,11 +198,20 @@ derived reporting preserve traceability across domains.
 
 ### 4.5 Daily Site Operations & Morning Compliance
 
-**Status: authority defined; implementation not started.** This subsection defines a new
-operational domain under `BD-OPERATIONS-HUB-01`. It is not a new top-level workstream and
-requires no new master register — the existing authority hierarchy governs it. It
-authorises no application, schema, RLS, migration or hosted-data change. Implementation is
-separately gated (see §10).
+**Status: authority defined; Phase 1 implemented locally — hosted migration not applied.**
+This subsection defines a new operational domain under `BD-OPERATIONS-HUB-01`. It is not a
+new top-level workstream and requires no new master register — the existing authority
+hierarchy governs it. The first narrow slice (Daily Site Entry capture, review/correction
+lifecycle, owner compliance waivers, morning-compliance calculation, Dashboard attention
+state and a mobile-first admin interface) has been **implemented and validated locally** on
+`feat/bd-daily-site-operations-phase-1` from authoritative `main`
+`c48a004515234c66b18ac5a062f4bc4da708b929`, via additive migration
+`20260728000200_operations_hub_daily_site_operations.sql`. The module is **not** enabled in
+production: the migration has **not** been applied to hosted Supabase and no hosted data was
+mutated. See WORKSTREAMS.md → *Daily Site Operations & Morning Compliance* for the Phase 1
+implementation note (schema, versioning/supersession, RLS/role boundary, compliance/EAT
+handling and validation results). Operational Expenditure remains deferred to a separate
+second slice.
 
 #### 4.5.1 Purpose and operational problem
 

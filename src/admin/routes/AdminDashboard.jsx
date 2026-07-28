@@ -11,6 +11,8 @@ import {
 import StatCard from "../components/StatCard";
 import ProjectAttentionList from "../components/ProjectAttentionList";
 import RecentActivity from "../components/RecentActivity";
+import MorningComplianceCard from "../components/dailysite/MorningComplianceCard";
+import { canSeeDailySiteOperations } from "../utils/dailySiteCapabilities";
 import {
   ProjectTypeSummary,
   StageColumnChart,
@@ -134,6 +136,8 @@ export default function AdminDashboard() {
           </strong>
         </Link>
       </section>
+
+      {canSeeDailySiteOperations(role) && <MorningComplianceCard role={role} />}
 
       <ProjectAttentionList projects={projects} role={role} />
 
