@@ -234,11 +234,15 @@ interface) is built and validated locally on `feat/bd-daily-site-operations-phas
 additive migration `20260728000200_operations_hub_daily_site_operations.sql` — three tables
 (`daily_site_entries`, immutable `daily_site_entry_events`, `daily_site_compliance_waivers`),
 narrow `SECURITY DEFINER` lifecycle functions and a `daily_site_morning_compliance()`
-calculation. Accepted entries are corrected only by supersession (prior row preserved). The
-migration is **not** applied to hosted Supabase and no hosted data was mutated; the module
-is not enabled in production. See WORKSTREAMS.md → *Daily Site Operations & Morning
-Compliance* for the full Phase 1 implementation note. It sits under `BD-OPERATIONS-HUB-01`
-and is not a new top-level workstream.
+calculation. Accepted entries are corrected only by supersession (prior row preserved).
+Authority is **project-authority scoped**: the owner is company-wide, while a manager can
+read and act only on projects within the existing project-authority model (active
+`project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every
+manager-capable lifecycle function, and applied to the compliance calculation so no
+unauthorised project leaks. The migration is **not** applied to hosted Supabase and no
+hosted data was mutated; the module is not enabled in production. See WORKSTREAMS.md →
+*Daily Site Operations & Morning Compliance* for the full Phase 1 implementation note. It
+sits under `BD-OPERATIONS-HUB-01` and is not a new top-level workstream.
 
 The domain is a per-project, per-work-date **Daily Site Entry** record capturing the
 morning operational plan — a `working` or `no_work` disposition (with a no-work reason:

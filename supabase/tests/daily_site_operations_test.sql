@@ -47,7 +47,24 @@ insert into public.projects (
   ('10000000-0000-0000-0000-000000000006', 'Design only', 'Design Concept', 'Design-only', 'Concept Design', '2026-07-01', false, false, 'Not Reviewed'),
   ('10000000-0000-0000-0000-000000000007', 'Paused', 'Residential', 'Paused', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
   ('10000000-0000-0000-0000-000000000008', 'Archived', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', true, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000009', 'Awaiting', 'Residential', 'Ongoing', 'Awaiting Approval', '2026-07-01', false, false, 'Not Reviewed');
+  ('10000000-0000-0000-0000-000000000009', 'Awaiting', 'Residential', 'Ongoing', 'Awaiting Approval', '2026-07-01', false, false, 'Not Reviewed'),
+  -- Ongoing D is manager B's project (manager A is never assigned to it).
+  ('10000000-0000-0000-0000-00000000000a', 'Ongoing D', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed');
+
+-- Project authority via the existing model: manager A (…02) is assigned to the
+-- Ongoing/excluded projects used across the suite; manager B (…06) is assigned
+-- only to Ongoing D. Owner needs no assignment (company-wide).
+insert into public.project_assignments (project_id, user_id, is_active) values
+  ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000002', true),
+  ('10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-000000000006', true);
 
 set local role authenticated;
 
@@ -510,12 +527,19 @@ declare
 begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
 
-  -- Weekday 2026-07-28 (Tuesday): exactly the three Ongoing, active projects
-  -- are due. Ongoing A has an accepted entry; Ongoing C has an active waiver.
+  -- Weekday 2026-07-28 (Tuesday), OWNER (company-wide): the four Ongoing, active
+  -- projects (A, B, C, D) are due. A has an entry; C has an active waiver.
   select count(*) into due_count
   from public.daily_site_morning_compliance('2026-07-28')
   where due is true;
-  perform pg_temp.assert_true(due_count = 3, 'three in-scope projects are due on the weekday');
+  perform pg_temp.assert_true(due_count = 4, 'owner sees four in-scope projects due on the weekday');
+
+  -- Owner sees manager B's Ongoing D in the company-wide view.
+  perform pg_temp.assert_true(
+    exists (select 1 from public.daily_site_morning_compliance('2026-07-28')
+            where project_id = '10000000-0000-0000-0000-00000000000a'),
+    'owner compliance includes Ongoing D'
+  );
 
   -- Excluded statuses never appear as due.
   perform pg_temp.assert_true(
@@ -612,6 +636,167 @@ begin
   );
 
   raise notice 'SECTION 7b (weekend/late/no-mutation) passed';
+end;
+$$;
+
+-- =====================================================================
+-- 7c. Project-authority isolation across two managers
+-- =====================================================================
+-- Manager A (…02) is assigned to A/B/C (+ excluded); manager B (…06) only to
+-- Ongoing D. Owner is company-wide. Verifies the repaired RLS, function-level
+-- revalidation and compliance authority filtering.
+do $$
+declare
+  d_entry public.daily_site_entries;
+  rm_entry public.daily_site_entries;
+  d_event_id uuid;
+  d_waiver public.daily_site_compliance_waivers;
+  cnt integer;
+begin
+  -- Manager B records an entry on their own Ongoing D.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
+  d_entry := public.create_daily_site_entry_draft(
+    '10000000-0000-0000-0000-00000000000a', '2026-07-28', 'working',
+    null, null, 4, null, 300, null, 'Plant screening hedge', 0, 0, null, 'none'
+  );
+  select id into d_event_id from public.daily_site_entry_events
+    where daily_site_entry_id = d_entry.id limit 1;
+
+  -- Owner waives Ongoing D for a different date (isolation subject).
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  d_waiver := public.create_daily_site_compliance_waiver(
+    '10000000-0000-0000-0000-00000000000a', '2026-07-29', 'Owner verified verbally'
+  );
+
+  -- Manager A cannot read manager B's entry, event or waiver.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.daily_site_entries where id = d_entry.id),
+    'manager A cannot read manager B entry'
+  );
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.daily_site_entry_events where id = d_event_id),
+    'manager A cannot read manager B event'
+  );
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.daily_site_compliance_waivers where id = d_waiver.id),
+    'manager A cannot read manager B waiver'
+  );
+
+  -- Manager B cannot read manager A's Ongoing-A/B/C entries.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
+  perform pg_temp.assert_true(
+    not exists (
+      select 1 from public.daily_site_entries
+      where project_id in (
+        '10000000-0000-0000-0000-000000000001',
+        '10000000-0000-0000-0000-000000000002',
+        '10000000-0000-0000-0000-000000000003'
+      )
+    ),
+    'manager B cannot read manager A entries'
+  );
+  -- Manager B sees only its own project's entries.
+  select count(*) into cnt from public.daily_site_entries;
+  perform pg_temp.assert_true(cnt >= 1, 'manager B sees at least its own entry');
+  perform pg_temp.assert_true(
+    not exists (
+      select 1 from public.daily_site_entries
+      where project_id <> '10000000-0000-0000-0000-00000000000a'
+    ),
+    'manager B sees only Ongoing D entries'
+  );
+
+  -- Manager A cannot create an entry for manager B's project.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  begin
+    perform public.create_daily_site_entry_draft(
+      '10000000-0000-0000-0000-00000000000a', '2999-09-01', 'no_work',
+      'rain', null, null, null, null, null, null, null, null, null, 'none'
+    );
+    raise exception 'manager A create on manager B project unexpectedly permitted';
+  exception when insufficient_privilege then null; end;
+
+  -- Authority removal (setup): manager A records a voluntary entry on the Paused
+  -- project (…07, assigned) and stashes its id for the post-removal checks below
+  -- (the assignment is deactivated as the table owner between DO blocks).
+  rm_entry := public.create_daily_site_entry_draft(
+    '10000000-0000-0000-0000-000000000007', '2999-10-01', 'no_work',
+    'temporarily_paused_for_day', null, null, null, null, null, null, null, null, null, 'none'
+  );
+  perform set_config('bd.removal_entry_id', rm_entry.id::text, false);
+
+  -- Compliance leakage: manager A's compliance excludes Ongoing D entirely, and
+  -- manager A's own due set is exactly its three authorised Ongoing projects.
+  perform pg_temp.assert_true(
+    not exists (
+      select 1 from public.daily_site_morning_compliance('2026-07-28')
+      where project_id = '10000000-0000-0000-0000-00000000000a'
+    ),
+    'manager A compliance excludes unauthorised Ongoing D'
+  );
+  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28') where due is true;
+  perform pg_temp.assert_true(cnt = 3, 'manager A sees exactly its three authorised due projects');
+
+  -- Manager B's compliance is exactly its one authorised due project (D).
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
+  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28') where due is true;
+  perform pg_temp.assert_true(cnt = 1, 'manager B sees exactly one due project');
+  perform pg_temp.assert_true(
+    not exists (
+      select 1 from public.daily_site_morning_compliance('2026-07-28')
+      where project_id <> '10000000-0000-0000-0000-00000000000a'
+    ),
+    'manager B compliance contains only Ongoing D'
+  );
+
+  -- daily_site_authorised_projects respects the same boundary.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
+  perform pg_temp.assert_true(
+    (select count(*) = 1 from public.daily_site_authorised_projects()) and
+    (select bool_and(id = '10000000-0000-0000-0000-00000000000a') from public.daily_site_authorised_projects()),
+    'authorised-projects selector returns only Ongoing D for manager B'
+  );
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  perform pg_temp.assert_true(
+    (select count(*) = 10 from public.daily_site_authorised_projects()),
+    'authorised-projects selector returns all projects for the owner'
+  );
+  -- Staff and inactive get nothing from the selector.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', true);
+  perform pg_temp.assert_true(
+    (select count(*) = 0 from public.daily_site_authorised_projects()),
+    'staff sees no authorised projects'
+  );
+
+  raise notice 'SECTION 7c (project-authority isolation) passed';
+end;
+$$;
+
+-- Remove manager A's authority for the Paused project as the table owner, then
+-- confirm the authored draft can no longer be mutated by that manager.
+reset role;
+update public.project_assignments set is_active = false
+  where project_id = '10000000-0000-0000-0000-000000000007'
+    and user_id = '00000000-0000-0000-0000-000000000002';
+set local role authenticated;
+
+do $$
+declare
+  rm_id uuid := current_setting('bd.removal_entry_id')::uuid;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  begin
+    perform public.update_daily_site_entry_draft(
+      rm_id, 'no_work', 'rain', null, null, null, null, null, null, null, null, null, 'none'
+    );
+    raise exception 'update after authority removal unexpectedly permitted';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.submit_daily_site_entry(rm_id);
+    raise exception 'submit after authority removal unexpectedly permitted';
+  exception when insufficient_privilege then null; end;
+  raise notice 'SECTION 7c-removal (authority loss blocks author) passed';
 end;
 $$;
 

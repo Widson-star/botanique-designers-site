@@ -6,6 +6,7 @@ import {
   correctAndResubmitDailySiteEntry as apiCorrect,
   createComplianceWaiver as apiCreateWaiver,
   createDailySiteEntryDraft as apiCreateDraft,
+  fetchAuthorisedProjects,
   fetchDailySiteEntries,
   fetchDailySiteEntryEvents,
   fetchDailySiteWaivers,
@@ -123,8 +124,17 @@ export default function DailySiteOperationsProvider({ children, session, role, i
   const [waivers, setWaivers] = useState([]);
   const [eventsByEntry, setEventsByEntry] = useState({});
   const [remoteCompliance, setRemoteCompliance] = useState([]);
+  const [remoteAuthorisedProjects, setRemoteAuthorisedProjects] = useState([]);
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
   const [error, setError] = useState("");
+
+  // The projects the caller may record an entry for. Real mode: the
+  // authority-scoped database list (never the blanket projects list). Demo mode:
+  // the dev seed projects (preview only; the production boundary is DB-enforced).
+  const authorisedProjects = useMemo(
+    () => (isDemo ? projects : remoteAuthorisedProjects),
+    [isDemo, projects, remoteAuthorisedProjects]
+  );
 
   // Demo compliance is derived (not stored) from local state; real compliance
   // comes from the EAT-aware database RPC via refresh().
@@ -139,14 +149,22 @@ export default function DailySiteOperationsProvider({ children, session, role, i
       return { ok: true };
     }
     try {
-      const [entryRows, waiverRows, complianceRows] = await Promise.all([
+      const [entryRows, waiverRows, complianceRows, authorisedRows] = await Promise.all([
         fetchDailySiteEntries(accessToken),
         fetchDailySiteWaivers(accessToken),
         fetchMorningCompliance(accessToken, null),
+        fetchAuthorisedProjects(accessToken),
       ]);
       setEntries(entryRows.map(mapDailySiteEntry));
       setWaivers(waiverRows.map(mapDailySiteWaiver));
       setRemoteCompliance((complianceRows || []).map(mapComplianceRow));
+      setRemoteAuthorisedProjects((authorisedRows || []).map((row) => ({
+        id: row.id,
+        projectName: row.project_name,
+        status: row.status,
+        stage: row.stage,
+        archived: Boolean(row.archived),
+      })));
       setStatus("ready");
       setError("");
       return { ok: true };
@@ -313,6 +331,7 @@ export default function DailySiteOperationsProvider({ children, session, role, i
     entries,
     waivers,
     compliance,
+    authorisedProjects,
     status,
     error,
     refresh,
@@ -328,7 +347,7 @@ export default function DailySiteOperationsProvider({ children, session, role, i
     createWaiver,
     revokeWaiver,
   }), [
-    entries, waivers, compliance, status, error, refresh, loadEvents,
+    entries, waivers, compliance, authorisedProjects, status, error, refresh, loadEvents,
     createDraft, updateDraft, submitEntry, returnEntry, correctEntry,
     acceptEntry, voidEntry, supersedeEntry, createWaiver, revokeWaiver,
   ]);

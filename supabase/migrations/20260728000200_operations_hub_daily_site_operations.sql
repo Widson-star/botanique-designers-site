@@ -207,10 +207,69 @@ create index daily_site_compliance_waivers_project_date_idx
   on public.daily_site_compliance_waivers (project_id, work_date desc);
 
 -- =====================================================================
+-- Project-authority helper (reuses the existing per-project model)
+-- =====================================================================
+-- Answers: "may the current authenticated actor operate on this project for
+-- Daily Site Operations?" — owner is company-wide; a manager is scoped to the
+-- EXISTING project-authority model (an active project_assignments row, via
+-- public.is_assigned_to_project, or being the project's lead_person_id). This is
+-- deliberately NOT a bare is_manager() bypass: a future manager can see and act
+-- only on the projects they are actually assigned to or lead. Present, sole
+-- active managers gain Daily Site authority the same way — by assignment or
+-- lead ownership — which the owner controls; role alone grants nothing. Staff,
+-- viewer, inactive and anonymous callers are denied (current_user_role() is null
+-- for an inactive/absent profile). SECURITY DEFINER with a fixed search_path so
+-- it is safe to call from both RLS policies and the SECURITY DEFINER functions,
+-- and it never widens or weakens any existing Projects or Approvals rule.
+create or replace function public.can_manage_daily_site_project(target_project_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case public.current_user_role()
+    when 'owner' then exists (
+      select 1 from public.projects p where p.id = target_project_id
+    )
+    when 'manager' then exists (
+      select 1 from public.projects p
+      where p.id = target_project_id
+        and (public.is_assigned_to_project(p.id) or p.lead_person_id = auth.uid())
+    )
+    else false
+  end
+$$;
+
+-- The projects the caller may record a Daily Site Entry for (owner: all;
+-- manager: only project-authority-scoped). Backs the entry-form project
+-- selector so the frontend never offers an unauthorised project.
+create or replace function public.daily_site_authorised_projects()
+returns table (
+  id uuid,
+  project_name text,
+  status text,
+  stage text,
+  archived boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.project_name, p.status, p.stage, p.archived
+  from public.projects p
+  where public.can_manage_daily_site_project(p.id)
+  order by p.project_name asc
+$$;
+
+-- =====================================================================
 -- Row level security
 -- =====================================================================
--- Owner and manager may READ all three tables. All mutation flows exclusively
--- through the narrow SECURITY DEFINER functions below; there is no direct
+-- Owner reads all three tables company-wide; a manager reads only rows for
+-- projects within the manager's existing project authority (see
+-- can_manage_daily_site_project). All mutation flows exclusively through the
+-- narrow SECURITY DEFINER functions below; there is no direct
 -- INSERT/UPDATE/DELETE policy, and those privileges are revoked from
 -- authenticated. Staff, viewer, inactive and anonymous callers have no access.
 
@@ -218,13 +277,13 @@ alter table public.daily_site_entries enable row level security;
 alter table public.daily_site_entry_events enable row level security;
 alter table public.daily_site_compliance_waivers enable row level security;
 
-create policy "daily_site_entries_select_owner_manager"
+create policy "daily_site_entries_select_authorised"
 on public.daily_site_entries
 for select
 to authenticated
-using (public.is_owner() or public.is_manager());
+using (public.can_manage_daily_site_project(project_id));
 
-create policy "daily_site_entry_events_select_owner_manager"
+create policy "daily_site_entry_events_select_authorised"
 on public.daily_site_entry_events
 for select
 to authenticated
@@ -233,15 +292,15 @@ using (
     select 1
     from public.daily_site_entries entry
     where entry.id = daily_site_entry_id
-      and (public.is_owner() or public.is_manager())
+      and public.can_manage_daily_site_project(entry.project_id)
   )
 );
 
-create policy "daily_site_compliance_waivers_select_owner_manager"
+create policy "daily_site_compliance_waivers_select_authorised"
 on public.daily_site_compliance_waivers
 for select
 to authenticated
-using (public.is_owner() or public.is_manager());
+using (public.can_manage_daily_site_project(project_id));
 
 -- =====================================================================
 -- Private helpers
@@ -458,6 +517,11 @@ begin
   if not found then
     raise exception 'project not found or unavailable' using errcode = 'no_data_found';
   end if;
+  -- Revalidate project authority in-transaction: a manager may record only for
+  -- a project within their existing project authority (owner is company-wide).
+  if not public.can_manage_daily_site_project(project.id) then
+    raise exception 'not authorised for this project' using errcode = 'insufficient_privilege';
+  end if;
 
   plan := public.private_daily_site_normalise_plan(
     target_disposition, target_no_work_reason, target_reason_detail,
@@ -521,6 +585,12 @@ begin
 
   select * into entry from public.daily_site_entries where id = target_entry_id for update;
   if not found then raise exception 'site entry not found' using errcode = 'no_data_found'; end if;
+  -- Authority is revalidated against the CURRENT assignment/lead state, not just
+  -- authorship: a manager who authored this draft still loses access if project
+  -- authority was later removed.
+  if not public.can_manage_daily_site_project(entry.project_id) then
+    raise exception 'not authorised for this project' using errcode = 'insufficient_privilege';
+  end if;
   if caller_role = 'manager' and entry.created_by <> auth.uid() then
     raise exception 'only the author may edit this draft' using errcode = 'insufficient_privilege';
   end if;
@@ -584,6 +654,9 @@ begin
 
   select * into entry from public.daily_site_entries where id = target_entry_id for update;
   if not found then raise exception 'site entry not found' using errcode = 'no_data_found'; end if;
+  if not public.can_manage_daily_site_project(entry.project_id) then
+    raise exception 'not authorised for this project' using errcode = 'insufficient_privilege';
+  end if;
   if caller_role = 'manager' and entry.created_by <> auth.uid() then
     raise exception 'only the author may submit this entry' using errcode = 'insufficient_privilege';
   end if;
@@ -688,6 +761,9 @@ begin
 
   select * into entry from public.daily_site_entries where id = target_entry_id for update;
   if not found then raise exception 'site entry not found' using errcode = 'no_data_found'; end if;
+  if not public.can_manage_daily_site_project(entry.project_id) then
+    raise exception 'not authorised for this project' using errcode = 'insufficient_privilege';
+  end if;
   if caller_role = 'manager' and entry.created_by <> auth.uid() then
     raise exception 'only the author may correct this entry' using errcode = 'insufficient_privilege';
   end if;
@@ -986,13 +1062,15 @@ $$;
 -- =====================================================================
 -- Morning-compliance calculation (read-only; never mutates projects)
 -- =====================================================================
--- SECURITY INVOKER: the caller's own RLS on projects, entries and waivers
--- governs visibility, so owner and manager both see the portfolio-wide
--- in-scope projects that their existing policies already expose. For the given
--- EAT work date it reports, per in-scope project, whether an entry or an active
--- waiver exists and the submission timing. Weekends produce no automatic due
--- items. Voluntary entries on excluded projects/dates are surfaced but never
--- create an obligation.
+-- SECURITY INVOKER for the entry/waiver reads (repaired RLS scopes them), and
+-- the project scan is explicitly filtered by can_manage_daily_site_project so
+-- the caller only ever sees projects within their authority: owner company-wide,
+-- a manager only their project-authority set. Missing/late/waived rows and any
+-- aggregate the caller derives therefore never leak an unauthorised project's
+-- name, id, counts or waiver state. For the given EAT work date it reports, per
+-- authorised in-scope project, whether an entry or active waiver exists and the
+-- submission timing. Weekends produce no automatic due items. Voluntary entries
+-- on excluded projects/dates are surfaced but never create an obligation.
 create or replace function public.daily_site_morning_compliance(
   target_date date default null
 )
@@ -1026,6 +1104,9 @@ as $$
            (p.status = 'Ongoing' and p.archived is false and p.stage <> 'Awaiting Approval') as in_scope
     from public.projects p
     cross join resolved r
+    -- Authority filter: only projects the caller may operate on (owner: all;
+    -- manager: project-authority-scoped). Prevents unauthorised-project leakage.
+    where public.can_manage_daily_site_project(p.id)
   ),
   live_entry as (
     select distinct on (e.project_id) e.id, e.project_id, e.work_date, e.state,
@@ -1092,6 +1173,9 @@ revoke execute on function public.supersede_daily_site_entry(uuid, text, text, t
 revoke execute on function public.create_daily_site_compliance_waiver(uuid, date, text) from public, anon;
 revoke execute on function public.revoke_daily_site_compliance_waiver(uuid, text) from public, anon;
 revoke execute on function public.daily_site_morning_compliance(date) from anon;
+-- Authority helpers: usable by authenticated (RLS + selector), never by anon.
+revoke execute on function public.can_manage_daily_site_project(uuid) from public, anon;
+revoke execute on function public.daily_site_authorised_projects() from public, anon;
 
 grant execute on function public.create_daily_site_entry_draft(uuid, date, text, text, text, integer, text, numeric, numeric, text, numeric, numeric, text, text) to authenticated;
 grant execute on function public.update_daily_site_entry_draft(uuid, text, text, text, integer, text, numeric, numeric, text, numeric, numeric, text, text) to authenticated;
@@ -1104,3 +1188,5 @@ grant execute on function public.supersede_daily_site_entry(uuid, text, text, te
 grant execute on function public.create_daily_site_compliance_waiver(uuid, date, text) to authenticated;
 grant execute on function public.revoke_daily_site_compliance_waiver(uuid, text) to authenticated;
 grant execute on function public.daily_site_morning_compliance(date) to authenticated;
+grant execute on function public.can_manage_daily_site_project(uuid) to authenticated;
+grant execute on function public.daily_site_authorised_projects() to authenticated;

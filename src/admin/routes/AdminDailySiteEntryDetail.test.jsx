@@ -42,6 +42,24 @@ function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "
 }
 
 describe("AdminDailySiteEntryDetail", () => {
+  it("fails safe when the entry id is not in the authorised set", () => {
+    // An unauthorised (or non-existent) entry is simply absent from the
+    // RLS-scoped list, so the detail route shows a safe not-available state
+    // rather than leaking anything.
+    render(
+      <MemoryRouter initialEntries={["/admin/daily-site-operations/not-mine"]}>
+        <AdminDataContext.Provider value={{ role: "manager", projects, profilesById: {}, currentUserId: "m1" }}>
+          <DailySiteOperationsContext.Provider value={{ entries: [], loadEvents: vi.fn(() => Promise.resolve([])) }}>
+            <Routes>
+              <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+            </Routes>
+          </DailySiteOperationsContext.Provider>
+        </AdminDataContext.Provider>
+      </MemoryRouter>
+    );
+    expect(screen.getByText("This entry is not available.")).toBeInTheDocument();
+  });
+
   it("renders readable entry facts without raw ids or JSON", () => {
     const { container } = renderDetail();
     expect(screen.getByRole("heading", { name: "Karen Residence" })).toBeInTheDocument();

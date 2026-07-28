@@ -85,6 +85,14 @@ export async function fetchMorningCompliance(accessToken, workDate = null) {
   return rpc(accessToken, "daily_site_morning_compliance", { target_date: workDate });
 }
 
+// Projects the caller may record a Daily Site Entry for — owner: all; manager:
+// only project-authority-scoped. Backs the entry-form selector so an
+// unauthorised project is never offered. Authority is enforced in the database;
+// this is the matching UI boundary.
+export async function fetchAuthorisedProjects(accessToken) {
+  return rpc(accessToken, "daily_site_authorised_projects", {});
+}
+
 // Map a camelCase entry-plan object to the RPC's target_* parameters. Numeric
 // fields are passed as-is; empty strings become null so the database sees a
 // clean absence rather than a blank.

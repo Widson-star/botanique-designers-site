@@ -14,15 +14,17 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
-  const { role, projects, currentUserId } = useAdminData();
-  const { entries, createDraft, updateDraft, submitEntry } = useDailySiteOperations();
+  const { role, currentUserId } = useAdminData();
+  const { entries, authorisedProjects, createDraft, updateDraft, submitEntry } = useDailySiteOperations();
 
   const editing = mode === "edit";
   const existing = editing ? entries.find((entry) => entry.id === params.entryId) : null;
 
+  // Only projects the caller is authorised to record for (owner: all;
+  // manager: project-authority-scoped) are offered — matching the database.
   const selectableProjects = useMemo(
-    () => [...projects].sort((a, b) => a.projectName.localeCompare(b.projectName)),
-    [projects]
+    () => [...(authorisedProjects || [])].sort((a, b) => a.projectName.localeCompare(b.projectName)),
+    [authorisedProjects]
   );
 
   const [projectId, setProjectId] = useState(
@@ -64,7 +66,7 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
     );
   }
 
-  const projectName = projects.find((project) => project.id === (existing?.projectId || projectId))?.projectName;
+  const projectName = selectableProjects.find((project) => project.id === (existing?.projectId || projectId))?.projectName;
 
   async function persist(values, thenSubmit) {
     setBusy(true);

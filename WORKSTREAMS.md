@@ -2333,14 +2333,25 @@ integration, public-site and Apicora work.
   accepted entries are corrected only by supersession — the prior row is preserved as
   `superseded` and a new `accepted` row (version + 1) links back via `supersedes_entry_id`.
   No hard delete; events are append-only.
-- **RLS/role boundary:** owner and manager read all three tables; all mutation flows through
-  the functions (direct `INSERT/UPDATE/DELETE` revoked from `authenticated`). Owner-only:
-  return, accept, void, supersede, waive/revoke. Manager: create/edit-own-draft, submit,
-  correct-and-resubmit. Staff/viewer/inactive/anon denied. `temporarily_paused_for_day`
-  never mutates `projects.status`.
+- **RLS/role boundary (project-authority scoped):** the **owner** reads all three tables
+  company-wide; a **manager** reads only rows for projects within the existing manager
+  project-authority model — an active `project_assignments` row (via
+  `public.is_assigned_to_project`) or being the project's `lead_person_id` — enforced by the
+  `public.can_manage_daily_site_project(uuid)` helper in the SELECT policies. Role alone
+  grants nothing, so a future manager cannot see or act on unrelated projects. All mutation
+  flows through the functions (direct `INSERT/UPDATE/DELETE` revoked from `authenticated`),
+  and every manager-capable function **revalidates project authority in-transaction** against
+  the current assignment/lead state — a manager who authored an entry still loses mutation
+  access if authority is later removed. Owner-only: return, accept, void, supersede,
+  waive/revoke. Manager: create/edit-own-draft, submit, correct-and-resubmit (all
+  authority-scoped). Staff/viewer/inactive/anon denied. `temporarily_paused_for_day` never
+  mutates `projects.status`.
 - **Compliance:** EAT-explicit (`Africa/Nairobi`), 08:30 EAT is a non-blocking expectation
   (late is database-derived), weekends create no automatic due items, waivers satisfy
-  compliance without operational totals, Ongoing/operationally-active projects only.
+  compliance without operational totals, Ongoing/operationally-active projects only. The
+  calculation is **filtered by `can_manage_daily_site_project`**, so a manager's
+  missing/late/waived counts never leak an unauthorised project's name, id or waiver state;
+  the entry-form selector uses the matching `daily_site_authorised_projects()` list.
 - **Validation:** isolated PostgreSQL 17 migration/test matrix green
   (`scripts/test-daily-site-db.sh`); full Vitest suite green; changed-file ESLint clean;
   production Vite build + full prerender succeed; desktop and 390×844 mobile browser checks
