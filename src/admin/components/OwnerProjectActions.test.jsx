@@ -32,11 +32,45 @@ describe("OwnerProjectActions", () => {
   it("shows the ongoing-state owner actions", () => {
     renderActions({ role: "owner", project: ongoing });
     expect(screen.getByRole("button", { name: "Mark completed" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Classify Design-only" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Archive" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More actions" })).toHaveAttribute(
+      "aria-haspopup",
+      "menu"
+    );
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const menu = screen.getByRole("menu", { name: "More project actions" });
+    expect(within(menu).getByRole("menuitem", { name: "Cancel" })).toBeInTheDocument();
+    expect(
+      within(menu).getByRole("menuitem", { name: "Classify Design-only" })
+    ).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
     // Not pending -> no Activate.
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
+  });
+
+  it("closes the More actions menu with Escape and restores trigger focus", async () => {
+    renderActions({ role: "owner", project: ongoing });
+    const trigger = screen.getByRole("button", { name: "More actions" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("opens exceptional-action confirmation from the accessible menu", async () => {
+    const updateProject = vi.fn().mockResolvedValue({ ok: true });
+    renderActions({ role: "owner", project: ongoing, updateProject });
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Cancel" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel project" }));
+    await waitFor(() =>
+      expect(updateProject).toHaveBeenCalledWith("p2", { status: "Cancelled" })
+    );
   });
 
   it("renders nothing for a manager (no material controls)", () => {

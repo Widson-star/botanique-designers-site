@@ -139,9 +139,9 @@ export default function ProjectForm({ mode, project }) {
         </div>
       )}
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
-        <h2 className="font-bold text-base">Project details</h2>
-        <div className="grid md:grid-cols-2 gap-4">
+      <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
+        <h2 className="text-base font-semibold">Project details</h2>
+        <div className="grid gap-4 md:grid-cols-2">
           <Field label="Project name" htmlFor="projectName" error={errors.projectName} required>
             <input
               id="projectName"
@@ -203,9 +203,9 @@ export default function ProjectForm({ mode, project }) {
         </div>
       </section>
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
-        <h2 className="font-bold text-base">Status & responsibility</h2>
-        <div className="grid md:grid-cols-2 gap-4">
+      <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
+        <h2 className="text-base font-semibold">Status and responsibility</h2>
+        <div className="grid gap-4 md:grid-cols-2">
           {caps.statusEditable ? (
             <Field label="Status" htmlFor="status">
               <select
@@ -291,9 +291,9 @@ export default function ProjectForm({ mode, project }) {
         </div>
       </section>
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
-        <h2 className="font-bold text-base">Schedule</h2>
-        <div className="grid md:grid-cols-2 gap-4">
+      <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
+        <h2 className="text-base font-semibold">Schedule</h2>
+        <div className="grid gap-4 md:grid-cols-2">
           <Field label="Planned / expected start" htmlFor="startDate">
             <input
               id="startDate"
@@ -354,21 +354,36 @@ export default function ProjectForm({ mode, project }) {
         </div>
       </section>
 
-      <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
-        <h2 className="font-bold text-base">Coordination</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <Field label="Next action" htmlFor="nextAction" error={errors.nextAction}>
+      <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
+        <div>
+          <h2 className="text-base font-semibold">Next steps and internal notes</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            Record the immediate team action, its timing and any context needed to keep work moving.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field
+            label="Next action"
+            htmlFor="nextAction"
+            error={errors.nextAction}
+            hint="What must happen next?"
+          >
             <input
               id="nextAction"
               type="text"
               maxLength={500}
               value={form.nextAction}
               onChange={(e) => setField("nextAction", e.target.value)}
+              placeholder="Example: Confirm mobilisation date with the client"
               className={inputClass}
             />
           </Field>
 
-          <Field label="Next-action date" htmlFor="nextActionDate">
+          <Field
+            label="Due date"
+            htmlFor="nextActionDate"
+            hint="When should this action be completed?"
+          >
             <input
               id="nextActionDate"
               type="date"
@@ -379,18 +394,29 @@ export default function ProjectForm({ mode, project }) {
           </Field>
         </div>
 
-        <Field label="Blocker" htmlFor="blocker" error={errors.blocker} hint="Leave blank if none.">
+        <Field
+          label="Current blocker"
+          htmlFor="blocker"
+          error={errors.blocker}
+          hint="What is preventing progress? Leave blank if nothing."
+        >
           <textarea
             id="blocker"
             rows={2}
             maxLength={500}
             value={form.blocker}
             onChange={(e) => setField("blocker", e.target.value)}
+            placeholder="Example: Awaiting client approval"
             className={inputClass}
           />
         </Field>
 
-        <Field label="Notes" htmlFor="notes" error={errors.notes}>
+        <Field
+          label="Internal notes"
+          htmlFor="notes"
+          error={errors.notes}
+          hint="Background, decisions or instructions the team should retain."
+        >
           <textarea
             id="notes"
             rows={4}
@@ -403,8 +429,8 @@ export default function ProjectForm({ mode, project }) {
       </section>
 
       {(caps.portfolioEditable || mode === "create") && (
-        <section className="bg-white border border-stone-200 rounded-lg p-5 space-y-4">
-          <h2 className="font-bold text-base">Portfolio</h2>
+        <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
+          <h2 className="text-base font-semibold">Portfolio</h2>
           {caps.portfolioEditable ? (
           <div className="grid md:grid-cols-2 gap-4">
             <label className="flex items-center gap-2 text-sm" htmlFor="portfolioEligible">
@@ -443,7 +469,7 @@ export default function ProjectForm({ mode, project }) {
         </section>
       )}
 
-      <div className="flex items-center gap-3">
+      <div className="sticky bottom-0 z-10 -mx-2 flex items-center gap-3 border-t border-stone-200 bg-[#f6f7f4]/95 px-2 py-3 backdrop-blur">
         <button
           type="submit"
           disabled={busy}

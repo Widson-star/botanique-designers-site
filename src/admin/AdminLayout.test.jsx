@@ -4,7 +4,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "./context/adminData";
 import AdminLayout from "./AdminLayout";
 
-function renderLayout() {
+function renderLayout({
+  role = "owner",
+  profileLabel = "Widson O. Ambaisi",
+} = {}) {
   return render(
     <MemoryRouter initialEntries={["/admin"]}>
       <AdminDataContext.Provider
@@ -14,8 +17,8 @@ function renderLayout() {
           <Route
             element={
               <AdminLayout
-                role="owner"
-                profileLabel="Widson Omutelema Ambaisi"
+                role={role}
+                profileLabel={profileLabel}
                 isDemo
                 onSignOut={vi.fn()}
               />
@@ -30,11 +33,11 @@ function renderLayout() {
 }
 
 describe("AdminLayout visual boundary", () => {
-  it("keeps admin headings inside the Quicksand-only admin shell", () => {
+  it("keeps admin headings inside the native-system-font admin shell", () => {
     renderLayout();
     const heading = screen.getByRole("heading", { name: "Dashboard heading" });
     expect(heading.closest(".admin-shell")).toBeInTheDocument();
-    expect(heading.closest(".admin-shell")).toHaveClass("font-sans");
+    expect(heading.closest(".admin-shell")).not.toHaveClass("font-sans");
   });
 
   it("shows only live Dashboard and Projects navigation", () => {
@@ -49,12 +52,23 @@ describe("AdminLayout visual boundary", () => {
     expect(screen.queryByRole("link", { name: /Leads|Site visits|Payments|Expenses/i })).not.toBeInTheDocument();
   });
 
-  it("shows the full founder fallback and a restrained finance boundary note", () => {
+  it("shows the compact founder name, Principal badge and restrained finance boundary note", () => {
     renderLayout();
-    expect(screen.getByText("Widson Omutelema Ambaisi")).toBeInTheDocument();
+    expect(screen.getByText("Widson O. Ambaisi")).toBeInTheDocument();
+    expect(screen.getByText("Principal")).toBeInTheDocument();
+    expect(screen.queryByText("Owner")).not.toBeInTheDocument();
     expect(
       screen.getByText("Financial documents remain managed in Simple Invoice Manager.")
     ).toBeInTheDocument();
     expect(screen.queryByText(/PDFs|document numbers|payments/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["manager", "Operations Manager"],
+    ["staff", "Project Team"],
+    ["viewer", "Read-only"],
+  ])("presents the %s role as %s", (role, label) => {
+    renderLayout({ role, profileLabel: "Team member" });
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 });

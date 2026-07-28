@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { useAdminData } from "../context/adminData";
 import { formatActivity } from "../utils/activityFormat";
+import { compactPersonName } from "../utils/personName";
 
 function ChangeRow({ change }) {
   return (
@@ -16,6 +17,17 @@ function ChangeRow({ change }) {
       <span className="text-botanique-charcoal">{change.after}</span>
     </li>
   );
+}
+
+function eventSummary(activity) {
+  if (activity.changes.length === 0) {
+    return activity.reason || "No field details were recorded for this event.";
+  }
+  const first = activity.changes[0];
+  const remaining = activity.changes.length - 1;
+  return `${first.label} changed from ${first.before} to ${first.after}${
+    remaining > 0 ? `, with ${remaining} other ${remaining === 1 ? "change" : "changes"}` : ""
+  }.`;
 }
 
 export default function ActivityHistory({ projectId }) {
@@ -63,26 +75,38 @@ export default function ActivityHistory({ projectId }) {
   }
 
   return (
-    <ol className="space-y-4">
+    <ol className="divide-y divide-stone-200">
       {activities.map((raw) => {
         const activity = formatActivity(raw, profilesById);
+        const compactActor = compactPersonName(activity.actor);
         return (
-          <li key={activity.id} className="border-l-2 border-stone-200 pl-4">
+          <li key={activity.id} className="py-4 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="font-semibold text-botanique-charcoal">{activity.actionLabel}</p>
-              <p className="text-xs text-gray-400">{activity.occurredAt}</p>
+              <p className="text-sm font-semibold text-botanique-charcoal">{activity.actionLabel}</p>
+              <time className="text-xs text-gray-400">{activity.occurredAt}</time>
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">By {activity.actor}</p>
-            {activity.changes.length > 0 && (
-              <ul className="mt-2 space-y-1">
-                {activity.changes.map((change) => (
-                  <ChangeRow key={change.field} change={change} />
-                ))}
-              </ul>
-            )}
-            {activity.reason && (
-              <p className="mt-2 text-xs text-gray-500 italic">Reason: {activity.reason}</p>
-            )}
+            <p className="mt-0.5 text-xs text-gray-500">By {compactActor}</p>
+            <p className="mt-2 text-sm leading-6 text-gray-600">{eventSummary(activity)}</p>
+            <details className="mt-2 text-sm">
+              <summary className="cursor-pointer font-medium text-botanique-green hover:underline">
+                View details
+              </summary>
+              <div className="mt-3 border-l-2 border-stone-200 pl-4">
+                <p className="mb-2 text-xs text-gray-500">
+                  Actor: <span className="text-botanique-charcoal">{activity.actor}</span>
+                </p>
+                {activity.changes.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {activity.changes.map((change) => (
+                      <ChangeRow key={change.field} change={change} />
+                    ))}
+                  </ul>
+                )}
+                {activity.reason && (
+                  <p className="mt-2 text-xs italic text-gray-500">Reason: {activity.reason}</p>
+                )}
+              </div>
+            </details>
           </li>
         );
       })}

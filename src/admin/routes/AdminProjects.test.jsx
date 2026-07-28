@@ -132,4 +132,19 @@ describe("AdminProjects", () => {
     expect(within(row).getByText("None")).toBeInTheDocument();
     expect(within(row).queryByText(/missing|blocker/i)).not.toBeInTheDocument();
   });
+
+  it("uses the compact founder name in width-constrained project rows", () => {
+    renderProjects("owner", "/admin/projects", [
+      {
+        ...projects[0],
+        id: "founder-led",
+        projectName: "Founder-led Project",
+        leadPersonId: "owner-1",
+        leadPersonName: "Widson Omutelema Ambaisi",
+      },
+    ]);
+    const row = screen.getByText("Founder-led Project").closest("tr");
+    expect(within(row).getByText("Widson O. Ambaisi")).toBeInTheDocument();
+    expect(within(row).queryByText("Widson Omutelema Ambaisi")).not.toBeInTheDocument();
+  });
 });

@@ -5,7 +5,6 @@ import { useAdminData } from "./adminData";
 
 const api = vi.hoisted(() => ({
   createProject: vi.fn(),
-  fetchFinancialReferences: vi.fn(),
   fetchProjectActivities: vi.fn(),
   fetchProjects: vi.fn(),
   fetchVisibleProfiles: vi.fn(),
@@ -57,6 +56,7 @@ function rawProject(id, name, overrides = {}) {
 function Harness() {
   const data = useAdminData();
   const ids = data.projects.map((project) => `${project.id}:${project.projectName}`);
+  const createdProject = data.projects.find((project) => project.id === "created");
 
   async function create() {
     const result = await data.createProject({ project_name: "Created" });
@@ -74,6 +74,11 @@ function Harness() {
     <div>
       <output aria-label="status">{data.dataStatus}</output>
       <output aria-label="projects">{ids.join("|")}</output>
+      <output aria-label="created-portfolio">
+        {createdProject
+          ? `${createdProject.portfolioEligible}:${createdProject.portfolioPermissionStatus}`
+          : ""}
+      </output>
       <output aria-label="feedback-type">{data.saveFeedback?.type || ""}</output>
       <output aria-label="feedback-message">{data.saveFeedback?.message || ""}</output>
       <button type="button" onClick={create}>Create</button>
@@ -186,7 +191,6 @@ describe("AdminDataProvider mutation reconciliation", () => {
     delete window.__lastMutationResult;
     api.fetchVisibleProfiles.mockResolvedValue([profile]);
     api.fetchProjects.mockResolvedValue([rawProject("existing", "Existing")]);
-    api.fetchFinancialReferences.mockResolvedValue([]);
     api.fetchProjectActivities.mockResolvedValue([]);
   });
 
@@ -210,6 +214,9 @@ describe("AdminDataProvider mutation reconciliation", () => {
       )
     );
     expect(window.__lastMutationResult).toBeUndefined();
+    expect(screen.getByLabelText("created-portfolio")).toHaveTextContent(
+      "false:Not Reviewed"
+    );
 
     await act(async () => {
       resolveRefresh([
@@ -385,7 +392,7 @@ describe("AdminDataProvider demo PATCH fidelity", () => {
     await waitFor(() => expect(demoProject().portfolioEligible).toBe(false));
   });
 
-  it("never calls a Supabase mutation", async () => {
+  it("never calls a Supabase project mutation", async () => {
     renderDemoProvider();
     fireEvent.click(screen.getByRole("button", { name: "Change notes" }));
     await waitFor(() => expect(demoProject().notes).toBe("Updated demo notes"));

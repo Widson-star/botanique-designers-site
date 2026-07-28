@@ -30,17 +30,15 @@ const project = {
   accessGranted: true,
 };
 
-function renderRoute(role, entry, element) {
+function renderRoute(role, entry, element, projectRows = [project]) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
       <AdminDataContext.Provider
         value={{
           role,
-          projects: [project],
+          projects: projectRows,
           profiles: [],
           currentUserId: "",
-          financialReferences: {},
-          isDemo: true,
           dataStatus: "ready",
           dataError: "",
           updateProject: vi.fn(),
@@ -61,19 +59,37 @@ describe("project detail role visibility", () => {
   it("shows Portfolio Overview and Edit to the owner", () => {
     renderRoute("owner", "/admin/projects/p1", <AdminProjectDetail />);
     expect(screen.getByRole("heading", { name: "Portfolio Overview" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit project" })).toBeInTheDocument();
+    expect(screen.getByText("Widson O. Ambaisi")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Commercial references|Estimate number|Payment status/i)
+    ).not.toBeInTheDocument();
   });
 
   it("hides Portfolio Overview from the Operations Manager", () => {
     renderRoute("manager", "/admin/projects/p1", <AdminProjectDetail />);
     expect(screen.queryByRole("heading", { name: "Portfolio Overview" })).not.toBeInTheDocument();
     expect(screen.queryByText("Approved For Portfolio")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Edit project" })).toBeInTheDocument();
   });
 
   it.each(["staff", "viewer"])("hides Edit from %s", (role) => {
     renderRoute(role, "/admin/projects/p1", <AdminProjectDetail />);
-    expect(screen.queryByRole("link", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit project" })).not.toBeInTheDocument();
+  });
+
+  it("renders the returned false / Not Reviewed portfolio values without substitution", () => {
+    renderRoute("owner", "/admin/projects/p1", <AdminProjectDetail />, [
+      {
+        ...project,
+        portfolioEligible: false,
+        portfolioPermissionStatus: "Not Reviewed",
+      },
+    ]);
+    const portfolio = screen.getByRole("heading", { name: "Portfolio Overview" }).closest("aside");
+    expect(portfolio).toHaveTextContent("EligibleNo");
+    expect(portfolio).toHaveTextContent("Permission statusNot Reviewed");
+    expect(portfolio).not.toHaveTextContent("Permission statusEligible");
   });
 });
 

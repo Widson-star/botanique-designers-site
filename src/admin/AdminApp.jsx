@@ -11,6 +11,7 @@ import AdminProjectDetail from "./routes/AdminProjectDetail";
 import AdminProjectForm from "./routes/AdminProjectForm";
 import { AdminDataProvider } from "./context/AdminDataContext";
 import { ROLES } from "./constants/roles";
+import { compactPersonName } from "./utils/personName";
 import {
   clearStoredSession,
   fetchCurrentProfile,
@@ -81,9 +82,11 @@ export default function AdminApp() {
 
   const profileLabel = useMemo(() => {
     if (isDemo) {
-      return role === ROLES.OWNER ? "Widson Omutelema Ambaisi" : "Martine Lotom";
+      return role === ROLES.OWNER ? "Widson O. Ambaisi" : "Martine Lotom";
     }
-    return profile?.full_name || profile?.email || "Authenticated admin";
+    return compactPersonName(
+      profile?.full_name || profile?.email || "Authenticated admin"
+    );
   }, [isDemo, profile, role]);
 
   async function handleLogin(event) {

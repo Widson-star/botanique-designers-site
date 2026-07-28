@@ -11,13 +11,13 @@
   }
 }
 
-/* The Operations Hub is a Quicksand-only working interface. Public editorial
-   pages retain the Fraunces display boundary above. */
+/* The Operations Hub uses the native operating-system UI stack. Public
+   editorial pages retain the Quicksand/Fraunces brand boundary above. */
 .admin-shell,
 .admin-shell h1,
 .admin-shell h2,
 .admin-shell h3 {
-  font-family: "Quicksand", ui-sans-serif, system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 @keyframes softPulse {

@@ -18,6 +18,7 @@ import {
   projectAttentionReasons,
   PROJECT_VIEW_LABELS,
 } from "../utils/dashboardMetrics";
+import { compactPersonName } from "../utils/personName";
 
 const FILTER_KEYS = ["search", "status", "stage", "lead", "projectType", "portfolio", "archived"];
 
@@ -149,15 +150,15 @@ export default function AdminProjects() {
       />
 
       <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white shadow-sm">
-        <table className="min-w-full divide-y divide-stone-200 text-sm">
+        <table className="min-w-[76rem] divide-y divide-stone-200 text-sm">
           <caption className="sr-only">Live project records</caption>
           <thead className="bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
-              <th scope="col" className="px-4 py-3">Project</th>
+              <th scope="col" className="w-[18%] px-4 py-3">Project</th>
               <th scope="col" className="px-4 py-3">Status</th>
               <th scope="col" className="px-4 py-3">Stage</th>
-              <th scope="col" className="px-4 py-3">Accountable lead</th>
-              <th scope="col" className="px-4 py-3">Next action</th>
+              <th scope="col" className="w-[12rem] px-4 py-3">Accountable lead</th>
+              <th scope="col" className="w-[20rem] px-4 py-3">Next action</th>
               <th scope="col" className="px-4 py-3">Target completion</th>
               <th scope="col" className="px-4 py-3">Attention</th>
               <th scope="col" className="px-4 py-3">Actions</th>
@@ -176,15 +177,16 @@ export default function AdminProjects() {
                     )}
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{project.clientSiteName || "Site label not set"}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {project.projectType}
-                    {project.location ? ` · ${project.location}` : ""}
-                  </p>
+                  <p className="mt-1 text-xs text-gray-400">{project.projectType}</p>
                 </td>
                 <td className="px-4 py-4"><ProjectBadge value={project.status} /></td>
                 <td className="px-4 py-4"><ProjectBadge value={project.stage} /></td>
-                <td className="px-4 py-4 text-gray-600">{project.leadPersonName}</td>
-                <td className="px-4 py-4 text-gray-600 max-w-xs">
+                <td className="min-w-[10rem] px-4 py-4 text-gray-600">
+                  <span className="line-clamp-2">
+                    {compactPersonName(project.leadPersonName)}
+                  </span>
+                </td>
+                <td className="min-w-[18rem] max-w-md px-4 py-4 text-gray-600">
                   <p>{project.nextAction || "No next action set"}</p>
                   <p className="text-xs text-gray-400 mt-1">{project.nextActionDate || "Not dated"}</p>
                 </td>

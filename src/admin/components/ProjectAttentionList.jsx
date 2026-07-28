@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import ProjectBadge from "./ProjectBadge";
 import { canEditProjects, canSeePendingActivation } from "../utils/projectCapabilities";
 import { projectsNeedingAttention } from "../utils/dashboardMetrics";
+import { compactPersonName } from "../utils/personName";
 
 export default function ProjectAttentionList({ projects, role }) {
   const showPendingActivation = canSeePendingActivation(role);
@@ -12,31 +12,24 @@ export default function ProjectAttentionList({ projects, role }) {
 
   return (
     <section
-      className="rounded-xl border border-stone-200 bg-white shadow-sm"
+      className="rounded-lg border border-stone-200 bg-white"
       aria-labelledby="attention-title"
     >
       <div className="flex flex-col gap-1 border-b border-stone-100 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-botanique-green">
-            Operational focus
-          </p>
-          <h2 id="attention-title" className="mt-1 text-lg font-bold">
-            Projects needing attention
-          </h2>
-        </div>
+        <h2 id="attention-title" className="text-base font-semibold">Projects needing attention</h2>
         <p className="text-xs text-gray-500">{items.length} visible projects flagged</p>
       </div>
 
       {items.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-gray-500">No projects need attention.</p>
+        <p className="px-5 py-3 text-sm text-gray-500">No projects need attention.</p>
       ) : (
         <ul className="divide-y divide-stone-100">
           {items.map(({ project, reasons }) => {
             const pendingActivation =
               showPendingActivation && project.status === "Pending" && !project.archived;
             return (
-              <li key={project.id} className="px-5 py-4">
-                <div className="grid gap-4 xl:grid-cols-[minmax(15rem,1.5fr)_minmax(13rem,1fr)_auto] xl:items-center">
+              <li key={project.id} className="px-5 py-3.5">
+                <div className="grid gap-3 md:grid-cols-[minmax(13rem,1.2fr)_minmax(16rem,1.5fr)_auto] md:items-center">
                   <div className="min-w-0">
                     <Link
                       to={`/admin/projects/${project.id}`}
@@ -44,29 +37,15 @@ export default function ProjectAttentionList({ projects, role }) {
                     >
                       {project.projectName}
                     </Link>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <ProjectBadge value={project.status} />
-                      <ProjectBadge value={project.stage} />
-                      <span className="rounded-full bg-stone-100 px-2 py-1 text-[11px] font-semibold text-gray-600">
-                        {project.projectType}
-                      </span>
-                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {project.status} · {project.stage} ·{" "}
+                      {compactPersonName(project.leadPersonName) || "Not assigned"}
+                    </p>
                   </div>
 
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                    <div>
-                      <dt className="text-gray-400">Accountable lead</dt>
-                      <dd className="mt-0.5 font-medium text-gray-700">
-                        {project.leadPersonName || "Not assigned"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-gray-400">Target completion</dt>
-                      <dd className="mt-0.5 font-medium text-gray-700">
-                        {project.targetCompletionDate || "Not set"}
-                      </dd>
-                    </div>
-                  </dl>
+                  <p className="text-xs leading-5 text-amber-800" aria-label="Attention reasons">
+                    {reasons.join(" · ")}
+                  </p>
 
                   <div className="flex flex-wrap gap-2 xl:justify-end">
                     {canEdit && (
@@ -88,16 +67,6 @@ export default function ProjectAttentionList({ projects, role }) {
                   </div>
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2" aria-label="Attention reasons">
-                  {reasons.map((reason) => (
-                    <span
-                      key={reason}
-                      className="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800"
-                    >
-                      {reason}
-                    </span>
-                  ))}
-                </div>
               </li>
             );
           })}

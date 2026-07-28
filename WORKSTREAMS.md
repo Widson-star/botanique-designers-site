@@ -1954,18 +1954,31 @@ PR is reviewed, merged and production-verified.
   `23805cb81ce01e57b26e31220cde7f141d806496` replaces the rejected equal-weight
   dashboard with a meeting-ready operational composition while preserving the existing
   CRUD, role capabilities, exact metric/view predicates, mutation reconciliation and
-  read-only ledger architecture. The dashboard now has a live generated operational +
+  read-only ledger architecture. The founder completed visual review against the supplied
+  local desktop and mobile screenshots and approved the final Phase 1B-A2 direction. The
+  admin application uses native system UI typography and visible **Principal** /
+  **Founder & Principal** terminology. The dashboard has a natural generated operational +
   attention summary; four primary indicators and a restrained Total / Completed /
-  Design-only strip; a unified deterministic Projects needing attention workspace;
-  compact status/stage/type management summaries; and cross-project Recent Activity
-  rendered as actor + project + readable changes with no UUID/raw JSON. The Projects table
-  prioritises status, stage, accountable lead, next action, target completion and the same
-  deterministic attention labels. The dominant Simple Invoice card is removed; its boundary
-  remains one restrained shell note. The admin shell now enforces Quicksand independently of
-  the public Fraunces heading rule, uses a calmer Botanique-green hierarchy, exposes only
-  Dashboard + Projects, integrates search, and retains accessible desktop/mobile navigation.
-  The development owner fallback is **Widson Omutelema Ambaisi** and the UI no longer
-  truncates the authenticated `profile.full_name`; no hosted profile row was changed.
+  Design-only strip; a compact deterministic Projects needing attention state; accessible
+  project-status doughnut and project-stage column visualisations; and a readable
+  project-type summary. Cross-project Recent Activity is rendered as actor + project +
+  readable changes with no UUID/raw JSON. The Projects table prioritises status, stage,
+  expanded accountable lead and next action, target completion and the same deterministic
+  attention labels. Project Overview is compact; Edit project remains visible; one
+  contextually relevant material action is primary; exceptional owner decisions remain in
+  the accessible More actions menu. The shared form has clearer Next steps and internal
+  notes sections with sticky Save/Create and Cancel actions. Activity History is concise
+  and expandable: collapsed operational rows use **Widson O. Ambaisi**, while expanded or
+  formal identity remains **Widson Omutelema Ambaisi**; other names such as **Martine
+  Lotom** are not abbreviated. Stored profile data is unchanged. The incomplete
+  `FinancialReferencesPanel` and editor are removed from Phase 1B-A2, with no
+  financial-reference POST/PATCH/provider mutation path. Simple Invoice Manager remains
+  authoritative for financial documents. Future commercial and operational-finance
+  modules, together with Team, Tasks, Approvals, Project Funds, Labour Engagements,
+  Commercial Records, Expenditure, Documents and Reports, remain separately gated under
+  `BD-OPERATIONS-HUB-01`. The admin shell exposes only
+  Dashboard + Projects, integrates search, and retains accessible desktop/mobile
+  navigation.
   Exact-commit Vercel deployment `dpl_AD9YgjBvLXuawDYFzSZgcHUSJ5rb` is **READY** at
   `botanique-designers-site-gpm1-pz95grbk1.vercel.app`.
 - **Final dashboard-semantics correction:** implementation commit
@@ -1990,7 +2003,7 @@ PR is reviewed, merged and production-verified.
   columns or `last_updated`); pure helpers hold capability, payload/patch, KPI and
   activity-format logic. No Supabase Realtime.
 - **Tests:** new Vitest + React Testing Library setup (test-infra devDependencies only).
-  **112 tests pass across 13 test files**, including pure role/capability, create/patch
+  **128 tests pass across 15 test files**, including pure role/capability, create/patch
   payload (changed-fields-only, blank→null, no audit fields, manager forced-Pending,
   preserved inaccessible lead), completion integrity and dialog focus, returned-row local
   upsert before refetch, preserved state + warning/retry after reconciliation failure,
@@ -2004,8 +2017,10 @@ PR is reviewed, merged and production-verified.
   states, admin typography, owner/manager authority, no dead navigation, and no dominant
   finance explanation or finance-data leakage; plus closed/design-only/archived attention
   exclusion, owner/manager Pending wording, manager activation-language absence, corrected
-  attention-summary counts and Projects-table predicate continuity. No test writes to hosted
-  production records.
+  attention-summary counts and Projects-table predicate continuity. Activity History
+  regressions prove compact collapsed founder naming, retained formal expanded identity,
+  unchanged Martine Lotom presentation and absence of raw profile UUIDs. No test writes to
+  hosted production records.
 - **Lint / build:** every changed/new JS/JSX file is ESLint-clean. `npm run lint` reports
   **19 inherited errors in unchanged files only** (`server/index.js` Node-global `no-undef`,
   `src/components/FadeIn.jsx` `set-state-in-effect`, `src/context/AppContext.jsx`
@@ -2013,9 +2028,11 @@ PR is reviewed, merged and production-verified.
   (clean `npm ci` install) succeeds and still prerenders the 43 public routes incl. `404.html`;
   admin routes remain client-only. The correction pass re-ran the same Vitest, ESLint,
   Vite-build and prerender entrypoints directly with the bundled Node runtime because this
-  execution shell did not expose an `npm` launcher; results are now 112/112 tests, zero
+  execution shell did not expose an `npm` launcher; results are now 128/128 tests across
+  15 files, zero
   changed-file lint findings, the same 19 inherited full-lint findings, and a successful
-  43-route + `404.html` prerender with admin routes client-only.
+  43-route + `404.html` prerender with no `dist/admin` directory and admin routes
+  client-only. `git diff --check` is clean.
 - **Preview verification:** the authenticated hosted-role matrix is verified through the
   automated tests + local dev-seed fixtures (owner vs Operations Manager shells, controls,
   pending activation, restricted manager create). Any Vercel preview verification against
@@ -2025,8 +2042,8 @@ PR is reviewed, merged and production-verified.
   `profiles.full_name` value could not be determined; no credential was entered and no
   profile correction was attempted. The source fallback remains
   `profile?.full_name || profile?.email || "Authenticated admin"`. **No migration. No hosted
-  schema change. No hosted data mutation. Not merged. Not production-live.** PR #34 remains
-  draft, open and unmerged; auto-merge remains disabled.
+  schema or RLS change. No package-file change. No hosted data mutation. Not merged. Not
+  production-live.** PR #34 remains draft, open and unmerged; auto-merge remains disabled.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 

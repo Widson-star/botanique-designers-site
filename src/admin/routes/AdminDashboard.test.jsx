@@ -60,29 +60,72 @@ describe("AdminDashboard composition", () => {
   it("renders empty summaries without fabricated project figures", () => {
     renderDashboard({ role: "owner", projects: [] });
     expect(
-      screen.getByText("No project data is available for an operational summary.")
+      screen.getByText("No project data is available yet.")
     ).toBeInTheDocument();
     expect(screen.getAllByText("No data yet").length).toBeGreaterThan(0);
   });
 
   it("generates the operational summary from visible projects", () => {
     renderDashboard({ role: "owner", projects });
-    expect(
-      screen.getByText(
-        "1 total projects: 0 active, 1 pending activation, 0 completed, 0 with overdue actions and 0 upcoming starts."
-      )
-    ).toBeInTheDocument();
-    expect(screen.getByText(/1 awaiting activation/)).toBeInTheDocument();
+    const summary = screen.getByText(/1 project in the portfolio/);
+    expect(summary).toHaveTextContent("1 is pending activation");
+    expect(summary).toHaveTextContent("1 is awaiting activation");
+    expect(summary).not.toHaveTextContent(/0 active|0 completed|0 upcoming/i);
   });
 
   it("uses ordinary Pending-project language for the manager summary", () => {
     renderDashboard({ role: "manager", projects });
-    const summary = screen.getByRole("heading", {
-      name: "Current project position",
-    }).closest("section");
+    expect(screen.getAllByText(/Pending projects/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/activation/i)).not.toBeInTheDocument();
+  });
 
-    expect(within(summary).getAllByText(/Pending projects/i).length).toBeGreaterThan(0);
-    expect(within(summary).queryByText(/activation/i)).not.toBeInTheDocument();
+  it("renders real accessible status, stage and type visualisations with filter links", () => {
+    renderDashboard({ role: "owner", projects });
+    expect(
+      screen.getByRole("img", { name: /Project status doughnut chart/i })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /Project stage column chart/i })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project types" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /^Pending 1$/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: /Inquiry: 1 projects/i })).toHaveAttribute(
+      "href",
+      "/admin/projects?stage=Inquiry"
+    );
+  });
+
+  it("fully exposes a Concept Design chart label", () => {
+    renderDashboard({
+      role: "owner",
+      projects: [{ ...projects[0], stage: "Concept Design" }],
+    });
+    expect(
+      screen.getByRole("link", { name: /Concept Design: 1 projects/i })
+    ).toHaveAttribute("href", "/admin/projects?stage=Concept%20Design");
+    expect(screen.getByText("Concept Design")).toBeInTheDocument();
+  });
+
+  it("does not use attention styling for a zero metric", () => {
+    renderDashboard({ role: "owner", projects });
+    const overdueCard = screen.getByText("Overdue actions").closest("a");
+    expect(overdueCard).not.toHaveClass("border-amber-300");
+  });
+
+  it("uses a compact row for an empty attention queue", () => {
+    renderDashboard({
+      role: "owner",
+      projects: [
+        {
+          ...projects[0],
+          status: "Completed",
+          stage: "Completed",
+          leadPersonId: "",
+          nextAction: "",
+        },
+      ],
+    });
+    expect(screen.getByText("No projects need attention.")).toHaveClass("py-3");
   });
 
   it("links each derived KPI to its exact named project view", () => {

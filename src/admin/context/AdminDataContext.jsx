@@ -18,14 +18,12 @@ import { AdminDataContext } from "./adminData";
 import { ROLES } from "../constants/roles";
 import {
   createProject as apiCreateProject,
-  fetchFinancialReferences,
   fetchProjectActivities as apiFetchActivities,
   fetchProjects,
   fetchVisibleProfiles,
   updateProject as apiUpdateProject,
 } from "../lib/supabase";
 import {
-  mapDatabaseFinancialReference,
   mapDatabaseProfile,
   mapDatabaseProject,
 } from "../utils/projectMappers";
@@ -90,28 +88,65 @@ function buildDemoProjects() {
   return projectSeed.map((seed) => mapSeedProject(seed, byId));
 }
 
-function buildDemoFinancialRefs(role) {
-  if (role !== ROLES.OWNER) return {};
-  return Object.fromEntries(
-    projectSeed.map((seed) => [
-      seed.id,
-      mapDatabaseFinancialReference({
-        simple_invoice_client_name: seed.simpleInvoiceClientName,
-        estimate_number: seed.relatedEstimateNumber,
-        invoice_number: seed.relatedInvoiceNumber,
-        receipt_reference: seed.receiptPaymentReferences,
-        payment_status: seed.paymentStatus,
-        financial_notes: seed.financialNotes,
-      }),
-    ])
-  );
+function buildDemoActivities() {
+  return {
+    "karen-residence-fountain-garden": [
+      {
+        id: "demo-activity-karen-1",
+        project_id: "karen-residence-fountain-garden",
+        action: "updated",
+        actor_id: "demo-owner",
+        occurred_at: "2026-07-27T08:30:00Z",
+        changed_fields: ["next_action", "next_action_date", "blocker"],
+        previous_values: {
+          next_action: "Prepare planting schedule",
+          next_action_date: "2026-07-25",
+          blocker: null,
+        },
+        new_values: {
+          next_action: "Confirm mobilisation date with the client",
+          next_action_date: "2026-07-30",
+          blocker: "Awaiting final access confirmation",
+        },
+        reason: "Updated after the Monday operations review.",
+      },
+      {
+        id: "demo-activity-karen-2",
+        project_id: "karen-residence-fountain-garden",
+        action: "created",
+        actor_id: "demo-owner",
+        occurred_at: "2026-07-22T10:15:00Z",
+        changed_fields: ["status", "stage", "lead_person_id"],
+        previous_values: {},
+        new_values: {
+          status: "Pending",
+          stage: "Inquiry",
+          lead_person_id: "demo-owner",
+        },
+        reason: null,
+      },
+    ],
+    "tsavo-company-projects-temporary-holding-record": [
+      {
+        id: "demo-activity-tsavo-1",
+        project_id: "tsavo-company-projects-temporary-holding-record",
+        action: "updated",
+        actor_id: "demo-manager",
+        occurred_at: "2026-07-26T14:10:00Z",
+        changed_fields: ["notes"],
+        previous_values: { notes: "Temporary holding record." },
+        new_values: { notes: "Separate locations still require individual project rows." },
+        reason: null,
+      },
+    ],
+  };
 }
 
 // Pure network loader (no React state). Fetches and maps the authenticated
 // bundle; callers apply the result to state. Kept side-effect-free so the effect
 // and refetch can both use it without a state-setting callback shared into the
 // effect (which the react-hooks set-state-in-effect rule flags).
-async function loadAdminBundle(accessToken, role) {
+async function loadAdminBundle(accessToken) {
   const rawProfiles = await fetchVisibleProfiles(accessToken);
   const mappedProfiles = rawProfiles.map(mapDatabaseProfile);
   const byId = toProfilesById(mappedProfiles);
@@ -119,21 +154,7 @@ async function loadAdminBundle(accessToken, role) {
   const rawProjects = await fetchProjects(accessToken);
   const projects = rawProjects.map((row) => mapDatabaseProject(row, byId));
 
-  let financialReferences = {};
-  if (role === ROLES.OWNER) {
-    const references = await fetchFinancialReferences(
-      accessToken,
-      projects.map((project) => project.id)
-    );
-    financialReferences = Object.fromEntries(
-      references.map((reference) => [
-        reference.project_id,
-        mapDatabaseFinancialReference(reference),
-      ])
-    );
-  }
-
-  return { profiles: mappedProfiles, projects, financialReferences };
+  return { profiles: mappedProfiles, projects };
 }
 
 export function AdminDataProvider({ session, role, profile, isDemo, children }) {
@@ -148,17 +169,13 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
   // seeded directly through the state initializers below rather than an effect.
   // The in-memory demo store is built lazily (never read during render).
   const demoStore = useRef(null);
-  const demoActivities = useRef({});
+  const demoActivities = useRef(buildDemoActivities());
   const getDemoStore = () => {
     if (!demoStore.current) demoStore.current = buildDemoProjects();
     return demoStore.current;
   };
-
   const [projects, setProjects] = useState(() => (isDemo ? buildDemoProjects() : []));
   const [profiles, setProfiles] = useState(() => (isDemo ? DEMO_PROFILES : []));
-  const [financialReferences, setFinancialReferences] = useState(() =>
-    isDemo ? buildDemoFinancialRefs(role) : {}
-  );
   const [dataStatus, setDataStatus] = useState(isDemo ? "ready" : "loading");
   const [dataError, setDataError] = useState("");
   const [saveFeedback, setSaveFeedback] = useState(null);
@@ -181,14 +198,12 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
   const applyBundle = useCallback((bundle) => {
     setProfiles(bundle.profiles);
     setProjects(bundle.projects);
-    setFinancialReferences(bundle.financialReferences);
     setDataError("");
     setDataStatus("ready");
   }, []);
 
   const applyLoadError = useCallback((error) => {
     setProjects([]);
-    setFinancialReferences({});
     setDataStatus("error");
     setDataError(error.message || "Unable to load admin data.");
   }, []);
@@ -196,9 +211,8 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
   const refreshDemoState = useCallback(() => {
     setProfiles(DEMO_PROFILES);
     setProjects([...getDemoStore()]);
-    setFinancialReferences(buildDemoFinancialRefs(role));
     setDataStatus("ready");
-  }, [role]);
+  }, []);
 
   // Real (network) data is loaded here; demo data is already seeded via the
   // state initializers, so the effect only runs for the authenticated path. The
@@ -209,7 +223,7 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
     let cancelled = false;
     async function run() {
       try {
-        const bundle = await loadAdminBundle(accessToken, role);
+        const bundle = await loadAdminBundle(accessToken);
         if (!cancelled) applyBundle(bundle);
       } catch (error) {
         if (!cancelled) applyLoadError(error);
@@ -233,7 +247,7 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
     }
     if (!accessToken || !role) return { ok: true };
     try {
-      applyBundle(await loadAdminBundle(accessToken, role));
+      applyBundle(await loadAdminBundle(accessToken));
       return { ok: true };
     } catch (error) {
       // Preserve previously loaded data; only ensure we are not stuck loading.
@@ -432,7 +446,6 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
       projects,
       profiles,
       profilesById,
-      financialReferences,
       dataStatus,
       dataError,
       saveFeedback,
@@ -449,7 +462,6 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
       projects,
       profiles,
       profilesById,
-      financialReferences,
       dataStatus,
       dataError,
       saveFeedback,

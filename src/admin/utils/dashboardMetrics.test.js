@@ -114,10 +114,10 @@ describe("operational summary and attention", () => {
   it("generates a live operational narrative from exact metrics", () => {
     const summary = operationalSummary(projects, { today: TODAY });
     expect(summary.overview).toBe(
-      "6 total projects: 2 active, 2 pending activation, 1 completed, 2 with overdue actions and 1 upcoming starts."
+      "6 projects in the portfolio. 2 are active, 2 are pending activation and 1 is completed."
     );
-    expect(summary.attention).toContain("2 awaiting activation");
-    expect(summary.attention).toContain("2 overdue actions");
+    expect(summary.attention).toContain("2 are awaiting activation");
+    expect(summary.attention).toContain("2 have an overdue action");
   });
 
   it("does not fabricate a summary when no project data exists", () => {
@@ -229,10 +229,32 @@ describe("operational summary and attention", () => {
       includePendingActivation: false,
     });
 
-    expect(owner.overview).toContain("2 pending activation");
-    expect(owner.attention).toContain("2 awaiting activation");
-    expect(manager.overview).toContain("2 pending projects");
+    expect(owner.overview).toContain("2 are pending activation");
+    expect(owner.attention).toContain("2 are awaiting activation");
+    expect(manager.overview).toContain("2 are pending");
     expect(`${manager.overview} ${manager.attention}`).not.toMatch(/activation/i);
+  });
+
+  it("omits zero-value categories and uses the calm no-attention sentence", () => {
+    const summary = operationalSummary(
+      [
+        {
+          status: "Completed",
+          archived: false,
+          leadPersonId: "",
+          nextAction: "",
+          blocker: "",
+        },
+      ],
+      { today: TODAY }
+    );
+    expect(summary.overview).toBe(
+      "1 project in the portfolio. 1 is completed."
+    );
+    expect(summary.overview).not.toContain("0");
+    expect(summary.attention).toBe(
+      "There are currently no overdue actions or upcoming starts."
+    );
   });
 
   it("excludes closed, design-only and archived records from attention counts", () => {

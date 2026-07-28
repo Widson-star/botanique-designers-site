@@ -55,12 +55,36 @@ const editableProject = {
 };
 
 describe("owner form", () => {
+  it("retains the founder's full formal name in the accountable-lead selector", () => {
+    renderForm({ role: "owner", mode: "create" });
+    expect(
+      screen.getByRole("option", { name: "Widson Omutelema Ambaisi" })
+    ).toBeInTheDocument();
+  });
+
   it("shows full controls including actual completion and editable portfolio", () => {
     renderForm({ role: "owner", mode: "create" });
     expect(screen.getByLabelText("Status")).toBeInTheDocument();
     expect(screen.getByLabelText("Actual completion")).toBeInTheDocument();
     expect(screen.getByLabelText("Portfolio eligible")).toBeInTheDocument();
     expect(screen.getByLabelText("Portfolio permission status")).toBeInTheDocument();
+  });
+
+  it("submits and preserves the default Not Reviewed portfolio state", async () => {
+    const { createProject } = renderForm({ role: "owner", mode: "create" });
+    expect(screen.getByLabelText("Portfolio eligible")).not.toBeChecked();
+    expect(screen.getByLabelText("Portfolio permission status")).toHaveValue("Not Reviewed");
+
+    fireEvent.change(screen.getByLabelText(/Project name/), {
+      target: { value: "Alego Usonga" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+
+    expect(createProject.mock.calls[0][0]).toMatchObject({
+      portfolio_eligible: false,
+      portfolio_permission_status: "Not Reviewed",
+    });
   });
 });
 
@@ -108,7 +132,7 @@ describe("manager edit", () => {
     // The protected lead is shown, not a select.
     expect(screen.getByText("Current assigned lead — protected profile")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Next action"), {
+    fireEvent.change(screen.getByLabelText(/^Next action/), {
       target: { value: "Call the client" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));

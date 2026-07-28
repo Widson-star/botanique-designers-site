@@ -4,6 +4,7 @@
 // from managers.
 import { Link } from "react-router-dom";
 import { pendingActivationProjects } from "../utils/dashboardMetrics";
+import { compactPersonName } from "../utils/personName";
 
 export default function PendingActivationList({ projects }) {
   const pending = pendingActivationProjects(projects);
@@ -36,7 +37,7 @@ export default function PendingActivationList({ projects }) {
                     </div>
                     <div>
                       <dt className="inline font-medium">Lead: </dt>
-                      <dd className="inline">{project.leadPersonName}</dd>
+                      <dd className="inline">{compactPersonName(project.leadPersonName)}</dd>
                     </div>
                     <div>
                       <dt className="inline font-medium">Stage: </dt>

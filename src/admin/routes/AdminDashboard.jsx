@@ -2,7 +2,6 @@ import { Link } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { canCreateProjects, canSeePendingActivation } from "../utils/projectCapabilities";
 import {
-  calculateAttentionSummary,
   calculateDashboardMetrics,
   operationalSummary,
   projectsByStage,
@@ -10,9 +9,13 @@ import {
   projectsByType,
 } from "../utils/dashboardMetrics";
 import StatCard from "../components/StatCard";
-import BarChart from "../components/BarChart";
 import ProjectAttentionList from "../components/ProjectAttentionList";
 import RecentActivity from "../components/RecentActivity";
+import {
+  ProjectTypeSummary,
+  StageColumnChart,
+  StatusDoughnutChart,
+} from "../components/DashboardVisualizations";
 
 export default function AdminDashboard() {
   const {
@@ -25,31 +28,23 @@ export default function AdminDashboard() {
   } = useAdminData();
   const showPendingActivation = canSeePendingActivation(role);
   const metrics = calculateDashboardMetrics(projects);
-  const attention = calculateAttentionSummary(projects);
   const summary = operationalSummary(projects, {
     includePendingActivation: showPendingActivation,
   });
-  const attentionLabels = [
-    ["pendingProjects", showPendingActivation ? "Awaiting activation" : "Pending projects"],
-    ["withoutLead", "Without leads"],
-    ["withoutNextAction", "Without next actions"],
-    ["withBlockers", "With blockers"],
-    ["overdueActions", "Overdue actions"],
-    ["upcomingStarts", "Upcoming starts"],
-  ];
   const showNewProject = canCreateProjects(role);
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-3 border-b border-stone-200 pb-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-botanique-green">
-            Operations Hub
-          </p>
-          <h1 className="mt-1 text-2xl font-bold">Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Live project control for planning and office briefings.
-          </p>
+          <h1 className="text-2xl font-semibold">Operations overview</h1>
+          {summary ? (
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-gray-600">
+              {summary.overview} {summary.attention}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">No project data is available yet.</p>
+          )}
         </div>
         {showNewProject && (
           <Link
@@ -75,47 +70,6 @@ export default function AdminDashboard() {
           {dataError || "Unable to load project records."}
         </div>
       )}
-
-      <section
-        className="overflow-hidden rounded-xl bg-botanique-dark text-white shadow-sm"
-        aria-labelledby="operational-summary-title"
-      >
-        <div className="grid gap-6 px-5 py-5 lg:grid-cols-[1.35fr_1fr] lg:px-6">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/60">
-              Live operational summary
-            </p>
-            <h2 id="operational-summary-title" className="mt-2 text-xl font-bold">
-              Current project position
-            </h2>
-            {summary ? (
-              <>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85">
-                  {summary.overview}
-                </p>
-                <p className="mt-2 max-w-2xl text-xs leading-5 text-white/60">
-                  Attention: {summary.attention}
-                </p>
-              </>
-            ) : (
-              <p className="mt-3 text-sm text-white/70">
-                No project data is available for an operational summary.
-              </p>
-            )}
-          </div>
-
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
-            {attentionLabels.map(([key, label]) => (
-              <div key={key} className="rounded-lg bg-white/10 px-3 py-2.5">
-                <dt className="text-[10px] font-semibold uppercase tracking-wide text-white/55">
-                  {label}
-                </dt>
-                <dd className="mt-1 text-lg font-bold tabular-nums">{attention[key]}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
 
       <section aria-label="Primary project indicators">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -149,13 +103,8 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      <section
-        className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-stone-200 bg-white px-5 py-3.5 shadow-sm"
-        aria-label="Secondary project summary"
-      >
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-gray-400">
-          Portfolio totals
-        </p>
+      <section className="flex flex-wrap items-center gap-x-8 gap-y-2 px-1" aria-label="Secondary project summary">
+        <p className="text-sm font-medium text-gray-500">Portfolio totals</p>
         <Link to="/admin/projects" className="text-sm text-gray-600 hover:text-botanique-green">
           Total <strong className="ml-1 tabular-nums text-botanique-charcoal">{metrics.total}</strong>
         </Link>
@@ -181,45 +130,25 @@ export default function AdminDashboard() {
 
       <ProjectAttentionList projects={projects} role={role} />
 
-      <div className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-        <section
-          className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
-          aria-labelledby="portfolio-summaries-title"
-        >
-          <div className="border-b border-stone-100 pb-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-botanique-green">
-              Live portfolio
-            </p>
-            <h2 id="portfolio-summaries-title" className="mt-1 text-lg font-bold">
-              Project composition
-            </h2>
+      <section className="rounded-lg border border-stone-200 bg-white p-5" aria-label="Project visualisations">
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.4fr] lg:divide-x lg:divide-stone-200">
+          <StatusDoughnutChart data={projectsByStatus(projects)} />
+          <div className="lg:pl-8">
+            <StageColumnChart data={projectsByStage(projects)} />
           </div>
-          <div className="mt-4 grid gap-5 md:grid-cols-3 md:divide-x md:divide-stone-100">
-            <BarChart
-              title="By status"
-              data={projectsByStatus(projects)}
-              hrefFor={(row) => `/admin/projects?status=${encodeURIComponent(row.label)}`}
-              embedded
-            />
-            <div className="md:pl-5">
-              <BarChart
-                title="By stage"
-                data={projectsByStage(projects)}
-                hrefFor={(row) => `/admin/projects?stage=${encodeURIComponent(row.label)}`}
-                embedded
-              />
-            </div>
-            <div className="md:pl-5">
-              <BarChart
-                title="By type"
-                data={projectsByType(projects)}
-                hrefFor={(row) =>
-                  `/admin/projects?projectType=${encodeURIComponent(row.label)}`
-                }
-                embedded
-              />
-            </div>
-          </div>
+        </div>
+        <div className="mt-5">
+          <ProjectTypeSummary data={projectsByType(projects)} />
+        </div>
+      </section>
+
+      <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
+        <section className="rounded-lg border border-stone-200 bg-white p-5" aria-labelledby="portfolio-summary-title">
+          <h2 id="portfolio-summary-title" className="text-base font-semibold">Portfolio notes</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            Metrics and charts use only the project records visible to this role. Open a
+            chart legend or column to review the matching filtered projects.
+          </p>
         </section>
 
         <RecentActivity

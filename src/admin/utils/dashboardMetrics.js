@@ -182,21 +182,53 @@ export function operationalSummary(
   if (projects.length === 0) return null;
   const metrics = calculateDashboardMetrics(projects, today);
   const attention = calculateAttentionSummary(projects, today);
-  const pendingOverview = includePendingActivation
-    ? `${metrics.pendingActivation} pending activation`
-    : `${metrics.pending} pending projects`;
-  const pendingAttention = includePendingActivation
-    ? `${attention.pendingProjects} awaiting activation, `
-    : "";
+
+  function joinNatural(items) {
+    if (items.length <= 1) return items[0] || "";
+    if (items.length === 2) return `${items[0]} and ${items[1]}`;
+    return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+  }
+
+  function isAre(value) {
+    return value === 1 ? "is" : "are";
+  }
+
+  const portfolioParts = [
+    metrics.active > 0 && `${metrics.active} ${isAre(metrics.active)} active`,
+    metrics.pending > 0 &&
+      (includePendingActivation
+        ? `${metrics.pendingActivation} ${isAre(metrics.pendingActivation)} pending activation`
+        : `${metrics.pending} ${isAre(metrics.pending)} pending`),
+    metrics.completed > 0 &&
+      `${metrics.completed} ${isAre(metrics.completed)} completed`,
+    metrics.designOnly > 0 &&
+      `${metrics.designOnly} ${isAre(metrics.designOnly)} design-only`,
+  ].filter(Boolean);
+
+  const attentionParts = [
+    includePendingActivation &&
+      attention.pendingProjects > 0 &&
+      `${attention.pendingProjects} ${isAre(attention.pendingProjects)} awaiting activation`,
+    attention.withoutLead > 0 &&
+      `${attention.withoutLead} ${attention.withoutLead === 1 ? "has" : "have"} no accountable lead`,
+    attention.withoutNextAction > 0 &&
+      `${attention.withoutNextAction} ${attention.withoutNextAction === 1 ? "has" : "have"} no next action`,
+    attention.withBlockers > 0 &&
+      `${attention.withBlockers} ${attention.withBlockers === 1 ? "has" : "have"} a current blocker`,
+    attention.overdueActions > 0 &&
+      `${attention.overdueActions} ${attention.overdueActions === 1 ? "has" : "have"} an overdue action`,
+    attention.upcomingStarts > 0 &&
+      `${attention.upcomingStarts} ${attention.upcomingStarts === 1 ? "has" : "have"} an upcoming start`,
+  ].filter(Boolean);
+
+  const totalLabel = `${metrics.total} ${metrics.total === 1 ? "project" : "projects"}`;
   return {
-    overview:
-      `${metrics.total} total projects: ${metrics.active} active, ` +
-      `${pendingOverview}, ${metrics.completed} completed, ` +
-      `${metrics.overdueActions} with overdue actions and ${metrics.upcomingStarts} upcoming starts.`,
-    attention:
-      `${pendingAttention}${attention.withoutLead} without accountable leads, ` +
-      `${attention.withoutNextAction} without next actions, ${attention.withBlockers} with blockers, ` +
-      `${attention.overdueActions} overdue actions and ${attention.upcomingStarts} upcoming starts.`,
+    overview: `${totalLabel} in the portfolio.${
+      portfolioParts.length ? ` ${joinNatural(portfolioParts)}.` : ""
+    }`,
+    attention: attentionParts.length
+      ? `${joinNatural(attentionParts)}.`
+      : "There are currently no overdue actions or upcoming starts.",
   };
 }
 

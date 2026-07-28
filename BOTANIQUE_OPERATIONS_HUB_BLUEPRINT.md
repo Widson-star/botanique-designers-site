@@ -13,6 +13,17 @@ slice, developed on `feat/bd-operations-hub-phase1b-a2` and **not yet merged** â
 **Project Tracker remains the current production `/admin` interface**. No UI for
 leads/campaigns, storage buckets, integrations, external setup, or frontend production
 deployment are performed here. Phase 1A is the first slice of Phase 1 (Operational spine).
+Within Phase 1B-A2, **Dashboard and Projects are the only functional navigation modules**;
+later modules appear only when implemented and authorised. The admin shell uses native
+system UI typography while public-site typography remains unchanged. Database roles remain
+`owner` / `manager` / `staff` / `viewer`, but the visible titles are **Principal** (compact)
+or **Founder & Principal** (expanded), **Operations Manager**, **Project Team**, and
+**Read-only**. Width-constrained operational views show **Widson O. Ambaisi**; formal
+contexts retain **Widson Omutelema Ambaisi**, without changing hosted profile data.
+Phase 1B-A2 has **no commercial-reference editor or Project Overview financial-reference
+panel**. Simple Invoice Manager remains authoritative, and the existing
+`project_financial_references` table and RLS remain unchanged for separately gated future
+commercial-record work.
 **Current UI limitation:** the production Project Tracker is **read-only** â€” it displays
 real hosted projects but has **no create/edit/archive/restore or next-action editing** (its
 "Add project / Archive / Assign staff / Edit next action" controls are disabled "future"

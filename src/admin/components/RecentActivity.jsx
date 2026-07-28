@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatActivity } from "../utils/activityFormat";
+import { compactPersonName } from "../utils/personName";
 
 const MAX_EVENTS = 6;
 
@@ -67,17 +68,10 @@ export default function RecentActivity({ projects, profilesById, fetchActivities
 
   return (
     <section
-      className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
+      className="rounded-lg border border-stone-200 bg-white p-5"
       aria-labelledby="recent-activity-title"
     >
-      <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-botanique-green">
-          Read-only ledger
-        </p>
-        <h2 id="recent-activity-title" className="mt-1 text-lg font-bold">
-          Recent activity
-        </h2>
-      </div>
+      <h2 id="recent-activity-title" className="text-base font-semibold">Recent activity</h2>
 
       {visibleStatus === "loading" && (
         <p className="mt-4 text-sm text-gray-500">Loading recent activity…</p>
@@ -100,7 +94,7 @@ export default function RecentActivity({ projects, profilesById, fetchActivities
                       {activity.actionLabel}
                     </p>
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {activity.actor} ·{" "}
+                      {compactPersonName(activity.actor)} ·{" "}
                       <Link
                         to={`/admin/projects/${raw.projectId}?tab=activity`}
                         className="font-semibold text-botanique-green hover:underline"

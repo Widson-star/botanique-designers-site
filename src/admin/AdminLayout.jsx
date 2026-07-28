@@ -25,10 +25,10 @@ const NAV_ITEMS = [
 ];
 
 function navItemClass({ isActive }) {
-  return `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+  return `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition ${
     isActive
-      ? "bg-white/10 text-white shadow-sm"
-      : "text-white/70 hover:bg-white/5 hover:text-white"
+      ? "bg-[#edf2ef] text-botanique-green"
+      : "text-gray-600 hover:bg-stone-100 hover:text-botanique-charcoal"
   }`;
 }
 
@@ -115,7 +115,7 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
   }, [drawerOpen]);
 
   return (
-    <div className="admin-shell min-h-screen bg-[#f4f5f1] font-sans text-botanique-charcoal">
+    <div className="admin-shell min-h-screen bg-[#f6f7f4] text-botanique-charcoal">
       <a
         href="#admin-main"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow"
@@ -125,30 +125,27 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
 
       <div className="lg:flex">
         {/* Persistent desktop sidebar */}
-        <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col bg-botanique-dark text-white">
-          <div className="border-b border-white/10 px-5 py-5">
-            <Link to="/admin" className="text-lg font-bold text-white">
+        <aside className="hidden border-r border-stone-200 bg-white lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col">
+          <div className="border-b border-stone-200 px-5 py-4">
+            <Link to="/admin" className="text-lg font-semibold text-botanique-charcoal">
               Botanique
             </Link>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-white/50">
+            <p className="mt-0.5 text-xs text-gray-500">
               Operations Hub
             </p>
           </div>
           <div className="flex-1 px-3 py-5">
-            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
-              Workspace
-            </p>
             <NavItems />
           </div>
-          <div className="border-t border-white/10 px-5 py-4 text-[11px] leading-relaxed text-white/45">
+          <div className="border-t border-stone-200 px-5 py-4 text-[11px] leading-relaxed text-gray-400">
             Financial documents remain managed in Simple Invoice Manager.
           </div>
         </aside>
 
-        <div className="lg:pl-64 flex-1 min-w-0">
+        <div className="min-w-0 flex-1 lg:pl-56">
           {/* Top bar */}
-          <header className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 shadow-sm backdrop-blur">
-            <div className="flex items-center gap-3 px-4 py-3 md:px-6">
+          <header className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
+            <div className="flex items-center gap-3 px-4 py-2.5 md:px-6">
               <button
                 type="button"
                 onClick={() => setDrawerOpen(true)}
@@ -166,7 +163,7 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
               </div>
 
               <div className="flex items-center gap-3 ml-auto">
-                <span className="rounded-full bg-botanique-beige px-3 py-1 text-xs font-semibold text-botanique-green">
+                <span className="border-l-2 border-botanique-green pl-2 text-xs font-medium text-botanique-green">
                   {roleLabel}
                 </span>
                 <span className="hidden whitespace-nowrap text-xs font-medium text-gray-600 md:inline">
@@ -186,9 +183,9 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
             </div>
           </header>
 
-          <main id="admin-main" className="mx-auto max-w-[90rem] px-4 py-5 md:px-6 lg:py-6" tabIndex={-1}>
+          <main id="admin-main" className="mx-auto max-w-[88rem] px-4 py-5 md:px-6 lg:py-6" tabIndex={-1}>
             {isDemo && (
-              <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="mb-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
                 Dev preview only. This is not real authentication and no change here is saved to Supabase.
               </div>
             )}
@@ -211,14 +208,14 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
             role="dialog"
             aria-modal="true"
             aria-label="Admin navigation"
-            className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col bg-botanique-dark p-5 text-white shadow-xl focus:outline-none"
+            className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col bg-white p-5 text-botanique-charcoal shadow-xl focus:outline-none"
           >
             <div className="flex items-center justify-between mb-5">
               <span className="text-lg font-bold">Botanique Operations</span>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
-                className="rounded-md border border-white/20 p-2 text-white/70 hover:bg-white/10"
+                className="rounded-md border border-stone-200 p-2 text-gray-600 hover:bg-stone-50"
                 aria-label="Close navigation menu"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
@@ -227,7 +224,7 @@ export default function AdminLayout({ role, profileLabel, isDemo, onSignOut }) {
               </button>
             </div>
             <NavItems onNavigate={() => setDrawerOpen(false)} />
-            <p className="mt-auto border-t border-white/10 pt-4 text-[11px] leading-relaxed text-white/45">
+            <p className="mt-auto border-t border-stone-200 pt-4 text-[11px] leading-relaxed text-gray-400">
               Financial documents remain managed in Simple Invoice Manager.
             </p>
           </div>

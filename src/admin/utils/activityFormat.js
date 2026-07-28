@@ -21,7 +21,7 @@ export const FIELD_LABELS = {
   target_completion_date: "Target completion",
   actual_completion_date: "Actual completion",
   next_action: "Next action",
-  next_action_date: "Next-action date",
+  next_action_date: "Due date",
   blocker: "Blocker",
   notes: "Notes",
   portfolio_eligible: "Portfolio eligible",
