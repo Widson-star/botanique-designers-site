@@ -4,6 +4,7 @@ import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { todayIso } from "../utils/dailySiteFormatters";
 import { canSeeDailySiteOperations, canRecordDailySiteEntry, summarizeCompliance } from "../utils/dailySiteCapabilities";
+import { ROLES } from "../constants/roles";
 import {
   DISPOSITION_LABELS,
   ENTRY_STATE_LABELS,
@@ -41,13 +42,16 @@ function matchesFilter(entry, filter, today) {
 
 export default function AdminDailySiteOperations() {
   const { role, projects } = useAdminData();
-  const { entries, compliance, status, error } = useDailySiteOperations();
+  const { entries, compliance, authorisedProjects, status, error } = useDailySiteOperations();
   const [filter, setFilter] = useState("today");
   const today = todayIso();
   const projectsById = useMemo(
     () => Object.fromEntries(projects.map((project) => [project.id, project])),
     [projects]
   );
+  // A manager whose project authority has not been established yet.
+  const noAuthority =
+    role === ROLES.MANAGER && status === "ready" && (authorisedProjects || []).length === 0;
 
   const summary = useMemo(() => summarizeCompliance(compliance), [compliance]);
   const visibleEntries = useMemo(
@@ -73,7 +77,7 @@ export default function AdminDailySiteOperations() {
             Morning site entries and compliance for active projects.
           </p>
         </div>
-        {canRecordDailySiteEntry(role) && (
+        {canRecordDailySiteEntry(role) && !noAuthority && (
           <Link
             to="/admin/daily-site-operations/new"
             className="inline-flex justify-center rounded-md bg-botanique-green px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-botanique-dark"
@@ -82,6 +86,17 @@ export default function AdminDailySiteOperations() {
           </Link>
         )}
       </div>
+
+      {noAuthority && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-5" role="status">
+          <h2 className="text-base font-semibold text-amber-900">No projects assigned to you yet</h2>
+          <p className="mt-1 text-sm leading-6 text-amber-900">
+            You are not yet the lead of, or assigned to, any project, so there is nothing to
+            record or track. Ask the owner to assign you to the active sites you manage — they
+            will then appear here automatically.
+          </p>
+        </div>
+      )}
 
       {status === "loading" && (
         <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">

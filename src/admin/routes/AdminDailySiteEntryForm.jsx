@@ -66,6 +66,27 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
     );
   }
 
+  // A manager with no project authority yet (no active assignment and not a
+  // project lead) sees a clear, non-broken state rather than an empty selector.
+  // Project authority is established by the owner (see the rollout prerequisite).
+  if (!editing && selectableProjects.length === 0) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Link to="/admin/daily-site-operations" className="text-sm text-gray-500 hover:text-botanique-green">
+          ← Daily site operations
+        </Link>
+        <div className="mt-4 rounded-lg border border-stone-200 bg-white p-8">
+          <h1 className="text-xl font-bold">No projects assigned to you yet</h1>
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            You are not yet the lead of, or assigned to, any project, so there is nothing to
+            record against. Ask the owner to assign you to the active sites you manage; the
+            projects will then appear here automatically.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const projectName = selectableProjects.find((project) => project.id === (existing?.projectId || projectId))?.projectName;
 
   async function persist(values, thenSubmit) {

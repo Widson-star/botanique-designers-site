@@ -12,12 +12,12 @@ const projects = [
   { id: "p2", projectName: "Lugulu Estate", status: "Ongoing", stage: "Implementation", archived: false },
 ];
 
-function renderRoute({ role = "manager", entries = [], compliance = [], dailyOverrides = {} } = {}) {
+function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {} } = {}) {
   const adminValue = {
     role, projects, profilesById: {}, currentUserId: "m1",
   };
   const dailyValue = {
-    entries, compliance, status: "ready", error: "",
+    entries, compliance, authorisedProjects, status: "ready", error: "",
     createWaiver: vi.fn(() => Promise.resolve({ ok: true })),
     refresh: vi.fn(() => Promise.resolve({ ok: true })),
     ...dailyOverrides,
@@ -42,6 +42,18 @@ describe("AdminDailySiteOperations route access", () => {
   it.each(["staff", "viewer"])("is unavailable to %s", (role) => {
     renderRoute({ role });
     expect(screen.getByText("Daily site operations unavailable")).toBeInTheDocument();
+  });
+
+  it("shows a clear no-authorised-projects state for a manager with no authority", () => {
+    renderRoute({ role: "manager", authorisedProjects: [] });
+    expect(screen.getByText("No projects assigned to you yet")).toBeInTheDocument();
+    // The New-entry action is not offered when there is nothing to record against.
+    expect(screen.queryByRole("link", { name: "New site entry" })).not.toBeInTheDocument();
+  });
+
+  it("does not show the no-authority state to the owner", () => {
+    renderRoute({ role: "owner", authorisedProjects: [] });
+    expect(screen.queryByText("No projects assigned to you yet")).not.toBeInTheDocument();
   });
 });
 

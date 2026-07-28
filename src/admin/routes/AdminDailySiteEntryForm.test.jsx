@@ -51,4 +51,10 @@ describe("AdminDailySiteEntryForm project selector authority", () => {
     const options = within(select).getAllByRole("option").map((option) => option.textContent);
     expect(options).toEqual(["Diani Resort", "Karen Residence", "Lugulu Estate"]); // sorted
   });
+
+  it("shows a safe no-projects state instead of an empty selector", () => {
+    renderNew({ role: "manager", authorisedProjects: [] });
+    expect(screen.getByText("No projects assigned to you yet")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Project")).not.toBeInTheDocument();
+  });
 });

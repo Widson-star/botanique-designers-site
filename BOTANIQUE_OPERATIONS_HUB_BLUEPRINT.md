@@ -239,10 +239,16 @@ Authority is **project-authority scoped**: the owner is company-wide, while a ma
 read and act only on projects within the existing project-authority model (active
 `project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every
 manager-capable lifecycle function, and applied to the compliance calculation so no
-unauthorised project leaks. The migration is **not** applied to hosted Supabase and no
-hosted data was mutated; the module is not enabled in production. See WORKSTREAMS.md →
-*Daily Site Operations & Morning Compliance* for the full Phase 1 implementation note. It
-sits under `BD-OPERATIONS-HUB-01` and is not a new top-level workstream.
+unauthorised project leaks. The manager's documented **portfolio-wide** authority is
+realised through explicit `project_assignments` (the broader visibility model of §7),
+keeping future managers scoped. A read-only hosted inventory found **0 assignments**, so the
+Operations Manager is currently authorised only for the site he leads (Alego Usonga) and not
+for the unassigned in-scope site (Karen Residence — Fountain Garden & Mature Borders);
+establishing his assignments is a **blocking, owner-driven rollout prerequisite** before
+activation. The migration is **not** applied to hosted Supabase and no hosted data was
+mutated; the module is not enabled in production. See WORKSTREAMS.md → *Daily Site Operations
+& Morning Compliance* for the full Phase 1 implementation note. It sits under
+`BD-OPERATIONS-HUB-01` and is not a new top-level workstream.
 
 The domain is a per-project, per-work-date **Daily Site Entry** record capturing the
 morning operational plan — a `working` or `no_work` disposition (with a no-work reason:

@@ -23,7 +23,12 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-000000000003', 'staff@test.local'),
   ('00000000-0000-0000-0000-000000000004', 'viewer@test.local'),
   ('00000000-0000-0000-0000-000000000005', 'inactive@test.local'),
-  ('00000000-0000-0000-0000-000000000006', 'manager2@test.local');
+  ('00000000-0000-0000-0000-000000000006', 'manager2@test.local'),
+  -- manager3 mirrors the hosted Operations Manager on his Alego site: LEAD of an
+  -- Ongoing project, with no project_assignments. manager4 mirrors the hosted
+  -- Karen gap / a future manager: active but neither assigned nor a lead.
+  ('00000000-0000-0000-0000-000000000007', 'manager3@test.local'),
+  ('00000000-0000-0000-0000-000000000008', 'manager4@test.local');
 
 insert into public.profiles (id, email, full_name, role, is_active) values
   ('00000000-0000-0000-0000-000000000001', 'owner@test.local', 'Test Owner', 'owner', true),
@@ -31,7 +36,9 @@ insert into public.profiles (id, email, full_name, role, is_active) values
   ('00000000-0000-0000-0000-000000000003', 'staff@test.local', 'Test Staff', 'staff', true),
   ('00000000-0000-0000-0000-000000000004', 'viewer@test.local', 'Test Viewer', 'viewer', true),
   ('00000000-0000-0000-0000-000000000005', 'inactive@test.local', 'Inactive Manager', 'manager', false),
-  ('00000000-0000-0000-0000-000000000006', 'manager2@test.local', 'Other Manager', 'manager', true);
+  ('00000000-0000-0000-0000-000000000006', 'manager2@test.local', 'Other Manager', 'manager', true),
+  ('00000000-0000-0000-0000-000000000007', 'manager3@test.local', 'Lead Manager', 'manager', true),
+  ('00000000-0000-0000-0000-000000000008', 'manager4@test.local', 'Unassigned Manager', 'manager', true);
 
 -- Project coverage matrix. Only Ongoing, non-archived, non-Awaiting-Approval
 -- projects are in automatic morning-compliance scope.
@@ -50,6 +57,18 @@ insert into public.projects (
   ('10000000-0000-0000-0000-000000000009', 'Awaiting', 'Residential', 'Ongoing', 'Awaiting Approval', '2026-07-01', false, false, 'Not Reviewed'),
   -- Ongoing D is manager B's project (manager A is never assigned to it).
   ('10000000-0000-0000-0000-00000000000a', 'Ongoing D', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed');
+
+-- Ongoing E is led by manager3 with NO assignment — the hosted "Alego" pattern
+-- (lead of an in-scope site is authorised without any project_assignments row).
+-- Inserted separately with the lead set directly (superuser INSERT bypasses the
+-- lead-change guard, which is a BEFORE UPDATE trigger).
+insert into public.projects (
+  id, project_name, project_type, status, stage, start_date, archived,
+  lead_person_id, portfolio_eligible, portfolio_permission_status
+) values (
+  '10000000-0000-0000-0000-00000000000b', 'Ongoing E', 'Residential', 'Ongoing', 'Implementation',
+  '2026-07-01', false, '00000000-0000-0000-0000-000000000007', false, 'Not Reviewed'
+);
 
 -- Project authority via the existing model: manager A (…02) is assigned to the
 -- Ongoing/excluded projects used across the suite; manager B (…06) is assigned
@@ -527,12 +546,12 @@ declare
 begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
 
-  -- Weekday 2026-07-28 (Tuesday), OWNER (company-wide): the four Ongoing, active
-  -- projects (A, B, C, D) are due. A has an entry; C has an active waiver.
+  -- Weekday 2026-07-28 (Tuesday), OWNER (company-wide): the five Ongoing, active
+  -- projects (A, B, C, D, E) are due. A has an entry; C has an active waiver.
   select count(*) into due_count
   from public.daily_site_morning_compliance('2026-07-28')
   where due is true;
-  perform pg_temp.assert_true(due_count = 4, 'owner sees four in-scope projects due on the weekday');
+  perform pg_temp.assert_true(due_count = 5, 'owner sees five in-scope projects due on the weekday');
 
   -- Owner sees manager B's Ongoing D in the company-wide view.
   perform pg_temp.assert_true(
@@ -759,7 +778,7 @@ begin
   );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   perform pg_temp.assert_true(
-    (select count(*) = 10 from public.daily_site_authorised_projects()),
+    (select count(*) = 11 from public.daily_site_authorised_projects()),
     'authorised-projects selector returns all projects for the owner'
   );
   -- Staff and inactive get nothing from the selector.
@@ -797,6 +816,79 @@ begin
     raise exception 'submit after authority removal unexpectedly permitted';
   exception when insufficient_privilege then null; end;
   raise notice 'SECTION 7c-removal (authority loss blocks author) passed';
+end;
+$$;
+
+-- =====================================================================
+-- 7d. Hosted-compatible authority patterns (lead-based + no-authority)
+-- =====================================================================
+-- Mirrors the read-only hosted inventory: the Operations Manager is LEAD of an
+-- Ongoing site (Alego) with zero project_assignments and must be authorised for
+-- it; an in-scope site he neither leads nor is assigned to (Karen) must be
+-- denied; and an active manager with no authority at all sees a safe empty set.
+do $$
+declare
+  e_entry public.daily_site_entries;
+  cnt integer;
+begin
+  -- manager3 leads Ongoing E (no assignment) — authorised via lead alone.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000007', true);
+  perform pg_temp.assert_true(
+    public.can_manage_daily_site_project('10000000-0000-0000-0000-00000000000b'),
+    'lead is authorised for their Ongoing site without any assignment'
+  );
+  -- ...and can actually record the morning entry for it.
+  e_entry := public.create_daily_site_entry_draft(
+    '10000000-0000-0000-0000-00000000000b', '2026-07-28', 'working',
+    null, null, 5, null, 450, null, 'Mobilise crew at Alego-equivalent site', 0, 0, null, 'none'
+  );
+  perform pg_temp.assert_true(e_entry.state = 'draft', 'lead manager records an entry for their site');
+  -- The lead is NOT authorised for an in-scope site he neither leads nor is
+  -- assigned to (the hosted "Karen Residence" gap).
+  perform pg_temp.assert_true(
+    not public.can_manage_daily_site_project('10000000-0000-0000-0000-000000000001'),
+    'lead manager is not authorised for an unrelated in-scope site'
+  );
+  begin
+    perform public.create_daily_site_entry_draft(
+      '10000000-0000-0000-0000-000000000001', '2999-11-01', 'no_work',
+      'rain', null, null, null, null, null, null, null, null, null, 'none'
+    );
+    raise exception 'lead manager create on unrelated site unexpectedly permitted';
+  exception when insufficient_privilege then null; end;
+  -- The lead's authorised set and compliance are exactly their one Ongoing site.
+  perform pg_temp.assert_true(
+    (select count(*) = 1 from public.daily_site_authorised_projects()) and
+    (select bool_and(id = '10000000-0000-0000-0000-00000000000b') from public.daily_site_authorised_projects()),
+    'lead manager authorised-projects is exactly their led site'
+  );
+  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28') where due is true;
+  perform pg_temp.assert_true(cnt = 1, 'lead manager has exactly one due project');
+
+  -- manager4 has neither assignment nor lead: a safe, empty, non-broken state
+  -- (this is what the frontend renders as "no projects assigned to you yet").
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000008', true);
+  perform pg_temp.assert_true(
+    (select count(*) = 0 from public.daily_site_authorised_projects()),
+    'unassigned manager has no authorised projects'
+  );
+  perform pg_temp.assert_true(
+    (select count(*) = 0 from public.daily_site_morning_compliance('2026-07-28')),
+    'unassigned manager sees an empty compliance set (no leakage)'
+  );
+  perform pg_temp.assert_true(
+    (select count(*) = 0 from public.daily_site_entries),
+    'unassigned manager sees no entries'
+  );
+  begin
+    perform public.create_daily_site_entry_draft(
+      '10000000-0000-0000-0000-000000000001', '2999-11-02', 'no_work',
+      'rain', null, null, null, null, null, null, null, null, null, 'none'
+    );
+    raise exception 'unassigned manager create unexpectedly permitted';
+  exception when insufficient_privilege then null; end;
+
+  raise notice 'SECTION 7d (hosted-compatible authority patterns) passed';
 end;
 $$;
 

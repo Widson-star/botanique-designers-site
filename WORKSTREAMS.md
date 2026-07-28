@@ -2352,10 +2352,29 @@ integration, public-site and Apicora work.
   calculation is **filtered by `can_manage_daily_site_project`**, so a manager's
   missing/late/waived counts never leak an unauthorised project's name, id or waiver state;
   the entry-form selector uses the matching `daily_site_authorised_projects()` list.
+- **Hosted authority reconciliation (read-only inventory, no mutation).** The chosen model
+  is the documented one: the Operations Manager's **portfolio-wide** authority (§7, "the
+  broader project-team and future visibility model") is realised through **explicit
+  `project_assignments`** (plus `lead_person_id`) — not a role-wide bypass — so future
+  managers stay scoped. A read-only inventory of hosted `botanique-admin` on
+  2026-07-28 found: **0 `project_assignments`**; nine projects; two active profiles (owner
+  Widson Ambaisi, manager Martine Lotom). The two in-scope Ongoing sites are **Alego Usonga**
+  (lead = Martine → already authorised) and **Karen Residence — Fountain Garden & Mature
+  Borders** (lead = null, unassigned → **not** yet authorised). Martine is therefore
+  authorised for **1 of 2** in-scope sites today.
+- **Rollout prerequisite (blocking, owner-driven).** Before the module is activated in
+  production, the owner must create an active `project_assignments` row for the Operations
+  Manager on each operationally-active site he manages that he does not already lead — at
+  minimum **Karen Residence — Fountain Garden & Mature Borders**. This is an authorised
+  operational-setup step performed through the normal assignment path; **this task created no
+  hosted assignment and applied no migration**. The migration and frontend must not be
+  enabled first and the assignments fixed afterwards. Until a manager has authority, the UI
+  shows a clear "no projects assigned to you yet" state rather than appearing broken.
 - **Validation:** isolated PostgreSQL 17 migration/test matrix green
-  (`scripts/test-daily-site-db.sh`); full Vitest suite green; changed-file ESLint clean;
-  production Vite build + full prerender succeed; desktop and 390×844 mobile browser checks
-  and console/network checks clean.
+  (`scripts/test-daily-site-db.sh`, incl. lead-based authority, unassigned-manager denial and
+  no-authority safe state); full Vitest suite green; changed-file ESLint clean; production
+  Vite build + full prerender succeed; desktop and 390×844 mobile browser checks and
+  console/network checks clean.
 
 - **Branch / baseline:** documentation branch `docs/bd-daily-site-operations-authority`
   from authoritative `main`
