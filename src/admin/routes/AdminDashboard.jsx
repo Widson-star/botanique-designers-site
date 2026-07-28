@@ -1,114 +1,168 @@
 import { Link } from "react-router-dom";
-import ProjectBadge from "../components/ProjectBadge";
+import { useAdminData } from "../context/adminData";
+import { canCreateProjects, canSeePendingActivation } from "../utils/projectCapabilities";
+import {
+  calculateDashboardMetrics,
+  operationalSummary,
+  projectsByStage,
+  projectsByStatus,
+  projectsByType,
+} from "../utils/dashboardMetrics";
+import StatCard from "../components/StatCard";
+import ProjectAttentionList from "../components/ProjectAttentionList";
+import RecentActivity from "../components/RecentActivity";
+import {
+  ProjectTypeSummary,
+  StageColumnChart,
+  StatusDoughnutChart,
+} from "../components/DashboardVisualizations";
 
-function StatCard({ label, value }) {
+export default function AdminDashboard() {
+  const {
+    role,
+    projects,
+    profilesById,
+    dataStatus,
+    dataError,
+    fetchActivities,
+  } = useAdminData();
+  const showPendingActivation = canSeePendingActivation(role);
+  const metrics = calculateDashboardMetrics(projects);
+  const summary = operationalSummary(projects, {
+    includePendingActivation: showPendingActivation,
+  });
+  const showNewProject = canCreateProjects(role);
+
   return (
-    <div className="bg-white border border-stone-200 rounded-lg p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="text-3xl font-bold text-botanique-charcoal mt-2">{value}</p>
-    </div>
-  );
-}
-
-export default function AdminDashboard({ projects, dataStatus, dataError, isDemo }) {
-  const activeProjects = projects.filter((project) => ["Ongoing", "Pending", "Paused"].includes(project.status));
-  const pendingNextActions = projects.filter((project) => project.nextAction && !project.archived);
-  const portfolioPermissionNeeded = projects.filter((project) => project.portfolioPermissionStatus === "Permission Needed");
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 border-b border-stone-200 pb-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Project tracker dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {isDemo
-              ? "Dev-only seed preview for Botanique Designers projects."
-              : "Authenticated operational project tracker for Botanique Designers."}
-          </p>
+          <h1 className="text-2xl font-semibold">Operations overview</h1>
+          {summary ? (
+            <p className="mt-2 max-w-4xl text-sm leading-6 text-gray-600">
+              {summary.overview} {summary.attention}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-gray-500">No project data is available yet.</p>
+          )}
         </div>
-        <Link
-          to="/admin/projects"
-          className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark transition"
-        >
-          View projects
-        </Link>
+        {showNewProject && (
+          <Link
+            to="/admin/projects/new"
+            className="inline-flex rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white transition hover:bg-botanique-dark"
+          >
+            New project
+          </Link>
+        )}
       </div>
 
       {dataStatus === "loading" && (
         <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">
-          Loading project records...
+          Loading project records…
         </div>
       )}
 
       {dataStatus === "error" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          role="alert"
+        >
           {dataError || "Unable to load project records."}
         </div>
       )}
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total projects" value={projects.length} />
-        <StatCard label="Ongoing" value={projects.filter((project) => project.status === "Ongoing").length} />
-        <StatCard label="Pending" value={projects.filter((project) => project.status === "Pending").length} />
-        <StatCard label="Completed" value={projects.filter((project) => project.status === "Completed").length} />
-        <StatCard label="Design-only" value={projects.filter((project) => project.status === "Design-only").length} />
-        <StatCard label="Next actions" value={pendingNextActions.length} />
-        <StatCard label="Portfolio permission needed" value={portfolioPermissionNeeded.length} />
-        <StatCard label="Archived" value={projects.filter((project) => project.archived).length} />
-      </div>
-
-      <section className="bg-white border border-stone-200 rounded-lg p-5">
-        <h2 className="font-bold text-lg mb-3">Simple Invoice boundary</h2>
-        <p className="text-sm text-gray-600 leading-relaxed">
-          Financial documents remain managed in Simple Invoice Manager. This admin preview
-          does not create invoices, estimates, receipts, PDFs, document numbers, or payments.
-        </p>
+      <section aria-label="Primary project indicators">
+        <div
+          className="grid grid-cols-2 overflow-hidden rounded-lg border border-stone-200 bg-white lg:grid-cols-4"
+          role="group"
+          aria-label="Management metrics"
+        >
+          <StatCard
+            label="Active projects"
+            value={metrics.active}
+            href="/admin/projects?view=active"
+            hint="Ongoing or paused"
+            className="border-b border-r border-stone-200 lg:border-b-0"
+          />
+          <StatCard
+            label={showPendingActivation ? "Pending activation" : "Pending projects"}
+            value={showPendingActivation ? metrics.pendingActivation : metrics.pending}
+            href={
+              showPendingActivation
+                ? "/admin/projects?view=pending-activation"
+                : "/admin/projects?view=pending"
+            }
+            tone="attention"
+            className="border-b border-stone-200 lg:border-b-0 lg:border-r"
+          />
+          <StatCard
+            label="Overdue actions"
+            value={metrics.overdueActions}
+            href="/admin/projects?view=overdue-actions"
+            tone={metrics.overdueActions > 0 ? "attention" : "default"}
+            className="border-r border-stone-200"
+          />
+          <StatCard
+            label="Upcoming starts"
+            value={metrics.upcomingStarts}
+            href="/admin/projects?view=upcoming-starts"
+          />
+        </div>
       </section>
 
-      <div className="grid lg:grid-cols-2 gap-5">
-        <section className="bg-white border border-stone-200 rounded-lg p-5">
-          <h2 className="font-bold text-lg mb-4">Active projects</h2>
-          {activeProjects.length === 0 ? (
-            <p className="text-sm text-gray-500">No active projects in this preview.</p>
-          ) : (
-            <div className="space-y-3">
-              {activeProjects.slice(0, 5).map((project) => (
-                <Link
-                  key={project.id}
-                  to={`/admin/projects/${project.id}`}
-                  className="block rounded-md border border-stone-100 p-3 hover:border-botanique-green transition"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium">{project.projectName}</p>
-                      <p className="text-xs text-gray-500 mt-1">{project.location || "Location not set"}</p>
-                    </div>
-                    <ProjectBadge value={project.status} />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+      <section className="flex flex-wrap items-center gap-x-8 gap-y-2 px-1" aria-label="Secondary project summary">
+        <p className="text-sm font-medium text-gray-500">Portfolio totals</p>
+        <Link to="/admin/projects" className="text-sm text-gray-600 hover:text-botanique-green">
+          Total <strong className="ml-1 tabular-nums text-botanique-charcoal">{metrics.total}</strong>
+        </Link>
+        <Link
+          to="/admin/projects?view=completed"
+          className="text-sm text-gray-600 hover:text-botanique-green"
+        >
+          Completed{" "}
+          <strong className="ml-1 tabular-nums text-botanique-charcoal">
+            {metrics.completed}
+          </strong>
+        </Link>
+        <Link
+          to="/admin/projects?view=design-only"
+          className="text-sm text-gray-600 hover:text-botanique-green"
+        >
+          Design-only{" "}
+          <strong className="ml-1 tabular-nums text-botanique-charcoal">
+            {metrics.designOnly}
+          </strong>
+        </Link>
+      </section>
+
+      <ProjectAttentionList projects={projects} role={role} />
+
+      <section className="rounded-lg border border-stone-200 bg-white p-5" aria-label="Project visualisations">
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.4fr] lg:divide-x lg:divide-stone-200">
+          <StatusDoughnutChart data={projectsByStatus(projects)} />
+          <div className="lg:pl-8">
+            <StageColumnChart data={projectsByStage(projects)} />
+          </div>
+        </div>
+        <div className="mt-5">
+          <ProjectTypeSummary data={projectsByType(projects)} />
+        </div>
+      </section>
+
+      <div className="grid gap-5 xl:grid-cols-[1.35fr_1fr]">
+        <section className="rounded-lg border border-stone-200 bg-white p-5" aria-labelledby="portfolio-summary-title">
+          <h2 id="portfolio-summary-title" className="text-base font-semibold">Portfolio notes</h2>
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            Metrics and charts use only the project records visible to this role. Open a
+            chart legend or column to review the matching filtered projects.
+          </p>
         </section>
 
-        <section className="bg-white border border-stone-200 rounded-lg p-5">
-          <h2 className="font-bold text-lg mb-4">Pending next actions</h2>
-          <div className="space-y-3">
-            {pendingNextActions.slice(0, 6).map((project) => (
-              <Link
-                key={project.id}
-                to={`/admin/projects/${project.id}`}
-                className="block rounded-md border border-stone-100 p-3 hover:border-botanique-green transition"
-              >
-                <p className="font-medium">{project.projectName}</p>
-                <p className="text-sm text-gray-600 mt-1">{project.nextAction}</p>
-                <p className="text-xs text-gray-400 mt-2">
-                  Due: {project.nextActionDate || "Not dated"}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </section>
+        <RecentActivity
+          projects={projects}
+          profilesById={profilesById}
+          fetchActivities={fetchActivities}
+        />
       </div>
     </div>
   );

@@ -45,6 +45,10 @@ Dashboard · Leads · Site Visits · Projects · Design & Implementation · Task
 **People & Resourcing** · Project Engagements · Expenses & Assets · Maintenance ·
 Applications · Reports · Settings
 
+**Phase 1B-A2 current boundary:** only **Dashboard** and **Projects** are functional
+navigation destinations. Future modules appear only after their own implementation and
+authorisation; the shell does not show dead or decorative module links.
+
 > The people-management area is deliberately named **People & Resourcing**, not "HR".
 > Botanique's model is project-based engagement and resourcing, not formal human-resources
 > administration.
@@ -530,6 +534,20 @@ authorised slice.
   cards (total, active, pending, completed, overdue actions, upcoming starts); initial charts
   (projects by status, by stage, by service type). No fabricated figures; empty states use
   **“No data yet”**; functions are working or hidden; **no dead “future” buttons**.
+  Project detail in this slice provides a **project Overview** and a **read-only Activity
+  History** (from the immutable `project_activities` ledger; field labels + before/after,
+  no raw UUIDs or JSON) — founder-authorised as the minimum useful detail view. No other
+  detail tabs are rendered; timeline/files/Tasks/People refinements remain **Phase 1B-A5**.
+  The Phase 1B-A2 Overview contains **no commercial-reference editor or financial-reference
+  panel**. Quotations, invoices, receipts and payments remain authoritative in **Simple
+  Invoice Manager**; this slice retains only the restrained shell boundary statement.
+  The admin application uses the **native system UI font** for compact operational
+  readability; the public-site typography is unchanged. Presentation labels do not rename
+  database roles: `owner` is shown as **Principal** in compact role badges and **Founder &
+  Principal** in expanded/formal contexts; `manager` is **Operations Manager**, `staff` is
+  **Project Team** unless a real operational title exists, and `viewer` is **Read-only**.
+  Width-constrained views use **Widson O. Ambaisi** while selectors and formal contexts
+  retain **Widson Omutelema Ambaisi**. Hosted profile data is not altered.
   **Role-scoped authority in this slice (enforced by the interim database boundary in
   §O.1a / the Phase 1B-A1 migration, not by hidden buttons):**
   - **Owner (Widson):** full project create/edit; **activate** Pending projects; mark
@@ -563,11 +581,12 @@ authorised slice.
   model.** Dashboard adds: approvals awaiting Widson; amendment requests; rejected/returned
   items;
   overdue approvals; exceptional items requiring owner attention.
-- **Phase 1B-A5 — Project Detail Refinement & Activity History:** Overview; Timeline; Tasks;
-  People; Project Engagements placeholder policy; Expenses placeholder policy; Files &
-  Evidence; Activity History (who changed what and when). No module shown as a dead
-  placeholder. Supabase Realtime remains optional and separately gated after save/refetch is
-  stable.
+- **Phase 1B-A5 — Project Detail Refinement:** builds on the Overview + read-only Activity
+  History already delivered in Phase 1B-A2. Adds the **richer timeline**; **Files &
+  Evidence**; supported **Tasks** and **People** views; **Project Engagements** placeholder
+  policy; **Expenses** placeholder policy; and **Activity-History refinements** (grouping,
+  filtering, richer actor/context resolution). No module shown as a dead placeholder.
+  Supabase Realtime remains optional and separately gated after save/refetch is stable.
 - **Phase 1B-B — Leads Interface:** campaigns; leads; qualification; follow-up queue; lead
   activity history; lead-source dashboard charts.
 - **Phase 1B-C — Site Visits & Lead-to-Project Conversion:** site visits; assessment
@@ -589,7 +608,8 @@ authorised slice.
   Google Calendar; authorised notifications; approved external integrations; optional
   controlled realtime synchronisation.
 
-**Preserved across all slices:** Botanique palette; Quicksand typography; professional
+**Preserved across all slices:** Botanique palette; public-site Quicksand typography
+(with the Phase 1B-A2 admin application using native system UI typography); professional
 dashboard hierarchy; no copying Power BI or third-party templates; no fabricated data;
 owner-only financial charts; role-appropriate dashboards; **no GPS, location tracking or
 employee surveillance.**
@@ -633,8 +653,9 @@ Desired future interface:
 
 **Design rules:**
 
-- Botanique brand palette; **Quicksand** operational typography; restrained, professional
-  visual hierarchy.
+- Botanique brand palette; restrained, professional visual hierarchy. The Phase 1B-A2
+  admin application uses native system UI typography; public-site Quicksand remains
+  unchanged.
 - **Do not copy third-party templates**; **do not reproduce Power BI styling**; no
   fabricated figures or decorative fake data.
 - Empty datasets show **"No data yet"** rather than mock values.

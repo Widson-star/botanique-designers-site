@@ -1896,6 +1896,175 @@ unstarted.**
   column set / schema version used** and must not compare full-row checksums across
   schema-changing migrations without normalising the projected columns.
 
+### Phase 1B-A2 — Admin Shell, Essential Project CRUD & Initial Live Dashboard
+
+Status: **Implemented on a feature branch and opened as a DRAFT PR — NOT merged and NOT
+production-live.** No database migration; no hosted schema change; no hosted data mutation.
+The production `/admin` interface remains the earlier read-only Project Tracker until this
+PR is reviewed, merged and production-verified.
+
+- **Baseline:** exact `main` `9666a2803c916eb5f5a188176806aaeb049dc9cd`.
+  **Branch:** `feat/bd-operations-hub-phase1b-a2`. **Draft PR #34:** `BD-OPERATIONS-HUB-01:
+  implement Phase 1B-A2 admin operations` (draft, not merged, auto-merge not enabled).
+- **Implemented scope (UI only, on the existing Phase 1B-A1 schema):** a professional
+  responsive admin **shell** (persistent desktop sidebar, keyboard-operable mobile drawer,
+  top bar, authenticated profile + role badge — Owner / Operations Manager, URL-parameter
+  project search; only working Dashboard + Projects destinations, no dead "future" links,
+  no notifications icon); **essential project CRUD** via one shared create/edit form
+  (`/admin/projects/new`, `/admin/projects/:id/edit`) with role-scoped fields, DB-matching
+  validation, changed-fields-only PATCH, and blank→null normalisation; **owner material
+  quick actions** (activate / mark completed / cancel / classify Design-only / archive /
+  restore) each explicit + confirmed via an accessible dialog, sending only the changing
+  field(s); **manager routine editing** only (forced-Pending intake create; Ongoing↔Paused;
+  non-Completed/Archived stages; no material/portfolio/completion-date controls); an
+  **initial live dashboard** (KPI cards total/active/pending/completed/overdue-actions/
+  upcoming-starts + owner-only pending-activation; accessible native CSS bar charts by
+  status/stage/type; empty states "No data yet"); a project **Overview**; and a **read-only
+  Activity History** from the immutable `project_activities` ledger (readable field labels,
+  before/after values, Yes/No booleans, "Not set" nulls, resolved profile names with safe
+  role fallbacks — never a raw UUID or raw JSON). Refetch/invalidation runs after every
+  successful mutation; failed saves preserve entered values and surface the database error.
+- **Phase 1B-A2 correction pass:** implementation commit
+  `32f61036cb192ff3a9dcb6cf7e8cd42bbcf5d162` repairs the existing draft without
+  reopening its architecture. “Mark completed” now requires a non-empty actual-completion
+  date, rejects dates before actual start, sends exactly `status` +
+  `actual_completion_date`, leaves stage independent, and uses stable accessible dialog
+  focus (date-first for completion, safe Cancel-first otherwise, focus trap, Escape,
+  opener restoration, unique IDs). Successful POST/PATCH representations are mapped into
+  local state before reconciliation; a failed post-write refresh preserves all usable
+  project data and returns a saved-with-refresh-warning contract with a working retry
+  control instead of clearing state or claiming unconditional success. Visible New/Edit
+  controls now use the existing role capabilities; unsupported Staff/Viewer forms remain
+  route-guarded, and the misleading Staff development preview is removed until its
+  assignment-scoped read-only UI is authorised. Dashboard Active, overdue-actions and
+  upcoming-starts drill-downs reuse the exact pure metric predicates through named URL
+  views (with resettable state). Portfolio Overview is owner-only; manager create still
+  explains the fixed non-eligible / Not Reviewed defaults, while manager edit exposes no
+  portfolio state. Development founder labels now use **Widson Omutelema Ambaisi**.
+  Deprecated `last_updated` changes are not returned for Activity History display.
+- **Demo-adapter fidelity correction:** implementation commit
+  `cc3276a148e8cec470a27700c8a06ebaeedc9865` makes demo PATCH reconstruction
+  distinguish an omitted property from an explicitly supplied `null` or `false` across
+  operational fields. Nullable text/date/lead values can now be cleared, boolean false is
+  applied, and `notes` is explicitly reconstructed so note edits persist and unrelated
+  updates preserve existing notes. The production Supabase create/update path is unchanged.
+  Exact-commit Vercel deployment `dpl_AodSDKXY3jpkUMyXXYLt1igMpcpc` is **READY** at
+  `botanique-designers-site-gpm1-lxwt5ouhe.vercel.app`.
+- **Founder visual-direction and dashboard-composition repair:** implementation commit
+  `23805cb81ce01e57b26e31220cde7f141d806496` replaces the rejected equal-weight
+  dashboard with a meeting-ready operational composition while preserving the existing
+  CRUD, role capabilities, exact metric/view predicates, mutation reconciliation and
+  read-only ledger architecture. The founder completed visual review against the supplied
+  local desktop and mobile screenshots and approved the final Phase 1B-A2 direction. The
+  admin application uses native system UI typography and visible **Principal** /
+  **Founder & Principal** terminology. The dashboard has a natural generated operational +
+  attention summary; four primary indicators and a restrained Total / Completed /
+  Design-only strip; a compact deterministic Projects needing attention state; accessible
+  project-status doughnut and project-stage column visualisations; and a readable
+  project-type summary. Cross-project Recent Activity is rendered as actor + project +
+  readable changes with no UUID/raw JSON. The Projects table prioritises status, stage,
+  expanded accountable lead and next action, target completion and the same deterministic
+  attention labels. Project Overview is compact; Edit project remains visible; one
+  contextually relevant material action is primary; exceptional owner decisions remain in
+  the accessible More actions menu. The shared form has clearer Next steps and internal
+  notes sections with sticky Save/Create and Cancel actions. Activity History is concise
+  and expandable: collapsed operational rows use **Widson O. Ambaisi**, while expanded or
+  formal identity remains **Widson Omutelema Ambaisi**; other names such as **Martine
+  Lotom** are not abbreviated. Stored profile data is unchanged. The incomplete
+  `FinancialReferencesPanel` and editor are removed from Phase 1B-A2, with no
+  financial-reference POST/PATCH/provider mutation path. Simple Invoice Manager remains
+  authoritative for financial documents. Future commercial and operational-finance
+  modules, together with Team, Tasks, Approvals, Project Funds, Labour Engagements,
+  Commercial Records, Expenditure, Documents and Reports, remain separately gated under
+  `BD-OPERATIONS-HUB-01`. The admin shell exposes only
+  Dashboard + Projects, integrates search, and retains accessible desktop/mobile
+  navigation.
+  Exact-commit Vercel deployment `dpl_AD9YgjBvLXuawDYFzSZgcHUSJ5rb` is **READY** at
+  `botanique-designers-site-gpm1-pz95grbk1.vercel.app`.
+- **Final dashboard-semantics correction:** implementation commit
+  `6a09bc0b296b060ea67e07be9e4a1aaffed3153c` defines the operational-attention
+  set as non-archived Pending, Ongoing or Paused projects only. Completed,
+  Cancelled, Design-only and archived records now produce no attention reasons,
+  cannot enter Projects needing attention, display `None` in the Projects table,
+  and are excluded from operational attention-summary counts. Pending owner
+  reasons still include Pending activation; manager reasons do not. The pure
+  operational-summary API now receives capability context: owners retain Pending
+  activation / Awaiting activation language and drill-down, while Operations
+  Managers see ordinary Pending projects wording with no activation implication
+  or activation mini-stat. No health score or percentage was introduced.
+  Production Supabase mutation code is unchanged. Exact-commit Vercel deployment
+  `dpl_GxfMhWDp6dwC3VNUSwgHw7Jva9qt` is **READY** at
+  `botanique-designers-site-gpm1-hlbb50jxy.vercel.app`.
+- **Senior KPI-rail and identity-presentation polish:** the four primary indicators now
+  occupy one compact management metrics rail with a single subtle outer border, neutral
+  internal dividers, no independent card outlines, ribbons, coloured edge strips, shadows
+  or lift animation. Desktop uses four equal regions; mobile uses one semantic 2×2 surface.
+  Zero values remain neutral; only a genuine non-zero attention value receives a restrained
+  amber value/dot treatment. The existing Active, Pending activation/Pending projects,
+  Overdue actions and Upcoming starts predicates and exact filtered destinations are
+  unchanged, with visible keyboard focus retained. Total, Completed and Design-only remain
+  a restrained typographic summary line below the rail. Authenticated founder presentation
+  now resolves the shortened hosted profile **Widson Ambaisi** to **Widson O. Ambaisi** only
+  when both the `owner` role and exact founder authentication email match. Formal contexts
+  continue to resolve **Widson Omutelema Ambaisi**, **Martine Lotom** is unaffected, and no
+  stored profile row was changed. Visual verification used the exact local implementation
+  at 1440×900 and 390×844, including a metrics close crop and Principal/header identity
+  crop. No dashboard logic, CRUD, capability, project-activity, Simple Invoice, navigation,
+  Realtime, migration, RLS, package or production mutation behavior changed.
+- **Architecture:** authentication stays in `AdminApp`; a focused `AdminDataProvider`
+  (`src/admin/context/`) owns visible projects, role-visible profiles, loading/error, save
+  feedback, refetch and create/update mutations; REST logic stays in `src/admin/lib/supabase.js`
+  (added `fetchVisibleProfiles`, `fetchProjectActivities`, `createProject`, `updateProject`,
+  all with `Prefer: return=representation` and error surfacing; never sending audit/finance
+  columns or `last_updated`); pure helpers hold capability, payload/patch, KPI and
+  activity-format logic. No Supabase Realtime.
+- **Tests:** new Vitest + React Testing Library setup (test-infra devDependencies only).
+  **135 tests pass across 15 test files**, including pure role/capability, create/patch
+  payload (changed-fields-only, blank→null, no audit fields, manager forced-Pending,
+  preserved inaccessible lead), completion integrity and dialog focus, returned-row local
+  upsert before refetch, preserved state + warning/retry after reconciliation failure,
+  genuine create/update failure contracts, duplicate-submit blocking, role-gated controls
+  and routes, owner-only Portfolio Overview, exact KPI view predicates/links, resettable
+  filters, empty-chart “No data yet”, and activity formatting (no UUID / no primary raw
+  JSON / no deprecated `last_updated` display), plus demo-mode null clearing for optional
+  text/date/lead fields, note persistence/preservation, boolean false handling, and proof
+  that no Supabase mutation is called; generated/empty operational summaries, deterministic
+  attention classification, exact metric/view continuity, Recent Activity empty/readable
+  states, admin typography, owner/manager authority, no dead navigation, and no dominant
+  finance explanation or finance-data leakage; plus closed/design-only/archived attention
+  exclusion, owner/manager Pending wording, manager activation-language absence, corrected
+  attention-summary counts and Projects-table predicate continuity. Activity History
+  regressions prove compact collapsed founder naming, retained formal expanded identity,
+  unchanged Martine Lotom presentation and absence of raw profile UUIDs. KPI-rail
+  regressions prove the single shared group, ribbon-free regions, neutral zero state,
+  restrained non-zero activation emphasis, exact four drill-down destinations, visible
+  keyboard focus and the mobile 2×2 semantic structure. Authenticated-header coverage proves
+  the shortened hosted founder profile resolves compactly while formal identity remains
+  available. No test writes to hosted production records.
+- **Lint / build:** every changed/new JS/JSX file is ESLint-clean. `npm run lint` reports
+  **19 inherited errors in unchanged files only** (`server/index.js` Node-global `no-undef`,
+  `src/components/FadeIn.jsx` `set-state-in-effect`, `src/context/AppContext.jsx`
+  `react-refresh/only-export-components`) — none introduced by this slice. `npm run build`
+  (clean `npm ci` install) succeeds and still prerenders the 43 public routes incl. `404.html`;
+  admin routes remain client-only. The correction pass re-ran the same Vitest, ESLint,
+  Vite-build and prerender entrypoints directly with the bundled Node runtime because this
+  execution shell did not expose an `npm` launcher; results are now 135/135 tests across
+  15 files, zero
+  changed-file lint findings, the same 19 inherited full-lint findings, and a successful
+  43-route + `404.html` prerender with no `dist/admin` directory and admin routes
+  client-only. `git diff --check` is clean.
+- **Preview verification:** the authenticated hosted-role matrix is verified through the
+  automated tests + local dev-seed fixtures (owner vs Operations Manager shells, controls,
+  pending activation, restricted manager create). Any Vercel preview verification against
+  hosted Supabase is **read-only**; no create/edit/archive/activation is run against hosted
+  records. The final semantics preview passed Vercel protection but reached the application
+  Sign in screen, so the authenticated founder label was not observable and the hosted
+  `profiles.full_name` value could not be determined; no credential was entered and no
+  profile correction was attempted. The source fallback remains
+  `profile?.full_name || profile?.email || "Authenticated admin"`. **No migration. No hosted
+  schema or RLS change. No package-file change. No hosted data mutation. Not merged. Not
+  production-live.** PR #34 remains draft, open and unmerged; auto-merge remains disabled.
+
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
 Status: **Launch pack prepared — external campaign setup NOT performed; no advert

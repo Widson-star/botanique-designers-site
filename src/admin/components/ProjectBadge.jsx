@@ -17,7 +17,7 @@ export default function ProjectBadge({ value }) {
   const style = badgeStyles[value] || "bg-botanique-beige text-botanique-charcoal border-stone-200";
 
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${style}`}>
+    <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${style}`}>
       {value || "Not set"}
     </span>
   );
