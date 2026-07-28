@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  APPROVAL_EVENT_LABELS,
   approvalComparison,
   mapApprovalEvent,
   mapApprovalRequest,
@@ -47,5 +48,13 @@ describe("approval formatters", () => {
       fromState: "",
       roundNumber: 1,
     });
+  });
+
+  it("uses review-neutral labels for queueing and retains decision labels", () => {
+    expect(APPROVAL_EVENT_LABELS.queued_for_review).toBe("Queued for review");
+    expect(APPROVAL_EVENT_LABELS.amendment_requested).toBe("Amendment requested");
+    expect(APPROVAL_EVENT_LABELS.approved).toBe("Request approved");
+    expect(APPROVAL_EVENT_LABELS.rejected).toBe("Request rejected");
+    expect(APPROVAL_EVENT_LABELS).not.toHaveProperty("review_started");
   });
 });

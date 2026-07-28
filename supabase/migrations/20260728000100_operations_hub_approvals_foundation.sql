@@ -64,7 +64,7 @@ create table public.approval_events (
   approval_request_id uuid not null references public.approval_requests(id) on delete restrict,
   event_type text not null check (event_type in (
     'submitted',
-    'review_started',
+    'queued_for_review',
     'amendment_requested',
     'amended',
     'resubmitted',
@@ -394,7 +394,7 @@ begin
   insert into public.approval_events (
     approval_request_id, event_type, actor_id, from_state, to_state, round_number
   ) values (
-    request.id, 'review_started', auth.uid(), 'submitted', 'awaiting_review', 1
+    request.id, 'queued_for_review', auth.uid(), 'submitted', 'awaiting_review', 1
   );
 
   return request;

@@ -62,6 +62,47 @@ begin
     (select count(*) = 2 from public.approval_events where approval_request_id = request.id),
     'submission and queue events are written'
   );
+  perform pg_temp.assert_true(
+    (
+      select count(*) = 1
+      from public.approval_events
+      where approval_request_id = request.id
+        and event_type = 'submitted'
+        and from_state is null
+        and to_state = 'submitted'
+    ),
+    'submission records the initial submitted event'
+  );
+  perform pg_temp.assert_true(
+    (
+      select count(*) = 1
+      from public.approval_events
+      where approval_request_id = request.id
+        and event_type = 'queued_for_review'
+        and from_state = 'submitted'
+        and to_state = 'awaiting_review'
+    ),
+    'submission records the queued_for_review transition'
+  );
+  perform pg_temp.assert_true(
+    not exists (
+      select 1 from public.approval_events
+      where approval_request_id = request.id and event_type = 'review_started'
+    ),
+    'submission does not record review_started'
+  );
+  perform pg_temp.assert_true(
+    (
+      select actor_id = request.requester_id
+      from public.approval_events
+      where approval_request_id = request.id and event_type = 'queued_for_review'
+    ),
+    'queued_for_review actor is the requester'
+  );
+  perform pg_temp.assert_true(
+    request.reviewed_at is null,
+    'submission does not mark the request reviewed'
+  );
 
   -- Duplicate active request is rejected.
   begin
@@ -160,6 +201,10 @@ begin
   request := public.decide_project_approval(request.id, 'approved', 'Approved.');
   perform pg_temp.assert_true(request.state = 'approved', 'request becomes approved');
   perform pg_temp.assert_true(
+    request.reviewed_at is not null and request.decided_at is not null,
+    'approval records review and decision timestamps'
+  );
+  perform pg_temp.assert_true(
     (select status = 'Ongoing' from public.projects where id = request.project_id),
     'approved change is applied'
   );
@@ -193,6 +238,10 @@ begin
   request := public.decide_project_approval(request.id, 'rejected', 'Not ready.');
   perform pg_temp.assert_true(request.state = 'rejected', 'owner can reject');
   perform pg_temp.assert_true(
+    request.reviewed_at is not null and request.decided_at is not null,
+    'rejection records review and decision timestamps'
+  );
+  perform pg_temp.assert_true(
     (select status = 'Pending' from public.projects where id = request.project_id),
     'rejection does not mutate project'
   );
@@ -209,6 +258,10 @@ begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   request := public.request_approval_amendment(request.id, 'Use the confirmed client date.');
   perform pg_temp.assert_true(request.state = 'amendment_requested', 'owner requests amendment');
+  perform pg_temp.assert_true(
+    request.reviewed_at is not null and request.decided_at is null,
+    'amendment request records review without a terminal decision'
+  );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
   begin
     perform public.amend_and_resubmit_approval(
@@ -235,6 +288,10 @@ begin
     'project_archive',
     '{"archived":true}',
     'Archive after handover.'
+  );
+  perform pg_temp.assert_true(
+    request.reviewed_at is null,
+    'withdrawal candidate has no substantive owner review'
   );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
   begin

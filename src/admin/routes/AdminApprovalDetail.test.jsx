@@ -31,14 +31,40 @@ const request = {
 };
 
 function renderDetail(role = "owner", requestRow = request) {
-  const loadEvents = vi.fn().mockResolvedValue([{
-    id: "event-1",
-    actorId: "manager-1",
-    eventType: "submitted",
-    occurredAt: "2026-07-28T08:00:00Z",
-    roundNumber: 1,
-    eventNotes: "",
-  }]);
+  const loadEvents = vi.fn().mockResolvedValue([
+    {
+      id: "event-1",
+      actorId: "manager-1",
+      eventType: "submitted",
+      occurredAt: "2026-07-28T08:00:00Z",
+      roundNumber: 1,
+      eventNotes: "",
+    },
+    {
+      id: "event-2",
+      actorId: "manager-1",
+      eventType: "queued_for_review",
+      occurredAt: "2026-07-28T08:00:01Z",
+      roundNumber: 1,
+      eventNotes: "",
+    },
+    {
+      id: "event-3",
+      actorId: "owner-1",
+      eventType: "amendment_requested",
+      occurredAt: "2026-07-28T09:00:00Z",
+      roundNumber: 1,
+      eventNotes: "",
+    },
+    {
+      id: "event-4",
+      actorId: "owner-1",
+      eventType: "approved",
+      occurredAt: "2026-07-28T10:00:00Z",
+      roundNumber: 1,
+      eventNotes: "",
+    },
+  ]);
   const methods = {
     requests: [requestRow],
     loadEvents,
@@ -77,6 +103,11 @@ describe("Admin approval detail", () => {
     expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Request amendment" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Request submitted")).toBeInTheDocument());
+    expect(screen.getByText("Queued for review")).toBeInTheDocument();
+    expect(screen.getByText("Amendment requested", { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText("Request approved")).toBeInTheDocument();
+    expect(screen.queryByText("Review started")).not.toBeInTheDocument();
+    expect(screen.queryByText("queued_for_review")).not.toBeInTheDocument();
     expect(screen.queryByText(/request-1|manager-1|project-1/)).not.toBeInTheDocument();
   });
 

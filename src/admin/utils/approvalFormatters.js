@@ -18,7 +18,7 @@ export const APPROVAL_STATE_LABELS = {
 
 export const APPROVAL_EVENT_LABELS = {
   submitted: "Request submitted",
-  review_started: "Queued for review",
+  queued_for_review: "Queued for review",
   amendment_requested: "Amendment requested",
   amended: "Proposal amended",
   resubmitted: "Request resubmitted",

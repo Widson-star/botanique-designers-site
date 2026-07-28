@@ -15,7 +15,7 @@ export default function ApprovalTimeline({ events, profilesById }) {
             <div className="-ml-[1.16rem] inline-block h-2 w-2 rounded-full bg-botanique-green" />
             <div className="-mt-4">
               <p className="text-sm font-medium">
-                {APPROVAL_EVENT_LABELS[event.eventType] || event.eventType}
+                {APPROVAL_EVENT_LABELS[event.eventType] || "Approval activity"}
               </p>
               <p className="mt-0.5 text-xs text-gray-500">
                 {actor ? profilePresentationName(actor, "Authorised user") : "Authorised user"}
