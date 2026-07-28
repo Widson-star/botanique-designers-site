@@ -283,8 +283,11 @@ correction. No approval-schema change is made now.
 
 **Recommended first slice:** Daily Site Entry capture plus morning compliance only, with
 Operational Expenditure deferred to a separate second slice to bound migration, RLS, UI
-and authority risk. Founder decisions on submission time, weekend handling, active-project
-scope, owner waiver and non-compliance restrictions remain open before implementation.
+and authority risk. The five founder decisions on submission time, weekend handling,
+active-project scope, owner waiver and non-compliance restrictions are **resolved** (see
+the resolved compliance rules above); the first implementation slice may proceed after
+normal implementation preflight, keeping Daily Site Entry capture and morning compliance
+as the narrow first slice and Operational Expenditure deferred to a separate second slice.
 
 ## 5. Progressive navigation architecture
 
