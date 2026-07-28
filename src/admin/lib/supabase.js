@@ -4,6 +4,28 @@ const SESSION_STORAGE_KEY = "botanique_admin_supabase_session";
 
 export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
+export function isUsableStoredSession(session, now = Date.now()) {
+  if (
+    !session ||
+    typeof session !== "object" ||
+    typeof session.access_token !== "string" ||
+    !session.access_token ||
+    typeof session.user?.id !== "string" ||
+    !session.user.id
+  ) {
+    return false;
+  }
+
+  if (session.expires_at != null) {
+    const expiresAt = Number(session.expires_at);
+    if (!Number.isFinite(expiresAt) || expiresAt * 1000 <= now) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function getHeaders(accessToken) {
   return {
     apikey: SUPABASE_ANON_KEY,
@@ -27,8 +49,15 @@ async function readJsonResponse(response) {
 export function getStoredSession() {
   try {
     const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+
+    const session = JSON.parse(raw);
+    if (isUsableStoredSession(session)) return session;
+
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
   } catch {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
     return null;
   }
 }
