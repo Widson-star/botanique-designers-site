@@ -1610,14 +1610,18 @@ files are documentation/template only (`LEAD_OPERATIONS_PLAYBOOK.md`,
 
 ## BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation
 
-Status: **Architecture recorded — NO implementation started.** Existing operational
-systems preserved; **Phase 1 (Operational spine) is the recommended next
-implementation after the campaign-launch work.** Documentation only. New narrow
-architecture/documentation workstream; no existing workstream covered the future
-Operations Hub design and no `BD-OPERATIONS-HUB` identifier conflict exists.
+Status: **Active programme. Phase 1A, Phase 1B-A1 and Phase 1B-A2 are merged; Phase
+1B-A2 is production-live and accepted.** The current functional `/admin` destinations
+are Dashboard and Projects. The **Approvals foundation is the next implementation
+workstream**, but implementation remains gated until the post-merge authority revision is
+reviewed and merged. No new Operations Hub master register is required: this entry remains
+the execution and live-state register, the Product Requirements remain founder-requirements
+authority, and the Blueprint remains architecture/system-of-record authority.
 
-Baseline `main`: `1b53ba3ac6fd79f0423eb64ec1497161363867c1`. Branch:
-`claude/bd-operations-hub-01-architecture`.
+Original architecture baseline `main`:
+`1b53ba3ac6fd79f0423eb64ec1497161363867c1`. Original architecture branch:
+`claude/bd-operations-hub-01-architecture`. This baseline is historical evidence, not the
+current implementation base.
 
 Records the intended long-term operating model — *Campaign → Lead → Qualification →
 Site visit → Quotation → Awarded project → Design & implementation → Maintenance →
@@ -1625,22 +1629,16 @@ Commercial reporting* — with the existing `/admin` + Supabase foundation evolv
 Botanique's internal Operations Hub. Full record in
 **`BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md`**: verified existing foundation (`/admin`,
 Supabase auth, `profiles`/`projects`/`project_assignments`/`project_financial_references`
-with RLS, owner/manager/staff/viewer roles, owner-only finance, the admin projects
-tracker) vs `NO EVIDENCE FOUND` items (no DB lead intake — the public QuoteWizard is
-WhatsApp-only; no leads/campaigns/visits/maintenance/expenses/applications/assets
-tables); twelve proposed modules; a system-of-record matrix (Simple Invoice Manager =
-finance source of truth, hub holds references only; project tracker separate); proposed
-data domains (`leads` with a nullable `project_id` until won, `campaigns`,
-`lead_activities`, `site_visits`, `project_milestones`, `tasks`,
-`maintenance_schedules`, `applications`, `operational_expenses`, `company_assets` — no
-migrations written); preserved owner/manager/staff RLS and finance restrictions; and a
-five-phase order (spine → delivery → recurring ops → business admin → integrations).
+with RLS, owner/manager/staff/viewer roles, owner-only finance and the admin projects
+tracker). The original twelve-module proposal and five-phase order are superseded by the
+28 July 2026 post-merge authority revision in the Product Requirements and Blueprint.
+Phase 1A subsequently implemented the `campaigns`, `leads` and `lead_activities` schema/RLS;
+Phase 1B-A1 implemented project integrity and history; Phase 1B-A2 implemented the live
+admin shell, project operations and initial dashboard.
 
-Boundaries: **no database migrations, UI, storage bucket, integration, or external
-setup**; no change to `/admin`, Supabase schema/RLS, finance references, the project
-tracker, GardenCare policy, the enquiry funnel, measurement, or the contact number.
-Changed files: `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` (new) and this `WORKSTREAMS.md`
-entry only.
+Original architecture-slice boundaries were documentation-only. Current protected
+boundaries and future dependencies are maintained in the revised Product Requirements and
+Blueprint.
 
 ### Phase 1A — Lead Data and RLS Foundation
 
@@ -1778,29 +1776,23 @@ System remain authoritative; existing `profiles`/`projects`/`project_assignments
 `project_financial_references` tables, policies, functions and the owner-only finance
 boundary are unchanged. The migration is additive and non-destructive.
 
-**Not done in Phase 1A:** admin lead routes/components, lead list/detail/edit screens,
+**Historical Phase 1A closeout (superseded for current UI status by Phase 1B-A2 below):**
+admin lead routes/components, lead list/detail/edit screens,
 site-visits, operational calendar, dashboard queues, won-lead project creation, website
 lead ingestion, UTM parsing, Google/Meta/WhatsApp/Calendar integrations, and any frontend
-production deployment. The hosted schema/RLS **is now live** (see the hosted-application
-record above); what remains for Phase 1B is the **user-facing** work. The existing
-seven-project **Project Tracker remains the current production `/admin` interface** — the
-new Phase 1A tables have **no visible UI yet**. **Current UI limitation (verified from
-founder screenshots):** the production Project Tracker is **read-only** — it supports
-search/filter/detail viewing but has **no project create/edit/archive/restore, staff
-assignment or next-action editing** (those controls are disabled "future" placeholders).
-Phase 1B is therefore split into controlled sub-slices, with **Phase 1B-A (Admin Shell +
-Essential Project Management)** prioritised next because the real hosted records cannot yet
-be maintained through the UI, then **1B-B (Leads UI)** and **1B-C (site visits +
-won-lead conversion)**. Full authority: `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md`
-§N–§T.
+production deployment were not delivered by Phase 1A. At that historical closeout, the
+seven-project production tracker was read-only and Phase 1B-A was next. Phase 1B-A2 has
+since superseded that UI state by delivering the live Dashboard, Projects and role-scoped
+project operations. The lead tables still have no visible UI. Current authority is in the
+post-merge revision below and the revised Product Requirements/Blueprint.
 
 ### Phase 1B-A — Admin Shell + Essential Project Management (entry gate + 1B-A1)
 
 Status: **Phase 1B-A entry-gate audit complete; Phase 1B-A1 (project integrity +
 history) migration MERGED (PR #32, merge commit `24d84d0a72fef50e57088c5d35e2c05f191e008c`)
 and APPLIED to hosted `botanique-admin` via the linked Supabase CLI, hosted-verified
-(structure + rollback-only runtime matrix) — NO UI built; Phase 1B-A2 is next and
-unstarted.**
+(structure + rollback-only runtime matrix).** This subsection records the Phase 1B-A1
+database slice; Phase 1B-A2 was subsequently implemented and is production-live.
 
 - **Entry-gate audit (read-only): complete.** Confirmed the hosted `botanique-admin`
   schema/RLS **structurally matched the committed authority across columns, types,
@@ -1850,17 +1842,18 @@ unstarted.**
   target date is allowed), and otherwise edits routine operational fields; reserved
   transitions are rejected at the database, and unchanged protected values never block
   unrelated edits. This is **not** the approval workflow and stores no proposals; the formal
-  proposal/approve/reject/amendment workflow remains **Phase 1B-A4 and unimplemented**, and
-  may later replace this interim restriction.
+  proposal/approve/reject/amendment workflow remains unimplemented. The former
+  **Phase 1B-A4** label is superseded by the named **Approvals foundation** workstream in
+  the post-merge roadmap; a reviewed implementation may later replace this interim
+  restriction only with equivalent or stronger authority.
 - **Documented but NOT implemented in PR #32:** daily project-update schema/UI, the owner
   approval/amendment workflow, and delegated-payment + reconciliation (commitment / payment
   execution / evidence / reconciliation; Simple Invoice Manager stays the client-finance
   authority). No `daily_updates`, approval, payment, engagement or expense table is created
   here. Martine retains routine portfolio-wide operational authority (coordination,
-  mobilisation, delegated payments under approved commitments, daily-update review). The
-  dashboard is **not** implemented in this PR; dashboard implementation **begins in Phase
-  1B-A2** (role-scoped: owner activate/complete/cancel/archive + a live "Pending activation"
-  list; manager routine editing only) and expands through later slices.
+  mobilisation, delegated payments under approved commitments, daily-update review).
+  Phase 1B-A2 subsequently delivered the dashboard and project UI; the unimplemented
+  domains now follow the post-merge roadmap below.
 - **Runtime status:** re-validated after each correction against an isolated PostgreSQL 17
   instance with a synthetic Supabase `auth` shim — all audit-identity, NULL helper-contract,
   transition-scoped lead-change, field-constraint, ledger (incl. empty-`changed_fields`
@@ -1898,14 +1891,16 @@ unstarted.**
 
 ### Phase 1B-A2 — Admin Shell, Essential Project CRUD & Initial Live Dashboard
 
-Status: **Implemented on a feature branch and opened as a DRAFT PR — NOT merged and NOT
-production-live.** No database migration; no hosted schema change; no hosted data mutation.
-The production `/admin` interface remains the earlier read-only Project Tracker until this
-PR is reviewed, merged and production-verified.
+Status: **MERGED and production-live — accepted 28 July 2026.** PR #34,
+`BD-OPERATIONS-HUB-01: implement Phase 1B-A2 admin operations`, is closed and merged.
+Final feature head:
+`ac2694c0e7a3a09392e4871d14e6150d66f949a1`. Authoritative merge commit:
+`1e5f66a75336ee86d7da046b0f43c0608ff3e534`. The old feature branch must not be reused.
+No database migration or RLS change was part of Phase 1B-A2.
 
 - **Baseline:** exact `main` `9666a2803c916eb5f5a188176806aaeb049dc9cd`.
-  **Branch:** `feat/bd-operations-hub-phase1b-a2`. **Draft PR #34:** `BD-OPERATIONS-HUB-01:
-  implement Phase 1B-A2 admin operations` (draft, not merged, auto-merge not enabled).
+  **Historical implementation branch:** `feat/bd-operations-hub-phase1b-a2`.
+  **Merged PR #34:** `BD-OPERATIONS-HUB-01: implement Phase 1B-A2 admin operations`.
 - **Implemented scope (UI only, on the existing Phase 1B-A1 schema):** a professional
   responsive admin **shell** (persistent desktop sidebar, keyboard-operable mobile drawer,
   top bar, authenticated profile + role badge — Owner / Operations Manager, URL-parameter
@@ -2053,7 +2048,8 @@ PR is reviewed, merged and production-verified.
   changed-file lint findings, the same 19 inherited full-lint findings, and a successful
   43-route + `404.html` prerender with no `dist/admin` directory and admin routes
   client-only. `git diff --check` is clean.
-- **Preview verification:** the authenticated hosted-role matrix is verified through the
+- **Preview and production verification:** the authenticated hosted-role matrix was
+  verified through the
   automated tests + local dev-seed fixtures (owner vs Operations Manager shells, controls,
   pending activation, restricted manager create). Any Vercel preview verification against
   hosted Supabase is **read-only**; no create/edit/archive/activation is run against hosted
@@ -2061,9 +2057,72 @@ PR is reviewed, merged and production-verified.
   Sign in screen, so the authenticated founder label was not observable and the hosted
   `profiles.full_name` value could not be determined; no credential was entered and no
   profile correction was attempted. The source fallback remains
-  `profile?.full_name || profile?.email || "Authenticated admin"`. **No migration. No hosted
-  schema or RLS change. No package-file change. No hosted data mutation. Not merged. Not
-  production-live.** PR #34 remains draft, open and unmerged; auto-merge remains disabled.
+  `profile?.full_name || profile?.email || "Authenticated admin"`. The founder later
+  completed authenticated production verification and accepted the Phase 1B-A2 interface.
+  Production now contains **eight** project records. **Alego Usonga** was created during
+  authenticated preview verification and is a legitimate operational record, not test or
+  seed data. No documentation or audit task may mutate it or create additional test
+  projects.
+
+### Post-merge authority revision — documentation only
+
+Status: **In progress on a new documentation branch from authoritative merge commit
+`1e5f66a75336ee86d7da046b0f43c0608ff3e534`.** This revision reconciles the authority
+documents with the accepted production state. It does not reopen Phase 1B-A2 and makes no
+application, migration, RLS, hosted-data or public-site change.
+
+Authority hierarchy:
+
+1. `WORKSTREAMS.md` — implementation, merge and hosted-state register.
+2. `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md` — founder requirements, boundaries,
+   roles and acceptance expectations.
+3. `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` — domain architecture, systems of record,
+   relationships and dependencies.
+4. Migrations and application code — implemented technical truth.
+5. Historical audits and handoffs — supporting evidence only.
+
+No separate Operations Hub master workstream register is needed. The revision remains under
+`BD-OPERATIONS-HUB-01` and records the governing sequence:
+
+1. Operations Hub authority revision.
+2. Approvals foundation.
+3. Project Funds & Reconciliation.
+4. Labour Engagements & Payments.
+5. Project Updates & Discussion.
+6. Tasks & Assignments.
+7. Team & Resourcing.
+8. Client Commercial Records.
+9. Operational Expenditure.
+10. Documents & Evidence.
+11. Reports & Management Summary.
+12. Leads, Site Visits and Maintenance integration.
+
+The Approvals foundation is the next implementation workstream after this documentation
+revision is reviewed and merged. It must preserve equivalent or stronger authority before
+any separately reviewed replacement of the Phase 1B-A1 interim
+`tg_guard_project_material_authority()` control.
+
+The revised domain model keeps four financial domains separate:
+
+- Client Commercial Records — Simple Invoice Manager remains authoritative.
+- Project Funds & Reconciliation.
+- Labour Engagements & Payments.
+- Operational Expenditure.
+
+The existing `project_financial_references` table does not satisfy these four domains.
+`project_activities` remains an immutable audit ledger and is not a chat system; a separate
+future Project Updates & Discussion domain provides auditable asynchronous communication.
+Future navigation appears progressively only when its module is functional and authorised.
+
+Dependencies: Approvals precedes funds, labour and exceptional expenditure; existing
+projects/profiles/RLS remain the identity and delivery spine; evidence/document policy is
+required for reconciliations, payments and project updates; fund/labour/expenditure
+semantics must stabilise before management reporting; and full Team & Resourcing requires a
+deliberate external-worker identity model.
+
+Explicit exclusions: no code, UI, route, navigation, migration, RLS, function, trigger,
+hosted Supabase, project-data, Simple Invoice Manager integration, financial
+implementation, Approvals implementation, Realtime, public-site or Apicora change.
 
 ## BD-CAMPAIGN-LAUNCH-01 — Controlled Paid Campaign Launch Preparation
 
