@@ -226,15 +226,20 @@ financial records.
 
 ### 4.9 Daily Site Operations & Morning Compliance
 
-This is the next implementation domain after the merged Approvals foundation. **Authority
-defined; Phase 1 implemented locally — hosted migration not applied.** The first narrow
-slice (Daily Site Entry capture, review/correction lifecycle, owner compliance waivers,
-morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
-interface) is built and validated locally on `feat/bd-daily-site-operations-phase-1` via
-additive migration `20260728000200_operations_hub_daily_site_operations.sql` — three tables
+This is the first implemented domain after the merged Approvals foundation.
+**APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING — hosted migration applied; Phase 1 merged.**
+The first narrow slice (Daily Site Entry capture, review/correction lifecycle, owner
+compliance waivers, morning-compliance calculation, a Dashboard attention surface and a
+mobile-first admin interface) was merged in PR #41 at authoritative `main`
+`dfb79373397637694fa26d730c110da58f20acae`, and its additive migration
+`20260728000200_operations_hub_daily_site_operations.sql` (recorded hosted version
+`20260729064007`) is now **applied to hosted `botanique-admin`** — three tables
 (`daily_site_entries`, immutable `daily_site_entry_events`, `daily_site_compliance_waivers`),
 narrow `SECURITY DEFINER` lifecycle functions and a `daily_site_morning_compliance()`
-calculation. Accepted entries are corrected only by supersession (prior row preserved).
+calculation, all verified read-only after apply, with the production deployment and signed-out
+`/admin` (desktop + mobile) confirmed. No operational data exists yet (0 entries/events/
+waivers) and no hosted row was mutated; the remaining gate is authenticated owner/manager UI
+verification. Accepted entries are corrected only by supersession (prior row preserved).
 Authority is **project-authority scoped**: the owner is company-wide, while a manager can
 read and act only on projects within the existing project-authority model (active
 `project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every
@@ -382,7 +387,7 @@ Governing order:
 
 1. Operations Hub authority revision — documentation only.
 2. Approvals foundation. *(Merged.)*
-3. Daily Site Operations & Morning Compliance. *(Authority defined; not implemented — §4.9.)*
+3. Daily Site Operations & Morning Compliance. *(Merged, PR #41; hosted migration applied — authenticated verification pending. §4.9.)*
 4. Operational Expenditure.
 5. Project Funds & Reconciliation.
 6. Labour Engagements & Payments.

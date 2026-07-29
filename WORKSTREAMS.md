@@ -2303,30 +2303,58 @@ frontend-only fix, merged after founder review.
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
 
-### Daily Site Operations & Morning Compliance — authority defined; Phase 1 implemented locally (not in production)
+### Daily Site Operations & Morning Compliance — hosted rollout applied; authenticated production verification pending
 
-Status: **AUTHORITY DEFINED — PHASE 1 IMPLEMENTED LOCALLY; HOSTED MIGRATION NOT APPLIED.**
-The paragraphs below preserve the original authority; the **Phase 1 implementation note**
-that follows records the first narrow slice, built and validated locally on the
-`feat/bd-daily-site-operations-phase-1` branch from authoritative `main`
-`c48a004515234c66b18ac5a062f4bc4da708b929`. The module is **not** enabled in production: the
-migration has **not** been applied to hosted Supabase and no hosted data was mutated. This
-domain remains under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream and
-needs no new master register. The Approvals classification (`APPLIED_WITH_LIMITATION`,
-remaining limitation: manager authenticated post-merge production verification) is
-**unchanged** and the Approvals implementation is not reopened.
+Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING.** Phase 1 is merged and its
+additive migration is live on hosted `botanique-admin`. PR #41 merged at authoritative `main`
+`dfb79373397637694fa26d730c110da58f20acae` (merge commit; parents
+`c48a004515234c66b18ac5a062f4bc4da708b929` + reviewed head `d1531e2`). The hosted migration
+`20260728000200_operations_hub_daily_site_operations.sql` was applied successfully (recorded
+version `20260729064007_operations_hub_daily_site_operations`); its schema, RLS policies,
+`SECURITY DEFINER`/`INVOKER` functions and grants were verified read-only; the production
+Vercel deployment of the merge commit succeeded; and the signed-out `/admin` login was
+verified clean on desktop and 390×844 mobile. The Operations Manager (Martine Lotom) is
+authorised for **both** current in-scope Ongoing sites — **Alego Usonga** and **Karen
+Residence — Fountain Garden & Mature Borders** — via `lead_person_id`. **No operational data
+exists yet: 0 Daily Site entries, 0 events, 0 waivers**, and no hosted row was mutated by the
+rollout (the only pre-rollout change was the founder's authorised Karen lead update made
+through the Project UI). The remaining gate before `ACTIVE_VERIFIED` is **authenticated owner
+and manager production UI verification** (checklist below / in PR). This domain remains under
+`BD-OPERATIONS-HUB-01` — not a new top-level workstream and no new master register. The
+Approvals classification (`APPLIED_WITH_LIMITATION`) is **unchanged** and Approvals is not
+reopened.
 
-**Phase 1 implementation note (local; draft PR).** Scope delivered: Daily Site Entry
-capture, the review/correction lifecycle, owner compliance waivers, morning-compliance
-calculation, a Dashboard attention surface and a mobile-first admin interface. Deliberately
-excluded (unchanged): Operational Expenditure, Project Funds/reconciliation, Labour
-Engagements/payments, actual/day-end fields, payroll, fund transfers, receipts/uploads,
-external email, notifications, Supabase Realtime, reports/exports, Simple Invoice Manager
-integration, public-site and Apicora work.
+**Hosted rollout verification (read-only, 2026-07-29).** Migration history includes the
+Daily Site Operations migration; all three tables exist with RLS enabled; `daily_site_entries`
+= 0, `daily_site_entry_events` = 0, `daily_site_compliance_waivers` = 0; `projects` = 9;
+`project_assignments` = 0; `approval_requests` = 0; `approval_events` = 0. Structural checks:
+3 SELECT policies and 0 direct INSERT/UPDATE/DELETE policies; `authenticated` has no direct
+table DML and cannot execute the `private_*` helpers; `anon` is denied. Authority checks:
+owner can manage all 9 projects (authorised list = 9); Martine can manage Alego and Karen and
+sees only his lead projects (no role-only access); compliance leaks no unauthorised project.
+Pre/post-migration integrity fingerprints for profiles, projects (identity + business
+fields), assignments, activities and approvals were **identical** — the migration was purely
+additive.
+
+> **Historical (superseded by the hosted rollout above).** The Phase 1 note below was written
+> while the work was local-only on branch `feat/bd-daily-site-operations-phase-1` before the
+> migration was applied to hosted Supabase. It is retained as development evidence; where it
+> says "implemented locally", "not applied to hosted" or "not enabled in production", that
+> status is now **superseded** — the migration is applied and the module is merged, pending
+> only authenticated UI verification.
+
+**Phase 1 implementation note (historical — local-development evidence).** Scope delivered:
+Daily Site Entry capture, the review/correction lifecycle, owner compliance waivers,
+morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
+interface. Deliberately excluded (unchanged): Operational Expenditure, Project
+Funds/reconciliation, Labour Engagements/payments, actual/day-end fields, payroll, fund
+transfers, receipts/uploads, external email, notifications, Supabase Realtime,
+reports/exports, Simple Invoice Manager integration, public-site and Apicora work.
 
 - **Migration:** `supabase/migrations/20260728000200_operations_hub_daily_site_operations.sql`
-  (additive, forward-only; applied only on a disposable local PostgreSQL 17 database for
-  tests). Creates `daily_site_entries`, immutable `daily_site_entry_events` and
+  (additive, forward-only). Now **applied to hosted `botanique-admin`** (version
+  `20260729064007`); it was validated pre-rollout on a disposable local PostgreSQL 17
+  database. Creates `daily_site_entries`, immutable `daily_site_entry_events` and
   `daily_site_compliance_waivers` plus narrow `SECURITY DEFINER` lifecycle functions and a
   `daily_site_morning_compliance()` calculation.
 - **Versioning/supersession:** one live entry per project/work-date (partial-unique index);
@@ -2371,9 +2399,9 @@ integration, public-site and Apicora work.
   through `lead_person_id` and/or explicit `project_assignments`. A read-only verification on
   2026-07-29 confirmed Karen is Ongoing/Implementation, not archived, in compliance scope, and
   led by the active manager; `project_assignments` remains 0 (the founder used lead, not an
-  assignment). The blocking prerequisite is therefore **cleared**, and the module is
-  rollout-ready. (Migration `20260728000200` remained unapplied at the time of this
-  documentation update.)
+  assignment). The blocking prerequisite was therefore **cleared**, and the migration has
+  since been **applied to hosted `botanique-admin`** and PR #41 merged (see the
+  APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING status at the top of this subsection).
 - **Validation:** isolated PostgreSQL 17 migration/test matrix green
   (`scripts/test-daily-site-db.sh`, incl. lead-based authority, unassigned-manager denial and
   no-authority safe state); full Vitest suite green; changed-file ESLint clean; production

@@ -198,19 +198,24 @@ derived reporting preserve traceability across domains.
 
 ### 4.5 Daily Site Operations & Morning Compliance
 
-**Status: authority defined; Phase 1 implemented locally — hosted migration not applied.**
-This subsection defines a new operational domain under `BD-OPERATIONS-HUB-01`. It is not a
-new top-level workstream and requires no new master register — the existing authority
+**Status: APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING — hosted migration applied; Phase 1
+merged.** This subsection defines a new operational domain under `BD-OPERATIONS-HUB-01`. It is
+not a new top-level workstream and requires no new master register — the existing authority
 hierarchy governs it. The first narrow slice (Daily Site Entry capture, review/correction
 lifecycle, owner compliance waivers, morning-compliance calculation, Dashboard attention
-state and a mobile-first admin interface) has been **implemented and validated locally** on
-`feat/bd-daily-site-operations-phase-1` from authoritative `main`
-`c48a004515234c66b18ac5a062f4bc4da708b929`, via additive migration
-`20260728000200_operations_hub_daily_site_operations.sql`. The module is **not** enabled in
-production: the migration has **not** been applied to hosted Supabase and no hosted data was
-mutated. See WORKSTREAMS.md → *Daily Site Operations & Morning Compliance* for the Phase 1
-implementation note (schema, versioning/supersession, RLS/role boundary, compliance/EAT
-handling and validation results). Manager authority is **project-authority scoped**
+state and a mobile-first admin interface) was implemented, validated on a disposable local
+PostgreSQL 17 matrix, and **merged** (PR #41) at authoritative `main`
+`dfb79373397637694fa26d730c110da58f20acae`. Its additive migration
+`20260728000200_operations_hub_daily_site_operations.sql` is now **applied to hosted
+`botanique-admin`** (recorded version `20260729064007`); the schema, RLS, functions and grants
+were verified read-only, the production Vercel deployment succeeded, and the signed-out
+`/admin` login was verified clean on desktop and mobile. No operational data exists yet
+(0 Daily Site entries, events and waivers) and no hosted row was mutated by the rollout. The
+one remaining gate before the module is treated as fully active-verified is **authenticated
+owner and manager production UI verification**. See WORKSTREAMS.md → *Daily Site Operations &
+Morning Compliance* for the full rollout note (schema, versioning/supersession, RLS/role
+boundary, compliance/EAT handling, hosted verification and pending checklist). Manager
+authority is **project-authority scoped**
 (`lead_person_id` or an active `project_assignments` row), realising the documented
 portfolio-wide Operations Manager authority through the existing model rather than a
 role-wide bypass. The founder has used the authorised Project edit interface to set the
