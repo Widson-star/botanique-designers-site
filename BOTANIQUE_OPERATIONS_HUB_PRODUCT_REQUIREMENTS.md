@@ -198,7 +198,8 @@ derived reporting preserve traceability across domains.
 
 ### 4.5 Daily Site Operations & Morning Compliance
 
-**Status: APPLIED_WITH_LIMITATION — live in production; first real entry recorded.** This
+**Status: ACTIVE_VERIFIED (2026-07-29) — live in production; authenticated owner + manager
+verification complete.** (Previously APPLIED_WITH_LIMITATION.) This
 subsection defines a new operational domain under `BD-OPERATIONS-HUB-01`. It is not a new
 top-level workstream and requires no new master register — the existing authority hierarchy
 governs it. The first narrow slice (Daily Site Entry capture, review/correction lifecycle,
@@ -215,13 +216,15 @@ correctly flagged **late**; two immutable lifecycle events *created* + *submitte
 sees the submitted entry with Return / Accept / Void controls; the manager sees no owner
 review controls; morning compliance reads Due 2 / Missing 1 (Karen) / Late 1 (Alego) /
 Waived 0. The submission created **no** approval request or event, and **no** waiver exists.
-Remaining limitations (why not yet fully active-verified): a confirmed responsive
-`/admin/daily-site-operations` list layout defect (**now repaired locally in a draft, unmerged
-frontend PR** — auto-layout six-column desktop table + stacked mobile cards, corporate-language
-label polish, and a single **Portfolio publication status** control replacing the old
-eligible-checkbox + permission-dropdown pair via display-only mapping with **no migration and
-no automatic public publication**); clean owner and manager Console evidence still to capture;
-and explicit confirmation that Martine's new-entry selector lists both Alego and Karen. See WORKSTREAMS.md → *Daily Site Operations & Morning
+All four prior limitations are now **closed** (authenticated exact-preview verification,
+2026-07-29): the responsive `/admin/daily-site-operations` list layout defect is **repaired and
+verified** (auto-layout six-column desktop table + stacked mobile cards, corporate-language
+labels, and a single owner-only **Portfolio publication status** control replacing the old
+eligible-checkbox + permission-dropdown pair via display-only mapping — **no migration, no
+automatic public publication**); owner and manager exact-preview verification **PASSED**; and
+Martine's authenticated new-entry selector confirmed to list **both** Alego and Karen. This is
+distinct from the still-open **manager-material-change governance gap** (a separate future
+domain; it does not block this ACTIVE_VERIFIED classification and does not change Approvals). See WORKSTREAMS.md → *Daily Site Operations & Morning
 Compliance* for the full note (schema, versioning/supersession, RLS/role boundary,
 compliance/EAT handling, the verified first entry, the layout defect and remaining
 limitations). Manager authority is **project-authority scoped**
