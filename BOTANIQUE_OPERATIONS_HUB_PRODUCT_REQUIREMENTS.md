@@ -210,14 +210,15 @@ state and a mobile-first admin interface) has been **implemented and validated l
 production: the migration has **not** been applied to hosted Supabase and no hosted data was
 mutated. See WORKSTREAMS.md → *Daily Site Operations & Morning Compliance* for the Phase 1
 implementation note (schema, versioning/supersession, RLS/role boundary, compliance/EAT
-handling and validation results). Manager authority is **project-authority scoped** (active
-`project_assignments` or `lead_person_id`), realising the documented portfolio-wide
-Operations Manager authority through explicit assignments rather than a role-wide bypass. A
-read-only hosted inventory found **0 assignments**, so before production activation the owner
-must assign the Operations Manager to each operationally-active site he manages that he does
-not already lead (currently **Karen Residence — Fountain Garden & Mature Borders**) — a
-**blocking rollout prerequisite**; no hosted assignment was created and no migration was
-applied in this work. Operational Expenditure remains deferred to a separate second slice.
+handling and validation results). Manager authority is **project-authority scoped**
+(`lead_person_id` or an active `project_assignments` row), realising the documented
+portfolio-wide Operations Manager authority through the existing model rather than a
+role-wide bypass. The founder has used the authorised Project edit interface to set the
+accountable **lead** of **Karen Residence — Fountain Garden & Mature Borders** to **Martine
+Lotom** (recorded in Activity History); combined with his existing lead of **Alego Usonga**,
+the Operations Manager is now authorised for both current in-scope Ongoing sites via lead
+authority, so the **blocking rollout prerequisite is satisfied** with no separate assignment
+row required. Operational Expenditure remains deferred to a separate second slice.
 
 #### 4.5.1 Purpose and operational problem
 
