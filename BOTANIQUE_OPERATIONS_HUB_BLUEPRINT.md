@@ -226,15 +226,27 @@ financial records.
 
 ### 4.9 Daily Site Operations & Morning Compliance
 
-This is the next implementation domain after the merged Approvals foundation. **Authority
-defined; Phase 1 implemented locally — hosted migration not applied.** The first narrow
+This is the first implemented domain after the merged Approvals foundation.
+**APPLIED_WITH_LIMITATION — live in production; first real entry recorded.** The first narrow
 slice (Daily Site Entry capture, review/correction lifecycle, owner compliance waivers,
 morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
-interface) is built and validated locally on `feat/bd-daily-site-operations-phase-1` via
-additive migration `20260728000200_operations_hub_daily_site_operations.sql` — three tables
+interface) was merged in PR #41 at authoritative `main`
+`dfb79373397637694fa26d730c110da58f20acae`, and its additive migration
+`20260728000200_operations_hub_daily_site_operations.sql` (recorded hosted version
+`20260729064007`) is **applied to hosted `botanique-admin`** — three tables
 (`daily_site_entries`, immutable `daily_site_entry_events`, `daily_site_compliance_waivers`),
 narrow `SECURITY DEFINER` lifecycle functions and a `daily_site_morning_compliance()`
-calculation. Accepted entries are corrected only by supersession (prior row preserved).
+calculation, all verified read-only after apply, with the production deployment and signed-out
+`/admin` (desktop + mobile) confirmed. **Authenticated production use has occurred:** on
+2026-07-29 Martine Lotom submitted the first legitimate Daily Site Entry for Alego Usonga
+(6 × KES 500 = KES 3,000; evidence provided; 10:09 EAT, correctly flagged late; created +
+submitted events), the owner sees it with Return/Accept/Void, the manager sees no owner
+controls, and compliance reads Due 2 / Missing 1 / Late 1 / Waived 0 — with no approval
+request/event and no waiver created. Remaining limitations before fully active-verified: a
+confirmed responsive `/admin/daily-site-operations` list layout defect (separate narrow code
+PR), clean owner/manager Console evidence, and explicit confirmation Martine's selector lists
+both Alego and Karen. Accepted entries are corrected only by supersession (prior row
+preserved).
 Authority is **project-authority scoped**: the owner is company-wide, while a manager can
 read and act only on projects within the existing project-authority model (active
 `project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every
@@ -278,6 +290,17 @@ Architectural invariants:
   voided → superseded; ordinary daily submission is **not** an approval request;
 - **evidence status only** in the first slice (none / promised / provided / not_required);
   file attachments depend on the future Documents & Evidence domain;
+- **Daily Attendance Evidence (authority, not implemented here)** — the casual, locally
+  sourced labour model is evidenced by an uploaded, project-specific **Daily Labour Register**
+  (names, phone numbers, limited identity reference where necessary, roles/tasks, signatures
+  or attendance confirmation) per working entry, rather than a permanent profile for every
+  casual worker; the register is uploaded against the correct Daily Site Entry ordinarily
+  **by 9:00 a.m. EAT** (late allowed and auditable), and where Martine is absent the site
+  representative or workers complete it and send it to him to upload. Regular staff (e.g.
+  Martine, Waweru) may later have reusable profiles; casual workers stay register-based.
+  Actual upload/storage belongs to the future **Documents & Evidence** domain under
+  data-minimisation and retention rules — this slice builds no upload, roster or
+  labour-payment workflow (PRD §4.5.11a);
 - **soft morning compliance** — the Dashboard flags in-scope projects lacking today's entry;
   no destructive lock, no notifications and no Realtime in the first slice.
 
@@ -382,7 +405,7 @@ Governing order:
 
 1. Operations Hub authority revision — documentation only.
 2. Approvals foundation. *(Merged.)*
-3. Daily Site Operations & Morning Compliance. *(Authority defined; not implemented — §4.9.)*
+3. Daily Site Operations & Morning Compliance. *(Merged, PR #41; live in production — APPLIED_WITH_LIMITATION, first real entry recorded. §4.9.)*
 4. Operational Expenditure.
 5. Project Funds & Reconciliation.
 6. Labour Engagements & Payments.

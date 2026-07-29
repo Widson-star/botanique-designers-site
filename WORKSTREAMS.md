@@ -2303,30 +2303,102 @@ frontend-only fix, merged after founder review.
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
 
-### Daily Site Operations & Morning Compliance — authority defined; Phase 1 implemented locally (not in production)
+### Daily Site Operations & Morning Compliance — live in production; first real entry recorded
 
-Status: **AUTHORITY DEFINED — PHASE 1 IMPLEMENTED LOCALLY; HOSTED MIGRATION NOT APPLIED.**
-The paragraphs below preserve the original authority; the **Phase 1 implementation note**
-that follows records the first narrow slice, built and validated locally on the
-`feat/bd-daily-site-operations-phase-1` branch from authoritative `main`
-`c48a004515234c66b18ac5a062f4bc4da708b929`. The module is **not** enabled in production: the
-migration has **not** been applied to hosted Supabase and no hosted data was mutated. This
-domain remains under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream and
-needs no new master register. The Approvals classification (`APPLIED_WITH_LIMITATION`,
-remaining limitation: manager authenticated post-merge production verification) is
-**unchanged** and the Approvals implementation is not reopened.
+Status: **APPLIED_WITH_LIMITATION.** Phase 1 is merged, its additive migration is live on
+hosted `botanique-admin`, the production frontend is active, and **authenticated production
+use has now occurred**. PR #41 merged at authoritative `main`
+`dfb79373397637694fa26d730c110da58f20acae` (merge commit; parents
+`c48a004515234c66b18ac5a062f4bc4da708b929` + reviewed head `d1531e2`). The hosted migration
+`20260728000200_operations_hub_daily_site_operations.sql` was applied successfully (recorded
+version `20260729064007_operations_hub_daily_site_operations`); schema, RLS, functions and
+grants were verified read-only; the production Vercel deployment succeeded; and the signed-out
+`/admin` login is clean on desktop and 390×844 mobile. The Operations Manager (Martine Lotom)
+is authorised for **both** current in-scope Ongoing sites — **Alego Usonga** and **Karen
+Residence — Fountain Garden & Mature Borders** — via `lead_person_id`. This domain remains
+under `BD-OPERATIONS-HUB-01` — not a new top-level workstream and no new master register. The
+Approvals classification (`APPLIED_WITH_LIMITATION`) is **unchanged** and Approvals is not
+reopened.
 
-**Phase 1 implementation note (local; draft PR).** Scope delivered: Daily Site Entry
-capture, the review/correction lifecycle, owner compliance waivers, morning-compliance
-calculation, a Dashboard attention surface and a mobile-first admin interface. Deliberately
-excluded (unchanged): Operational Expenditure, Project Funds/reconciliation, Labour
-Engagements/payments, actual/day-end fields, payroll, fund transfers, receipts/uploads,
-external email, notifications, Supabase Realtime, reports/exports, Simple Invoice Manager
-integration, public-site and Apicora work.
+**First legitimate production Daily Site Entry (verified read-only, 2026-07-29).** Martine
+Lotom created and submitted the first real operational record — **not a test fixture**:
+- entry `51af0a4c-611f-4497-9e33-15088fba7df8`, project **Alego Usonga**, work date
+  **2026-07-29**, disposition **working**, state **submitted**, version **1**;
+- created_by and submitted_by **Martine Lotom**; submitted_at **07:09:15 UTC = 10:09 EAT**;
+  **is_late = true** (database-derived; after 08:30 EAT), event note "Submitted after 08:30
+  EAT (late).";
+- expected workforce **6**, rate **KES 500** per worker, agreed total none, **planned labour
+  cost KES 3,000** (DB-derived 6 × 500); planned work "1. Site grading and levelling / 2.
+  Planting grass"; funds available **KES 0**; additional requested **KES 0**; evidence status
+  **provided**; notes "Work ongoing well"; not yet reviewed (reviewed_by null).
+- **Lifecycle events (2):** `created` (→ draft) at 10:09:14 EAT, then `submitted`
+  (draft → submitted) at 10:09:15 EAT — both actor Martine Lotom.
+
+**What this confirms in production.** Authenticated **manager submission** succeeded;
+authenticated **owner review visibility** succeeded (owner sees the submitted Alego entry with
+Return / Accept / Void controls); **lifecycle event creation** succeeded (immutable
+created + submitted events); the **late calculation** succeeded (is_late true, stamped note);
+**project-authority scoping** operated successfully (Martine acted only on his lead project;
+the manager view shows no owner review controls). The **morning-compliance summary** reads,
+for the owner on 2026-07-29: **Due today 2, Missing 1 (Karen Residence), Late 1 (Alego),
+Waived 0**. **No waiver exists** (`daily_site_compliance_waivers` = 0). Daily Site submission
+**did not create an approval request or event** (`approval_requests` = 0, `approval_events`
+= 0). The **Daily Attendance Evidence** authority (§4.5.11a) is defined but **not
+implemented**. Current hosted counts: `daily_site_entries` = **1**, `daily_site_entry_events`
+= **2**, `daily_site_compliance_waivers` = **0**; `projects` = **9**; `project_assignments`
+= 0; `approval_requests` = 0; `approval_events` = 0. No hosted row was mutated by this
+reconciliation (read-only).
+
+**Remaining limitations (why not yet `ACTIVE_VERIFIED`).**
+1. **Responsive Daily Site Operations list defect (confirmed in production).** On
+   `/admin/daily-site-operations` the desktop table row overlaps: the Date and Plan headings
+   overlap, the work date wraps vertically, and "Working today" crowds/overlaps the date,
+   making the row hard to scan. Repair recommended in a **separate narrow code PR** (see the
+   layout-defect note below); not fixed here.
+2. **Clean owner Console evidence** still to be captured (no React #418 or blocking error on
+   the owner authenticated views).
+3. **Clean manager Console evidence** still to be captured (same, for the manager).
+4. **Explicit confirmation** that Martine's **new-entry project selector** includes **both**
+   Alego Usonga and Karen Residence — Fountain Garden & Mature Borders.
+
+**Confirmed production layout defect — `/admin/daily-site-operations` list.** The desktop
+table row has overlapping content (Date/Plan headings overlap; work date wraps to multiple
+lines; "Working today" overlaps/crowds the date). Recommended future repair (separate narrow
+code PR, not in this documentation PR): give the desktop row the columns **Project · Work date
+· Site plan · Planned workforce · Status · Action**; and on responsive/mobile transform each
+record into a **stacked card** (no compressed multi-column table), prevent horizontal
+overflow, keep the date on one readable line, and preserve the plain-language status and
+workforce summary.
+
+**UI-language follow-up (later; not implemented here).** A future narrow UI-language pass may
+soften the Daily Site Entry field labels to plainer operational wording:
+Disposition → **Site activity status**; Workers expected → **Planned workforce**; Planned
+labour cost → **Estimated labour cost**; Planned work → **Planned site activities**; Crew
+reference → **Crew or team reference**; Funds available (planning) → **Site funds currently
+available**; Additional requested (planning) → **Additional site funds required**; Evidence
+status → **Supporting evidence**. This is presentation wording only — no schema/enum change.
+It must not be mixed into a documentation PR; it may be combined with the Project-form
+corporate-language polish only if that implementation PR stays narrow and reviewable.
+
+> **Historical (superseded by the hosted rollout above).** The Phase 1 note below was written
+> while the work was local-only on branch `feat/bd-daily-site-operations-phase-1` before the
+> migration was applied to hosted Supabase. It is retained as development evidence; where it
+> says "implemented locally", "not applied to hosted" or "not enabled in production", that
+> status is now **superseded** — the migration is applied, the module is merged, and it is in
+> authenticated production use (see the `APPLIED_WITH_LIMITATION` status above).
+
+**Phase 1 implementation note (historical — local-development evidence).** Scope delivered:
+Daily Site Entry capture, the review/correction lifecycle, owner compliance waivers,
+morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
+interface. Deliberately excluded (unchanged): Operational Expenditure, Project
+Funds/reconciliation, Labour Engagements/payments, actual/day-end fields, payroll, fund
+transfers, receipts/uploads, external email, notifications, Supabase Realtime,
+reports/exports, Simple Invoice Manager integration, public-site and Apicora work.
 
 - **Migration:** `supabase/migrations/20260728000200_operations_hub_daily_site_operations.sql`
-  (additive, forward-only; applied only on a disposable local PostgreSQL 17 database for
-  tests). Creates `daily_site_entries`, immutable `daily_site_entry_events` and
+  (additive, forward-only). Now **applied to hosted `botanique-admin`** (version
+  `20260729064007`); it was validated pre-rollout on a disposable local PostgreSQL 17
+  database. Creates `daily_site_entries`, immutable `daily_site_entry_events` and
   `daily_site_compliance_waivers` plus narrow `SECURITY DEFINER` lifecycle functions and a
   `daily_site_morning_compliance()` calculation.
 - **Versioning/supersession:** one live entry per project/work-date (partial-unique index);
@@ -2352,6 +2424,18 @@ integration, public-site and Apicora work.
   calculation is **filtered by `can_manage_daily_site_project`**, so a manager's
   missing/late/waived counts never leak an unauthorised project's name, id or waiver state;
   the entry-form selector uses the matching `daily_site_authorised_projects()` list.
+- **Daily Attendance Evidence (authority added; not implemented).** To support Botanique's
+  casual, locally sourced labour model, attendance is evidenced by an uploaded,
+  project-specific **Daily Labour Register** per working entry (worker names, phone numbers,
+  limited identity reference where necessary, roles/tasks, signatures or attendance
+  confirmation) rather than a permanent profile for every casual worker. The register is
+  uploaded against the correct Daily Site Entry ordinarily **by 9:00 a.m. EAT** (late allowed
+  and auditable); where Martine is absent, the site representative or workers complete it and
+  send it to him to upload against the correct project. Regular staff (e.g. Martine, Waweru)
+  may later have reusable profiles; casual workers stay register-based. Actual upload/storage
+  is **deferred to the Documents & Evidence domain** under data-minimisation and retention
+  rules — this slice still records only `evidence_status` and builds **no** upload, roster or
+  labour-payment workflow (PRD §4.5.11a; Blueprint §4.9).
 - **Hosted authority reconciliation (read-only inventory, no mutation).** The chosen model
   is the documented one: the Operations Manager's **portfolio-wide** authority (§7, "the
   broader project-team and future visibility model") is realised through **`lead_person_id`
@@ -2371,9 +2455,10 @@ integration, public-site and Apicora work.
   through `lead_person_id` and/or explicit `project_assignments`. A read-only verification on
   2026-07-29 confirmed Karen is Ongoing/Implementation, not archived, in compliance scope, and
   led by the active manager; `project_assignments` remains 0 (the founder used lead, not an
-  assignment). The blocking prerequisite is therefore **cleared**, and the module is
-  rollout-ready. (Migration `20260728000200` remained unapplied at the time of this
-  documentation update.)
+  assignment). The blocking prerequisite was therefore **cleared**, and the migration has
+  since been **applied to hosted `botanique-admin`** and PR #41 merged, with the first real
+  Alego entry now submitted in production (see the `APPLIED_WITH_LIMITATION` status at the top
+  of this subsection).
 - **Validation:** isolated PostgreSQL 17 migration/test matrix green
   (`scripts/test-daily-site-db.sh`, incl. lead-based authority, unassigned-manager denial and
   no-authority safe state); full Vitest suite green; changed-file ESLint clean; production

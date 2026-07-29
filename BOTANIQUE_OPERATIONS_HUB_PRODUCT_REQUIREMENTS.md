@@ -198,19 +198,30 @@ derived reporting preserve traceability across domains.
 
 ### 4.5 Daily Site Operations & Morning Compliance
 
-**Status: authority defined; Phase 1 implemented locally — hosted migration not applied.**
-This subsection defines a new operational domain under `BD-OPERATIONS-HUB-01`. It is not a
-new top-level workstream and requires no new master register — the existing authority
-hierarchy governs it. The first narrow slice (Daily Site Entry capture, review/correction
-lifecycle, owner compliance waivers, morning-compliance calculation, Dashboard attention
-state and a mobile-first admin interface) has been **implemented and validated locally** on
-`feat/bd-daily-site-operations-phase-1` from authoritative `main`
-`c48a004515234c66b18ac5a062f4bc4da708b929`, via additive migration
-`20260728000200_operations_hub_daily_site_operations.sql`. The module is **not** enabled in
-production: the migration has **not** been applied to hosted Supabase and no hosted data was
-mutated. See WORKSTREAMS.md → *Daily Site Operations & Morning Compliance* for the Phase 1
-implementation note (schema, versioning/supersession, RLS/role boundary, compliance/EAT
-handling and validation results). Manager authority is **project-authority scoped**
+**Status: APPLIED_WITH_LIMITATION — live in production; first real entry recorded.** This
+subsection defines a new operational domain under `BD-OPERATIONS-HUB-01`. It is not a new
+top-level workstream and requires no new master register — the existing authority hierarchy
+governs it. The first narrow slice (Daily Site Entry capture, review/correction lifecycle,
+owner compliance waivers, morning-compliance calculation, Dashboard attention state and a
+mobile-first admin interface) was implemented, validated on a disposable local PostgreSQL 17
+matrix, and **merged** (PR #41) at authoritative `main`
+`dfb79373397637694fa26d730c110da58f20acae`. Its additive migration
+`20260728000200_operations_hub_daily_site_operations.sql` is **applied to hosted
+`botanique-admin`** (recorded version `20260729064007`), the production frontend is active, and
+**authenticated production use has occurred**: on 2026-07-29 the Operations Manager (Martine
+Lotom) created and submitted the first legitimate Daily Site Entry for **Alego Usonga** (6
+workers × KES 500 = KES 3,000 planned labour; evidence *provided*; submitted 10:09 EAT and
+correctly flagged **late**; two immutable lifecycle events *created* + *submitted*). The owner
+sees the submitted entry with Return / Accept / Void controls; the manager sees no owner
+review controls; morning compliance reads Due 2 / Missing 1 (Karen) / Late 1 (Alego) /
+Waived 0. The submission created **no** approval request or event, and **no** waiver exists.
+Remaining limitations (why not yet fully active-verified): a confirmed responsive
+`/admin/daily-site-operations` list layout defect (separate narrow code PR); clean owner and
+manager Console evidence still to capture; and explicit confirmation that Martine's new-entry
+selector lists both Alego and Karen. See WORKSTREAMS.md → *Daily Site Operations & Morning
+Compliance* for the full note (schema, versioning/supersession, RLS/role boundary,
+compliance/EAT handling, the verified first entry, the layout defect and remaining
+limitations). Manager authority is **project-authority scoped**
 (`lead_person_id` or an active `project_assignments` row), realising the documented
 portfolio-wide Operations Manager authority through the existing model rather than a
 role-wide bypass. The founder has used the authorised Project edit interface to set the
@@ -402,6 +413,34 @@ First slice: **evidence status only** — one of none, promised, provided, not_r
 file upload is built in the first slice. Actual receipts, photos, delivery notes, signed
 attendance and other attachments depend on the future Documents & Evidence domain (§9) and
 are deferred to it.
+
+#### 4.5.11a Daily Attendance Evidence (Daily Labour Register)
+
+**Authority defined; not implemented in this slice.** This authority supports Botanique's
+**casual and locally sourced labour model** — permanent worker profiles are **not** required
+for every casual worker. Each **working** Daily Site Entry should support an uploaded,
+**project-specific Daily Labour Register** evidencing attendance, containing: project; work
+date; worker names; telephone numbers; **limited identity reference where necessary**;
+roles/tasks; and signatures or attendance confirmation. Casual and locally sourced workers
+are evidenced through this register rather than through permanent profiles.
+
+- **Timing.** The morning operational plan is recorded **before work begins** (ordinarily by
+  08:30 EAT — §4.5.8); the supporting attendance register should ordinarily be uploaded
+  against the correct Daily Site Entry **by 9:00 a.m. EAT**. Late submission remains
+  **allowed and auditable** (never a blocking cut-off), retaining the actual timestamp.
+- **Absent-Martine flow.** Where Martine is absent, the site representative or the workers
+  complete the register and send it to him; **Martine uploads it against the correct
+  project/Daily Site Entry**. Accountability for the upload stays with the Operations
+  Manager.
+- **Profiles vs register.** Regular staff (for example Martine and Waweru) **may later** have
+  reusable worker profiles; casual workers remain **register-based**. This slice introduces
+  no worker-profile registry and no roster.
+- **Storage and privacy.** Actual file upload and storage of the register belong to the
+  future **Documents & Evidence domain (§9)** and are **deferred to it**; they must follow
+  **data-minimisation** (limited identity reference only where necessary; no unnecessary
+  personal data) and **retention** rules. Until that domain exists, the first slice records
+  only `evidence_status` (§4.5.11) — it does **not** upload, store, roster or pay against the
+  register, and no labour-payment workflow is created here.
 
 #### 4.5.12 Mobile-first requirement
 
