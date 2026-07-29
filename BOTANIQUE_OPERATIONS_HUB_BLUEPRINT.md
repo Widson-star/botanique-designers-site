@@ -227,8 +227,28 @@ financial records.
 ### 4.9 Daily Site Operations & Morning Compliance
 
 This is the next implementation domain after the merged Approvals foundation. **Authority
-defined; not implemented.** It sits under `BD-OPERATIONS-HUB-01` and is not a new top-level
-workstream.
+defined; Phase 1 implemented locally — hosted migration not applied.** The first narrow
+slice (Daily Site Entry capture, review/correction lifecycle, owner compliance waivers,
+morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
+interface) is built and validated locally on `feat/bd-daily-site-operations-phase-1` via
+additive migration `20260728000200_operations_hub_daily_site_operations.sql` — three tables
+(`daily_site_entries`, immutable `daily_site_entry_events`, `daily_site_compliance_waivers`),
+narrow `SECURITY DEFINER` lifecycle functions and a `daily_site_morning_compliance()`
+calculation. Accepted entries are corrected only by supersession (prior row preserved).
+Authority is **project-authority scoped**: the owner is company-wide, while a manager can
+read and act only on projects within the existing project-authority model (active
+`project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every
+manager-capable lifecycle function, and applied to the compliance calculation so no
+unauthorised project leaks. The manager's documented **portfolio-wide** authority is
+realised through `lead_person_id` and/or explicit `project_assignments` (the broader
+visibility model of §7), keeping future managers scoped. The founder has since used the
+authorised Project edit interface to set **Karen Residence — Fountain Garden & Mature
+Borders**' accountable lead to **Martine Lotom** (recorded in Activity History), so the
+Operations Manager is now authorised for **both** in-scope Ongoing sites (Alego Usonga and
+Karen Residence) via lead authority — no separate assignment row is required — and the
+**rollout prerequisite is satisfied**. See WORKSTREAMS.md → *Daily Site Operations & Morning
+Compliance* for the full Phase 1 implementation note. It sits under `BD-OPERATIONS-HUB-01`
+and is not a new top-level workstream.
 
 The domain is a per-project, per-work-date **Daily Site Entry** record capturing the
 morning operational plan — a `working` or `no_work` disposition (with a no-work reason:

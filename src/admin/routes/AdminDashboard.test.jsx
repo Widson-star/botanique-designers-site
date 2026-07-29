@@ -2,12 +2,14 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
+import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import AdminDashboard from "./AdminDashboard";
 
 function renderDashboard({
   role,
   projects = [],
   fetchActivities = vi.fn(() => new Promise(() => {})),
+  compliance = [],
 }) {
   const value = {
     role,
@@ -17,10 +19,18 @@ function renderDashboard({
     dataError: "",
     fetchActivities,
   };
+  const dailySite = {
+    compliance,
+    status: "ready",
+    createWaiver: vi.fn(() => Promise.resolve({ ok: true })),
+    refresh: vi.fn(() => Promise.resolve({ ok: true })),
+  };
   return render(
     <MemoryRouter>
       <AdminDataContext.Provider value={value}>
-        <AdminDashboard />
+        <DailySiteOperationsContext.Provider value={dailySite}>
+          <AdminDashboard />
+        </DailySiteOperationsContext.Provider>
       </AdminDataContext.Provider>
     </MemoryRouter>
   );

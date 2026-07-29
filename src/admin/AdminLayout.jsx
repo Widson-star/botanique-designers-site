@@ -10,6 +10,7 @@ import { ROLE_LABELS } from "./constants/roles";
 import SaveFeedback from "./components/SaveFeedback";
 import { profilePresentationName } from "./utils/personName";
 import { canSeeApprovals } from "./utils/approvalCapabilities";
+import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 
 const NAV_ITEMS = [
   {
@@ -23,6 +24,13 @@ const NAV_ITEMS = [
     label: "Projects",
     end: false,
     icon: "M4 5.5h12v11H4v-11Zm3-2h6v2H7v-2Z",
+  },
+  {
+    to: "/admin/daily-site-operations",
+    label: "Daily site ops",
+    end: false,
+    capability: canSeeDailySiteOperations,
+    icon: "M6 3v2m8-2v2M3.5 7.5h13M4.5 5.5h11a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z",
   },
   {
     to: "/admin/approvals",

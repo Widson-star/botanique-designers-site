@@ -2303,15 +2303,82 @@ frontend-only fix, merged after founder review.
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
 
-### Daily Site Operations & Morning Compliance — authority defined, implementation not started
+### Daily Site Operations & Morning Compliance — authority defined; Phase 1 implemented locally (not in production)
 
-Status: **AUTHORITY DEFINED / IMPLEMENTATION NOT STARTED.** This subsection records a new
-operational domain under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream
-and needs no new master register. Documentation-only: no application code, migration,
-Supabase, RLS, route, navigation, UI, hosted-data, approval request/event, Simple Invoice
-Manager, public-site or Apicora change was made. The Approvals classification
-(`APPLIED_WITH_LIMITATION`, remaining limitation: manager authenticated post-merge
-production verification) is **unchanged** and the Approvals implementation is not reopened.
+Status: **AUTHORITY DEFINED — PHASE 1 IMPLEMENTED LOCALLY; HOSTED MIGRATION NOT APPLIED.**
+The paragraphs below preserve the original authority; the **Phase 1 implementation note**
+that follows records the first narrow slice, built and validated locally on the
+`feat/bd-daily-site-operations-phase-1` branch from authoritative `main`
+`c48a004515234c66b18ac5a062f4bc4da708b929`. The module is **not** enabled in production: the
+migration has **not** been applied to hosted Supabase and no hosted data was mutated. This
+domain remains under `BD-OPERATIONS-HUB-01` — it is **not** a new top-level workstream and
+needs no new master register. The Approvals classification (`APPLIED_WITH_LIMITATION`,
+remaining limitation: manager authenticated post-merge production verification) is
+**unchanged** and the Approvals implementation is not reopened.
+
+**Phase 1 implementation note (local; draft PR).** Scope delivered: Daily Site Entry
+capture, the review/correction lifecycle, owner compliance waivers, morning-compliance
+calculation, a Dashboard attention surface and a mobile-first admin interface. Deliberately
+excluded (unchanged): Operational Expenditure, Project Funds/reconciliation, Labour
+Engagements/payments, actual/day-end fields, payroll, fund transfers, receipts/uploads,
+external email, notifications, Supabase Realtime, reports/exports, Simple Invoice Manager
+integration, public-site and Apicora work.
+
+- **Migration:** `supabase/migrations/20260728000200_operations_hub_daily_site_operations.sql`
+  (additive, forward-only; applied only on a disposable local PostgreSQL 17 database for
+  tests). Creates `daily_site_entries`, immutable `daily_site_entry_events` and
+  `daily_site_compliance_waivers` plus narrow `SECURITY DEFINER` lifecycle functions and a
+  `daily_site_morning_compliance()` calculation.
+- **Versioning/supersession:** one live entry per project/work-date (partial-unique index);
+  accepted entries are corrected only by supersession — the prior row is preserved as
+  `superseded` and a new `accepted` row (version + 1) links back via `supersedes_entry_id`.
+  No hard delete; events are append-only.
+- **RLS/role boundary (project-authority scoped):** the **owner** reads all three tables
+  company-wide; a **manager** reads only rows for projects within the existing manager
+  project-authority model — an active `project_assignments` row (via
+  `public.is_assigned_to_project`) or being the project's `lead_person_id` — enforced by the
+  `public.can_manage_daily_site_project(uuid)` helper in the SELECT policies. Role alone
+  grants nothing, so a future manager cannot see or act on unrelated projects. All mutation
+  flows through the functions (direct `INSERT/UPDATE/DELETE` revoked from `authenticated`),
+  and every manager-capable function **revalidates project authority in-transaction** against
+  the current assignment/lead state — a manager who authored an entry still loses mutation
+  access if authority is later removed. Owner-only: return, accept, void, supersede,
+  waive/revoke. Manager: create/edit-own-draft, submit, correct-and-resubmit (all
+  authority-scoped). Staff/viewer/inactive/anon denied. `temporarily_paused_for_day` never
+  mutates `projects.status`.
+- **Compliance:** EAT-explicit (`Africa/Nairobi`), 08:30 EAT is a non-blocking expectation
+  (late is database-derived), weekends create no automatic due items, waivers satisfy
+  compliance without operational totals, Ongoing/operationally-active projects only. The
+  calculation is **filtered by `can_manage_daily_site_project`**, so a manager's
+  missing/late/waived counts never leak an unauthorised project's name, id or waiver state;
+  the entry-form selector uses the matching `daily_site_authorised_projects()` list.
+- **Hosted authority reconciliation (read-only inventory, no mutation).** The chosen model
+  is the documented one: the Operations Manager's **portfolio-wide** authority (§7, "the
+  broader project-team and future visibility model") is realised through **`lead_person_id`
+  and/or explicit `project_assignments`** — not a role-wide bypass — so future managers stay
+  scoped. A read-only inventory of hosted `botanique-admin` on 2026-07-28 found nine projects
+  and two active profiles (owner Widson Ambaisi, manager Martine Lotom). The two in-scope
+  Ongoing sites are **Alego Usonga** (lead = Martine) and **Karen Residence — Fountain Garden
+  & Mature Borders**.
+- **Rollout prerequisite — SATISFIED (owner-driven, via the authorised Project interface).**
+  The founder used the existing, authorised Project edit interface to set the accountable
+  **lead** of **Karen Residence — Fountain Garden & Mature Borders** from *Not set* to
+  **Martine Lotom** (recorded in that project's Activity History). Because the approved
+  authority helper authorises a manager who is the project's `lead_person_id`, Martine is now
+  authorised for **both** current in-scope Ongoing sites — **Alego Usonga** and **Karen
+  Residence** — via lead authority. **No separate `project_assignments` row is required for
+  Karen**: `lead_person_id` already supplies valid authority. Future managers remain scoped
+  through `lead_person_id` and/or explicit `project_assignments`. A read-only verification on
+  2026-07-29 confirmed Karen is Ongoing/Implementation, not archived, in compliance scope, and
+  led by the active manager; `project_assignments` remains 0 (the founder used lead, not an
+  assignment). The blocking prerequisite is therefore **cleared**, and the module is
+  rollout-ready. (Migration `20260728000200` remained unapplied at the time of this
+  documentation update.)
+- **Validation:** isolated PostgreSQL 17 migration/test matrix green
+  (`scripts/test-daily-site-db.sh`, incl. lead-based authority, unassigned-manager denial and
+  no-authority safe state); full Vitest suite green; changed-file ESLint clean; production
+  Vite build + full prerender succeed; desktop and 390×844 mobile browser checks and
+  console/network checks clean.
 
 - **Branch / baseline:** documentation branch `docs/bd-daily-site-operations-authority`
   from authoritative `main`

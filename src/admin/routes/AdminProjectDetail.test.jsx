@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { AdminApprovalsContext } from "../context/adminApprovals";
+import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import AdminProjectDetail from "./AdminProjectDetail";
 import AdminProjectForm from "./AdminProjectForm";
 
@@ -49,11 +50,13 @@ function renderRoute(role, entry, element, projectRows = [project]) {
         <AdminApprovalsContext.Provider
           value={{ requests: [], submit: vi.fn() }}
         >
-          <Routes>
-            <Route path="/admin/projects/:id" element={element} />
-            <Route path="/admin/projects/:id/edit" element={element} />
-            <Route path="/admin/projects/new" element={element} />
-          </Routes>
+          <DailySiteOperationsContext.Provider value={{ entries: [] }}>
+            <Routes>
+              <Route path="/admin/projects/:id" element={element} />
+              <Route path="/admin/projects/:id/edit" element={element} />
+              <Route path="/admin/projects/new" element={element} />
+            </Routes>
+          </DailySiteOperationsContext.Provider>
         </AdminApprovalsContext.Provider>
       </AdminDataContext.Provider>
     </MemoryRouter>

@@ -11,6 +11,7 @@ import { canEditProjects, isOwner } from "../utils/projectCapabilities";
 import { formatDateTime } from "../utils/activityFormat";
 import { compactPersonName } from "../utils/personName";
 import ProjectApprovalActions from "../components/approvals/ProjectApprovalActions";
+import ProjectDailySiteSection from "../components/dailysite/ProjectDailySiteSection";
 
 function DetailCard({ title, children }) {
   return (
@@ -204,6 +205,7 @@ export default function AdminProjectDetail() {
             </div>
           </section>
           <ProjectApprovalActions project={project} />
+          <ProjectDailySiteSection project={project} role={role} />
         </div>
       ) : (
         <div role="tabpanel">
