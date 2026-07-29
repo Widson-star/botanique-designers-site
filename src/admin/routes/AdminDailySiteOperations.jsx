@@ -8,9 +8,10 @@ import { ROLES } from "../constants/roles";
 import {
   DISPOSITION_LABELS,
   ENTRY_STATE_LABELS,
-  dispositionSummary,
   formatKes,
   formatWorkDate,
+  plannedActivitySummary,
+  plannedWorkforceSummary,
 } from "../utils/dailySiteFormatters";
 
 const FILTERS = [
@@ -167,48 +168,149 @@ export default function AdminDailySiteOperations() {
           <p className="text-sm text-gray-500">No site entries in this view.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
-          <table className="w-full table-fixed text-left text-sm">
-            <thead className="border-b border-stone-200 bg-stone-50 text-xs text-gray-500">
-              <tr>
-                <th className="w-[38%] px-3 py-3 font-medium md:px-4">Project</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Date</th>
-                <th className="w-[32%] px-3 py-3 font-medium md:px-4">Plan</th>
-                <th className="w-[30%] px-3 py-3 font-medium md:px-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {visibleEntries.map((entry) => {
-                const project = projectsById[entry.projectId];
-                return (
-                  <tr key={entry.id}>
-                    <td className="break-words px-3 py-3 align-top md:px-4">
-                      <Link to={`/admin/daily-site-operations/${entry.id}`} className="font-semibold text-botanique-green hover:underline">
+        <>
+          {/* Desktop / wide tablet: structured table (auto layout so no column
+              is starved to a zero width and the date never wraps vertically). */}
+          <div className="hidden overflow-hidden rounded-lg border border-stone-200 bg-white md:block">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-stone-200 bg-stone-50 text-xs text-gray-500">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Project</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Work date</th>
+                  <th className="px-4 py-3 font-medium">Site plan</th>
+                  <th className="px-4 py-3 font-medium">Planned workforce</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {visibleEntries.map((entry) => {
+                  const project = projectsById[entry.projectId];
+                  const isLateBadge =
+                    entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state);
+                  return (
+                    <tr key={entry.id} className="align-top">
+                      <td className="px-4 py-3">
+                        <span className="block max-w-[16rem] break-words font-semibold text-botanique-charcoal">
+                          {project?.projectName || "Authorised project"}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        {formatWorkDate(entry.workDate)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="block font-medium text-botanique-charcoal">
+                          {DISPOSITION_LABELS[entry.disposition]}
+                        </span>
+                        <span className="mt-0.5 line-clamp-2 max-w-[22rem] break-words text-xs text-gray-500">
+                          {plannedActivitySummary(entry)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        <span className="block">{plannedWorkforceSummary(entry)}</span>
+                        {entry.disposition === "working" && (
+                          <span className="mt-0.5 block text-xs text-gray-500">
+                            {formatKes(entry.plannedLabourCost)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-botanique-charcoal">{ENTRY_STATE_LABELS[entry.state]}</span>
+                        {isLateBadge && (
+                          <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            Late
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                        <Link
+                          to={`/admin/daily-site-operations/${entry.id}`}
+                          className="font-semibold text-botanique-green hover:underline"
+                        >
+                          {reviewLabel(entry.state)}
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile / narrow tablet: stacked cards (no compressed table, no
+              horizontal overflow, large touch targets, plain-language labels). */}
+          <ul className="space-y-3 md:hidden">
+            {visibleEntries.map((entry) => {
+              const project = projectsById[entry.projectId];
+              const isLateBadge =
+                entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state);
+              return (
+                <li key={entry.id}>
+                  <Link
+                    to={`/admin/daily-site-operations/${entry.id}`}
+                    className="block rounded-lg border border-stone-200 bg-white p-4 transition hover:border-botanique-green/40 hover:bg-stone-50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="break-words font-semibold text-botanique-charcoal">
                         {project?.projectName || "Authorised project"}
-                      </Link>
-                      <span className="mt-0.5 block text-xs text-gray-500 sm:hidden">{formatWorkDate(entry.workDate)}</span>
-                    </td>
-                    <td className="hidden px-4 py-3 align-top text-gray-600 sm:table-cell">{formatWorkDate(entry.workDate)}</td>
-                    <td className="break-words px-3 py-3 align-top md:px-4">
-                      <span className="block">{DISPOSITION_LABELS[entry.disposition]}</span>
-                      <span className="block text-xs text-gray-500">
-                        {dispositionSummary(entry)}
-                        {entry.disposition === "working" ? ` · ${formatKes(entry.plannedLabourCost)}` : ""}
                       </span>
-                    </td>
-                    <td className="break-words px-3 py-3 align-top md:px-4">
-                      <span>{ENTRY_STATE_LABELS[entry.state]}</span>
-                      {entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state) && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Late</span>
+                      <span className="shrink-0 text-sm font-semibold text-botanique-green">
+                        {reviewLabel(entry.state)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">{formatWorkDate(entry.workDate)}</p>
+
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                      <CardFact label="Site activity">
+                        <span className="font-medium text-botanique-charcoal">
+                          {DISPOSITION_LABELS[entry.disposition]}
+                        </span>
+                        <span className="mt-0.5 block break-words text-xs text-gray-500">
+                          {plannedActivitySummary(entry)}
+                        </span>
+                      </CardFact>
+                      <CardFact label="Planned workforce">
+                        <span className="text-botanique-charcoal">{plannedWorkforceSummary(entry)}</span>
+                        {entry.disposition === "working" && (
+                          <span className="mt-0.5 block text-xs text-gray-500">
+                            Est. {formatKes(entry.plannedLabourCost)}
+                          </span>
+                        )}
+                      </CardFact>
+                    </dl>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-stone-100 pt-3">
+                      <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                        {ENTRY_STATE_LABELS[entry.state]}
+                      </span>
+                      {isLateBadge && (
+                        <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                          Late
+                        </span>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
+    </div>
+  );
+}
+
+// The list is read-only for a manager (they review or open); the owner can act
+// on a submitted entry. A single "Open"/"Review" verb keeps the action clear.
+function reviewLabel(state) {
+  return ["submitted", "resubmitted"].includes(state) ? "Review" : "Open";
+}
+
+function CardFact({ label, children }) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>
+      <dd className="mt-0.5">{children}</dd>
     </div>
   );
 }

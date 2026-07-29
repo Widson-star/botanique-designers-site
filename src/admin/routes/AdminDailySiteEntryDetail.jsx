@@ -147,7 +147,7 @@ export default function AdminDailySiteEntryDetail() {
       {/* Entry facts */}
       <section className="rounded-lg border border-stone-200 bg-white p-5">
         <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Detail label="Disposition">{DISPOSITION_LABELS[entry.disposition]}</Detail>
+          <Detail label="Site activity status">{DISPOSITION_LABELS[entry.disposition]}</Detail>
           {entry.disposition === "no_work" ? (
             <Detail label="Reason">
               {NO_WORK_REASON_LABELS[entry.noWorkReason] || "—"}
@@ -155,20 +155,20 @@ export default function AdminDailySiteEntryDetail() {
             </Detail>
           ) : (
             <>
-              <Detail label="Workers expected">{entry.expectedWorkerCount ?? "—"}</Detail>
+              <Detail label="Planned workforce">{entry.expectedWorkerCount ?? "—"}</Detail>
               <Detail label="Labour pricing">
                 {entry.agreedLabourTotal != null
                   ? `Agreed total ${formatKes(entry.agreedLabourTotal)}`
                   : `${formatKes(entry.ratePerWorker)} per worker`}
               </Detail>
-              <Detail label="Planned labour cost">{formatKes(entry.plannedLabourCost)}</Detail>
-              {entry.crewReference && <Detail label="Crew">{entry.crewReference}</Detail>}
-              <Detail label="Planned work">{entry.workPlanned || "—"}</Detail>
+              <Detail label="Estimated labour cost">{formatKes(entry.plannedLabourCost)}</Detail>
+              {entry.crewReference && <Detail label="Crew or team reference">{entry.crewReference}</Detail>}
+              <Detail label="Planned site activities">{entry.workPlanned || "—"}</Detail>
             </>
           )}
-          <Detail label="Funds available (planning)">{formatKes(entry.fundsAvailable)}</Detail>
-          <Detail label="Additional requested (planning)">{formatKes(entry.additionalAmountRequested)}</Detail>
-          <Detail label="Evidence status">{EVIDENCE_STATUS_LABELS[entry.evidenceStatus]}</Detail>
+          <Detail label="Site funds currently available">{formatKes(entry.fundsAvailable)}</Detail>
+          <Detail label="Additional site funds required">{formatKes(entry.additionalAmountRequested)}</Detail>
+          <Detail label="Supporting evidence">{EVIDENCE_STATUS_LABELS[entry.evidenceStatus]}</Detail>
           <Detail label="Recorded by">{resolveActorLabel(entry.createdBy, profilesById)}</Detail>
           {entry.submittedAt && (
             <Detail label="Submitted">

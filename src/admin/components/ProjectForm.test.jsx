@@ -68,18 +68,24 @@ describe("owner form", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows full controls including actual completion and editable portfolio", () => {
+  it("shows full controls including actual completion and a single portfolio control", () => {
     renderForm({ role: "owner", mode: "create" });
     expect(screen.getByLabelText("Status")).toBeInTheDocument();
     expect(screen.getByLabelText("Actual completion")).toBeInTheDocument();
-    expect(screen.getByLabelText("Portfolio eligible")).toBeInTheDocument();
-    expect(screen.getByLabelText("Portfolio permission status")).toBeInTheDocument();
+    // One clear control replaces the old checkbox + permission dropdown pair.
+    expect(screen.getByLabelText(/Portfolio publication status/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Portfolio eligible")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Portfolio permission status")).not.toBeInTheDocument();
   });
 
   it("submits and preserves the default Not Reviewed portfolio state", async () => {
     const { createProject } = renderForm({ role: "owner", mode: "create" });
-    expect(screen.getByLabelText("Portfolio eligible")).not.toBeChecked();
-    expect(screen.getByLabelText("Portfolio permission status")).toHaveValue("Not Reviewed");
+    // The dropdown is bound to the underlying permission-status column value.
+    expect(screen.getByLabelText(/Portfolio publication status/)).toHaveValue("Not Reviewed");
+    // It renders the friendly "Not assessed" label for that value.
+    expect(
+      screen.getByRole("option", { name: "Not assessed", selected: true })
+    ).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/Project name/), {
       target: { value: "Alego Usonga" },
@@ -92,6 +98,25 @@ describe("owner form", () => {
       portfolio_permission_status: "Not Reviewed",
     });
   });
+
+  it("writes both underlying columns deterministically from the single control (no conflict)", async () => {
+    const { createProject } = renderForm({ role: "owner", mode: "create" });
+    fireEvent.change(screen.getByLabelText(/Project name/), {
+      target: { value: "Publication Candidate" },
+    });
+    // Choosing "Approved for publication" maps to the Approved For Portfolio
+    // enum AND derives portfolio_eligible = true — the two can never disagree.
+    fireEvent.change(screen.getByLabelText(/Portfolio publication status/), {
+      target: { value: "Approved For Portfolio" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+
+    expect(createProject.mock.calls[0][0]).toMatchObject({
+      portfolio_permission_status: "Approved For Portfolio",
+      portfolio_eligible: true,
+    });
+  });
 });
 
 describe("manager create", () => {
@@ -102,8 +127,9 @@ describe("manager create", () => {
     expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Actual completion")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Portfolio eligible")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Portfolio publication status")).not.toBeInTheDocument();
     expect(screen.getByText(/fixed to/)).toHaveTextContent(
-      "not portfolio eligible and Not Reviewed"
+      "fixed to Not assessed for portfolio"
     );
 
     fireEvent.change(screen.getByLabelText(/Project name/), {
@@ -138,7 +164,7 @@ describe("manager edit", () => {
     // The protected lead is shown, not a select.
     expect(screen.getByText("Current assigned lead — protected profile")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText(/^Next action/), {
+    fireEvent.change(screen.getByLabelText(/^Next required action/), {
       target: { value: "Call the client" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));

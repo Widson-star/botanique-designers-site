@@ -243,10 +243,14 @@ calculation, all verified read-only after apply, with the production deployment 
 submitted events), the owner sees it with Return/Accept/Void, the manager sees no owner
 controls, and compliance reads Due 2 / Missing 1 / Late 1 / Waived 0 — with no approval
 request/event and no waiver created. Remaining limitations before fully active-verified: a
-confirmed responsive `/admin/daily-site-operations` list layout defect (separate narrow code
-PR), clean owner/manager Console evidence, and explicit confirmation Martine's selector lists
-both Alego and Karen. Accepted entries are corrected only by supersession (prior row
-preserved).
+confirmed responsive `/admin/daily-site-operations` list layout defect (**now repaired locally
+in a draft, unmerged frontend PR**, `fix/bd-daily-site-list-and-language-polish` — auto-layout
+six-column desktop table + stacked mobile cards, plus corporate-language label polish and a
+single **Portfolio publication status** control that consolidates the old eligible-checkbox +
+permission-dropdown pair with **no migration and no public-publication automation**; the
+public portfolio remains a separate curated dataset), clean owner/manager Console evidence, and
+explicit confirmation Martine's selector lists both Alego and Karen. Accepted entries are
+corrected only by supersession (prior row preserved).
 Authority is **project-authority scoped**: the owner is company-wide, while a manager can
 read and act only on projects within the existing project-authority model (active
 `project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every

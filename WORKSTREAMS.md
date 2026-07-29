@@ -2353,8 +2353,10 @@ reconciliation (read-only).
 1. **Responsive Daily Site Operations list defect (confirmed in production).** On
    `/admin/daily-site-operations` the desktop table row overlaps: the Date and Plan headings
    overlap, the work date wraps vertically, and "Working today" crowds/overlaps the date,
-   making the row hard to scan. Repair recommended in a **separate narrow code PR** (see the
-   layout-defect note below); not fixed here.
+   making the row hard to scan. **Now repaired locally** on branch
+   `fix/bd-daily-site-list-and-language-polish` (see the "Responsive-list repair +
+   corporate-language polish" note below) — the fix is in a **draft, unmerged** PR pending
+   authenticated production verification, so this limitation stays open until that merge.
 2. **Clean owner Console evidence** still to be captured (no React #418 or blocking error on
    the owner authenticated views).
 3. **Clean manager Console evidence** still to be captured (same, for the manager).
@@ -2386,6 +2388,59 @@ corporate-language polish only if that implementation PR stays narrow and review
 > says "implemented locally", "not applied to hosted" or "not enabled in production", that
 > status is now **superseded** — the migration is applied, the module is merged, and it is in
 > authenticated production use (see the `APPLIED_WITH_LIMITATION` status above).
+
+**Responsive-list repair + corporate-language polish — implemented locally (draft PR, not
+merged).** A narrow frontend-only PR on branch `fix/bd-daily-site-list-and-language-polish`
+(baseline main `9355b5869773502d33860296f0d9ff7150f2e476`) addresses limitation #1 and the
+UI-language follow-up above. **No hosted data was mutated, no migration was created, and no
+hosted schema/enum changed.**
+
+- **List repair (root cause + fix).** The desktop list used `table-fixed` with column widths
+  summing to 100 % (`38% + 32% + 30%`) while the un-widthed Date column was starved to **0 %**,
+  forcing the work date to wrap vertically character-by-character. Repaired to an
+  **auto-layout** table with six clear columns — **Project · Work date · Site plan · Planned
+  workforce · Status · Action** — the work-date cell kept on one line (`whitespace-nowrap`),
+  the site-plan summary clamped (`line-clamp-2`). Below `md` the table is replaced by
+  **stacked cards** (Project, Work date, Site activity, Planned workforce, Estimated labour
+  cost, Status, Late badge, Open/Review action) with no horizontal overflow and large touch
+  targets. Verified at 1440×900, 1024×768, 768×1024 and 390×844 with a clean console.
+- **Daily Site corporate-label mapping (display-only; enum values preserved).** Disposition →
+  **Site activity status**; Workers expected → **Planned workforce**; Planned labour cost →
+  **Estimated labour cost**; Planned work → **Planned site activities**; Crew reference →
+  **Crew or team reference**; Funds available (planning) → **Site funds currently available**;
+  Additional requested (planning) → **Additional site funds required**; Evidence status →
+  **Supporting evidence**. Supporting-evidence option wording: none → **Not provided**,
+  promised → **Expected later**, provided → **Confirmed as available**, not_required →
+  **Not required** (stored keys `none/promised/provided/not_required` unchanged).
+- **Project-form corporate-label mapping (semantics unchanged).** Next action → **Next required
+  action**; Due date → **Action due date**; Current blocker → **Current delivery constraint**;
+  Internal notes → **Internal project notes**.
+- **Portfolio field decision — Option A (display-only consolidation; no migration).** The old
+  `Portfolio eligible` **checkbox** + `Portfolio permission status` **dropdown** are replaced
+  by **one** control, **Portfolio publication status**, bound to the existing
+  `portfolio_permission_status` column; the legacy `portfolio_eligible` boolean is **derived
+  deterministically** so the two can never disagree. Legacy-value → display mapping: Not
+  Reviewed → **Not assessed** (eligible false); Eligible → **Internal portfolio candidate**
+  (true); Permission Needed → **Client authorisation required** (true); Approved For Portfolio
+  → **Approved for publication** (true); Private / Do Not Publish → **Confidential — do not
+  publish** (false). An untouched field is written unchanged (no silent reinterpretation).
+- **Audit — do either field publish publicly? No.** The public website portfolio renders from a
+  **static, curated** dataset (`src/data/case-studies.js`); neither `portfolio_eligible` nor
+  `portfolio_permission_status` feeds public publication. **"Approved for publication" is an
+  internal authorisation only and never auto-creates or publishes a public project.**
+- **Hosted portfolio inventory (read-only; 9 projects, none mutated).** All nine projects have
+  `portfolio_eligible = false`; **four** carry a permission status implying eligibility and are
+  therefore **contradictory** under the old dual-field model — Alego Usonga (Eligible), Mununga
+  Corridor (Approved For Portfolio), Tsavo Company Projects (Approved For Portfolio) and Zizu
+  Investments (Eligible). This live conflict is exactly what the single-field consolidation
+  removes going forward. The remaining five (Karen Residence, KSMS/CBK-IMS, Muthithi Gardens,
+  Rift and Ridge Diani, Zaara Park) are consistent at Not Reviewed.
+- **Validation.** Full frontend suite green (233 tests, 29 files); lint clean on all changed
+  files; `npm run build` (sitemap + Vite + prerender of 43 routes) succeeds. The production
+  Alego entry, all nine projects, Approvals, Simple Invoice Manager and the public portfolio
+  are **unchanged**. Classification stays **`APPLIED_WITH_LIMITATION`** — a local repair does
+  not by itself justify `ACTIVE_VERIFIED`; authenticated owner/manager production verification
+  remains outstanding.
 
 **Phase 1 implementation note (historical — local-development evidence).** Scope delivered:
 Daily Site Entry capture, the review/correction lifecycle, owner compliance waivers,

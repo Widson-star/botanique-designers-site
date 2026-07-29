@@ -5,6 +5,7 @@
 import { Link } from "react-router-dom";
 import { pendingActivationProjects } from "../utils/dashboardMetrics";
 import { compactPersonName } from "../utils/personName";
+import { portfolioPublicationLabel } from "../constants/projectStatus";
 
 export default function PendingActivationList({ projects }) {
   const pending = pendingActivationProjects(projects);
@@ -49,7 +50,7 @@ export default function PendingActivationList({ projects }) {
                     </div>
                     <div>
                       <dt className="inline font-medium">Portfolio: </dt>
-                      <dd className="inline">{project.portfolioPermissionStatus}</dd>
+                      <dd className="inline">{portfolioPublicationLabel(project.portfolioPermissionStatus)}</dd>
                     </div>
                   </dl>
                 </div>

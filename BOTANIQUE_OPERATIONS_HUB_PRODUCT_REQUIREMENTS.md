@@ -216,9 +216,12 @@ sees the submitted entry with Return / Accept / Void controls; the manager sees 
 review controls; morning compliance reads Due 2 / Missing 1 (Karen) / Late 1 (Alego) /
 Waived 0. The submission created **no** approval request or event, and **no** waiver exists.
 Remaining limitations (why not yet fully active-verified): a confirmed responsive
-`/admin/daily-site-operations` list layout defect (separate narrow code PR); clean owner and
-manager Console evidence still to capture; and explicit confirmation that Martine's new-entry
-selector lists both Alego and Karen. See WORKSTREAMS.md → *Daily Site Operations & Morning
+`/admin/daily-site-operations` list layout defect (**now repaired locally in a draft, unmerged
+frontend PR** — auto-layout six-column desktop table + stacked mobile cards, corporate-language
+label polish, and a single **Portfolio publication status** control replacing the old
+eligible-checkbox + permission-dropdown pair via display-only mapping with **no migration and
+no automatic public publication**); clean owner and manager Console evidence still to capture;
+and explicit confirmation that Martine's new-entry selector lists both Alego and Karen. See WORKSTREAMS.md → *Daily Site Operations & Morning
 Compliance* for the full note (schema, versioning/supersession, RLS/role boundary,
 compliance/EAT handling, the verified first entry, the layout defect and remaining
 limitations). Manager authority is **project-authority scoped**

@@ -10,6 +10,7 @@ import { canViewProject } from "../utils/permissions";
 import { canEditProjects, isOwner } from "../utils/projectCapabilities";
 import { formatDateTime } from "../utils/activityFormat";
 import { compactPersonName } from "../utils/personName";
+import { portfolioPublicationLabel } from "../constants/projectStatus";
 import ProjectApprovalActions from "../components/approvals/ProjectApprovalActions";
 import ProjectDailySiteSection from "../components/dailysite/ProjectDailySiteSection";
 
@@ -196,8 +197,10 @@ export default function AdminProjectDetail() {
                     Portfolio Overview
                   </h3>
                   <dl className="mt-2">
-                    <DetailRow label="Eligible" value={project.portfolioEligible ? "Yes" : "No"} />
-                    <DetailRow label="Permission status" value={project.portfolioPermissionStatus} />
+                    <DetailRow
+                      label="Publication status"
+                      value={portfolioPublicationLabel(project.portfolioPermissionStatus)}
+                    />
                     <DetailRow label="Archived" value={project.archived ? "Yes" : "No"} />
                   </dl>
                 </aside>

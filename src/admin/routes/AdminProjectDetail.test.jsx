@@ -87,7 +87,7 @@ describe("project detail role visibility", () => {
     expect(screen.queryByRole("link", { name: "Edit project" })).not.toBeInTheDocument();
   });
 
-  it("renders the returned false / Not Reviewed portfolio values without substitution", () => {
+  it("shows a single friendly publication status derived from the stored permission value", () => {
     renderRoute("owner", "/admin/projects/p1", <AdminProjectDetail />, [
       {
         ...project,
@@ -96,9 +96,10 @@ describe("project detail role visibility", () => {
       },
     ]);
     const portfolio = screen.getByRole("heading", { name: "Portfolio Overview" }).closest("aside");
-    expect(portfolio).toHaveTextContent("EligibleNo");
-    expect(portfolio).toHaveTextContent("Permission statusNot Reviewed");
-    expect(portfolio).not.toHaveTextContent("Permission statusEligible");
+    // The single consolidated control: friendly label, no raw enum, no separate
+    // eligibility row that could contradict the status.
+    expect(portfolio).toHaveTextContent("Publication statusNot assessed");
+    expect(portfolio).not.toHaveTextContent("Eligible");
   });
 });
 
