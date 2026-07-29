@@ -24,10 +24,13 @@ export const NO_WORK_REASON_LABELS = {
   other: "Other",
 };
 
+// Display-only labels for the supporting-evidence enum. The stored values
+// (none/promised/provided/not_required) are unchanged; only the wording shown
+// to operators is polished to professional operational language.
 export const EVIDENCE_STATUS_LABELS = {
-  none: "None",
-  promised: "Promised",
-  provided: "Provided",
+  none: "Not provided",
+  promised: "Expected later",
+  provided: "Confirmed as available",
   not_required: "Not required",
 };
 
@@ -184,4 +187,24 @@ export function dispositionSummary(entry) {
   }
   const count = entry.expectedWorkerCount ?? 0;
   return `${count} worker${count === 1 ? "" : "s"} planned`;
+}
+
+// Concise planned-activity summary for the list's Site plan column. For a
+// working day this is the planned activities text; for a no-work day it is the
+// reason. Never returns raw enum values. Falls back to a plain placeholder.
+export function plannedActivitySummary(entry) {
+  if (!entry) return "";
+  if (entry.disposition === "no_work") {
+    const label = NO_WORK_REASON_LABELS[entry.noWorkReason] || "No work today";
+    return entry.reasonDetail ? `${label} — ${entry.reasonDetail}` : label;
+  }
+  return entry.workPlanned?.trim() || "No planned activities recorded";
+}
+
+// Planned workforce headline for the list — worker count only (cost is shown
+// separately). Returns "—" for a no-work day.
+export function plannedWorkforceSummary(entry) {
+  if (!entry || entry.disposition === "no_work") return "—";
+  const count = entry.expectedWorkerCount ?? 0;
+  return `${count} worker${count === 1 ? "" : "s"}`;
 }

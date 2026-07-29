@@ -6,8 +6,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  PORTFOLIO_PERMISSION_STATUSES,
+  PORTFOLIO_PUBLICATION_OPTIONS,
   PROJECT_TYPES,
+  derivePortfolioEligible,
 } from "../constants/projectStatus";
 import { useAdminData } from "../context/adminData";
 import {
@@ -364,7 +365,7 @@ export default function ProjectForm({ mode, project }) {
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <Field
-            label="Next action"
+            label="Next required action"
             htmlFor="nextAction"
             error={errors.nextAction}
             hint="What must happen next?"
@@ -381,7 +382,7 @@ export default function ProjectForm({ mode, project }) {
           </Field>
 
           <Field
-            label="Due date"
+            label="Action due date"
             htmlFor="nextActionDate"
             hint="When should this action be completed?"
           >
@@ -396,7 +397,7 @@ export default function ProjectForm({ mode, project }) {
         </div>
 
         <Field
-          label="Current blocker"
+          label="Current delivery constraint"
           htmlFor="blocker"
           error={errors.blocker}
           hint="What is preventing progress? Leave blank if nothing."
@@ -413,7 +414,7 @@ export default function ProjectForm({ mode, project }) {
         </Field>
 
         <Field
-          label="Internal notes"
+          label="Internal project notes"
           htmlFor="notes"
           error={errors.notes}
           hint="Background, decisions or instructions the team should retain."
@@ -433,38 +434,38 @@ export default function ProjectForm({ mode, project }) {
         <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
           <h2 className="text-base font-semibold">Portfolio</h2>
           {caps.portfolioEditable ? (
-          <div className="grid md:grid-cols-2 gap-4">
-            <label className="flex items-center gap-2 text-sm" htmlFor="portfolioEligible">
-              <input
-                id="portfolioEligible"
-                type="checkbox"
-                checked={form.portfolioEligible}
-                onChange={(e) => setField("portfolioEligible", e.target.checked)}
-                className="h-4 w-4 rounded border-stone-300 text-botanique-green focus:ring-botanique-green"
-              />
-              Portfolio eligible
-            </label>
-
-            <Field label="Portfolio permission status" htmlFor="portfolioPermissionStatus">
+            <Field
+              label="Portfolio publication status"
+              htmlFor="portfolioPublicationStatus"
+              hint="Controls whether the project may be considered for Botanique's public portfolio. Approval does not publish the project automatically."
+            >
               <select
-                id="portfolioPermissionStatus"
+                id="portfolioPublicationStatus"
                 value={form.portfolioPermissionStatus}
-                onChange={(e) => setField("portfolioPermissionStatus", e.target.value)}
+                onChange={(e) => {
+                  const status = e.target.value;
+                  // One control writes both underlying columns deterministically,
+                  // so the eligibility flag and permission status can never
+                  // disagree. Public publication remains a separate process.
+                  setForm((current) => ({
+                    ...current,
+                    portfolioPermissionStatus: status,
+                    portfolioEligible: derivePortfolioEligible(status),
+                  }));
+                }}
                 className={inputClass}
               >
-                {PORTFOLIO_PERMISSION_STATUSES.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
+                {PORTFOLIO_PUBLICATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
             </Field>
-          </div>
           ) : (
             <div className="rounded-md border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-gray-600">
-              New manager-created projects are fixed to <strong>not portfolio eligible</strong>{" "}
-              and <strong>Not Reviewed</strong>. The owner reviews any later portfolio
-              eligibility or publication permission decision.
+              New manager-created projects are fixed to <strong>Not assessed</strong> for
+              portfolio. The owner reviews any later portfolio publication decision.
             </div>
           )}
         </section>

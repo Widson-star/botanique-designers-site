@@ -1,7 +1,7 @@
 // Project list filters. State is owned by the Projects route (synced to URL
 // search parameters) so dashboard/chart links can open filtered views.
 import {
-  PORTFOLIO_PERMISSION_STATUSES,
+  PORTFOLIO_PUBLICATION_OPTIONS,
   PROJECT_STAGES,
   PROJECT_STATUSES,
   PROJECT_TYPES,
@@ -59,10 +59,10 @@ export default function ProjectFilters({ filters, updateFilter, resetFilters, le
 
         {isOwner(role) && (
           <SelectFilter
-            label="Portfolio permission"
+            label="Portfolio status"
             value={filters.portfolio}
             onChange={(v) => updateFilter("portfolio", v)}
-            options={PORTFOLIO_PERMISSION_STATUSES}
+            options={PORTFOLIO_PUBLICATION_OPTIONS}
           />
         )}
 

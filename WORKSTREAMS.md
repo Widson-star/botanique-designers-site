@@ -2303,11 +2303,17 @@ frontend-only fix, merged after founder review.
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
 
-### Daily Site Operations & Morning Compliance — live in production; first real entry recorded
+### Daily Site Operations & Morning Compliance — live in production; ACTIVE_VERIFIED
 
-Status: **APPLIED_WITH_LIMITATION.** Phase 1 is merged, its additive migration is live on
-hosted `botanique-admin`, the production frontend is active, and **authenticated production
-use has now occurred**. PR #41 merged at authoritative `main`
+Status: **ACTIVE_VERIFIED** (2026-07-29). Previously `APPLIED_WITH_LIMITATION`; all four
+recorded limitations are now closed — the responsive-list repair + corporate-language polish +
+single owner-only Portfolio control shipped in PR #43, and the founder completed authenticated
+owner and manager verification on the exact PR #43 Vercel preview (owner PASSED; manager
+PASSED, selector confirmed to include Alego and Karen). See "All four remaining limitations are
+now CLOSED" below. This does **not** alter the Approvals classification, and it does not close
+the separate manager-material-change governance gap (a distinct, future domain). Phase 1 is
+merged, its additive migration is live on hosted `botanique-admin`, the production frontend is
+active, and **authenticated production use has now occurred**. PR #41 merged at authoritative `main`
 `dfb79373397637694fa26d730c110da58f20acae` (merge commit; parents
 `c48a004515234c66b18ac5a062f4bc4da708b929` + reviewed head `d1531e2`). The hosted migration
 `20260728000200_operations_hub_daily_site_operations.sql` was applied successfully (recorded
@@ -2349,17 +2355,25 @@ implemented**. Current hosted counts: `daily_site_entries` = **1**, `daily_site_
 = 0; `approval_requests` = 0; `approval_events` = 0. No hosted row was mutated by this
 reconciliation (read-only).
 
-**Remaining limitations (why not yet `ACTIVE_VERIFIED`).**
-1. **Responsive Daily Site Operations list defect (confirmed in production).** On
-   `/admin/daily-site-operations` the desktop table row overlaps: the Date and Plan headings
-   overlap, the work date wraps vertically, and "Working today" crowds/overlaps the date,
-   making the row hard to scan. Repair recommended in a **separate narrow code PR** (see the
-   layout-defect note below); not fixed here.
-2. **Clean owner Console evidence** still to be captured (no React #418 or blocking error on
-   the owner authenticated views).
-3. **Clean manager Console evidence** still to be captured (same, for the manager).
-4. **Explicit confirmation** that Martine's **new-entry project selector** includes **both**
-   Alego Usonga and Karen Residence — Fountain Garden & Mature Borders.
+**All four remaining limitations are now CLOSED (authenticated exact-preview verification,
+2026-07-29).** The founder ran the checks personally on the exact PR #43 Vercel preview
+(`botanique-designers-sit-git-d70901-…vercel.app`), because the assisting environment cannot
+authenticate there; the results below are the founder's recorded verification.
+1. **Responsive Daily Site Operations list defect — FIXED and verified.** Root cause: the
+   desktop `table-fixed` widths summed to 100 % (`38+32+30`), starving the un-widthed Date
+   column to 0 % so the work date wrapped vertically. Repaired to an auto-layout six-column
+   table (**Project · Work date · Site plan · Planned workforce · Status · Action**, date on
+   one line, site-plan clamped) with stacked mobile cards below `md`. Verified on the exact
+   preview (owner): six clear columns, no Date/Site-plan overlap, one-line dates.
+2. **Clean owner Console evidence — MET.** Owner preview PASSED: the repaired list, corporate
+   labels, the single Portfolio publication control (old checkbox absent, five options, helper
+   text), and Projects/Approvals all load and render correctly; no form saved.
+3. **Clean manager Console evidence — MET.** Manager preview PASSED: entry detail readable,
+   corporate labels present, no Return/Accept/Void, no supersession control, Portfolio not
+   editable, Projects/Approvals load; nothing submitted, no form saved.
+4. **Manager selector includes both projects — CONFIRMED.** Authenticated as Martine, the New
+   site entry selector lists **Alego Usonga** and **Karen Residence — Fountain Garden & Mature
+   Borders** (plus the also-Martine-led **Mununga Corridor**); no unrelated project appears.
 
 **Confirmed production layout defect — `/admin/daily-site-operations` list.** The desktop
 table row has overlapping content (Date/Plan headings overlap; work date wraps to multiple
@@ -2386,6 +2400,86 @@ corporate-language polish only if that implementation PR stays narrow and review
 > says "implemented locally", "not applied to hosted" or "not enabled in production", that
 > status is now **superseded** — the migration is applied, the module is merged, and it is in
 > authenticated production use (see the `APPLIED_WITH_LIMITATION` status above).
+
+**Responsive-list repair + corporate-language polish — PR #43, authenticated-preview verified,
+merged.** A narrow frontend-only PR on branch `fix/bd-daily-site-list-and-language-polish`
+(baseline main `9355b5869773502d33860296f0d9ff7150f2e476`) addresses limitation #1 and the
+UI-language follow-up above. It carried **no migration and no hosted schema/enum change**; the
+only hosted writes were the separately-authorised test-data reconciliation recorded below (not
+part of the PR code). Frontend suite green (233 tests), lint clean, build + prerender of 43
+routes, Vercel preview green; owner and manager exact-preview verification PASSED.
+
+**Test-data reconciliation (2026-07-29, founder-authorised, applied via the database path under
+the owner identity; recorded in `project_activities`).** During account/role testing the founder
+made several changes that were then corrected to their intended values: **Zaara Park** lead
+Martine → **Unassigned** (its owner-set Completed status + 2023-06-30 date were left as-is, not
+part of the reversal); **Karen** restored to name **"Karen Residence — Fountain Garden & Mature
+Borders"**, status **Ongoing**, lead **Martine Lotom**. Projects remain **9**; `approval_requests`
+and `approval_events` remain **0**; the accepted **Alego** entry is unchanged.
+
+**Karen Daily Site Entry `9fa0c797-c353-4514-acf8-87d4f31fd7aa` — role-verification TEST DATA,
+left as-is by decision.** This is an owner-created no-work entry (created + submitted + accepted
+by the owner within ~11 s on 2026-07-29), not a genuine site-manager operational record. The
+implemented lifecycle **cannot void an accepted entry** (only supersession applies, and that
+would create a replacement accepted record rather than remove it from compliance). Rather than
+create a new operational record, the founder chose to **leave it unchanged and document-only**;
+it is recorded here as test data. Full exclusion from operational compliance awaits a future
+test-data/exclude lifecycle capability. **The legitimate accepted Alego entry was not touched.**
+
+**Separate, still-open governance gap (not part of PR #43).** A manager can currently write
+material project fields — including accountable lead, project name, client identity, location,
+project type and planned/actual start — and create projects **directly**, with no Approvals
+gate; only the six lifecycle actions (activation, target-completion change, completion,
+cancellation, archive, restore) are proposal-gated. This pre-existing gap is tracked for a
+dedicated **Project Material Change Approvals + manager project-scope restriction** domain and is
+**not** addressed by PR #43. See the PR #43 audit comment for the full finding.
+
+- **List repair (root cause + fix).** The desktop list used `table-fixed` with column widths
+  summing to 100 % (`38% + 32% + 30%`) while the un-widthed Date column was starved to **0 %**,
+  forcing the work date to wrap vertically character-by-character. Repaired to an
+  **auto-layout** table with six clear columns — **Project · Work date · Site plan · Planned
+  workforce · Status · Action** — the work-date cell kept on one line (`whitespace-nowrap`),
+  the site-plan summary clamped (`line-clamp-2`). Below `md` the table is replaced by
+  **stacked cards** (Project, Work date, Site activity, Planned workforce, Estimated labour
+  cost, Status, Late badge, Open/Review action) with no horizontal overflow and large touch
+  targets. Verified at 1440×900, 1024×768, 768×1024 and 390×844 with a clean console.
+- **Daily Site corporate-label mapping (display-only; enum values preserved).** Disposition →
+  **Site activity status**; Workers expected → **Planned workforce**; Planned labour cost →
+  **Estimated labour cost**; Planned work → **Planned site activities**; Crew reference →
+  **Crew or team reference**; Funds available (planning) → **Site funds currently available**;
+  Additional requested (planning) → **Additional site funds required**; Evidence status →
+  **Supporting evidence**. Supporting-evidence option wording: none → **Not provided**,
+  promised → **Expected later**, provided → **Confirmed as available**, not_required →
+  **Not required** (stored keys `none/promised/provided/not_required` unchanged).
+- **Project-form corporate-label mapping (semantics unchanged).** Next action → **Next required
+  action**; Due date → **Action due date**; Current blocker → **Current delivery constraint**;
+  Internal notes → **Internal project notes**.
+- **Portfolio field decision — Option A (display-only consolidation; no migration).** The old
+  `Portfolio eligible` **checkbox** + `Portfolio permission status` **dropdown** are replaced
+  by **one** control, **Portfolio publication status**, bound to the existing
+  `portfolio_permission_status` column; the legacy `portfolio_eligible` boolean is **derived
+  deterministically** so the two can never disagree. Legacy-value → display mapping: Not
+  Reviewed → **Not assessed** (eligible false); Eligible → **Internal portfolio candidate**
+  (true); Permission Needed → **Client authorisation required** (true); Approved For Portfolio
+  → **Approved for publication** (true); Private / Do Not Publish → **Confidential — do not
+  publish** (false). An untouched field is written unchanged (no silent reinterpretation).
+- **Audit — do either field publish publicly? No.** The public website portfolio renders from a
+  **static, curated** dataset (`src/data/case-studies.js`); neither `portfolio_eligible` nor
+  `portfolio_permission_status` feeds public publication. **"Approved for publication" is an
+  internal authorisation only and never auto-creates or publishes a public project.**
+- **Hosted portfolio inventory (read-only; 9 projects, none mutated).** All nine projects have
+  `portfolio_eligible = false`; **four** carry a permission status implying eligibility and are
+  therefore **contradictory** under the old dual-field model — Alego Usonga (Eligible), Mununga
+  Corridor (Approved For Portfolio), Tsavo Company Projects (Approved For Portfolio) and Zizu
+  Investments (Eligible). This live conflict is exactly what the single-field consolidation
+  removes going forward. The remaining five (Karen Residence, KSMS/CBK-IMS, Muthithi Gardens,
+  Rift and Ridge Diani, Zaara Park) are consistent at Not Reviewed.
+- **Validation.** Full frontend suite green (233 tests, 29 files); lint clean on all changed
+  files; `npm run build` (sitemap + Vite + prerender of 43 routes) succeeds. The production
+  Alego entry, all nine projects, Approvals, Simple Invoice Manager and the public portfolio
+  are **unchanged**. Classification stays **`APPLIED_WITH_LIMITATION`** — a local repair does
+  not by itself justify `ACTIVE_VERIFIED`; authenticated owner/manager production verification
+  remains outstanding.
 
 **Phase 1 implementation note (historical — local-development evidence).** Scope delivered:
 Daily Site Entry capture, the review/correction lifecycle, owner compliance waivers,

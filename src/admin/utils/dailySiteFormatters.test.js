@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  EVIDENCE_STATUS_LABELS,
   dispositionSummary,
   formatKes,
   mapComplianceRow,
   mapDailySiteEntry,
+  plannedActivitySummary,
+  plannedWorkforceSummary,
   todayIso,
 } from "./dailySiteFormatters";
 
@@ -35,6 +38,51 @@ describe("entry mapping", () => {
     expect(dispositionSummary({ disposition: "working", expectedWorkerCount: 1 })).toBe("1 worker planned");
     expect(dispositionSummary({ disposition: "working", expectedWorkerCount: 4 })).toBe("4 workers planned");
     expect(dispositionSummary({ disposition: "no_work", noWorkReason: "rain" })).toBe("Rain");
+  });
+});
+
+describe("list column helpers", () => {
+  it("summarises planned activities for a working day, with a plain fallback", () => {
+    expect(
+      plannedActivitySummary({ disposition: "working", workPlanned: "Lay turf" })
+    ).toBe("Lay turf");
+    expect(
+      plannedActivitySummary({ disposition: "working", workPlanned: "" })
+    ).toBe("No planned activities recorded");
+  });
+
+  it("summarises a no-work day using the reason label (never a raw enum)", () => {
+    expect(
+      plannedActivitySummary({ disposition: "no_work", noWorkReason: "rain" })
+    ).toBe("Rain");
+    expect(
+      plannedActivitySummary({
+        disposition: "no_work",
+        noWorkReason: "other",
+        reasonDetail: "Public holiday",
+      })
+    ).toBe("Other — Public holiday");
+  });
+
+  it("shows the planned worker count and a dash for a no-work day", () => {
+    expect(plannedWorkforceSummary({ disposition: "working", expectedWorkerCount: 6 })).toBe("6 workers");
+    expect(plannedWorkforceSummary({ disposition: "working", expectedWorkerCount: 1 })).toBe("1 worker");
+    expect(plannedWorkforceSummary({ disposition: "no_work" })).toBe("—");
+  });
+});
+
+describe("supporting-evidence display labels", () => {
+  it("uses professional wording while preserving the stored enum keys", () => {
+    expect(EVIDENCE_STATUS_LABELS).toMatchObject({
+      none: "Not provided",
+      promised: "Expected later",
+      provided: "Confirmed as available",
+      not_required: "Not required",
+    });
+    // The stored keys themselves are unchanged (no migration).
+    expect(Object.keys(EVIDENCE_STATUS_LABELS).sort()).toEqual(
+      ["none", "not_required", "promised", "provided"].sort()
+    );
   });
 });
 

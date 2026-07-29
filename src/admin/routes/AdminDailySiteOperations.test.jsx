@@ -12,9 +12,9 @@ const projects = [
   { id: "p2", projectName: "Lugulu Estate", status: "Ongoing", stage: "Implementation", archived: false },
 ];
 
-function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {} } = {}) {
+function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {}, projectsOverride } = {}) {
   const adminValue = {
-    role, projects, profilesById: {}, currentUserId: "m1",
+    role, projects: projectsOverride || projects, profilesById: {}, currentUserId: "m1",
   };
   const dailyValue = {
     entries, compliance, authorisedProjects, status: "ready", error: "",
@@ -66,7 +66,7 @@ describe("AdminDailySiteOperations queue and summary", () => {
     {
       id: "e1", projectId: "p1", workDate: todayIso(), disposition: "working",
       expectedWorkerCount: 6, ratePerWorker: 400, plannedLabourCost: 2400, state: "submitted",
-      isLate: false, noWorkReason: "",
+      isLate: false, noWorkReason: "", workPlanned: "Lay turf and edge the borders",
     },
   ];
 
@@ -78,8 +78,79 @@ describe("AdminDailySiteOperations queue and summary", () => {
 
   it("renders entries as readable rows without raw ids or JSON", () => {
     const { container } = renderRoute({ entries, compliance });
-    expect(screen.getByRole("link", { name: "Karen Residence" })).toBeInTheDocument();
+    // Rendered in both the desktop table and the mobile card (CSS-hidden, still
+    // in the DOM), so the project name and workforce appear more than once.
+    expect(screen.getAllByText("Karen Residence").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("6 workers").length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+    expect(container.textContent).not.toMatch(/[{}]/);
+  });
+
+  it("renders the six desktop columns in order with the date on one line", () => {
+    const { container } = renderRoute({ entries, compliance });
+    const headers = Array.from(container.querySelectorAll("thead th")).map((th) =>
+      th.textContent.trim()
+    );
+    expect(headers).toEqual([
+      "Project",
+      "Work date",
+      "Site plan",
+      "Planned workforce",
+      "Status",
+      "Action",
+    ]);
+    // The work-date cell is kept on a single line (never vertical char wrapping).
+    const dateCell = Array.from(container.querySelectorAll("tbody td")).find((td) =>
+      /\d{4}/.test(td.textContent)
+    );
+    expect(dateCell.className).toMatch(/whitespace-nowrap/);
+  });
+
+  it("offers a Review action for a submitted entry and shows the estimated labour cost", () => {
+    renderRoute({ entries, compliance });
+    const reviewLinks = screen.getAllByRole("link", { name: "Review" });
+    expect(reviewLinks.length).toBeGreaterThan(0);
+    expect(reviewLinks[0]).toHaveAttribute("href", "/admin/daily-site-operations/e1");
+    expect(screen.getAllByText("KES 2,400").length).toBeGreaterThan(0);
+  });
+
+  it("shows a Late badge for a late submitted entry", () => {
+    renderRoute({
+      entries: [{ ...entries[0], isLate: true }],
+      compliance,
+    });
+    expect(screen.getAllByText("Late").length).toBeGreaterThan(0);
+  });
+
+  it("renders a no-work entry with its reason and no workforce cost", () => {
+    renderRoute({
+      entries: [
+        {
+          id: "e2", projectId: "p1", workDate: todayIso(), disposition: "no_work",
+          noWorkReason: "rain", state: "submitted", isLate: false,
+        },
+      ],
+      compliance,
+    });
+    expect(screen.getAllByText("No work today").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rain").length).toBeGreaterThan(0);
+  });
+
+  it("handles a long project name and long planned activities without raw JSON", () => {
+    const longName =
+      "Karen Residence — Fountain Garden, Mature Borders, Water Feature & Perimeter Screening";
+    const { container } = renderRoute({
+      entries: [
+        {
+          ...entries[0],
+          workPlanned:
+            "Excavate and prepare the northern bed, install irrigation spurs, then lay imported topsoil across the full border run before planting.",
+        },
+      ],
+      compliance,
+      projectsOverride: [{ id: "p1", projectName: longName, status: "Ongoing", stage: "Implementation", archived: false }],
+    });
+    expect(screen.getAllByText(longName).length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/[{}]/);
   });
 });

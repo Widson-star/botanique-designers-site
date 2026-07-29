@@ -134,7 +134,7 @@ export default function DailySiteEntryForm({
       {form.disposition === "working" ? (
         <>
           <div>
-            <label className={labelClass} htmlFor="dse-workers">Workers expected</label>
+            <label className={labelClass} htmlFor="dse-workers">Planned workforce</label>
             <input
               id="dse-workers"
               type="number"
@@ -191,12 +191,12 @@ export default function DailySiteEntryForm({
           )}
 
           <div className="rounded-lg border border-botanique-green/30 bg-[#edf2ef] px-4 py-3">
-            <p className="text-sm text-gray-600">Planned labour cost</p>
+            <p className="text-sm text-gray-600">Estimated labour cost</p>
             <p className="text-xl font-semibold text-botanique-green" aria-live="polite">{formatKes(plannedCost)}</p>
           </div>
 
           <div>
-            <label className={labelClass} htmlFor="dse-work">Planned work</label>
+            <label className={labelClass} htmlFor="dse-work">Planned site activities</label>
             <textarea
               id="dse-work"
               rows={3}
@@ -208,7 +208,7 @@ export default function DailySiteEntryForm({
           </div>
 
           <div>
-            <label className={labelClass} htmlFor="dse-crew">Crew reference (optional)</label>
+            <label className={labelClass} htmlFor="dse-crew">Crew or team reference (optional)</label>
             <input
               id="dse-crew"
               type="text"
@@ -257,7 +257,7 @@ export default function DailySiteEntryForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className={labelClass} htmlFor="dse-funds">Funds already available (KES)</label>
+          <label className={labelClass} htmlFor="dse-funds">Site funds currently available (KES)</label>
           <input
             id="dse-funds"
             type="number"
@@ -270,7 +270,7 @@ export default function DailySiteEntryForm({
           {touched && errors.fundsAvailable && <p className="mt-1 text-sm text-red-700">{errors.fundsAvailable}</p>}
         </div>
         <div>
-          <label className={labelClass} htmlFor="dse-additional">Additional amount requested (KES)</label>
+          <label className={labelClass} htmlFor="dse-additional">Additional site funds required (KES)</label>
           <input
             id="dse-additional"
             type="number"
@@ -301,7 +301,7 @@ export default function DailySiteEntryForm({
       </div>
 
       <div>
-        <label className={labelClass} htmlFor="dse-evidence">Evidence status</label>
+        <label className={labelClass} htmlFor="dse-evidence">Supporting evidence</label>
         <select
           id="dse-evidence"
           value={form.evidenceStatus}

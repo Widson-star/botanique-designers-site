@@ -27,14 +27,14 @@ describe("DailySiteEntryForm (mobile entry flow)", () => {
 
   it("computes planned labour cost as workers × rate", () => {
     renderForm();
-    fireEvent.change(screen.getByLabelText("Workers expected"), { target: { value: "8" } });
+    fireEvent.change(screen.getByLabelText("Planned workforce"), { target: { value: "8" } });
     fireEvent.change(screen.getByLabelText("Rate per worker (KES)"), { target: { value: "500" } });
     expect(screen.getByText("KES 4,000")).toBeInTheDocument();
   });
 
   it("supports the agreed-total pricing mode", () => {
     renderForm();
-    fireEvent.change(screen.getByLabelText("Workers expected"), { target: { value: "3" } });
+    fireEvent.change(screen.getByLabelText("Planned workforce"), { target: { value: "3" } });
     fireEvent.click(screen.getByRole("button", { name: "Agreed total" }));
     fireEvent.change(screen.getByLabelText("Agreed labour total (KES)"), { target: { value: "4500" } });
     expect(screen.getByText("KES 4,500")).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe("DailySiteEntryForm (mobile entry flow)", () => {
   it("blocks submission of a working entry with no planned work and surfaces errors", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
-    fireEvent.change(screen.getByLabelText("Workers expected"), { target: { value: "4" } });
+    fireEvent.change(screen.getByLabelText("Planned workforce"), { target: { value: "4" } });
     fireEvent.change(screen.getByLabelText("Rate per worker (KES)"), { target: { value: "500" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit entry" }));
     expect(onSubmit).not.toHaveBeenCalled();
@@ -53,9 +53,9 @@ describe("DailySiteEntryForm (mobile entry flow)", () => {
   it("submits a valid working entry with the normalised values", () => {
     const onSubmit = vi.fn();
     renderForm({ onSubmit });
-    fireEvent.change(screen.getByLabelText("Workers expected"), { target: { value: "6" } });
+    fireEvent.change(screen.getByLabelText("Planned workforce"), { target: { value: "6" } });
     fireEvent.change(screen.getByLabelText("Rate per worker (KES)"), { target: { value: "400" } });
-    fireEvent.change(screen.getByLabelText("Planned work"), { target: { value: "Lay turf" } });
+    fireEvent.change(screen.getByLabelText("Planned site activities"), { target: { value: "Lay turf" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit entry" }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
     const values = onSubmit.mock.calls[0][0];
