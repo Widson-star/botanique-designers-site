@@ -2384,8 +2384,8 @@ corporate-language polish only if that implementation PR stays narrow and review
 > while the work was local-only on branch `feat/bd-daily-site-operations-phase-1` before the
 > migration was applied to hosted Supabase. It is retained as development evidence; where it
 > says "implemented locally", "not applied to hosted" or "not enabled in production", that
-> status is now **superseded** — the migration is applied and the module is merged, pending
-> only authenticated UI verification.
+> status is now **superseded** — the migration is applied, the module is merged, and it is in
+> authenticated production use (see the `APPLIED_WITH_LIMITATION` status above).
 
 **Phase 1 implementation note (historical — local-development evidence).** Scope delivered:
 Daily Site Entry capture, the review/correction lifecycle, owner compliance waivers,
