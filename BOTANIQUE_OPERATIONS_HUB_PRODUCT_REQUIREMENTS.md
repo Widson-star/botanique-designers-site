@@ -408,6 +408,34 @@ file upload is built in the first slice. Actual receipts, photos, delivery notes
 attendance and other attachments depend on the future Documents & Evidence domain (§9) and
 are deferred to it.
 
+#### 4.5.11a Daily Attendance Evidence (Daily Labour Register)
+
+**Authority defined; not implemented in this slice.** This authority supports Botanique's
+**casual and locally sourced labour model** — permanent worker profiles are **not** required
+for every casual worker. Each **working** Daily Site Entry should support an uploaded,
+**project-specific Daily Labour Register** evidencing attendance, containing: project; work
+date; worker names; telephone numbers; **limited identity reference where necessary**;
+roles/tasks; and signatures or attendance confirmation. Casual and locally sourced workers
+are evidenced through this register rather than through permanent profiles.
+
+- **Timing.** The morning operational plan is recorded **before work begins** (ordinarily by
+  08:30 EAT — §4.5.8); the supporting attendance register should ordinarily be uploaded
+  against the correct Daily Site Entry **by 9:00 a.m. EAT**. Late submission remains
+  **allowed and auditable** (never a blocking cut-off), retaining the actual timestamp.
+- **Absent-Martine flow.** Where Martine is absent, the site representative or the workers
+  complete the register and send it to him; **Martine uploads it against the correct
+  project/Daily Site Entry**. Accountability for the upload stays with the Operations
+  Manager.
+- **Profiles vs register.** Regular staff (for example Martine and Waweru) **may later** have
+  reusable worker profiles; casual workers remain **register-based**. This slice introduces
+  no worker-profile registry and no roster.
+- **Storage and privacy.** Actual file upload and storage of the register belong to the
+  future **Documents & Evidence domain (§9)** and are **deferred to it**; they must follow
+  **data-minimisation** (limited identity reference only where necessary; no unnecessary
+  personal data) and **retention** rules. Until that domain exists, the first slice records
+  only `evidence_status` (§4.5.11) — it does **not** upload, store, roster or pay against the
+  register, and no labour-payment workflow is created here.
+
 #### 4.5.12 Mobile-first requirement
 
 The Daily Site Entry must be designed primarily for Martine's phone. Expected interaction:

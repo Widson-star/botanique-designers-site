@@ -283,6 +283,17 @@ Architectural invariants:
   voided → superseded; ordinary daily submission is **not** an approval request;
 - **evidence status only** in the first slice (none / promised / provided / not_required);
   file attachments depend on the future Documents & Evidence domain;
+- **Daily Attendance Evidence (authority, not implemented here)** — the casual, locally
+  sourced labour model is evidenced by an uploaded, project-specific **Daily Labour Register**
+  (names, phone numbers, limited identity reference where necessary, roles/tasks, signatures
+  or attendance confirmation) per working entry, rather than a permanent profile for every
+  casual worker; the register is uploaded against the correct Daily Site Entry ordinarily
+  **by 9:00 a.m. EAT** (late allowed and auditable), and where Martine is absent the site
+  representative or workers complete it and send it to him to upload. Regular staff (e.g.
+  Martine, Waweru) may later have reusable profiles; casual workers stay register-based.
+  Actual upload/storage belongs to the future **Documents & Evidence** domain under
+  data-minimisation and retention rules — this slice builds no upload, roster or
+  labour-payment workflow (PRD §4.5.11a);
 - **soft morning compliance** — the Dashboard flags in-scope projects lacking today's entry;
   no destructive lock, no notifications and no Realtime in the first slice.
 

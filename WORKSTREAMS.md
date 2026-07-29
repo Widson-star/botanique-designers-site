@@ -2380,6 +2380,18 @@ reports/exports, Simple Invoice Manager integration, public-site and Apicora wor
   calculation is **filtered by `can_manage_daily_site_project`**, so a manager's
   missing/late/waived counts never leak an unauthorised project's name, id or waiver state;
   the entry-form selector uses the matching `daily_site_authorised_projects()` list.
+- **Daily Attendance Evidence (authority added; not implemented).** To support Botanique's
+  casual, locally sourced labour model, attendance is evidenced by an uploaded,
+  project-specific **Daily Labour Register** per working entry (worker names, phone numbers,
+  limited identity reference where necessary, roles/tasks, signatures or attendance
+  confirmation) rather than a permanent profile for every casual worker. The register is
+  uploaded against the correct Daily Site Entry ordinarily **by 9:00 a.m. EAT** (late allowed
+  and auditable); where Martine is absent, the site representative or workers complete it and
+  send it to him to upload against the correct project. Regular staff (e.g. Martine, Waweru)
+  may later have reusable profiles; casual workers stay register-based. Actual upload/storage
+  is **deferred to the Documents & Evidence domain** under data-minimisation and retention
+  rules — this slice still records only `evidence_status` and builds **no** upload, roster or
+  labour-payment workflow (PRD §4.5.11a; Blueprint §4.9).
 - **Hosted authority reconciliation (read-only inventory, no mutation).** The chosen model
   is the documented one: the Operations Manager's **portfolio-wide** authority (§7, "the
   broader project-team and future visibility model") is realised through **`lead_person_id`
