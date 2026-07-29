@@ -2303,38 +2303,82 @@ frontend-only fix, merged after founder review.
   Invoice Manager was not touched; no financial-domain implementation was started; no
   Apicora work occurred.
 
-### Daily Site Operations & Morning Compliance — hosted rollout applied; authenticated production verification pending
+### Daily Site Operations & Morning Compliance — live in production; first real entry recorded
 
-Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING.** Phase 1 is merged and its
-additive migration is live on hosted `botanique-admin`. PR #41 merged at authoritative `main`
+Status: **APPLIED_WITH_LIMITATION.** Phase 1 is merged, its additive migration is live on
+hosted `botanique-admin`, the production frontend is active, and **authenticated production
+use has now occurred**. PR #41 merged at authoritative `main`
 `dfb79373397637694fa26d730c110da58f20acae` (merge commit; parents
 `c48a004515234c66b18ac5a062f4bc4da708b929` + reviewed head `d1531e2`). The hosted migration
 `20260728000200_operations_hub_daily_site_operations.sql` was applied successfully (recorded
-version `20260729064007_operations_hub_daily_site_operations`); its schema, RLS policies,
-`SECURITY DEFINER`/`INVOKER` functions and grants were verified read-only; the production
-Vercel deployment of the merge commit succeeded; and the signed-out `/admin` login was
-verified clean on desktop and 390×844 mobile. The Operations Manager (Martine Lotom) is
-authorised for **both** current in-scope Ongoing sites — **Alego Usonga** and **Karen
-Residence — Fountain Garden & Mature Borders** — via `lead_person_id`. **No operational data
-exists yet: 0 Daily Site entries, 0 events, 0 waivers**, and no hosted row was mutated by the
-rollout (the only pre-rollout change was the founder's authorised Karen lead update made
-through the Project UI). The remaining gate before `ACTIVE_VERIFIED` is **authenticated owner
-and manager production UI verification** (checklist below / in PR). This domain remains under
-`BD-OPERATIONS-HUB-01` — not a new top-level workstream and no new master register. The
+version `20260729064007_operations_hub_daily_site_operations`); schema, RLS, functions and
+grants were verified read-only; the production Vercel deployment succeeded; and the signed-out
+`/admin` login is clean on desktop and 390×844 mobile. The Operations Manager (Martine Lotom)
+is authorised for **both** current in-scope Ongoing sites — **Alego Usonga** and **Karen
+Residence — Fountain Garden & Mature Borders** — via `lead_person_id`. This domain remains
+under `BD-OPERATIONS-HUB-01` — not a new top-level workstream and no new master register. The
 Approvals classification (`APPLIED_WITH_LIMITATION`) is **unchanged** and Approvals is not
 reopened.
 
-**Hosted rollout verification (read-only, 2026-07-29).** Migration history includes the
-Daily Site Operations migration; all three tables exist with RLS enabled; `daily_site_entries`
-= 0, `daily_site_entry_events` = 0, `daily_site_compliance_waivers` = 0; `projects` = 9;
-`project_assignments` = 0; `approval_requests` = 0; `approval_events` = 0. Structural checks:
-3 SELECT policies and 0 direct INSERT/UPDATE/DELETE policies; `authenticated` has no direct
-table DML and cannot execute the `private_*` helpers; `anon` is denied. Authority checks:
-owner can manage all 9 projects (authorised list = 9); Martine can manage Alego and Karen and
-sees only his lead projects (no role-only access); compliance leaks no unauthorised project.
-Pre/post-migration integrity fingerprints for profiles, projects (identity + business
-fields), assignments, activities and approvals were **identical** — the migration was purely
-additive.
+**First legitimate production Daily Site Entry (verified read-only, 2026-07-29).** Martine
+Lotom created and submitted the first real operational record — **not a test fixture**:
+- entry `51af0a4c-611f-4497-9e33-15088fba7df8`, project **Alego Usonga**, work date
+  **2026-07-29**, disposition **working**, state **submitted**, version **1**;
+- created_by and submitted_by **Martine Lotom**; submitted_at **07:09:15 UTC = 10:09 EAT**;
+  **is_late = true** (database-derived; after 08:30 EAT), event note "Submitted after 08:30
+  EAT (late).";
+- expected workforce **6**, rate **KES 500** per worker, agreed total none, **planned labour
+  cost KES 3,000** (DB-derived 6 × 500); planned work "1. Site grading and levelling / 2.
+  Planting grass"; funds available **KES 0**; additional requested **KES 0**; evidence status
+  **provided**; notes "Work ongoing well"; not yet reviewed (reviewed_by null).
+- **Lifecycle events (2):** `created` (→ draft) at 10:09:14 EAT, then `submitted`
+  (draft → submitted) at 10:09:15 EAT — both actor Martine Lotom.
+
+**What this confirms in production.** Authenticated **manager submission** succeeded;
+authenticated **owner review visibility** succeeded (owner sees the submitted Alego entry with
+Return / Accept / Void controls); **lifecycle event creation** succeeded (immutable
+created + submitted events); the **late calculation** succeeded (is_late true, stamped note);
+**project-authority scoping** operated successfully (Martine acted only on his lead project;
+the manager view shows no owner review controls). The **morning-compliance summary** reads,
+for the owner on 2026-07-29: **Due today 2, Missing 1 (Karen Residence), Late 1 (Alego),
+Waived 0**. **No waiver exists** (`daily_site_compliance_waivers` = 0). Daily Site submission
+**did not create an approval request or event** (`approval_requests` = 0, `approval_events`
+= 0). The **Daily Attendance Evidence** authority (§4.5.11a) is defined but **not
+implemented**. Current hosted counts: `daily_site_entries` = **1**, `daily_site_entry_events`
+= **2**, `daily_site_compliance_waivers` = **0**; `projects` = **9**; `project_assignments`
+= 0; `approval_requests` = 0; `approval_events` = 0. No hosted row was mutated by this
+reconciliation (read-only).
+
+**Remaining limitations (why not yet `ACTIVE_VERIFIED`).**
+1. **Responsive Daily Site Operations list defect (confirmed in production).** On
+   `/admin/daily-site-operations` the desktop table row overlaps: the Date and Plan headings
+   overlap, the work date wraps vertically, and "Working today" crowds/overlaps the date,
+   making the row hard to scan. Repair recommended in a **separate narrow code PR** (see the
+   layout-defect note below); not fixed here.
+2. **Clean owner Console evidence** still to be captured (no React #418 or blocking error on
+   the owner authenticated views).
+3. **Clean manager Console evidence** still to be captured (same, for the manager).
+4. **Explicit confirmation** that Martine's **new-entry project selector** includes **both**
+   Alego Usonga and Karen Residence — Fountain Garden & Mature Borders.
+
+**Confirmed production layout defect — `/admin/daily-site-operations` list.** The desktop
+table row has overlapping content (Date/Plan headings overlap; work date wraps to multiple
+lines; "Working today" overlaps/crowds the date). Recommended future repair (separate narrow
+code PR, not in this documentation PR): give the desktop row the columns **Project · Work date
+· Site plan · Planned workforce · Status · Action**; and on responsive/mobile transform each
+record into a **stacked card** (no compressed multi-column table), prevent horizontal
+overflow, keep the date on one readable line, and preserve the plain-language status and
+workforce summary.
+
+**UI-language follow-up (later; not implemented here).** A future narrow UI-language pass may
+soften the Daily Site Entry field labels to plainer operational wording:
+Disposition → **Site activity status**; Workers expected → **Planned workforce**; Planned
+labour cost → **Estimated labour cost**; Planned work → **Planned site activities**; Crew
+reference → **Crew or team reference**; Funds available (planning) → **Site funds currently
+available**; Additional requested (planning) → **Additional site funds required**; Evidence
+status → **Supporting evidence**. This is presentation wording only — no schema/enum change.
+It must not be mixed into a documentation PR; it may be combined with the Project-form
+corporate-language polish only if that implementation PR stays narrow and reviewable.
 
 > **Historical (superseded by the hosted rollout above).** The Phase 1 note below was written
 > while the work was local-only on branch `feat/bd-daily-site-operations-phase-1` before the
@@ -2412,8 +2456,9 @@ reports/exports, Simple Invoice Manager integration, public-site and Apicora wor
   2026-07-29 confirmed Karen is Ongoing/Implementation, not archived, in compliance scope, and
   led by the active manager; `project_assignments` remains 0 (the founder used lead, not an
   assignment). The blocking prerequisite was therefore **cleared**, and the migration has
-  since been **applied to hosted `botanique-admin`** and PR #41 merged (see the
-  APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING status at the top of this subsection).
+  since been **applied to hosted `botanique-admin`** and PR #41 merged, with the first real
+  Alego entry now submitted in production (see the `APPLIED_WITH_LIMITATION` status at the top
+  of this subsection).
 - **Validation:** isolated PostgreSQL 17 migration/test matrix green
   (`scripts/test-daily-site-db.sh`, incl. lead-based authority, unassigned-manager denial and
   no-authority safe state); full Vitest suite green; changed-file ESLint clean; production
