@@ -2671,17 +2671,33 @@ Hub code/database. Changed files: `CAMPAIGN_LAUNCH_PACK_2026-07-27.md` (new),
 
 ## BD-OPERATIONS-HUB-01 — Phase 1B-A4: Project Material Change Approvals and Manager Project-Scope Control
 
-Status: **IMPLEMENTED_UNVERIFIED** (draft PR; migration NOT applied to hosted
-Supabase; not yet authenticated-verified in production). Daily Site Operations
+Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING** (draft PR; migration
+applied and structurally verified on hosted Supabase; authenticated owner/manager
+workflow verification still pending). Daily Site Operations
 remains **ACTIVE_VERIFIED** (unchanged). Approvals remains a project-lifecycle
 foundation *plus* this expanded, field-level material-change type — it is **not**
-reclassified ACTIVE_VERIFIED until hosted rollout and authenticated verification.
+reclassified ACTIVE_VERIFIED until authenticated verification.
 
 Baseline `main`: `24154fee4a163378201a6db0e1d94006287c88ae`. Branch:
 `feat/bd-project-material-change-approvals`. Additive, forward-only. No hosted
 project mutated; no Daily Site record altered; production `approval_requests` /
 `approval_events` remain 0/0; Simple Invoice Manager unchanged; no financial,
 portfolio-behaviour or Apicora work.
+
+**Hosted rollout (30 July 2026).** After the Daily Site migration-history alias was
+reconciled through the official Supabase history-repair mechanism, hosted history was
+canonical through `20260728000200`. A fresh `supabase db push --linked --dry-run` listed
+only `20260729000100_operations_hub_project_material_change_approvals.sql`; that migration
+was then applied once through the transactional linked CLI path from 19:38:01–19:38:28 UTC
+(22:38:01–22:38:28 EAT). Hosted history now contains `20260729000100` exactly once.
+Read-only verification confirmed both intake tables, the seventh material-change type,
+all expected functions/ownership/search paths/grants, five enabled project triggers, scoped
+project and intake RLS, owner-only project INSERT, and Ongoing/non-archived Daily Site
+eligibility. All nine projects, two profiles, zero assignments, 15 existing project
+activities, 0/0 approvals, three Daily Site entries, 11 Daily Site events and zero waivers
+retained identical deterministic fingerprints; both intake tables are empty and the
+migration generated no project activity. Authenticated owner/manager workflow verification
+remains pending, so expanded Approvals is not yet `ACTIVE_VERIFIED`.
 
 **Verified governance gap closed.** The interim Phase 1B-A1 boundary already
 reserved the six lifecycle transitions (activation, target completion, completion,
@@ -2734,22 +2750,19 @@ lifecycle types still working, and Daily Site RLS unaffected. The existing appro
 and daily-site matrices still pass. Frontend: `vitest` full suite green (249+),
 `eslint` introduces no new errors, `npm run build` prerenders successfully.
 
-Rollout prerequisites (before ACTIVE_VERIFIED): owner review of the draft PR; apply
-the migration to the hosted Botanique Supabase project after confirming the four
-prior migrations are applied; authenticated preview verification as owner **and**
-manager (visibility scoping, a material-change proposal round-trip, an intake
+Remaining prerequisite before ACTIVE_VERIFIED: authenticated preview verification as owner
+**and** manager (visibility scoping, a material-change proposal round-trip, an intake
 round-trip, activity wording); re-confirm production `approval_requests`/
 `approval_events` counts and the nine untouched projects.
 
-Boundaries: no hosted migration applied; PR remains draft/unmerged; no financial,
+Boundaries: hosted migration applied with business rows unchanged; PR remains draft/unmerged; no financial,
 Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. New/changed
 files: the migration + PG test + runner under `supabase/`; the Operations Hub docs;
 and the `src/admin` material-change / intake / activity-wording implementation and
 tests.
 
 **Authority corrections (pre-security-review, same PR #44 branch).** Two founder
-corrections applied on top of the above, still IMPLEMENTED_UNVERIFIED, migration
-still unapplied:
+corrections applied on top of the above:
 
 1. **Project status is not low-risk.** Ongoing↔Paused is no longer a manager direct
    write; it is now the tenth `project_material_change` allowlist field, validated to
@@ -2775,7 +2788,7 @@ still unapplied:
    immediately and an approved resume restores it. `can_manage_daily_site_project`
    (read/history/corrections) is untouched, so Daily Site Operations stays ACTIVE_VERIFIED.
 
-**Migration security review (same PR #44 branch).** Hostile-path DB review confirmed: all 19
+**Migration security review (same PR #44 branch).** Hostile-path DB review confirmed: all 20
 new/replaced functions are SECURITY DEFINER with a fixed `search_path = public`, schema-
 qualified, no dynamic SQL; `private_*` helpers fully revoked from public/anon/authenticated
 (two over-grants tightened during review); strict JSON-key allowlist rejects arbitrary/nested
@@ -2783,8 +2796,9 @@ keys, malformed UUIDs and empty proposals; authoritative original snapshots; sta
 protection; owner-only decisions with no manager/requester self-approval; atomic apply;
 scoped manager RLS; separate-table intake isolation. Added DB concurrency-guard tests (decide-
 twice, withdraw-vs-approve, duplicate intake approval creates no duplicate project) and
-hostile-JSON tests. Still IMPLEMENTED_UNVERIFIED; migration `20260729000100` still unapplied
-and strictly the latest of the six repository migrations (no collision/rename).
+hostile-JSON tests. Migration `20260729000100` is now applied and remains strictly the
+latest of the six repository migrations (no collision/rename); authenticated workflow
+verification remains pending.
 
 **No-self-approval correction (same PR #44 branch).** Governance fix: the owner edits and
 creates projects **directly** and must never submit a manager-style proposal that they, as
@@ -2834,7 +2848,7 @@ if the file is deliberately applied statement-by-statement with autocommit (plai
 without `--single-transaction`, or pasting into the SQL editor without a `begin;`/`commit;`
 wrapper) and interrupted — the checklist forbids this.
 
-Controlled hosted rollout checklist (owner-executed; not run here):
+Controlled hosted rollout checklist (completed 30 July 2026):
 
 1. **Pre-apply migration-history snapshot** — `select version,name from
    supabase_migrations.schema_migrations order by version;` confirm the five prior versions

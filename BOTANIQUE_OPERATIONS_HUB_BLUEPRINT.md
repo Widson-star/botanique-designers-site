@@ -404,7 +404,7 @@ The Phase 1B-A1 migration remains technical truth:
 
 This is an audit model, not a general discussion or approvals model.
 
-### 7.1 Phase 1B-A4 — material-change governance (draft, migration unapplied)
+### 7.1 Phase 1B-A4 — material-change governance (hosted apply complete; authenticated verification pending)
 
 The Phase 1B-A4 migration (`20260729000100`) tightens the model above without weakening
 any finance/Daily Site/portfolio boundary:
@@ -460,7 +460,14 @@ Authority corrections applied before the migration security review:
   non-transactional statement, so partial application cannot occur under those methods — see
   the WORKSTREAMS rollout checklist and PITR recovery.
 
-Status: draft PR, migration not applied to hosted Supabase, not yet ACTIVE_VERIFIED.
+Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING**. Migration `20260729000100`
+was applied once through the transactional linked Supabase CLI path on 30 July 2026 after
+the dry run listed that migration alone. Hosted structural verification passed for tables,
+functions, ownership, fixed search paths, triggers, RLS and grants. Pre/post deterministic
+fingerprints confirmed all project, profile, assignment, project-activity, approval and
+Daily Site business rows unchanged; intake tables are empty and no migration-generated
+activity exists. The PR remains draft and expanded Approvals is not yet
+`ACTIVE_VERIFIED`; authenticated owner/manager workflow verification remains pending.
 
 ## 8. Implementation roadmap and dependencies
 

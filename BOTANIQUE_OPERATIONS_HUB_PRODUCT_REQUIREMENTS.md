@@ -551,8 +551,20 @@ future-domain navigation.
 
 ### 5.2 Project Material Change Approvals and Manager Project-Scope Control (Phase 1B-A4)
 
-Status: **IMPLEMENTED_UNVERIFIED** (draft PR; migration unapplied to hosted Supabase).
-Additive to §5.1; the six lifecycle types are preserved and never duplicated.
+Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING** (draft PR; migration
+`20260729000100` applied and structurally verified on hosted Supabase; authenticated
+owner/manager workflow verification pending). Additive to §5.1; the six lifecycle types
+are preserved and never duplicated.
+
+The controlled hosted rollout on 30 July 2026 applied only migration `20260729000100`
+through the transactional linked Supabase CLI path after a dry run listed that version
+alone. Migration history is canonical and contains the target exactly once. Hosted
+tables, functions, ownership, fixed search paths, triggers, RLS and grants passed read-only
+verification. Deterministic pre/post fingerprints confirmed all nine projects, profiles,
+assignments, existing project activities, approvals and Daily Site rows unchanged;
+approval rows remain 0/0, intake rows remain 0/0, and no migration-generated project
+activity exists. Expanded Approvals is not `ACTIVE_VERIFIED` until authenticated owner and
+manager workflow verification is complete.
 
 **Verified governance gap.** Beyond the six lifecycle transitions already reserved to the
 owner, a manager could directly change material project **identity, authority and schedule**
