@@ -30,10 +30,10 @@ const project = {
 };
 
 describe("material-change allowlist + role capabilities", () => {
-  it("exposes exactly the nine material fields", () => {
+  it("exposes exactly the ten material fields (status included, never low-risk)", () => {
     expect(MATERIAL_FIELD_KEYS).toEqual([
       "project_name", "client_site_name", "location", "county", "project_type",
-      "stage", "lead_person_id", "start_date", "actual_start_date",
+      "status", "stage", "lead_person_id", "start_date", "actual_start_date",
     ]);
   });
 
@@ -68,6 +68,13 @@ describe("buildMaterialProposal", () => {
       location: "Karen",
     });
     expect(result.changedKeys).toEqual([]);
+  });
+
+  it("treats an Ongoing->Paused status change as a material proposal", () => {
+    const result = buildMaterialProposal(project, { status: "Paused" });
+    expect(result.changedKeys).toEqual(["status"]);
+    expect(result.originalValues).toEqual({ status: "Ongoing" });
+    expect(result.proposedValues).toEqual({ status: "Paused" });
   });
 });
 

@@ -16,8 +16,9 @@ export const MANAGER_STAGES = PROJECT_STAGES.filter(
   (stage) => !OWNER_ONLY_STAGES.includes(stage)
 );
 
-// Statuses a manager may toggle an already-active project between (low-risk,
-// direct — Ongoing<->Paused is the one status move that stays a direct write).
+// The only status transition a manager may PROPOSE via project_material_change
+// (Ongoing<->Paused). Every status change — including this one — is now
+// Principal-approved; a manager has no direct status write.
 export const MANAGER_STATUS_TOGGLE = ["Ongoing", "Paused"];
 
 // Phase 1B-A4 — the material project fields a manager may no longer edit
@@ -31,6 +32,7 @@ export const MATERIAL_FIELD_KEYS = [
   "location",
   "county",
   "project_type",
+  "status", // Ongoing<->Paused only, validated by the database
   "stage",
   "lead_person_id",
   "start_date",
@@ -43,6 +45,7 @@ export const MATERIAL_FIELD_LABELS = {
   location: "Location",
   county: "County",
   project_type: "Project type",
+  status: "Status (Ongoing / Paused)",
   stage: "Stage",
   lead_person_id: "Accountable lead",
   start_date: "Planned start",
@@ -50,9 +53,8 @@ export const MATERIAL_FIELD_LABELS = {
 };
 
 // The low-risk operational fields a manager keeps as a direct, audited write on
-// an authorised project (never material identity/authority/schedule).
+// an authorised project (never material identity/authority/schedule/status).
 export const MANAGER_LOW_RISK_KEYS = [
-  "status", // only Ongoing<->Paused, enforced by statusOptionsForForm
   "next_action",
   "next_action_date",
   "blocker",
@@ -155,18 +157,16 @@ export function hasOwnerMaterialActions(role, project) {
 
 export function statusOptionsForForm(role, mode, currentStatus) {
   if (isOwner(role)) return PROJECT_STATUSES;
-  // Manager create is fixed to Pending.
+  // Manager create is fixed to Pending; manager edit never changes status
+  // directly (Ongoing<->Paused is a project_material_change proposal).
   if (mode === "create") return ["Pending"];
-  // Manager edit may only toggle an already-active project Ongoing<->Paused.
-  if (MANAGER_STATUS_TOGGLE.includes(currentStatus)) return MANAGER_STATUS_TOGGLE;
-  // Any other status is protected: shown read-only, no re-selection.
   return [currentStatus];
 }
 
-export function isStatusEditable(role, mode, currentStatus) {
-  if (isOwner(role)) return true;
-  if (mode === "create") return false; // fixed Pending
-  return MANAGER_STATUS_TOGGLE.includes(currentStatus);
+export function isStatusEditable(role) {
+  // Status is now owner-only for a direct write; a manager proposes
+  // Ongoing<->Paused via project_material_change.
+  return isOwner(role);
 }
 
 export function stageOptionsForForm(role, mode, currentStage) {

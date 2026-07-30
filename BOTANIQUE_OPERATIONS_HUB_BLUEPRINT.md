@@ -429,6 +429,24 @@ any finance/Daily Site/portfolio boundary:
 - Activity history now surfaces the **exact actor name and role** when the profile is
   readable (never a raw UUID or role slug).
 
+Authority corrections applied before the migration security review:
+
+- **Project status is not low-risk.** The interim allowance for a manager to directly
+  toggle Ongoing↔Paused is revoked (`tg_guard_project_material_authority` no longer carves
+  it out and `tg_guard_project_material_fields` blocks it). Ongoing↔Paused is now a
+  `project_material_change` proposal (constrained to that transition on an active project);
+  activation/completion/cancellation/archive/restore keep their dedicated types and
+  Design-only stays owner-only. A manager direct status write is zero. The low-risk direct
+  set is exactly `next_action`, `next_action_date`, `blocker`, `notes`.
+- **Portfolio is OWNER_ONLY.** `portfolio_eligible` and `portfolio_permission_status` are
+  deliberately excluded from the material allowlist; no manager proposal path exists.
+- **Daily Site Entry eligibility ≠ project access.** `daily_site_authorised_projects()` and
+  `create_daily_site_entry_draft()` now require operational eligibility (not archived and
+  status not in Completed/Cancelled/Design-only) in addition to project authority, so a
+  completed project (Mununga) is excluded from the new-entry selector and the database
+  refuses a new entry for it — while its Projects visibility, history and correction
+  workflows are unchanged (`can_manage_daily_site_project` is untouched).
+
 Status: draft PR, migration not applied to hosted Supabase, not yet ACTIVE_VERIFIED.
 
 ## 8. Implementation roadmap and dependencies

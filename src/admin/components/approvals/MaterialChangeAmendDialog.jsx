@@ -8,6 +8,7 @@ import { PROJECT_TYPES } from "../../constants/projectStatus";
 import { useAdminData } from "../../context/adminData";
 import {
   MANAGER_STAGES,
+  MANAGER_STATUS_TOGGLE,
   MATERIAL_FIELD_LABELS,
   leadOptionsForRole,
 } from "../../utils/projectCapabilities";
@@ -77,6 +78,10 @@ export default function MaterialChangeAmendDialog({ request, onCancel, onSubmit 
             {key === "project_type" ? (
               <select id={`amend-${key}`} value={values[key]} onChange={(e) => setValue(key, e.target.value)} className={inputClass}>
                 {PROJECT_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+              </select>
+            ) : key === "status" ? (
+              <select id={`amend-${key}`} value={values[key]} onChange={(e) => setValue(key, e.target.value)} className={inputClass}>
+                {[...new Set([values[key], ...MANAGER_STATUS_TOGGLE])].filter(Boolean).map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             ) : key === "stage" ? (
               <select id={`amend-${key}`} value={values[key]} onChange={(e) => setValue(key, e.target.value)} className={inputClass}>

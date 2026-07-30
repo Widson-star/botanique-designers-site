@@ -257,7 +257,9 @@ export default function ProjectForm({ mode, project }) {
               value={
                 mode === "create"
                   ? "Pending (owner approval required to activate)"
-                  : `${form.status} (owner-only change)`
+                  : caps.proposesMaterial
+                    ? `${form.status} (change requires Principal approval)`
+                    : `${form.status} (owner-only change)`
               }
             />
           )}

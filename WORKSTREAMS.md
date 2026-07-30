@@ -2746,3 +2746,35 @@ Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. New/changed
 files: the migration + PG test + runner under `supabase/`; the Operations Hub docs;
 and the `src/admin` material-change / intake / activity-wording implementation and
 tests.
+
+**Authority corrections (pre-security-review, same PR #44 branch).** Two founder
+corrections applied on top of the above, still IMPLEMENTED_UNVERIFIED, migration
+still unapplied:
+
+1. **Project status is not low-risk.** Ongoing↔Paused is no longer a manager direct
+   write; it is now the tenth `project_material_change` allowlist field, validated to
+   the Ongoing↔Paused transition on an active project only. The interim
+   `tg_guard_project_material_authority` carve-out is removed and
+   `tg_guard_project_material_fields` also blocks status, so a manager direct status
+   write is zero. Activation/completion/cancellation/archive/restore keep their
+   dedicated types; Design-only stays owner-only. Low-risk direct is now exactly
+   `next_action`, `next_action_date`, `blocker`, `notes`. Portfolio
+   (`portfolio_eligible`, `portfolio_permission_status`) is documented explicitly as
+   OWNER_ONLY with no manager proposal path.
+2. **Daily Site Entry eligibility ≠ project access.** A pre-existing Daily Site defect
+   (the selector/create path gated only on authority, contradicting the migration's own
+   "operationally-active" intent) is fixed narrowly in this PR:
+   `daily_site_authorised_projects()` and `create_daily_site_entry_draft()` now also
+   require operational eligibility (not archived, status not in
+   Completed/Cancelled/Design-only). Completed Mununga stays visible in Projects but is
+   excluded from the new-entry selector and blocked at the database; Alego/Karen remain
+   eligible. `can_manage_daily_site_project` (read/history/corrections) is untouched, so
+   Daily Site Operations stays ACTIVE_VERIFIED.
+
+Migration ordering: `20260729000100` is strictly the latest of the six repository
+migrations (after `20260728000200`); no collision, no rename required. Lint baseline:
+exact main `24154fee` reports 19 pre-existing errors (`server/index.js` Buffer/process,
+`FadeIn.jsx`, `AppContext.jsx`) and PR #44 reports the same 19 — zero new. PG17
+material matrix + existing Approvals + existing Daily Site matrices pass; frontend
+`vitest` full suite green (251); `npm run build` prerenders 43 routes; `git diff --check`
+clean.

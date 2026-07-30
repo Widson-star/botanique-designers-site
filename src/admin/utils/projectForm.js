@@ -187,14 +187,11 @@ const OWNER_UPDATE_COLUMNS = [
   "portfolio_permission_status",
 ];
 
-// Phase 1B-A4 — a manager's DIRECT update patch now carries ONLY low-risk
-// operational fields. Every material identity/authority/schedule field
-// (project_name, client_site_name, location, county, project_type, stage,
-// lead_person_id, start_date, actual_start_date) is excluded here and instead
-// routed through a project_material_change approval (see buildMaterialProposal).
-// status remains (the form only offers Ongoing<->Paused for a manager).
+// Phase 1B-A4 — a manager's DIRECT update patch carries ONLY the low-risk
+// operational fields. Every material identity/authority/schedule field —
+// including `status` (Ongoing<->Paused is Principal-approved) — is excluded here
+// and routed through a project_material_change approval (see buildMaterialProposal).
 const MANAGER_UPDATE_COLUMNS = [
-  "status",
   "next_action",
   "next_action_date",
   "blocker",

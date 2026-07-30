@@ -13,6 +13,7 @@ import { useAdminApprovals } from "../../context/adminApprovals";
 import { ACTIVE_APPROVAL_STATES } from "../../utils/approvalCapabilities";
 import {
   MANAGER_STAGES,
+  MANAGER_STATUS_TOGGLE,
   MATERIAL_FIELD_KEYS,
   MATERIAL_FIELD_LABELS,
   leadOptionsForRole,
@@ -31,6 +32,7 @@ function currentMaterialForm(project) {
     location: project.location || "",
     county: project.county || "",
     project_type: project.projectType || "Residential",
+    status: project.status || "",
     stage: project.stage || "",
     lead_person_id: project.leadPersonId || "",
     start_date: project.startDate || "",
@@ -181,6 +183,23 @@ export default function MaterialChangeProposal({ project }) {
                 >
                   {PROJECT_TYPES.map((type) => (
                     <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              ) : key === "status" ? (
+                <select
+                  id={`material-${key}`}
+                  value={form[key]}
+                  onChange={(e) => setField(key, e.target.value)}
+                  disabled={!MANAGER_STATUS_TOGGLE.includes(project.status)}
+                  className={inputClass}
+                >
+                  {/* Only the Ongoing<->Paused transition is proposable; other
+                      statuses (Pending/Completed/…) are shown locked. */}
+                  {(MANAGER_STATUS_TOGGLE.includes(project.status)
+                    ? MANAGER_STATUS_TOGGLE
+                    : [project.status]
+                  ).map((s) => (
+                    <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               ) : key === "stage" ? (

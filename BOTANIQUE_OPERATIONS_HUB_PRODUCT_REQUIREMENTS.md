@@ -570,14 +570,44 @@ scope. Consistent with the Daily Site authority model, so Martine retains Alego/
 
 | Field | Manager path | Owner path |
 | --- | --- | --- |
-| `project_name`, `client_site_name`, `location`, `county`, `project_type`, `stage` (non-terminal), `lead_person_id`, `start_date`, `actual_start_date` | `project_material_change` proposal | direct edit |
-| `status` Ongoing↔Paused, `next_action`, `next_action_date`, `blocker`, `notes` | **low-risk direct** (audited) | direct edit |
-| activation, target completion, completion, cancellation, archive, restore | existing dedicated lifecycle approval type | direct/quick action |
-| `portfolio_eligible`, `portfolio_permission_status`, Design-only, terminal (Completed/Archived) stage, `actual_completion_date` | **owner-only** (no manager path) | direct/quick action |
+| `project_name`, `client_site_name`, `location`, `county`, `project_type`, `status` (Ongoing↔Paused only), `stage` (non-terminal), `lead_person_id`, `start_date`, `actual_start_date` | `project_material_change` proposal | direct edit |
+| `next_action`, `next_action_date`, `blocker`, `notes` | **low-risk direct** (audited) | direct edit |
+| activation (Pending→Ongoing), target completion, completion, cancellation, archive, restore | existing dedicated lifecycle approval type | direct/quick action |
+| `portfolio_eligible`, `portfolio_permission_status` (**OWNER_ONLY** — no manager proposal path in Phase 1B-A4), Design-only classification, terminal (Completed/Archived) stage, `actual_completion_date` | **owner-only** (no manager path) | direct/quick action |
 
-Low-risk direct fields (§8) remain a manager write **only on an authorised project**, are
-recorded in `project_activities` with the exact actor and role, and create **no** approval
-request. Project name, lead, location, type, stage and dates are never low-risk.
+**Project status is NOT low-risk (authority correction).** A status change alters
+active/paused counts, Dashboard reporting, Daily Site compliance expectations, staffing and
+attention, so a manager has **zero** direct status write. The single Ongoing↔Paused
+transition is a `project_material_change` proposal (validated to Ongoing↔Paused on an
+already-active project); activation, completion, cancellation, archive and restore keep
+their dedicated lifecycle types, and Design-only stays owner-only — no duplicate/conflicting
+paths. Status-transition matrix: Pending→Ongoing = `project_activation`; Ongoing↔Paused =
+`project_material_change`; Ongoing/Paused→Completed = `project_completion`; →Cancelled =
+`project_cancellation`; archive/restore = `project_archive`/`project_restore`; Design-only =
+owner-only direct.
+
+The **low-risk direct** set (§8) is exactly `next_action`, `next_action_date`, `blocker`,
+`notes` — a manager write **only on an authorised project**, recorded in
+`project_activities` with the exact actor and role, creating **no** approval request. Status,
+stage, lead, project identity, location/county, type, planned/actual start, completion
+fields, portfolio status and archive state are never low-risk.
+
+**Portfolio (explicit).** `portfolio_eligible` and `portfolio_permission_status` are
+**OWNER_ONLY**: managers cannot edit them directly and Phase 1B-A4 introduces **no** manager
+proposal path for portfolio; the owner retains direct control and no public-publication
+automation exists. Their omission from the material allowlist is deliberate, not accidental.
+
+**Daily Site Entry eligibility ≠ project access (authority correction).** Project
+read/edit/proposal authority (lead/assignment) does not by itself make a project eligible for
+a **new** Daily Site Entry. The new-entry selector and the `create_daily_site_entry_draft`
+database function now require the project to be both within the user's authority **and**
+operationally eligible — excluding **Completed, Cancelled, Archived and Design-only**. A
+completed project (e.g. Mununga) remains visible in Projects and keeps its historical Daily
+Site records, but cannot receive a new entry, in the UI **or** the database. Pending, Ongoing
+and Paused remain eligible (a paused or newly-mobilising site may still record a working or
+no-work day); a stricter Ongoing-only rule is intentionally not imposed without evidence.
+Existing entries, accept/void/supersede correction workflows and Daily Site read access for
+completed projects are unchanged, so Daily Site Operations stays ACTIVE_VERIFIED.
 
 **Project creation.** Manager direct creation is removed (owner-only INSERT). A manager
 submits a restricted **project-intake proposal** (`project_intake_requests`); no live

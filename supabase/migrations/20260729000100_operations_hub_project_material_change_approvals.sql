@@ -86,6 +86,7 @@ as $$
     'location',
     'county',
     'project_type',
+    'status',
     'stage',
     'lead_person_id',
     'start_date',
@@ -128,6 +129,7 @@ begin
         when 'location' then to_jsonb(project.location)
         when 'county' then to_jsonb(project.county)
         when 'project_type' then to_jsonb(project.project_type)
+        when 'status' then to_jsonb(project.status)
         when 'stage' then to_jsonb(project.stage)
         when 'lead_person_id' then to_jsonb(project.lead_person_id)
         when 'start_date' then to_jsonb(project.start_date)
@@ -189,7 +191,7 @@ begin
     end if;
     v := proposed -> k;
 
-    if k in ('project_name', 'project_type') then
+    if k in ('project_name', 'project_type', 'status') then
       -- Required, non-blank strings.
       if jsonb_typeof(v) <> 'string' or char_length(trim(v #>> '{}')) = 0 then
         raise exception 'field "%" must be a non-empty string', k using errcode = 'check_violation';
@@ -234,6 +236,16 @@ begin
           'Public Realm', 'Design Concept', 'Maintenance', 'Other'
         ) then
           raise exception 'project_type is not a permitted value' using errcode = 'check_violation';
+        end if;
+      when 'status' then
+        -- Only the Ongoing<->Paused transition on an already-active project is a
+        -- material-change proposal. Activation (Pending->Ongoing), completion,
+        -- cancellation, archive and restore remain owner-reserved via their own
+        -- dedicated approval types; Design-only is owner-only. Both the current
+        -- (captured) status and the proposed status must be Ongoing or Paused.
+        if text_value not in ('Ongoing', 'Paused')
+           or (original->>'status') not in ('Ongoing', 'Paused') then
+          raise exception 'status via material change is limited to the Ongoing<->Paused transition on an active project; activation, completion, cancellation, archive and restore use their dedicated approvals' using errcode = 'check_violation';
         end if;
       when 'stage' then
         -- Terminal stages remain owner-reserved via the dedicated completion /
@@ -291,6 +303,7 @@ begin
     location = case when proposed ? 'location' then proposed->>'location' else location end,
     county = case when proposed ? 'county' then proposed->>'county' else county end,
     project_type = case when proposed ? 'project_type' then proposed->>'project_type' else project_type end,
+    status = case when proposed ? 'status' then proposed->>'status' else status end,
     stage = case when proposed ? 'stage' then proposed->>'stage' else stage end,
     lead_person_id = case when proposed ? 'lead_person_id' then (proposed->>'lead_person_id')::uuid else lead_person_id end,
     start_date = case when proposed ? 'start_date' then (proposed->>'start_date')::date else start_date end,
@@ -624,12 +637,13 @@ begin
      or new.location is distinct from old.location
      or new.county is distinct from old.county
      or new.project_type is distinct from old.project_type
+     or new.status is distinct from old.status
      or new.stage is distinct from old.stage
      or new.lead_person_id is distinct from old.lead_person_id
      or new.start_date is distinct from old.start_date
      or new.actual_start_date is distinct from old.actual_start_date then
     raise exception
-      'a manager may not directly change material project fields (name, client/site, location, county, type, stage, accountable lead, planned or actual start); submit a project_material_change approval for owner review'
+      'a manager may not directly change material project fields (name, client/site, location, county, type, status, stage, accountable lead, planned or actual start); submit a project_material_change approval for owner review'
       using errcode = 'check_violation';
   end if;
 
@@ -1222,3 +1236,229 @@ grant execute on function public.withdraw_project_intake(uuid, text) to authenti
 grant execute on function public.request_project_intake_amendment(uuid, text) to authenticated;
 grant execute on function public.amend_and_resubmit_project_intake(uuid, jsonb, text, text) to authenticated;
 grant execute on function public.decide_project_intake(uuid, text, text) to authenticated;
+
+-- =====================================================================
+-- 9. Authority correction: project status is NOT a low-risk direct field.
+-- ---------------------------------------------------------------------
+-- The interim Phase 1B-A1 boundary allowed a manager to directly toggle an
+-- active project between Ongoing and Paused. That is now revoked: a status
+-- change affects active/paused counts, Dashboard reporting, Daily Site
+-- compliance expectations and staffing/attention, so it must be Principal-
+-- approved. Ongoing<->Paused is routed through project_material_change (see the
+-- status branch of private_validate_project_material_change above); the five
+-- dedicated lifecycle types (activation, completion, cancellation, archive,
+-- restore) and the owner-only Design-only classification are unchanged. This
+-- CREATE OR REPLACE preserves every other clause of the interim guard verbatim
+-- and only tightens the status branch to reject ALL manager status changes.
+-- =====================================================================
+create or replace function public.tg_guard_project_material_authority()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_role text := public.current_user_role();
+begin
+  if caller_role is distinct from 'manager' then
+    return new;
+  end if;
+
+  if (tg_op = 'INSERT') then
+    if new.status <> 'Pending'
+       or new.archived is true
+       or new.stage in ('Completed', 'Archived')
+       or new.actual_completion_date is not null
+       or new.portfolio_eligible is true
+       or new.portfolio_permission_status <> 'Not Reviewed' then
+      raise exception
+        'manager may only create a Pending, non-archived project at a non-Completed/Archived stage with portfolio state Not Reviewed; owner approval is required to activate, complete, cancel, classify Design-only, archive or set portfolio publication'
+        using errcode = 'check_violation';
+    end if;
+    return new;
+  end if;
+
+  -- Status is now Principal-approved for a manager in ALL directions: the
+  -- Ongoing<->Paused transition is a project_material_change proposal and every
+  -- other status change remains owner-reserved. A manager direct status write
+  -- is zero.
+  if new.status is distinct from old.status then
+    raise exception
+      'manager may not directly change project status; Ongoing<->Paused is a project_material_change proposal and activation, completion, cancellation and Design-only remain owner-reserved'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.stage is distinct from old.stage
+     and (old.stage in ('Completed', 'Archived') or new.stage in ('Completed', 'Archived')) then
+    raise exception 'manager may not set or reverse a Completed or Archived project stage; this is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.archived is distinct from old.archived then
+    raise exception 'manager may not archive or restore a project; this is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.portfolio_eligible is distinct from old.portfolio_eligible then
+    raise exception 'manager may not change portfolio_eligible; portfolio publication is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.portfolio_permission_status is distinct from old.portfolio_permission_status then
+    raise exception 'manager may not change portfolio_permission_status; portfolio publication is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.target_completion_date is distinct from old.target_completion_date then
+    raise exception 'manager may not set or revise target_completion_date after creation; this is owner-only until the Phase 1B-A4 proposal mechanism'
+      using errcode = 'check_violation';
+  end if;
+
+  if new.actual_completion_date is distinct from old.actual_completion_date then
+    raise exception 'manager may not set or change actual_completion_date; this is owner-only'
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+-- =====================================================================
+-- 10. Authority correction: Daily Site Entry eligibility != project access.
+-- ---------------------------------------------------------------------
+-- Project read/edit/proposal authority (lead/assignment) is NOT the same as
+-- Daily Site Entry eligibility. A completed/cancelled/archived/design-only
+-- project may remain visible in Projects and historical Daily Site records but
+-- must not be a target for a NEW Daily Site Entry. This aligns the selector +
+-- the create path with the migration's own documented intent ("operationally-
+-- active projects") and with daily_site_morning_compliance's operational scope.
+-- The eligibility gate does NOT touch can_manage_daily_site_project (which still
+-- governs READ of existing entries and history for completed projects), does not
+-- alter accepted/void/supersede correction workflows, and never mutates
+-- projects.status. Pending, Ongoing and Paused remain eligible for a new entry
+-- (a paused or newly-mobilising site may still record a no-work or working day);
+-- a stricter Ongoing-only rule is intentionally NOT imposed without evidence.
+-- =====================================================================
+create or replace function public.private_daily_site_project_eligible(target_project_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.projects p
+    where p.id = target_project_id
+      and p.archived is false
+      and p.status not in ('Completed', 'Cancelled', 'Design-only')
+  )
+$$;
+
+revoke execute on function public.private_daily_site_project_eligible(uuid) from public, anon;
+grant execute on function public.private_daily_site_project_eligible(uuid) to authenticated;
+
+-- Selector now returns only authorised AND operationally-eligible projects.
+create or replace function public.daily_site_authorised_projects()
+returns table (
+  id uuid,
+  project_name text,
+  status text,
+  stage text,
+  archived boolean
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.id, p.project_name, p.status, p.stage, p.archived
+  from public.projects p
+  where public.can_manage_daily_site_project(p.id)
+    and p.archived is false
+    and p.status not in ('Completed', 'Cancelled', 'Design-only')
+  order by p.project_name asc
+$$;
+
+-- Create-draft now enforces operational eligibility in-transaction so the
+-- database — not just the selector — refuses a NEW entry for an ineligible
+-- project. Every other clause is preserved verbatim from the daily-site
+-- foundation definition.
+create or replace function public.create_daily_site_entry_draft(
+  target_project_id uuid,
+  target_work_date date,
+  target_disposition text,
+  target_no_work_reason text default null,
+  target_reason_detail text default null,
+  target_worker_count integer default null,
+  target_crew_reference text default null,
+  target_rate numeric default null,
+  target_agreed numeric default null,
+  target_work_planned text default null,
+  target_funds_available numeric default null,
+  target_additional_requested numeric default null,
+  target_notes text default null,
+  target_evidence_status text default 'none'
+)
+returns public.daily_site_entries
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller_role text := public.private_active_daily_site_role();
+  project public.projects;
+  plan record;
+  entry public.daily_site_entries;
+begin
+  if caller_role is null or caller_role not in ('owner', 'manager') then
+    raise exception 'only an active owner or manager may record a site entry' using errcode = 'insufficient_privilege';
+  end if;
+  if target_work_date is null then
+    raise exception 'a work date is required' using errcode = 'check_violation';
+  end if;
+
+  select * into project from public.projects where id = target_project_id for share;
+  if not found then
+    raise exception 'project not found or unavailable' using errcode = 'no_data_found';
+  end if;
+  -- Revalidate project authority in-transaction: a manager may record only for
+  -- a project within their existing project authority (owner is company-wide).
+  if not public.can_manage_daily_site_project(project.id) then
+    raise exception 'not authorised for this project' using errcode = 'insufficient_privilege';
+  end if;
+  -- Operational eligibility: a completed/cancelled/archived/design-only project
+  -- may keep its history but must not receive a NEW Daily Site Entry.
+  if not public.private_daily_site_project_eligible(project.id) then
+    raise exception 'project is not operationally eligible for a new Daily Site Entry (completed, cancelled, archived or design-only projects are excluded)' using errcode = 'check_violation';
+  end if;
+
+  plan := public.private_daily_site_normalise_plan(
+    target_disposition, target_no_work_reason, target_reason_detail,
+    target_worker_count, target_crew_reference, target_rate, target_agreed,
+    target_work_planned, target_funds_available, target_additional_requested,
+    target_notes, target_evidence_status
+  );
+
+  insert into public.daily_site_entries (
+    project_id, work_date, disposition, no_work_reason, reason_detail,
+    expected_worker_count, crew_reference, rate_per_worker, agreed_labour_total,
+    planned_labour_cost, work_planned, funds_available, additional_amount_requested,
+    notes, evidence_status, state, version, created_by, updated_by
+  ) values (
+    project.id, target_work_date, target_disposition, plan.out_no_work_reason, plan.out_reason_detail,
+    plan.out_worker_count, plan.out_crew_reference, plan.out_rate, plan.out_agreed,
+    plan.out_planned_cost, plan.out_work_planned, plan.out_funds_available, plan.out_additional_requested,
+    plan.out_notes, plan.out_evidence_status, 'draft', 1, auth.uid(), auth.uid()
+  ) returning * into entry;
+
+  insert into public.daily_site_entry_events (
+    daily_site_entry_id, event_type, actor_id, from_state, to_state, version_number, new_snapshot
+  ) values (
+    entry.id, 'created', auth.uid(), null, 'draft', entry.version,
+    public.private_daily_site_snapshot(entry)
+  );
+
+  return entry;
+end;
+$$;

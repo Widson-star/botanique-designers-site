@@ -148,9 +148,12 @@ describe("manager edit", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers only Ongoing<->Paused for status (a low-risk direct field)", () => {
+  it("routes status Ongoing<->Paused through the material-change proposal, not a direct field", () => {
     renderForm({ role: "manager", mode: "edit", project: editableProject });
-    const statusSelect = screen.getByLabelText("Status");
+    // No editable Status combobox in the direct-save form (it is read-only).
+    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+    // The proposal offers the constrained Ongoing<->Paused status select.
+    const statusSelect = screen.getByLabelText("Status (Ongoing / Paused)");
     const options = Array.from(statusSelect.querySelectorAll("option")).map((o) => o.value);
     expect(options).toEqual(["Ongoing", "Paused"]);
   });

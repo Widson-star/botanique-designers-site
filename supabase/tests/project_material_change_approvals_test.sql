@@ -100,6 +100,9 @@ begin
     raise exception 'manager changed county directly'; exception when check_violation then null; end;
   begin update public.projects set project_type = 'Commercial' where id = '10000000-0000-0000-0000-000000000001';
     raise exception 'manager changed project_type directly'; exception when check_violation then null; end;
+  -- Status is NOT low-risk: a manager may not directly pause or resume.
+  begin update public.projects set status = 'Paused' where id = '10000000-0000-0000-0000-000000000001';
+    raise exception 'manager paused directly'; exception when check_violation then null; end;
   begin update public.projects set stage = 'Detailed Design' where id = '10000000-0000-0000-0000-000000000001';
     raise exception 'manager changed stage directly'; exception when check_violation then null; end;
   begin update public.projects set lead_person_id = '00000000-0000-0000-0000-000000000003' where id = '10000000-0000-0000-0000-000000000001';
@@ -109,19 +112,19 @@ begin
   begin update public.projects set actual_start_date = '2026-06-05' where id = '10000000-0000-0000-0000-000000000001';
     raise exception 'manager changed actual_start_date directly'; exception when check_violation then null; end;
 
-  -- Low-risk fields remain a direct, audited manager write on an authorised project.
+  -- Low-risk fields (next_action/next_action_date/blocker/notes ONLY) remain a
+  -- direct, audited manager write on an authorised project. status is NOT here.
   history_before := (select count(*) from public.project_activities where project_id = '10000000-0000-0000-0000-000000000001');
   update public.projects
   set next_action = 'Confirm mobilisation', next_action_date = '2026-08-01',
       blocker = 'Awaiting client sign-off', notes = 'Weekly review scheduled'
   where id = '10000000-0000-0000-0000-000000000001';
-  update public.projects set status = 'Paused' where id = '10000000-0000-0000-0000-000000000001';
   history_after := (select count(*) from public.project_activities where project_id = '10000000-0000-0000-0000-000000000001');
   perform pg_temp.assert_true(history_after > history_before, 'low-risk direct update records project history');
   perform pg_temp.assert_true(
-    (select next_action = 'Confirm mobilisation' and status = 'Paused'
+    (select next_action = 'Confirm mobilisation' and status = 'Ongoing'
      from public.projects where id = '10000000-0000-0000-0000-000000000001'),
-    'low-risk direct manager updates apply'
+    'low-risk direct manager updates apply and never change status'
   );
   perform pg_temp.assert_true(
     (select actor_id = auth.uid() from public.project_activities
@@ -129,8 +132,6 @@ begin
        and new_values->>'next_action' = 'Confirm mobilisation' limit 1),
     'project history records the exact acting manager'
   );
-  -- Restore Alego to Ongoing for later scenarios.
-  update public.projects set status = 'Ongoing' where id = '10000000-0000-0000-0000-000000000001';
 
   -- Manager cannot update an UNRELATED project (RLS filters it: zero rows, no change).
   update public.projects set next_action = 'Should not apply' where id = '10000000-0000-0000-0000-000000000005';
@@ -308,6 +309,74 @@ begin
   perform pg_temp.assert_true(
     (select lead_person_id = '00000000-0000-0000-0000-000000000002' from public.projects where id = '10000000-0000-0000-0000-000000000004'),
     'approved lead change applies atomically'
+  );
+end;
+$$;
+
+-- =====================================================================
+-- D2. Project status (Ongoing<->Paused) is a material-change proposal, never
+--     a manager direct write.
+-- =====================================================================
+do $$
+declare
+  request public.approval_requests;
+begin
+  -- Manager proposes pausing Alego (Ongoing, led by manager).
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  request := public.submit_project_approval(
+    '10000000-0000-0000-0000-000000000001', 'project_material_change',
+    '{"status":"Paused"}', 'Site paused for the rains.'
+  );
+  perform pg_temp.assert_true(request.state = 'awaiting_review', 'status pause proposal queues for review');
+  perform pg_temp.assert_true(
+    (select status = 'Ongoing' from public.projects where id = '10000000-0000-0000-0000-000000000001'),
+    'pause proposal does not change the live status'
+  );
+
+  -- A status proposal is invalid on a non-active (Pending) project — activation
+  -- is the dedicated path, not material change.
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000007', 'project_material_change',
+      '{"status":"Paused"}', 'Wrong path'
+    );
+    raise exception 'status proposal on a pending project unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+  -- Terminal statuses are never reachable via material change.
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000002', 'project_material_change',
+      '{"status":"Completed"}', 'Wrong path'
+    );
+    raise exception 'terminal status via material change unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+
+  -- Owner approves the pause: status applied atomically.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  request := public.decide_project_approval(request.id, 'approved', null);
+  perform pg_temp.assert_true(
+    (select status = 'Paused' from public.projects where id = '10000000-0000-0000-0000-000000000001'),
+    'approved pause applies the status atomically'
+  );
+
+  -- Manager still cannot resume directly; must propose again.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  begin
+    update public.projects set status = 'Ongoing' where id = '10000000-0000-0000-0000-000000000001';
+    raise exception 'manager resumed directly';
+  exception when check_violation then null;
+  end;
+  request := public.submit_project_approval(
+    '10000000-0000-0000-0000-000000000001', 'project_material_change',
+    '{"status":"Ongoing"}', 'Rains cleared; resuming.'
+  );
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  request := public.decide_project_approval(request.id, 'approved', null);
+  perform pg_temp.assert_true(
+    (select status = 'Ongoing' from public.projects where id = '10000000-0000-0000-0000-000000000001'),
+    'approved resume applies the status atomically'
   );
 end;
 $$;
@@ -571,6 +640,90 @@ select pg_temp.assert_true(
   (select count(*) = 0 from public.daily_site_authorised_projects() where project_name in ('Zizu', 'Runda')),
   'daily site selector excludes unrelated projects'
 );
+
+-- =====================================================================
+-- I. Daily Site Entry eligibility != project access. A completed project (the
+--    Mununga-equivalent CompletionProj) stays visible in Projects for its lead
+--    but is not a valid target for a NEW Daily Site Entry, in the selector AND
+--    in the database create function.
+-- =====================================================================
+do $$
+declare
+  entry public.daily_site_entries;
+begin
+  -- Manager leads the now-Completed project and still sees it in Projects.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  perform pg_temp.assert_true(
+    exists (select 1 from public.projects where id = '10000000-0000-0000-0000-000000000008'),
+    'manager still sees the completed project in Projects (lead/assigned)'
+  );
+  -- ...but it is excluded from the Daily Site new-entry selector.
+  perform pg_temp.assert_true(
+    not exists (
+      select 1 from public.daily_site_authorised_projects()
+      where id = '10000000-0000-0000-0000-000000000008'
+    ),
+    'completed project is excluded from the Daily Site selector'
+  );
+  -- Operationally-active led/assigned projects remain eligible.
+  perform pg_temp.assert_true(
+    (select count(*) = 2 from public.daily_site_authorised_projects()
+      where id in ('10000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002')),
+    'Alego and Karen remain valid Daily Site options'
+  );
+  -- The database refuses a NEW entry for the completed project.
+  begin
+    perform public.create_daily_site_entry_draft(
+      '10000000-0000-0000-0000-000000000008', '2999-06-10', 'no_work',
+      'rain', null, null, null, null, null, null, null, null, 'Completed project attempt', 'not_required'
+    );
+    raise exception 'new entry for a completed project unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+  -- The database accepts a NEW entry for an eligible (Ongoing) led project.
+  entry := public.create_daily_site_entry_draft(
+    '10000000-0000-0000-0000-000000000001', '2999-06-11', 'no_work',
+    'rain', null, null, null, null, null, null, null, null, 'Eligible project', 'not_required'
+  );
+  perform pg_temp.assert_true(entry.state = 'draft', 'eligible project accepts a new Daily Site Entry');
+end;
+$$;
+
+-- Owner selector + create path also exclude completed/cancelled/archived.
+do $$
+declare
+  entry public.daily_site_entries;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  -- Owner directly cancels one project and archives another (owner is unrestricted).
+  update public.projects set status = 'Cancelled' where id = '10000000-0000-0000-0000-000000000005';
+  update public.projects set archived = true where id = '10000000-0000-0000-0000-000000000006';
+
+  perform pg_temp.assert_true(
+    (select count(*) = 0 from public.daily_site_authorised_projects()
+      where id in (
+        '10000000-0000-0000-0000-000000000005', -- Cancelled
+        '10000000-0000-0000-0000-000000000006', -- Archived
+        '10000000-0000-0000-0000-000000000008'  -- Completed
+      )),
+    'owner Daily Site selector excludes completed/cancelled/archived projects'
+  );
+  begin
+    perform public.create_daily_site_entry_draft(
+      '10000000-0000-0000-0000-000000000005', '2999-06-12', 'no_work',
+      'other', 'Client cancelled', null, null, null, null, null, null, null, 'Cancelled attempt', 'not_required'
+    );
+    raise exception 'owner new entry for a cancelled project unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+  -- Owner may still record for an operationally-eligible project.
+  entry := public.create_daily_site_entry_draft(
+    '10000000-0000-0000-0000-000000000002', '2999-06-13', 'no_work',
+    'rain', null, null, null, null, null, null, null, null, 'Owner eligible', 'not_required'
+  );
+  perform pg_temp.assert_true(entry.state = 'draft', 'owner may record for an eligible project');
+end;
+$$;
 
 -- Anonymous cannot read the new intake tables or execute the workflow functions.
 reset role;
