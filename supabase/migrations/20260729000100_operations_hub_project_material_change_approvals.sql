@@ -549,6 +549,12 @@ begin
   if target_decision = 'approved' then
     select * into project from public.projects where id = request.project_id for update;
 
+    -- Mark the project-history event that the apply generates as "approval-
+    -- applied" so the owner's activity view can distinguish it from a direct
+    -- edit. Transaction-local and reset immediately after the apply so no later
+    -- direct update in the same transaction inherits the marker.
+    perform set_config('bd.applied_via_approval', 'true', true);
+
     if request.approval_type = 'project_material_change' then
       perform public.private_validate_project_material_change(
         project, request.original_values, request.proposed_values
@@ -578,6 +584,8 @@ begin
           update public.projects set archived = false where id = project.id;
       end case;
     end if;
+
+    perform set_config('bd.applied_via_approval', '', true);
   end if;
 
   update public.approval_requests
@@ -1221,8 +1229,11 @@ revoke execute on function public.private_project_material_allowlist() from publ
 revoke execute on function public.private_project_material_original(public.projects, jsonb) from public, anon, authenticated;
 revoke execute on function public.private_validate_project_material_change(public.projects, jsonb, jsonb) from public, anon, authenticated;
 revoke execute on function public.private_apply_project_material_change(uuid, jsonb) from public, anon, authenticated;
-revoke execute on function public.private_manager_project_scope(uuid) from public, anon;
-grant execute on function public.private_manager_project_scope(uuid) to authenticated;
+-- Internal helper: only ever called from submit_project_approval (SECURITY
+-- DEFINER, runs as the function owner). No authenticated EXECUTE is required, so
+-- it is fully revoked like the other private_ helpers (least privilege; closes
+-- off RPC enumeration via /rest/v1/rpc).
+revoke execute on function public.private_manager_project_scope(uuid) from public, anon, authenticated;
 revoke execute on function public.private_validate_project_intake(jsonb) from public, anon, authenticated;
 
 revoke execute on function public.submit_project_intake(jsonb, text, text, uuid) from public, anon;
@@ -1324,6 +1335,101 @@ end;
 $$;
 
 -- =====================================================================
+-- 9b. Distinguish approval-applied project changes from direct edits.
+-- ---------------------------------------------------------------------
+-- The project-history ledger previously recorded an approval-applied update and
+-- a direct manager edit identically ('updated', no reason). decide_project_approval
+-- now sets a transaction-local marker (`bd.applied_via_approval`) around the apply;
+-- this CREATE OR REPLACE of the history trigger reads it and stamps a fixed,
+-- non-identifying reason on the generated event, so the owner's Activity History
+-- can tell an approved change from a direct low-risk edit. Everything else is
+-- preserved verbatim (operational fields diffed, audit columns ignored, actor from
+-- auth.uid(), no-op updates skipped). No raw UUID is written.
+-- =====================================================================
+create or replace function public.tg_project_history()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  op_fields constant text[] := array[
+    'project_name', 'client_site_name', 'location', 'county', 'project_type',
+    'status', 'stage', 'lead_person_id', 'start_date', 'last_updated',
+    'next_action', 'next_action_date', 'portfolio_eligible',
+    'portfolio_permission_status', 'notes', 'archived',
+    'actual_start_date', 'target_completion_date', 'actual_completion_date',
+    'blocker'
+  ];
+  oldj jsonb;
+  newj jsonb;
+  f text;
+  changed text[] := '{}';
+  pv jsonb := '{}'::jsonb;
+  nv jsonb := '{}'::jsonb;
+  act text;
+  event_reason text := case
+    when current_setting('bd.applied_via_approval', true) = 'true'
+      then 'Applied via an approved change request.'
+    else null
+  end;
+begin
+  if (tg_op = 'INSERT') then
+    newj := to_jsonb(new);
+    foreach f in array op_fields loop
+      if jsonb_typeof(newj -> f) is distinct from 'null' then
+        changed := changed || f;
+        nv := nv || jsonb_build_object(f, newj -> f);
+      end if;
+    end loop;
+
+    insert into public.project_activities
+      (project_id, action, actor_id, occurred_at, changed_fields,
+       previous_values, new_values, reason, created_at)
+    values
+      (new.id, 'created', auth.uid(), now(), changed, null, nv, event_reason, now());
+
+    return null;
+
+  elsif (tg_op = 'UPDATE') then
+    oldj := to_jsonb(old);
+    newj := to_jsonb(new);
+    foreach f in array op_fields loop
+      if (oldj -> f) is distinct from (newj -> f) then
+        changed := changed || f;
+        pv := pv || jsonb_build_object(f, oldj -> f);
+        nv := nv || jsonb_build_object(f, newj -> f);
+      end if;
+    end loop;
+
+    if array_length(changed, 1) is null then
+      return null;
+    end if;
+
+    if ('archived' = any (changed)) then
+      if (new.archived is true) then
+        act := 'archived';
+      else
+        act := 'restored';
+      end if;
+    else
+      act := 'updated';
+    end if;
+
+    insert into public.project_activities
+      (project_id, action, actor_id, occurred_at, changed_fields,
+       previous_values, new_values, reason, created_at)
+    values
+      (new.id, act, auth.uid(), now(), changed, pv, nv, event_reason, now());
+
+    return null;
+  end if;
+
+  return null;
+end;
+$$;
+
+-- =====================================================================
 -- 10. Authority correction: Daily Site Entry eligibility != project access.
 -- ---------------------------------------------------------------------
 -- Project read/edit/proposal authority (lead/assignment) is NOT the same as
@@ -1335,9 +1441,24 @@ $$;
 -- The eligibility gate does NOT touch can_manage_daily_site_project (which still
 -- governs READ of existing entries and history for completed projects), does not
 -- alter accepted/void/supersede correction workflows, and never mutates
--- projects.status. Pending, Ongoing and Paused remain eligible for a new entry
--- (a paused or newly-mobilising site may still record a no-work or working day);
--- a stricter Ongoing-only rule is intentionally NOT imposed without evidence.
+-- projects.status.
+--
+-- Eligibility rule: status = 'Ongoing' AND archived = false. This is the
+-- authority-coherent rule (see BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md
+-- §4.5 "Paused semantics", the daily-site migration header "operationally-active
+-- projects", and daily_site_morning_compliance's Ongoing-only scope):
+--   * Pending  -> excluded: active site operations have not begun (activation is
+--                 the dedicated approval);
+--   * Paused   -> excluded: a project must be resumed (Ongoing<->Paused is a
+--                 project_material_change proposal) before working activity is
+--                 recorded — a project must never remain officially Paused while
+--                 a new "Working today" entry is created. A single paused DAY on
+--                 an Ongoing project is the `temporarily_paused_for_day` no-work
+--                 disposition, NOT a Paused project status;
+--   * Completed / Cancelled / Design-only / Archived -> excluded.
+-- Setting a project Ongoing->Paused immediately removes it from new-entry
+-- eligibility; an approved resume restores it. No authority requires Pending or
+-- Paused project-status entries.
 -- =====================================================================
 create or replace function public.private_daily_site_project_eligible(target_project_id uuid)
 returns boolean
@@ -1351,14 +1472,18 @@ as $$
     from public.projects p
     where p.id = target_project_id
       and p.archived is false
-      and p.status not in ('Completed', 'Cancelled', 'Design-only')
+      and p.status = 'Ongoing'
   )
 $$;
 
-revoke execute on function public.private_daily_site_project_eligible(uuid) from public, anon;
-grant execute on function public.private_daily_site_project_eligible(uuid) to authenticated;
+-- Internal helper: only called from daily_site_authorised_projects() and
+-- create_daily_site_entry_draft() (both SECURITY DEFINER, run as the owner). No
+-- authenticated EXECUTE is required; fully revoked for least privilege.
+revoke execute on function public.private_daily_site_project_eligible(uuid) from public, anon, authenticated;
 
--- Selector now returns only authorised AND operationally-eligible projects.
+-- Selector now returns only authorised AND operationally-eligible (Ongoing,
+-- non-archived) projects. Same rule as private_daily_site_project_eligible and
+-- the create path, for owner and manager alike.
 create or replace function public.daily_site_authorised_projects()
 returns table (
   id uuid,
@@ -1376,7 +1501,7 @@ as $$
   from public.projects p
   where public.can_manage_daily_site_project(p.id)
     and p.archived is false
-    and p.status not in ('Completed', 'Cancelled', 'Design-only')
+    and p.status = 'Ongoing'
   order by p.project_name asc
 $$;
 
@@ -1427,10 +1552,12 @@ begin
   if not public.can_manage_daily_site_project(project.id) then
     raise exception 'not authorised for this project' using errcode = 'insufficient_privilege';
   end if;
-  -- Operational eligibility: a completed/cancelled/archived/design-only project
-  -- may keep its history but must not receive a NEW Daily Site Entry.
+  -- Operational eligibility: only an Ongoing, non-archived project may receive a
+  -- NEW Daily Site Entry. A Pending, Paused, Completed, Cancelled, Design-only or
+  -- Archived project keeps its history but is not a valid new-entry target (a
+  -- Paused project must be resumed via approval first).
   if not public.private_daily_site_project_eligible(project.id) then
-    raise exception 'project is not operationally eligible for a new Daily Site Entry (completed, cancelled, archived or design-only projects are excluded)' using errcode = 'check_violation';
+    raise exception 'project is not operationally eligible for a new Daily Site Entry (only an Ongoing, non-archived project may receive one; resume a paused project via approval first)' using errcode = 'check_violation';
   end if;
 
   plan := public.private_daily_site_normalise_plan(

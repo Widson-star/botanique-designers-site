@@ -85,12 +85,20 @@ export default function ActivityHistory({ projectId }) {
         return (
           <li key={activity.id} className="py-4 first:pt-0 last:pb-0">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-sm font-semibold text-botanique-charcoal">{activity.actionLabel}</p>
+              <p className="text-sm font-semibold text-botanique-charcoal">
+                {activity.actionLabel}
+                {activity.viaApproval && (
+                  <span className="ml-2 rounded-full bg-botanique-green/10 px-2 py-0.5 text-[11px] font-medium text-botanique-green align-middle">
+                    Approval-applied
+                  </span>
+                )}
+              </p>
               <time className="text-xs text-gray-400">{activity.occurredAt}</time>
             </div>
             <p className="mt-0.5 text-xs text-gray-500">
               By {compactActor}
               {activity.actorRole ? ` · ${activity.actorRole}` : ""}
+              {activity.viaApproval ? " · applied via approved request" : " · direct update"}
             </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">{eventSummary(activity)}</p>
             <details className="mt-2 text-sm">

@@ -119,6 +119,11 @@ export function formatFieldValue(field, value, profilesById = {}) {
 
 // Turn one ledger activity row into a readable summary object. Groups every
 // changed field into a before/after row; never returns raw JSON or UUIDs.
+// The fixed, system-written marker the approval apply stamps on the history
+// event (see the 20260729000100 migration). Matched here so the UI can show an
+// "Approval-applied" badge instead of repeating the sentence as a free reason.
+export const APPROVAL_APPLIED_REASON = "Applied via an approved change request.";
+
 export function formatActivity(activity, profilesById = {}) {
   const previous = activity.previous_values || {};
   const next = activity.new_values || {};
@@ -139,6 +144,8 @@ export function formatActivity(activity, profilesById = {}) {
     ),
   }));
 
+  const viaApproval = activity.reason === APPROVAL_APPLIED_REASON;
+
   return {
     id: activity.id,
     action: activity.action,
@@ -146,7 +153,10 @@ export function formatActivity(activity, profilesById = {}) {
     actor: resolveActorLabel(activity.actor_id, profilesById),
     actorRole: resolveActorRole(activity.actor_id, profilesById),
     occurredAt: formatDateTime(activity.occurred_at),
-    reason: activity.reason || null,
+    // Distinguish an approval-applied change from a direct edit. The marker is
+    // surfaced as a badge, so it is not repeated as a free-text reason.
+    viaApproval,
+    reason: viaApproval ? null : activity.reason || null,
     changes,
   };
 }

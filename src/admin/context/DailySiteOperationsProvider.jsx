@@ -131,15 +131,14 @@ export default function DailySiteOperationsProvider({ children, session, role, i
   // The projects the caller may record a NEW entry for. Real mode: the
   // authority-scoped AND operationally-eligible database list (never the blanket
   // projects list). Demo mode: the dev seed projects filtered to the same
-  // eligibility (completed/cancelled/archived/design-only excluded) so the
-  // preview matches the DB boundary; the production boundary is DB-enforced.
+  // eligibility rule (Ongoing and not archived) so the preview matches the DB
+  // boundary; the production boundary is DB-enforced. Pending, Paused, Completed,
+  // Cancelled, Design-only and Archived projects are excluded from new entries.
   const authorisedProjects = useMemo(
     () =>
       isDemo
         ? projects.filter(
-            (project) =>
-              !project.archived &&
-              !["Completed", "Cancelled", "Design-only"].includes(project.status)
+            (project) => !project.archived && project.status === "Ongoing"
           )
         : remoteAuthorisedProjects,
     [isDemo, projects, remoteAuthorisedProjects]

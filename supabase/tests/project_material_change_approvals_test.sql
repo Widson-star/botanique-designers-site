@@ -132,6 +132,13 @@ begin
        and new_values->>'next_action' = 'Confirm mobilisation' limit 1),
     'project history records the exact acting manager'
   );
+  -- A DIRECT low-risk edit is NOT marked as approval-applied (distinguishable).
+  perform pg_temp.assert_true(
+    (select reason is null from public.project_activities
+     where project_id = '10000000-0000-0000-0000-000000000001'
+       and new_values->>'next_action' = 'Confirm mobilisation' limit 1),
+    'direct low-risk edit is not marked as approval-applied'
+  );
 
   -- Manager cannot update an UNRELATED project (RLS filters it: zero rows, no change).
   update public.projects set next_action = 'Should not apply' where id = '10000000-0000-0000-0000-000000000005';
@@ -229,6 +236,33 @@ begin
     raise exception 'invalid lead proposal unexpectedly succeeded';
   exception when check_violation then null;
   end;
+  -- Hostile JSON: a nested object cannot bypass the per-field type validation.
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000002', 'project_material_change',
+      '{"location":{"nested":"payload"}}', 'Nested json'
+    );
+    raise exception 'nested-object material value unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+  -- Hostile JSON: a malformed UUID for the accountable lead is rejected.
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000002', 'project_material_change',
+      '{"lead_person_id":"not-a-uuid"}', 'Bad uuid'
+    );
+    raise exception 'malformed lead UUID unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+  -- Hostile JSON: an empty proposal (no changed field) is rejected.
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000002', 'project_material_change',
+      '{}', 'Empty proposal'
+    );
+    raise exception 'empty material proposal unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
 
   -- Manager cannot propose on an UNRELATED project, nor can an unrelated manager.
   begin
@@ -272,6 +306,14 @@ begin
         and new_values->>'location' = 'Karen'
     ),
     'project history records the approval-applied change'
+  );
+  -- The approval-applied event is marked distinct from a direct edit (no UUID).
+  perform pg_temp.assert_true(
+    (select reason = 'Applied via an approved change request.'
+       from public.project_activities
+      where project_id = '10000000-0000-0000-0000-000000000001'
+        and new_values->>'location' = 'Karen' limit 1),
+    'approval-applied change carries the distinguishing marker'
   );
   perform pg_temp.assert_true(
     exists (
@@ -689,39 +731,140 @@ begin
 end;
 $$;
 
--- Owner selector + create path also exclude completed/cancelled/archived.
+-- Owner selector + create path use the SAME Ongoing-only rule: Pending, Paused,
+-- Completed, Cancelled, Design-only and Archived are all excluded.
 do $$
 declare
   entry public.daily_site_entries;
 begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
-  -- Owner directly cancels one project and archives another (owner is unrestricted).
-  update public.projects set status = 'Cancelled' where id = '10000000-0000-0000-0000-000000000005';
-  update public.projects set archived = true where id = '10000000-0000-0000-0000-000000000006';
+  -- Owner (unrestricted) sets a spread of non-Ongoing states directly.
+  update public.projects set status = 'Cancelled' where id = '10000000-0000-0000-0000-000000000005'; -- Cancelled
+  update public.projects set archived = true where id = '10000000-0000-0000-0000-000000000006';       -- Archived
+  update public.projects set status = 'Paused' where id = '10000000-0000-0000-0000-000000000003';     -- Paused
+  update public.projects set status = 'Pending' where id = '10000000-0000-0000-0000-000000000009';    -- Pending
 
   perform pg_temp.assert_true(
     (select count(*) = 0 from public.daily_site_authorised_projects()
       where id in (
+        '10000000-0000-0000-0000-000000000003', -- Paused
         '10000000-0000-0000-0000-000000000005', -- Cancelled
         '10000000-0000-0000-0000-000000000006', -- Archived
-        '10000000-0000-0000-0000-000000000008'  -- Completed
+        '10000000-0000-0000-0000-000000000008', -- Completed
+        '10000000-0000-0000-0000-000000000009'  -- Pending
       )),
-    'owner Daily Site selector excludes completed/cancelled/archived projects'
+    'owner Daily Site selector excludes pending/paused/completed/cancelled/archived projects'
   );
+  perform pg_temp.assert_true(
+    (select bool_and(status = 'Ongoing' and archived is false)
+       from public.daily_site_authorised_projects()),
+    'owner Daily Site selector returns only Ongoing, non-archived projects'
+  );
+  -- A Paused project must be resumed (via approval) before a new entry.
   begin
     perform public.create_daily_site_entry_draft(
-      '10000000-0000-0000-0000-000000000005', '2999-06-12', 'no_work',
-      'other', 'Client cancelled', null, null, null, null, null, null, null, 'Cancelled attempt', 'not_required'
+      '10000000-0000-0000-0000-000000000003', '2999-06-12', 'no_work',
+      'rain', null, null, null, null, null, null, null, null, 'Paused attempt', 'not_required'
     );
-    raise exception 'owner new entry for a cancelled project unexpectedly succeeded';
+    raise exception 'owner new entry for a paused project unexpectedly succeeded';
   exception when check_violation then null;
   end;
-  -- Owner may still record for an operationally-eligible project.
+  -- A Pending project has not begun site operations.
+  begin
+    perform public.create_daily_site_entry_draft(
+      '10000000-0000-0000-0000-000000000009', '2999-06-12', 'no_work',
+      'rain', null, null, null, null, null, null, null, null, 'Pending attempt', 'not_required'
+    );
+    raise exception 'owner new entry for a pending project unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
+  -- Owner may still record for an operationally-eligible (Ongoing) project.
   entry := public.create_daily_site_entry_draft(
     '10000000-0000-0000-0000-000000000002', '2999-06-13', 'no_work',
     'rain', null, null, null, null, null, null, null, null, 'Owner eligible', 'not_required'
   );
-  perform pg_temp.assert_true(entry.state = 'draft', 'owner may record for an eligible project');
+  perform pg_temp.assert_true(entry.state = 'draft', 'owner may record for an Ongoing project');
+end;
+$$;
+
+-- =====================================================================
+-- J. Concurrency guards. Every mutating RPC takes a row lock (FOR UPDATE) and
+--    re-checks state, so a losing concurrent caller is rejected rather than
+--    double-applying. These sequential cases assert the state guard that a
+--    second concurrent transaction would hit after the first commits.
+-- =====================================================================
+do $$
+declare
+  request public.approval_requests;
+  intake public.project_intake_requests;
+  projects_after_first integer;
+begin
+  -- Material change: a request can be decided once; a second decision fails and
+  -- never re-applies (guards "two owner decisions on the same request").
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  request := public.submit_project_approval(
+    '10000000-0000-0000-0000-000000000004', 'project_material_change',
+    '{"county":"Kajiado"}', 'County correction.'
+  );
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  request := public.decide_project_approval(request.id, 'approved', null);
+  begin
+    perform public.decide_project_approval(request.id, 'approved', null);
+    raise exception 'material change decided twice';
+  exception when check_violation then null;
+  end;
+
+  -- Withdrawal racing approval: once approved, the requester can no longer
+  -- withdraw; and a withdrawn request can no longer be decided.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  request := public.submit_project_approval(
+    '10000000-0000-0000-0000-000000000004', 'project_material_change',
+    '{"location":"Kitengela"}', 'Location correction.'
+  );
+  request := public.withdraw_approval_request(request.id, 'Changed my mind.');
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  begin
+    perform public.decide_project_approval(request.id, 'approved', null);
+    raise exception 'withdrawn material change decided';
+  exception when check_violation then null;
+  end;
+
+  -- Intake: approve-once, and a retry/second decision creates NO duplicate
+  -- project (guards "duplicate intake approval" / retry-race duplicates).
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  intake := public.submit_project_intake(
+    '{"project_name":"Concurrency Intake","project_type":"Residential"}', 'Ready.'
+  );
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  intake := public.decide_project_intake(intake.id, 'approved', null);
+  projects_after_first := (select count(*) from public.projects);
+  begin
+    perform public.decide_project_intake(intake.id, 'approved', null);
+    raise exception 'intake approved twice';
+  exception when check_violation then null;
+  end;
+  perform pg_temp.assert_true(
+    (select count(*) = projects_after_first from public.projects),
+    'a second intake decision creates no duplicate project'
+  );
+  perform pg_temp.assert_true(
+    (select count(*) = 1 from public.projects
+      where id = intake.created_project_id),
+    'the approved intake created exactly one live project'
+  );
+
+  -- Withdrawn intake can no longer be decided.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  intake := public.submit_project_intake(
+    '{"project_name":"Withdrawn Concurrency","project_type":"Residential"}', 'Ready.'
+  );
+  intake := public.withdraw_project_intake(intake.id, 'Not now.');
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  begin
+    perform public.decide_project_intake(intake.id, 'approved', null);
+    raise exception 'withdrawn intake decided';
+  exception when check_violation then null;
+  end;
 end;
 $$;
 

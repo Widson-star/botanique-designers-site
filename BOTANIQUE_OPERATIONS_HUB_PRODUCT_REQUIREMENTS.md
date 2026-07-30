@@ -601,13 +601,26 @@ automation exists. Their omission from the material allowlist is deliberate, not
 read/edit/proposal authority (lead/assignment) does not by itself make a project eligible for
 a **new** Daily Site Entry. The new-entry selector and the `create_daily_site_entry_draft`
 database function now require the project to be both within the user's authority **and**
-operationally eligible — excluding **Completed, Cancelled, Archived and Design-only**. A
+operationally eligible: **`status = 'Ongoing' AND archived = false`**. This is the
+authority-coherent rule (see §4.5 "Paused semantics", the daily-site migration header
+"operationally-active projects", and `daily_site_morning_compliance`'s Ongoing-only scope):
+
+- **Ongoing** → eligible (Working today or No work today);
+- **Pending** → excluded: active site operations have not begun (activation is the dedicated
+  approval);
+- **Paused** → excluded: the project must be **resumed** (Ongoing↔Paused is a
+  `project_material_change` proposal) before working activity is recorded — a project must
+  never remain officially Paused while a new "Working today" entry is created. A single
+  paused **day** on an Ongoing project is the `temporarily_paused_for_day` no-work
+  disposition, **not** a Paused project status (§4.5);
+- **Completed / Cancelled / Design-only / Archived** → excluded.
+
+Manager and owner selectors use the **same** rule. Setting a project Ongoing→Paused
+immediately removes it from new-entry eligibility; an approved resume restores it. A
 completed project (e.g. Mununga) remains visible in Projects and keeps its historical Daily
-Site records, but cannot receive a new entry, in the UI **or** the database. Pending, Ongoing
-and Paused remain eligible (a paused or newly-mobilising site may still record a working or
-no-work day); a stricter Ongoing-only rule is intentionally not imposed without evidence.
-Existing entries, accept/void/supersede correction workflows and Daily Site read access for
-completed projects are unchanged, so Daily Site Operations stays ACTIVE_VERIFIED.
+Site records, but cannot receive a new entry, in the UI **or** the database. Existing
+entries, accept/void/supersede correction workflows and Daily Site read access are unchanged
+(`can_manage_daily_site_project` is untouched), so Daily Site Operations stays ACTIVE_VERIFIED.
 
 **Project creation.** Manager direct creation is removed (owner-only INSERT). A manager
 submits a restricted **project-intake proposal** (`project_intake_requests`); no live

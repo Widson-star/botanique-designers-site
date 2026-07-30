@@ -2765,11 +2765,26 @@ still unapplied:
    (the selector/create path gated only on authority, contradicting the migration's own
    "operationally-active" intent) is fixed narrowly in this PR:
    `daily_site_authorised_projects()` and `create_daily_site_entry_draft()` now also
-   require operational eligibility (not archived, status not in
-   Completed/Cancelled/Design-only). Completed Mununga stays visible in Projects but is
-   excluded from the new-entry selector and blocked at the database; Alego/Karen remain
-   eligible. `can_manage_daily_site_project` (read/history/corrections) is untouched, so
-   Daily Site Operations stays ACTIVE_VERIFIED.
+   require operational eligibility. Following the migration security-review authority
+   decision (evidence: PRD §4.5 Paused semantics + the migration header + Ongoing-only
+   morning-compliance scope — no authority requires Pending/Paused entries), the rule is
+   tightened to **`status = 'Ongoing' AND archived = false`** (same for owner and manager):
+   Pending, Paused, Completed, Cancelled, Design-only and Archived are excluded. Completed
+   Mununga stays visible in Projects but is excluded from the new-entry selector and blocked
+   at the database; Alego/Karen (Ongoing) remain eligible; Ongoing→Paused removes eligibility
+   immediately and an approved resume restores it. `can_manage_daily_site_project`
+   (read/history/corrections) is untouched, so Daily Site Operations stays ACTIVE_VERIFIED.
+
+**Migration security review (same PR #44 branch).** Hostile-path DB review confirmed: all 19
+new/replaced functions are SECURITY DEFINER with a fixed `search_path = public`, schema-
+qualified, no dynamic SQL; `private_*` helpers fully revoked from public/anon/authenticated
+(two over-grants tightened during review); strict JSON-key allowlist rejects arbitrary/nested
+keys, malformed UUIDs and empty proposals; authoritative original snapshots; stale-request
+protection; owner-only decisions with no manager/requester self-approval; atomic apply;
+scoped manager RLS; separate-table intake isolation. Added DB concurrency-guard tests (decide-
+twice, withdraw-vs-approve, duplicate intake approval creates no duplicate project) and
+hostile-JSON tests. Still IMPLEMENTED_UNVERIFIED; migration `20260729000100` still unapplied
+and strictly the latest of the six repository migrations (no collision/rename).
 
 Migration ordering: `20260729000100` is strictly the latest of the six repository
 migrations (after `20260728000200`); no collision, no rename required. Lint baseline:

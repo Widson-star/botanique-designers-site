@@ -441,11 +441,15 @@ Authority corrections applied before the migration security review:
 - **Portfolio is OWNER_ONLY.** `portfolio_eligible` and `portfolio_permission_status` are
   deliberately excluded from the material allowlist; no manager proposal path exists.
 - **Daily Site Entry eligibility ≠ project access.** `daily_site_authorised_projects()` and
-  `create_daily_site_entry_draft()` now require operational eligibility (not archived and
-  status not in Completed/Cancelled/Design-only) in addition to project authority, so a
-  completed project (Mununga) is excluded from the new-entry selector and the database
-  refuses a new entry for it — while its Projects visibility, history and correction
-  workflows are unchanged (`can_manage_daily_site_project` is untouched).
+  `create_daily_site_entry_draft()` now require operational eligibility — **`status =
+  'Ongoing' AND archived = false`** — in addition to project authority (same rule for owner
+  and manager). Pending (not begun), Paused (must be resumed via approval first), Completed,
+  Cancelled, Design-only and Archived are all excluded, consistent with §4.5 Paused
+  semantics and the Ongoing-only morning-compliance scope. A completed/paused project
+  (Mununga) is excluded from the new-entry selector and the database refuses a new entry for
+  it, while its Projects visibility, history and accept/void/supersede correction workflows
+  are unchanged (`can_manage_daily_site_project` is untouched). Setting a project
+  Ongoing→Paused removes new-entry eligibility immediately; an approved resume restores it.
 
 Status: draft PR, migration not applied to hosted Supabase, not yet ACTIVE_VERIFIED.
 
