@@ -5,6 +5,7 @@ export const APPROVAL_TYPE_LABELS = {
   project_cancellation: "Project cancellation",
   project_archive: "Project archive",
   project_restore: "Project restoration",
+  project_material_change: "Material project change",
 };
 
 export const APPROVAL_STATE_LABELS = {
@@ -33,6 +34,16 @@ const VALUE_LABELS = {
   target_completion_date: "Target completion",
   actual_completion_date: "Actual completion",
   archived: "Archived",
+  // Material-change fields.
+  project_name: "Project name",
+  client_site_name: "Client / site label",
+  location: "Location",
+  county: "County",
+  project_type: "Project type",
+  stage: "Stage",
+  lead_person_id: "Accountable lead",
+  start_date: "Planned start",
+  actual_start_date: "Actual start",
 };
 
 export function mapApprovalRequest(row) {
@@ -71,17 +82,65 @@ export function mapApprovalEvent(row) {
   };
 }
 
-export function approvalComparison(request) {
+// Field-by-field diff. When `profilesById` is supplied an accountable-lead UUID
+// is resolved to a person name (a raw UUID is never surfaced). When the live
+// `project` is supplied, a per-field CURRENT value and a `stale` flag (the live
+// value has drifted from the captured original) are included so the owner sees
+// original -> current -> proposed without any raw JSON.
+export function approvalComparison(request, options = {}) {
+  const { profilesById = null, project = null } = options;
   const keys = Object.keys(request?.proposedValues || {});
-  return keys.map((key) => ({
-    key,
-    label: VALUE_LABELS[key] || key.replaceAll("_", " "),
-    before: readableApprovalValue(request.originalValues?.[key]),
-    proposed: readableApprovalValue(request.proposedValues?.[key]),
-  }));
+  const liveByKey = project ? projectLiveValues(project) : null;
+  return keys.map((key) => {
+    const originalRaw = request.originalValues?.[key];
+    const proposedRaw = request.proposedValues?.[key];
+    const liveRaw = liveByKey ? liveByKey[key] : undefined;
+    const row = {
+      key,
+      label: VALUE_LABELS[key] || key.replaceAll("_", " "),
+      before: readableApprovalValue(originalRaw, key, profilesById),
+      proposed: readableApprovalValue(proposedRaw, key, profilesById),
+    };
+    if (liveByKey && Object.prototype.hasOwnProperty.call(liveByKey, key)) {
+      row.current = readableApprovalValue(liveRaw, key, profilesById);
+      row.stale = normaliseForCompare(liveRaw) !== normaliseForCompare(originalRaw);
+    }
+    return row;
+  });
 }
 
-export function readableApprovalValue(value) {
+// Map the mapped project (camelCase) back to the DB material-field keys so the
+// diff can show the current live value alongside the proposal.
+function projectLiveValues(project) {
+  return {
+    project_name: project.projectName ?? null,
+    client_site_name: project.clientSiteName ?? null,
+    location: project.location ?? null,
+    county: project.county ?? null,
+    project_type: project.projectType ?? null,
+    stage: project.stage ?? null,
+    lead_person_id: project.leadPersonId ?? null,
+    start_date: project.startDate ?? null,
+    actual_start_date: project.actualStartDate ?? null,
+    status: project.status ?? null,
+    target_completion_date: project.targetCompletionDate ?? null,
+    actual_completion_date: project.actualCompletionDate ?? null,
+    archived: project.archived ?? null,
+  };
+}
+
+function normaliseForCompare(value) {
+  if (value === null || value === undefined || value === "") return null;
+  return value;
+}
+
+export function readableApprovalValue(value, key = "", profilesById = null) {
+  if (key === "lead_person_id") {
+    if (!value) return "Unassigned";
+    const profile = profilesById ? profilesById[value] : null;
+    if (profile) return profile.full_name || profile.email || "Team member";
+    return "Protected profile";
+  }
   if (value === null || value === undefined || value === "") return "Not set";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);

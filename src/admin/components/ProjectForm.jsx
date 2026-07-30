@@ -24,6 +24,7 @@ import {
   validateProjectForm,
 } from "../utils/projectForm";
 import { formalProfileName } from "../utils/personName";
+import MaterialChangeProposal from "./approvals/MaterialChangeProposal";
 
 function Field({ label, htmlFor, error, hint, children, required }) {
   return (
@@ -131,6 +132,7 @@ export default function ProjectForm({ mode, project }) {
   const showActualCompletion = caps.actualCompletionVisible;
 
   return (
+    <div className="space-y-6">
     <form onSubmit={handleSubmit} className="space-y-6" noValidate>
       {serverError && (
         <div
@@ -143,65 +145,91 @@ export default function ProjectForm({ mode, project }) {
 
       <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
         <h2 className="text-base font-semibold">Project details</h2>
+        {!caps.materialEditable && (
+          <p className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-gray-500">
+            These identity fields are read-only for your role. Use “Propose a
+            material change” below to request a change with Principal approval.
+          </p>
+        )}
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Project name" htmlFor="projectName" error={errors.projectName} required>
-            <input
-              id="projectName"
-              type="text"
-              maxLength={160}
-              value={form.projectName}
-              onChange={(e) => setField("projectName", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="Project name" htmlFor="projectName" error={errors.projectName} required>
+              <input
+                id="projectName"
+                type="text"
+                maxLength={160}
+                value={form.projectName}
+                onChange={(e) => setField("projectName", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          ) : (
+            <ReadOnlyValue label="Project name" value={form.projectName || "Not set"} />
+          )}
 
-          <Field label="Client / site label" htmlFor="clientSiteName" error={errors.clientSiteName}>
-            <input
-              id="clientSiteName"
-              type="text"
-              maxLength={160}
-              value={form.clientSiteName}
-              onChange={(e) => setField("clientSiteName", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="Client / site label" htmlFor="clientSiteName" error={errors.clientSiteName}>
+              <input
+                id="clientSiteName"
+                type="text"
+                maxLength={160}
+                value={form.clientSiteName}
+                onChange={(e) => setField("clientSiteName", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          ) : (
+            <ReadOnlyValue label="Client / site label" value={form.clientSiteName || "Not set"} />
+          )}
 
-          <Field label="Project type" htmlFor="projectType">
-            <select
-              id="projectType"
-              value={form.projectType}
-              onChange={(e) => setField("projectType", e.target.value)}
-              className={inputClass}
-            >
-              {PROJECT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="Project type" htmlFor="projectType">
+              <select
+                id="projectType"
+                value={form.projectType}
+                onChange={(e) => setField("projectType", e.target.value)}
+                className={inputClass}
+              >
+                {PROJECT_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : (
+            <ReadOnlyValue label="Project type" value={form.projectType} />
+          )}
 
-          <Field label="Location" htmlFor="location" error={errors.location}>
-            <input
-              id="location"
-              type="text"
-              maxLength={120}
-              value={form.location}
-              onChange={(e) => setField("location", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="Location" htmlFor="location" error={errors.location}>
+              <input
+                id="location"
+                type="text"
+                maxLength={120}
+                value={form.location}
+                onChange={(e) => setField("location", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          ) : (
+            <ReadOnlyValue label="Location" value={form.location || "Not set"} />
+          )}
 
-          <Field label="County" htmlFor="county" error={errors.county}>
-            <input
-              id="county"
-              type="text"
-              maxLength={80}
-              value={form.county}
-              onChange={(e) => setField("county", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="County" htmlFor="county" error={errors.county}>
+              <input
+                id="county"
+                type="text"
+                maxLength={80}
+                value={form.county}
+                onChange={(e) => setField("county", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          ) : (
+            <ReadOnlyValue label="County" value={form.county || "Not set"} />
+          )}
         </div>
       </section>
 
@@ -254,7 +282,15 @@ export default function ProjectForm({ mode, project }) {
           )}
 
           {/* Accountable lead */}
-          {hasProtectedLead && !changingLead ? (
+          {!caps.materialEditable ? (
+            <ReadOnlyValue
+              label="Accountable project lead"
+              value={
+                project?.leadPersonName ||
+                (project?.leadPersonId ? "Assigned lead (protected)" : "Unassigned")
+              }
+            />
+          ) : hasProtectedLead && !changingLead ? (
             <div>
               <span className="block text-xs font-medium text-gray-600 mb-1">
                 Accountable project lead
@@ -296,25 +332,33 @@ export default function ProjectForm({ mode, project }) {
       <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
         <h2 className="text-base font-semibold">Schedule</h2>
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Planned / expected start" htmlFor="startDate">
-            <input
-              id="startDate"
-              type="date"
-              value={form.startDate}
-              onChange={(e) => setField("startDate", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="Planned / expected start" htmlFor="startDate">
+              <input
+                id="startDate"
+                type="date"
+                value={form.startDate}
+                onChange={(e) => setField("startDate", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          ) : (
+            <ReadOnlyValue label="Planned / expected start" value={form.startDate || "Not set"} />
+          )}
 
-          <Field label="Actual start" htmlFor="actualStartDate">
-            <input
-              id="actualStartDate"
-              type="date"
-              value={form.actualStartDate}
-              onChange={(e) => setField("actualStartDate", e.target.value)}
-              className={inputClass}
-            />
-          </Field>
+          {caps.materialEditable ? (
+            <Field label="Actual start" htmlFor="actualStartDate">
+              <input
+                id="actualStartDate"
+                type="date"
+                value={form.actualStartDate}
+                onChange={(e) => setField("actualStartDate", e.target.value)}
+                className={inputClass}
+              />
+            </Field>
+          ) : (
+            <ReadOnlyValue label="Actual start" value={form.actualStartDate || "Not set"} />
+          )}
 
           {caps.targetCompletionEditable ? (
             <Field
@@ -477,7 +521,13 @@ export default function ProjectForm({ mode, project }) {
           disabled={busy}
           className="rounded-md bg-botanique-green px-5 py-2.5 text-sm font-semibold text-white hover:bg-botanique-dark transition disabled:opacity-60"
         >
-          {busy ? "Saving…" : mode === "create" ? "Create project" : "Save changes"}
+          {busy
+            ? "Saving…"
+            : mode === "create"
+              ? "Create project"
+              : caps.proposesMaterial
+                ? "Save operational updates"
+                : "Save changes"}
         </button>
         <button
           type="button"
@@ -489,5 +539,12 @@ export default function ProjectForm({ mode, project }) {
         </button>
       </div>
     </form>
+
+      {/* Manager material-change proposal — a SIBLING of the direct-save form
+          (never a nested form): the project is unchanged until Principal approval. */}
+      {caps.proposesMaterial && mode === "edit" && project && (
+        <MaterialChangeProposal project={project} />
+      )}
+    </div>
   );
 }

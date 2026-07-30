@@ -28,6 +28,10 @@ vi.mock("./context/AdminApprovalsContext", () => ({
   default: ({ children }) => children,
 }));
 
+vi.mock("./context/AdminIntakeProvider", () => ({
+  default: ({ children }) => children,
+}));
+
 vi.mock("./context/DailySiteOperationsProvider", () => ({
   default: ({ children }) => children,
 }));

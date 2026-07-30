@@ -6,6 +6,7 @@
 // profile references resolved to names where profile RLS permits. UUIDs are
 // NEVER surfaced, and raw JSON is never the primary interface.
 import { formalProfileName } from "./personName";
+import { ROLE_LABELS } from "../constants/roles";
 
 // Human labels for the operational fields the ledger diffs.
 export const FIELD_LABELS = {
@@ -63,6 +64,15 @@ export function resolveActorLabel(actorId, profilesById = {}) {
   // An owner activity whose profile row is not readable to a manager shows a
   // safe label rather than the id (see product requirements §19).
   return "Owner or authorised manager";
+}
+
+// The acting profile's role label ("Principal", "Operations Manager", …) when
+// the profile is readable; empty when it is not (never a raw role slug/UUID).
+export function resolveActorRole(actorId, profilesById = {}) {
+  if (!actorId) return "";
+  const profile = profilesById[actorId];
+  if (profile?.role && ROLE_LABELS[profile.role]) return ROLE_LABELS[profile.role];
+  return "";
 }
 
 export function formatDateTime(value) {
@@ -134,6 +144,7 @@ export function formatActivity(activity, profilesById = {}) {
     action: activity.action,
     actionLabel: actionLabel(activity.action),
     actor: resolveActorLabel(activity.actor_id, profilesById),
+    actorRole: resolveActorRole(activity.actor_id, profilesById),
     occurredAt: formatDateTime(activity.occurred_at),
     reason: activity.reason || null,
     changes,

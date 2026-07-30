@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ApprovalComparison from "../components/approvals/ApprovalComparison";
 import ApprovalRequestDialog from "../components/approvals/ApprovalRequestDialog";
+import MaterialChangeAmendDialog from "../components/approvals/MaterialChangeAmendDialog";
 import ApprovalTimeline from "../components/approvals/ApprovalTimeline";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAdminData } from "../context/adminData";
@@ -117,7 +118,9 @@ export default function AdminApprovalDetail() {
             <div><dt className="text-xs text-gray-500">Round</dt><dd className="mt-1 text-sm">{request.requestRound}</dd></div>
             <div><dt className="text-xs text-gray-500">Project</dt><dd className="mt-1 text-sm">{project.projectName}</dd></div>
           </dl>
-          <div className="mt-5"><ApprovalComparison request={request} /></div>
+          <div className="mt-5">
+            <ApprovalComparison request={request} profilesById={profilesById} project={project} />
+          </div>
           <div className="mt-5">
             <h3 className="text-xs font-medium text-gray-500">Reason</h3>
             <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.reason}</p>
@@ -158,7 +161,14 @@ export default function AdminApprovalDetail() {
         </section>
       </div>
 
-      {action === "edit" && (
+      {action === "edit" && request.approvalType === "project_material_change" && (
+        <MaterialChangeAmendDialog
+          request={request}
+          onCancel={() => setAction("")}
+          onSubmit={(values) => runAction(() => amendAndResubmit(request.id, values))}
+        />
+      )}
+      {action === "edit" && request.approvalType !== "project_material_change" && (
         <ApprovalRequestDialog
           open
           project={project}

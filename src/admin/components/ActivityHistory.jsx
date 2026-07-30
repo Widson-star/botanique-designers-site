@@ -88,7 +88,10 @@ export default function ActivityHistory({ projectId }) {
               <p className="text-sm font-semibold text-botanique-charcoal">{activity.actionLabel}</p>
               <time className="text-xs text-gray-400">{activity.occurredAt}</time>
             </div>
-            <p className="mt-0.5 text-xs text-gray-500">By {compactActor}</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              By {compactActor}
+              {activity.actorRole ? ` · ${activity.actorRole}` : ""}
+            </p>
             <p className="mt-2 text-sm leading-6 text-gray-600">{eventSummary(activity)}</p>
             <details className="mt-2 text-sm">
               <summary className="cursor-pointer font-medium text-botanique-green hover:underline">

@@ -2666,3 +2666,83 @@ Boundaries: no external advertising account configured, no advert launched, no
 contact-number change, no tracking/tags/cookies, no website code change, no Operations
 Hub code/database. Changed files: `CAMPAIGN_LAUNCH_PACK_2026-07-27.md` (new),
 `CAMPAIGN_READINESS_AUDIT.md`, and this `WORKSTREAMS.md` entry.
+
+---
+
+## BD-OPERATIONS-HUB-01 — Phase 1B-A4: Project Material Change Approvals and Manager Project-Scope Control
+
+Status: **IMPLEMENTED_UNVERIFIED** (draft PR; migration NOT applied to hosted
+Supabase; not yet authenticated-verified in production). Daily Site Operations
+remains **ACTIVE_VERIFIED** (unchanged). Approvals remains a project-lifecycle
+foundation *plus* this expanded, field-level material-change type — it is **not**
+reclassified ACTIVE_VERIFIED until hosted rollout and authenticated verification.
+
+Baseline `main`: `24154fee4a163378201a6db0e1d94006287c88ae`. Branch:
+`feat/bd-project-material-change-approvals`. Additive, forward-only. No hosted
+project mutated; no Daily Site record altered; production `approval_requests` /
+`approval_events` remain 0/0; Simple Invoice Manager unchanged; no financial,
+portfolio-behaviour or Apicora work.
+
+**Verified governance gap closed.** The interim Phase 1B-A1 boundary already
+reserved the six lifecycle transitions (activation, target completion, completion,
+cancellation, archive, restore) to the owner, but a manager could still, on any of
+the nine projects: see every project; create a live Pending project directly; and
+directly edit material identity/authority/schedule fields — project name,
+client/site label, location, county, project type, non-terminal stage, accountable
+lead (including reassigning **himself**), planned start and actual start. Those
+direct edits became live immediately, bypassing Approvals.
+
+**Selected manager visibility model (RLS-enforced).** A manager may now SELECT and
+UPDATE only projects they **lead** (`lead_person_id = auth.uid()`) or are actively
+**assigned** to (`project_assignments`). The owner remains company-wide. This aligns
+the `projects` table RLS with the model Daily Site Operations already used
+(`can_manage_daily_site_project`), so the Daily Site selector for Martine (Alego,
+Karen, Mununga + assigned) is preserved and no unrelated project leaks through
+lists, charts, activity or search.
+
+**Selected project-intake model.** Restricted intake record separate from live
+projects: new `project_intake_requests` (+ `project_intake_events`). A manager
+proposes a new project; NO `projects` row exists until the owner approves, at which
+point the live project is created atomically and `created_project_id` records the
+intake→project link. A pending intake never enters project lists, Dashboard counts,
+charts, Daily Site Operations, search or portfolio reporting. Rejection, withdrawal
+and amendment leave no live project. The manager gains no authority by proposing
+himself (the created project opens unassigned; the owner assigns the lead).
+
+**Material change approval type.** A seventh approval type `project_material_change`
+extends the existing `approval_requests`/`approval_events` lifecycle (submitted →
+awaiting_review → amendment_requested → approved/rejected/withdrawn) with a strict
+nine-field allowlist, an authoritative original snapshot, stale-request protection,
+immutable events, manager assignment/authority validation, and atomic apply that
+writes a `project_activities` history event. The six lifecycle types are preserved
+verbatim and never duplicated.
+
+Database enforcement (PostgreSQL functions + RLS + triggers, not frontend-only):
+manager direct writes to any material field are rejected (`tg_guard_project_material_fields`);
+manager cannot update unrelated or create live projects (scoped/owner-only RLS);
+owner-only decisions; strict JSON-key allowlist; original-must-match-current at
+approval; rejected/withdrawn/amendment never mutate the project; duplicate active
+requests blocked (one active material change per project; one active intake per
+requester+name).
+
+Validation: PostgreSQL 17 matrix
+(`supabase/tests/project_material_change_approvals_test.sql`, run via
+`scripts/test-material-approvals-db.sh`) passes, covering visibility scoping,
+direct-write blocks, submit/approve/reject/amend/withdraw/stale/duplicate, intake
+create/approve/reject/withdraw, low-risk direct edits + activity history, the six
+lifecycle types still working, and Daily Site RLS unaffected. The existing approvals
+and daily-site matrices still pass. Frontend: `vitest` full suite green (249+),
+`eslint` introduces no new errors, `npm run build` prerenders successfully.
+
+Rollout prerequisites (before ACTIVE_VERIFIED): owner review of the draft PR; apply
+the migration to the hosted Botanique Supabase project after confirming the four
+prior migrations are applied; authenticated preview verification as owner **and**
+manager (visibility scoping, a material-change proposal round-trip, an intake
+round-trip, activity wording); re-confirm production `approval_requests`/
+`approval_events` counts and the nine untouched projects.
+
+Boundaries: no hosted migration applied; PR remains draft/unmerged; no financial,
+Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. New/changed
+files: the migration + PG test + runner under `supabase/`; the Operations Hub docs;
+and the `src/admin` material-change / intake / activity-wording implementation and
+tests.

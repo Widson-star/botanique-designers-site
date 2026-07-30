@@ -46,9 +46,9 @@ describe("ActivityHistory", () => {
     );
 
     expect(await screen.findAllByText("Project updated")).toHaveLength(2);
-    const founderRow = screen.getByText("By Widson O. Ambaisi").closest("li");
+    const founderRow = screen.getByText("By Widson O. Ambaisi · Principal").closest("li");
     expect(founderRow).not.toBeNull();
-    expect(screen.getByText("By Martine Lotom")).toBeInTheDocument();
+    expect(screen.getByText("By Martine Lotom · Operations Manager")).toBeInTheDocument();
     expect(screen.queryByText("By Widson Omutelema Ambaisi")).not.toBeInTheDocument();
     expect(
       within(founderRow).getByText(/Next action changed from Survey to Mobilise/)

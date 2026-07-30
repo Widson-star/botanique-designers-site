@@ -404,6 +404,33 @@ The Phase 1B-A1 migration remains technical truth:
 
 This is an audit model, not a general discussion or approvals model.
 
+### 7.1 Phase 1B-A4 — material-change governance (draft, migration unapplied)
+
+The Phase 1B-A4 migration (`20260729000100`) tightens the model above without weakening
+any finance/Daily Site/portfolio boundary:
+
+- **Manager scope is now RLS-enforced.** `projects` SELECT/UPDATE for a manager is limited
+  to projects they lead or are actively assigned to; the owner stays company-wide. This
+  matches `can_manage_daily_site_project`, so the Daily Site selector is unchanged.
+- **Direct project creation is owner-only.** Managers submit `project_intake_requests`
+  proposals; an approved intake creates the live project atomically (`created_project_id`
+  links intake→project). A pending intake is never a live project.
+- **Material identity/authority/schedule fields are no longer a manager direct write.** A
+  new `BEFORE UPDATE` guard (`tg_guard_project_material_fields`) rejects manager changes to
+  `project_name`, `client_site_name`, `location`, `county`, `project_type`, `stage`,
+  `lead_person_id`, `start_date`, `actual_start_date`. Those route through a seventh
+  approval type, `project_material_change`, which extends the existing
+  `approval_requests`/`approval_events` lifecycle with a strict field allowlist, an
+  authoritative original snapshot, stale-request protection, manager assignment/authority
+  validation, atomic apply and a `project_activities` history event.
+- **Owner apply runs as the deciding owner**, so the manager guards and the interim
+  material-authority/lead guards early-return and never block an approved change; the six
+  lifecycle types and both interim guards remain attached as defence-in-depth.
+- Activity history now surfaces the **exact actor name and role** when the profile is
+  readable (never a raw UUID or role slug).
+
+Status: draft PR, migration not applied to hosted Supabase, not yet ACTIVE_VERIFIED.
+
 ## 8. Implementation roadmap and dependencies
 
 Governing order:
