@@ -130,6 +130,42 @@ describe("owner form", () => {
   });
 });
 
+describe("owner edit (direct, never a proposal)", () => {
+  it("edits material fields directly and offers no material-change proposal", () => {
+    renderForm({ role: "owner", mode: "edit", project: editableProject });
+    // Material fields are directly editable for the owner.
+    expect(screen.getByLabelText(/Project name/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Location")).toBeInTheDocument();
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    // The owner never sees the manager material-change proposal section, and the
+    // direct save is the ordinary "Save changes".
+    expect(
+      screen.queryByRole("heading", { name: "Propose a material change" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Submit material changes for approval" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  });
+
+  it("sends a direct patch (no approval) when the owner changes a material field", async () => {
+    const { updateProject, submitApproval } = renderForm({
+      role: "owner",
+      mode: "edit",
+      project: editableProject,
+    });
+    fireEvent.change(screen.getByLabelText(/Project name/), {
+      target: { value: "Karen Renamed Directly" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const [, patch] = updateProject.mock.calls[0];
+    expect(patch).toMatchObject({ project_name: "Karen Renamed Directly" });
+    // No approval proposal was submitted.
+    expect(submitApproval).not.toHaveBeenCalled();
+  });
+});
+
 describe("manager edit", () => {
   it("presents material fields read-only in the main form and offers a proposal", () => {
     renderForm({ role: "manager", mode: "edit", project: editableProject });

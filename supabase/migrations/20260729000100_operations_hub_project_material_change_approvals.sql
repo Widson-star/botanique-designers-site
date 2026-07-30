@@ -371,10 +371,17 @@ begin
     raise exception 'project not found or unavailable' using errcode = 'no_data_found';
   end if;
 
+  -- No self-approval: project_material_change is a MANAGER proposal only. The
+  -- owner edits material fields directly and must never be able to submit (and
+  -- then, as the sole decider, self-approve) a manager-style material request.
+  -- The six lifecycle types retain their foundation behaviour (owner-originated
+  -- lifecycle requests remain permitted by design).
+  if target_approval_type = 'project_material_change' and caller_role <> 'manager' then
+    raise exception 'project_material_change is a manager proposal; the owner edits material fields directly' using errcode = 'insufficient_privilege';
+  end if;
   -- A manager may only propose a MATERIAL change on a project they lead or are
-  -- assigned to. (The six lifecycle types retain their foundation behaviour.)
+  -- assigned to.
   if target_approval_type = 'project_material_change'
-     and caller_role = 'manager'
      and not public.private_manager_project_scope(target_project_id) then
     raise exception 'a manager may only propose changes to a project they lead or are assigned to' using errcode = 'insufficient_privilege';
   end if;
@@ -542,6 +549,11 @@ begin
   select * into request from public.approval_requests
   where id = target_approval_request_id for update;
   if not found then raise exception 'approval request not found' using errcode = 'no_data_found'; end if;
+  -- No self-approval: for a manager-style material change the requester may never
+  -- be the decision-maker (defence-in-depth; the owner cannot submit one anyway).
+  if request.approval_type = 'project_material_change' and request.requester_id = auth.uid() then
+    raise exception 'no self-approval: the requester may not decide their own material change' using errcode = 'insufficient_privilege';
+  end if;
   if request.state <> 'awaiting_review' then
     raise exception 'only an awaiting-review request can be decided' using errcode = 'check_violation';
   end if;
@@ -922,8 +934,11 @@ declare
   caller_role text := public.private_active_approval_role();
   intake public.project_intake_requests;
 begin
-  if caller_role is null or caller_role not in ('owner', 'manager') then
-    raise exception 'only an active owner or manager may submit a project intake' using errcode = 'insufficient_privilege';
+  -- No self-approval: project intake is a MANAGER proposal only. The owner
+  -- creates projects directly and must never submit (and then, as the sole
+  -- decider, self-approve) an intake.
+  if caller_role is distinct from 'manager' then
+    raise exception 'only an active manager may submit a project intake; the owner creates projects directly' using errcode = 'insufficient_privilege';
   end if;
   if target_reason is null or char_length(trim(target_reason)) = 0 then
     raise exception 'a reason is required' using errcode = 'check_violation';
@@ -1147,6 +1162,11 @@ begin
   select * into intake from public.project_intake_requests
   where id = target_intake_request_id for update;
   if not found then raise exception 'project intake not found' using errcode = 'no_data_found'; end if;
+  -- No self-approval: the requester may never decide their own intake
+  -- (defence-in-depth; the owner cannot submit one anyway).
+  if intake.requester_id = auth.uid() then
+    raise exception 'no self-approval: the requester may not decide their own intake' using errcode = 'insufficient_privilege';
+  end if;
   if intake.state <> 'awaiting_review' then
     raise exception 'only an awaiting-review intake can be decided' using errcode = 'check_violation';
   end if;

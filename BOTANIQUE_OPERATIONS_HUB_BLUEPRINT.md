@@ -451,6 +451,15 @@ Authority corrections applied before the migration security review:
   are unchanged (`can_manage_daily_site_project` is untouched). Setting a project
   Ongoing→Paused removes new-entry eligibility immediately; an approved resume restores it.
 
+- **No self-approval.** The owner edits/creates projects directly and never submits a
+  manager-style proposal. `project_material_change` and project intake are manager-only to
+  submit; the owner is the only decider; the decision functions also reject `requester_id =
+  auth.uid()`. The six lifecycle types keep their foundation behaviour (owner-originated
+  requests permitted). Migration `20260729000100` applies whole-file atomically under a
+  single transaction (`supabase db push` / `psql --single-transaction`); it has no
+  non-transactional statement, so partial application cannot occur under those methods — see
+  the WORKSTREAMS rollout checklist and PITR recovery.
+
 Status: draft PR, migration not applied to hosted Supabase, not yet ACTIVE_VERIFIED.
 
 ## 8. Implementation roadmap and dependencies

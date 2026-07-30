@@ -636,10 +636,23 @@ field-by-field diff (at-submission / current-live / proposed) with a stale warni
 Accept / Request amendment / Reject — never raw JSON; an accountable-lead UUID is resolved
 to a name.
 
+**No self-approval (manager proposes, owner decides, requester ≠ decider).** The owner edits
+and creates projects **directly** and must never submit a manager-style proposal that they, as
+the sole decider, could self-approve. `project_material_change` and project intake are
+**manager-only** to submit (`submit_project_approval` rejects a material change from a
+non-manager; `submit_project_intake` is manager-only); the owner is the only decider; and the
+decision functions additionally reject `requester_id = auth.uid()`. The owner's direct
+alternatives remain: edit material fields directly, and create projects directly. The six
+lifecycle approval types keep their foundation behaviour (owner-originated lifecycle requests
+remain permitted by design); a general requester≠decider rule is intentionally not forced on
+them. Submit/decide matrix: material change + intake = manager submit / owner decide /
+requester≠decider **enforced**; the six lifecycle types = owner-or-manager submit / owner
+decide / owner self-decision allowed (foundation).
+
 **Database enforcement.** PostgreSQL functions + RLS + triggers enforce every rule above
 (strict JSON-key allowlist, original-matches-current at approval, atomic apply, immutable
-events, duplicate handling). The frontend only mirrors the database and never offers a
-control the database would reject.
+events, duplicate handling, no self-approval). The frontend only mirrors the database and
+never offers a control the database would reject.
 
 ## 6. Project Updates & Discussion
 

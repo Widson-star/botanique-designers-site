@@ -2786,6 +2786,91 @@ twice, withdraw-vs-approve, duplicate intake approval creates no duplicate proje
 hostile-JSON tests. Still IMPLEMENTED_UNVERIFIED; migration `20260729000100` still unapplied
 and strictly the latest of the six repository migrations (no collision/rename).
 
+**No-self-approval correction (same PR #44 branch).** Governance fix: the owner edits and
+creates projects **directly** and must never submit a manager-style proposal that they, as
+the sole decider, could self-approve.
+
+- `submit_project_approval` rejects a `project_material_change` from any non-manager caller
+  (owner edits material fields directly); `decide_project_approval` additionally rejects when
+  `requester_id = auth.uid()` for a material change.
+- `submit_project_intake` is manager-only (owner creates projects directly);
+  `decide_project_intake` rejects when `requester_id = auth.uid()`.
+- The six lifecycle types are unchanged (owner-originated lifecycle requests remain a
+  foundation-design path; a general requester≠decider invariant is deliberately NOT imposed
+  on them, per "do not break the foundation unnecessarily").
+
+Approval submit/decision matrix:
+
+| Approval type | May submit | May decide | requester = decider allowed? | Direct owner alternative |
+| --- | --- | --- | --- | --- |
+| project_activation | owner, manager | owner | yes (owner-originated, foundation) | owner sets status Ongoing directly |
+| project_target_completion_change | owner, manager | owner | yes (foundation) | owner sets target directly |
+| project_completion | owner, manager | owner | yes (foundation) | owner "Mark completed" quick action |
+| project_cancellation | owner, manager | owner | yes (foundation) | owner sets Cancelled directly |
+| project_archive | owner, manager | owner | yes (foundation) | owner archives directly |
+| project_restore | owner, manager | owner | yes (foundation) | owner restores directly |
+| **project_material_change** | **manager only** | **owner** | **NO** | owner edits material fields directly |
+| **project intake** | **manager only** | **owner** | **NO** | owner creates the project directly |
+
+Frontend confirmed aligned (defence-in-depth, not the security boundary): the owner never
+sees "Submit material changes for approval" (the proposal section renders only for a manager)
+and creates projects via the direct form (managers route to the intake form); managers never
+see owner decision controls (`canDecideApproval` = owner only). New tests: owner-edit sends a
+direct patch with no approval; owner create renders the direct form, manager create renders
+the intake form.
+
+**Migration transaction & recovery (hosted rollout).** Proven by applying the file under
+`psql --single-transaction` against a fresh PG17 with the five prior migrations: the entire
+`20260729000100` commits atomically. It contains **no** non-transactional statement (no
+`CREATE INDEX CONCURRENTLY`, `ALTER TYPE … ADD VALUE`, `VACUUM`, `CREATE DATABASE`,
+`ALTER SYSTEM`, `REINDEX`), so nothing forces a mid-file commit. Whole-file atomicity is
+therefore **guaranteed whenever the file is applied inside one transaction** — which
+`supabase db push` / `supabase migration up` do automatically, and which `psql
+--single-transaction -f` guarantees. Under those methods, **partial application is not
+possible**: any error (including connection loss) aborts and rolls back the whole file, and
+the Supabase migration-history row (`supabase_migrations.schema_migrations`, keyed by
+version `20260729000100`) is written only on success. Partial application is *only* possible
+if the file is deliberately applied statement-by-statement with autocommit (plain `psql -f`
+without `--single-transaction`, or pasting into the SQL editor without a `begin;`/`commit;`
+wrapper) and interrupted — the checklist forbids this.
+
+Controlled hosted rollout checklist (owner-executed; not run here):
+
+1. **Pre-apply migration-history snapshot** — `select version,name from
+   supabase_migrations.schema_migrations order by version;` confirm the five prior versions
+   present and `20260729000100` **absent**.
+2. **Pre-apply object existence** — confirm `to_regclass('public.project_intake_requests')`
+   is NULL and `to_regprocedure('public.submit_project_intake(jsonb,text,text,uuid)')` is
+   NULL (migration not yet applied).
+3. **Business-data counts** — record `projects`=9, `approval_requests`=0,
+   `approval_events`=0, `project_intake_requests`=0 (table absent → 0), `daily_site_entries`
+   count.
+4. **Project fingerprints** — record `select id, md5(project_name||coalesce(client_site_name,'')
+   ||status||stage||coalesce(lead_person_id::text,'')||archived::text) from projects order by
+   id;` (to prove no project row changed).
+5. **Apply** — atomically only: `supabase db push` (preferred) **or** `psql
+   "$DATABASE_URL" --single-transaction -v ON_ERROR_STOP=1 -f
+   supabase/migrations/20260729000100_operations_hub_project_material_change_approvals.sql`.
+6. **Post-apply history** — confirm a `20260729000100` row now exists in
+   `supabase_migrations.schema_migrations`.
+7. **Objects/functions/triggers** — confirm `project_intake_requests`,
+   `project_intake_events`, the new functions (`submit_project_intake`,
+   `decide_project_intake`, `submit_project_approval` extended, …), the trigger
+   `projects_material_fields_guard`, and the replaced `tg_project_history` /
+   `tg_guard_project_material_authority` / `daily_site_authorised_projects` /
+   `create_daily_site_entry_draft` exist.
+8. **RLS** — confirm the scoped `projects` policies, `project_intake_*` policies and revoked
+   direct DML; confirm `approval_requests_approval_type_check` now includes
+   `project_material_change`.
+9. **Unchanged business data** — re-run steps 3–4 and diff: counts unchanged (0/0 approvals,
+   9 projects), project fingerprints identical, no Daily Site row changed.
+10. **Recovery / stop conditions** — if step 5 errors: the transaction rolled back, DB is
+    unchanged (verify via steps 6–7 showing nothing applied); fix and retry. If a partial
+    state is ever observed (only from a non-atomic apply): **restore via Supabase
+    point-in-time recovery to the pre-apply timestamp** (recorded before step 5) rather than
+    hand-reconstructing the replaced functions; then re-apply atomically. Because the
+    migration is additive, a clean re-apply after PITR is safe.
+
 Migration ordering: `20260729000100` is strictly the latest of the six repository
 migrations (after `20260728000200`); no collision, no rename required. Lint baseline:
 exact main `24154fee` reports 19 pre-existing errors (`server/index.js` Buffer/process,

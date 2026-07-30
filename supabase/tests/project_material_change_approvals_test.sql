@@ -868,6 +868,83 @@ begin
 end;
 $$;
 
+-- =====================================================================
+-- K. No self-approval. The owner edits/creates directly and must never submit
+--    a manager-style proposal; the requester may never decide their own; and
+--    the owner's direct paths still work without any approval/intake.
+-- =====================================================================
+do $$
+declare
+  projects_before integer;
+  intakes_before integer;
+  new_id uuid;
+begin
+  -- Owner cannot submit a project_material_change (edits directly instead).
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000001', 'project_material_change',
+      '{"location":"Owner Proposed"}', 'Owner should not propose'
+    );
+    raise exception 'owner submitted a material change';
+  exception when insufficient_privilege then null;
+  end;
+  -- Owner cannot submit a project intake (creates projects directly instead).
+  begin
+    perform public.submit_project_intake(
+      '{"project_name":"Owner Intake","project_type":"Residential"}', 'Owner should not intake'
+    );
+    raise exception 'owner submitted a project intake';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- Owner edits a material field DIRECTLY: succeeds, no approval request created.
+  projects_before := (select count(*) from public.approval_requests
+    where project_id = '10000000-0000-0000-0000-000000000001' and approval_type = 'project_material_change');
+  update public.projects set project_name = 'Alego Direct' where id = '10000000-0000-0000-0000-000000000001';
+  perform pg_temp.assert_true(
+    (select project_name = 'Alego Direct' from public.projects where id = '10000000-0000-0000-0000-000000000001'),
+    'owner direct material edit applies immediately'
+  );
+  perform pg_temp.assert_true(
+    (select count(*) = projects_before from public.approval_requests
+      where project_id = '10000000-0000-0000-0000-000000000001' and approval_type = 'project_material_change'),
+    'owner direct edit creates no approval request'
+  );
+
+  -- Owner creates a project DIRECTLY: succeeds, no intake row created.
+  projects_before := (select count(*) from public.projects);
+  intakes_before := (select count(*) from public.project_intake_requests);
+  insert into public.projects (project_name, project_type, status, stage, portfolio_permission_status)
+  values ('Owner Direct Project', 'Residential', 'Pending', 'Inquiry', 'Not Reviewed')
+  returning id into new_id;
+  perform pg_temp.assert_true(new_id is not null, 'owner direct project creation succeeds');
+  perform pg_temp.assert_true(
+    (select count(*) = projects_before + 1 from public.projects),
+    'owner direct creation adds exactly one project'
+  );
+  perform pg_temp.assert_true(
+    (select count(*) = intakes_before from public.project_intake_requests),
+    'owner direct creation creates no intake row'
+  );
+
+  -- A valid manager submission + a DIFFERENT owner decision still succeeds
+  -- (requester 002 != decider 001).
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
+  declare
+    request public.approval_requests;
+  begin
+    request := public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000001', 'project_material_change',
+      '{"county":"Homabay"}', 'Legitimate manager proposal.'
+    );
+    perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+    request := public.decide_project_approval(request.id, 'approved', null);
+    perform pg_temp.assert_true(request.state = 'approved', 'manager-submitted + owner-decided material change succeeds');
+  end;
+end;
+$$;
+
 -- Anonymous cannot read the new intake tables or execute the workflow functions.
 reset role;
 set local role anon;
