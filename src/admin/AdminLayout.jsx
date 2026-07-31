@@ -12,6 +12,7 @@ import { profilePresentationName } from "./utils/personName";
 import { canSeeApprovals } from "./utils/approvalCapabilities";
 import { canManageStaff } from "./utils/permissions";
 import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
+import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
 
 const NAV_ITEMS = [
   {
@@ -32,6 +33,13 @@ const NAV_ITEMS = [
     end: false,
     capability: canSeeDailySiteOperations,
     icon: "M6 3v2m8-2v2M3.5 7.5h13M4.5 5.5h11a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z",
+  },
+  {
+    to: "/admin/site-costs",
+    label: "Site Costs",
+    end: false,
+    capability: canSeeSiteCosts,
+    icon: "M4 5h12v10H4V5Zm3 3h6M7 11h4",
   },
   {
     to: "/admin/approvals",

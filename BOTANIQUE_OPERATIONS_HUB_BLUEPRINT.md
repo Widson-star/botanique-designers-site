@@ -341,9 +341,24 @@ as the narrow first slice and Operational Expenditure deferred to a separate sec
 
 ### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-BD-FIN-01A is the approved first finance slice, but this documentation revision authorises
-no implementation. Its purpose is to establish an authoritative internal project-cost
-obligation and immutable decision history before any money movement.
+**Implementation state: ACTIVE_VERIFIED (2026-07-31).** PR #48 contains the implementation
+introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e` (see the PR itself, not this
+document, for its live head and merge state). It is
+based on `d5986af66bec550567408e99b61d170607daee75` and adds migration
+`20260731000200_internal_cost_claims.sql`, a PostgreSQL 17 authority matrix and the Site
+Costs admin surfaces. **The PR itself remains open, draft and unmerged** — this status
+describes hosted and authenticated verification, not merge state. The migration has been
+applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`) as hosted version
+`20260731160117`; schema, RLS, grants and existing-data preservation were verified with no
+unexpected change to any existing table. `APPLIED_WITH_LIMITATION` was a historical
+checkpoint: manual authenticated Principal and Operations Manager UI verification against
+the exact PR-head Vercel preview subsequently passed (navigation, project scoping, the
+direct-authorisation and manager claim forms, and the Daily Site copy-to-draft flow, on
+desktop and mobile, with no console errors), with all three new tables remaining at zero
+rows and no claim submitted. Staff/Viewer UI verification remains unavailable because no
+such accounts exist; their denial is covered by the PostgreSQL and capability test matrices.
+Its purpose is to establish an authoritative internal project-cost obligation and immutable
+decision history before any money movement.
 
 The aggregate is a project-scoped claim with an optional Daily Site source, one recipient
 or crew, one category, one or more structured lines, a service/work date, purpose, KES total
@@ -357,7 +372,7 @@ The compact authoritative lifecycle is `draft`, `awaiting_review`,
 resubmission are events that enter `awaiting_review`. Funding, payment and reconciliation
 progress are deferred derived states, not claim lifecycle values.
 
-Daily Site remains the operational planning source. A future explicit **Create cost claim**
+Daily Site remains the operational planning source. The draft implementation's explicit **Create cost claim**
 action may copy project, date, source version and planning context to an editable draft; it
 never creates a claim automatically. Later Daily Site changes cannot rewrite submitted or
 approved claims, finance cannot rewrite Daily Site history, and one entry may support

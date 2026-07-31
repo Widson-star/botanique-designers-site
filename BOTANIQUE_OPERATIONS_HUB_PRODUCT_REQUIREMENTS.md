@@ -487,8 +487,23 @@ The founder has resolved the five previously open decisions; they are now author
 
 ### 4.6 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-**Status: product contract approved; implementation not authorised by this documentation
-revision.** BD-FIN-01A is the first implementation slice of BD-FIN-01. It records what
+**Status: product contract approved; ACTIVE_VERIFIED (2026-07-31) on PR #48, which contains
+the implementation introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e` (see the
+PR itself, not this document, for its live head and merge state); the PR itself was still
+open, draft and unmerged at this acceptance checkpoint — this status describes hosted and
+authenticated verification, not merge state.** The separately authorised implementation is
+based on authoritative base `d5986af66bec550567408e99b61d170607daee75`. Migration
+`20260731000200_internal_cost_claims.sql` has been applied to hosted `botanique-admin`
+(`wcacyfyxjiysfibuuhgf`) as hosted version `20260731160117`, with schema/RLS/grants and
+existing-data preservation verified and Principal/Operations Manager RPC authority verified
+via fully rolled-back hosted SQL transactions; no persisted claims exist. `APPLIED_WITH_
+LIMITATION` was a historical checkpoint: manual authenticated Principal and Operations
+Manager UI verification against the exact PR-head Vercel preview subsequently passed, with
+no claim submitted and all three new tables remaining at zero rows; Staff/Viewer UI
+verification remains unavailable because no such accounts exist, with their denial covered
+by the PostgreSQL and capability test matrices instead. This maintained product contract
+does not by
+itself authorise deployment. BD-FIN-01A is the first implementation slice of BD-FIN-01. It records what
 Botanique is expected or authorised to pay for an internal project cost and its decision
 history before any actual money movement is introduced.
 
@@ -513,7 +528,7 @@ immutable events that move the claim to awaiting review. Funded, partially funde
 partially paid and reconciled are not claim lifecycle states; they are deferred, derived
 states belonging to later money-movement domains.
 
-Daily Site remains the operational planning source. A future explicit **Create cost claim**
+Daily Site remains the operational planning source. The draft implementation's explicit **Create cost claim**
 action may copy project, date, source version and planning context into a separate editable
 finance draft. There is no automatic claim creation. A Daily Site estimate never becomes a
 liability or actual expenditure by itself; later Daily Site changes cannot silently alter a

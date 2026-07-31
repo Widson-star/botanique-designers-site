@@ -74,12 +74,21 @@ describe("AdminDailySiteEntryDetail", () => {
     expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Return for correction" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Void" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create cost claim" })).toHaveAttribute(
+      "href", "/admin/site-costs/new?dailySiteEntryId=e1"
+    );
   });
 
   it("hides owner review actions from the manager", () => {
     renderDetail({ role: "manager", currentUserId: "m1" });
     expect(screen.queryByRole("button", { name: "Accept" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Return for correction" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create cost claim" })).toBeInTheDocument();
+  });
+
+  it("does not offer a cost claim from returned or no-work planning", () => {
+    renderDetail({ role: "manager", currentUserId: "m1", entries: [{ ...baseEntry, state: "returned_for_correction" }] });
+    expect(screen.queryByRole("link", { name: "Create cost claim" })).not.toBeInTheDocument();
   });
 
   it("treats accepted entries as immutable — offers supersession, not edit", () => {

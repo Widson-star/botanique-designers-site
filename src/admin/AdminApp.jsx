@@ -20,6 +20,10 @@ import { AdminDataProvider } from "./context/AdminDataContext";
 import AdminApprovalsProvider from "./context/AdminApprovalsContext";
 import AdminIntakeProvider from "./context/AdminIntakeProvider";
 import DailySiteOperationsProvider from "./context/DailySiteOperationsProvider";
+import SiteCostsProvider from "./context/SiteCostsProvider";
+import AdminSiteCosts from "./routes/AdminSiteCosts";
+import AdminSiteCostForm from "./routes/AdminSiteCostForm";
+import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
 import { ROLES } from "./constants/roles";
 import {
   clearStoredSession,
@@ -189,6 +193,7 @@ export default function AdminApp() {
       <AdminApprovalsProvider session={session} role={role} isDemo={isDemo}>
         <AdminIntakeProvider session={session} role={role} isDemo={isDemo}>
         <DailySiteOperationsProvider session={session} role={role} isDemo={isDemo}>
+        <SiteCostsProvider session={session} role={role} isDemo={isDemo}>
           <Routes>
             <Route
               element={
@@ -214,9 +219,14 @@ export default function AdminApp() {
               <Route path="/admin/daily-site-operations/new" element={<AdminDailySiteEntryForm mode="create" />} />
               <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
               <Route path="/admin/daily-site-operations/:entryId/edit" element={<AdminDailySiteEntryForm mode="edit" />} />
+              <Route path="/admin/site-costs" element={<AdminSiteCosts />} />
+              <Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} />
+              <Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} />
+              <Route path="/admin/site-costs/:claimId/edit" element={<AdminSiteCostForm />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Route>
           </Routes>
+        </SiteCostsProvider>
         </DailySiteOperationsProvider>
         </AdminIntakeProvider>
       </AdminApprovalsProvider>
