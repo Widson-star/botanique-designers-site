@@ -341,13 +341,19 @@ as the narrow first slice and Operational Expenditure deferred to a separate sec
 
 ### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-**Implementation state: IMPLEMENTED_IN_DRAFT.** The proposed branch
-`feat/bd-fin-01a-internal-cost-claims` is based on
-`d5986af66bec550567408e99b61d170607daee75` and adds migration
+**Implementation state: APPLIED_WITH_LIMITATION.** PR #48 (branch
+`feat/bd-fin-01a-internal-cost-claims`, head `74a25babc411ef42a38dad882d14e00261aca32e`) is
+based on `d5986af66bec550567408e99b61d170607daee75` and adds migration
 `20260731000200_internal_cost_claims.sql`, a PostgreSQL 17 authority matrix and the Site
-Costs admin surfaces. It is not merged or hosted-applied; production and hosted records are
-unchanged. Its purpose is to establish an authoritative internal project-cost
-obligation and immutable decision history before any money movement.
+Costs admin surfaces. The PR remains open, draft and unmerged. The migration has been
+applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`) on 2026-07-31 as hosted version
+`20260731160117`; schema, RLS, grants and existing-data preservation were verified with no
+unexpected change to any existing table, and all three new tables remain at zero rows.
+Principal/Operations Manager RPC authority was verified via fully rolled-back hosted SQL
+transactions (no persisted claims); authenticated UI-session verification on the Vercel
+preview was not performed, since it requires entering a real account password. Its purpose
+is to establish an authoritative internal project-cost obligation and immutable decision
+history before any money movement.
 
 The aggregate is a project-scoped claim with an optional Daily Site source, one recipient
 or crew, one category, one or more structured lines, a service/work date, purpose, KES total
