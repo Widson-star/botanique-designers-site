@@ -1612,11 +1612,12 @@ files are documentation/template only (`LEAD_OPERATIONS_PLAYBOOK.md`,
 
 Status: **Active programme. Approvals, Daily Site Operations and project material-change
 controls are merged, hosted and ACTIVE_VERIFIED.** The current functional `/admin`
-destinations are Dashboard, Projects, Daily Site Operations, Approvals and Project Intakes.
+destinations are Dashboard, Projects, Daily Site Operations, Site Costs, Fund Requests,
+Approvals and Project Intakes, each shown only to the roles its capability check permits.
 BD-FIN-01A (Internal Cost Claims and Principal Decision) is merged, hosted and
 ACTIVE_VERIFIED. BD-FIN-01B (Project Fund Control Authority) is the approved next finance
-authority; its first slice, BD-FIN-01B1 (Claim-Backed Fund Requests), is implemented and
-hosted but remains in an open draft pull request and is therefore not yet merged.
+authority; its first slice, BD-FIN-01B1 (Claim-Backed Fund Requests), is merged, hosted and
+ACTIVE_VERIFIED on PR #51.
 BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain separately gated and unimplemented.
 No new Operations Hub master register is required: this entry remains
 the execution and live-state register, the Product Requirements remain founder-requirements
@@ -2187,15 +2188,24 @@ worker master records, spend reporting, client-commercial records and Simple Inv
 Manager integration. Simple Invoice Manager remains the client-commercial system of record;
 `project_financial_references` remains only a narrow legacy reference facility.
 
-**BD-FIN-01B1 implementation status: implemented and hosted, draft pull request open,
-unmerged (2026-07-31).** The `20260731000300_claim_backed_fund_requests` migration is
+**BD-FIN-01B1 implementation status: ACTIVE_VERIFIED.** PR #51 contains the implementation
+whose final reviewed head was `c310b4c762cd666465a2a7813f38c3642d0cbd16`, based on
+authoritative main `49e02c4a7022ab112798b809c957a5794eb5c6f0`. PR #51 was open, draft and
+unmerged at the authenticated acceptance checkpoint described below; it subsequently merged
+at merge commit `fe481410fdaab37e93c811e3744637de82fab370` (parents: previous authoritative
+main `49e02c4a7022ab112798b809c957a5794eb5c6f0` first and the final reviewed head second) at
+21:02:21 UTC on 31 July 2026, which is 00:02 EAT on 1 August 2026. Authoritative main is now
+that merge commit, and the production deployment at that commit succeeded. This status
+describes hosted and authenticated verification, not merge state.
+The `20260731000300_claim_backed_fund_requests` migration is
 applied to the hosted `botanique-admin` project (ref `wcacyfyxjiysfibuuhgf`) and adds
 exactly three tables — `fund_requests`, `fund_request_allocations` and
 `fund_request_events` — plus one sequence, three SELECT-only RLS policies and eight
 authenticated RPCs. Production carries **zero** fund request, allocation and event rows;
 the hosted authority and concurrency matrix was executed only inside fully rolled-back
 transactions, and pre-existing profile, project, claim and Daily Site fingerprints are
-unchanged.
+unchanged. The verified post-merge hosted state is `fund_requests` = 0,
+`fund_request_allocations` = 0, `fund_request_events` = 0 and `internal_cost_claims` = 0.
 
 Implemented role model: the Operations Manager creates, edits, submits, amends, resubmits
 and withdraws their own request in an authorised, eligible project; the Principal reads
@@ -2222,9 +2232,31 @@ what a reserving fund request holds against it. Principal direct authority is on
 RPC producing one approved request and a single `principal_direct_authorised` event, never
 a simulated manager request or a fabricated submit-and-approve cycle.
 
-Inherited limitation carried forward from BD-FIN-01A: authenticated Staff and Viewer
-interface verification depends on genuine accounts that do not currently exist, so those
-roles are verified through database and capability tests rather than through the browser.
+Founder-authenticated interface verification passed against the exact PR-head preview for
+both the Principal and the Operations Manager: navigation, the fund request queue,
+role-specific controls, the Principal direct-authority form being structurally distinct
+from Manager submission, the advisory-draft-availability warning, exactly the three
+eligible authorised projects, both intended-custody options, the intended Operations
+Manager custodian field, approval-not-release wording throughout, the Principal mobile
+queue, and a clean Principal console with no errors or warnings. No screenshots,
+credentials, session identifiers or private browser information are recorded here.
+
+Verification limitations at that checkpoint:
+
+- Zero-data browser limitation: production carries zero approved claims and zero fund
+  requests, so allocation, request detail, approval, amendment, resubmission, withdrawal
+  and cancellation could not be exercised in the browser. Those paths are covered instead
+  by the fully rolled-back hosted authority and concurrency matrix, the automated UI tests
+  and the role-capability tests. No production finance record was created for verification.
+- Operations Manager authenticated mobile rendering and Network-tab evidence were not
+  separately captured.
+- Inherited limitation carried forward from BD-FIN-01A: authenticated Staff and Viewer
+  interface verification depends on genuine accounts that do not currently exist, so those
+  roles are verified through database and capability tests rather than through the browser.
+- Inherited runner warning: `scripts/test-approvals-db.sh` and
+  `scripts/test-material-approvals-db.sh` lack the `export LC_ALL` line carried by the other
+  database runners and require `LC_ALL=C` at invocation on the verification machine. This is
+  pre-existing and was deliberately not changed by BD-FIN-01B1.
 
 **BD-FIN-01B — Project Fund Control Authority.** This
 is the next approved finance authority after BD-FIN-01A ACTIVE_VERIFIED. It defines how

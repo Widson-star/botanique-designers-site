@@ -569,9 +569,23 @@ initial implementation unless a later project-classification change is separatel
 
 ### 4.7 BD-FIN-01B — Project Fund Control Authority
 
-**Status: BD-FIN-01B1 implemented and hosted; draft pull request open and unmerged
-(2026-07-31). BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain documentation authority only
-and are not implemented.** BD-FIN-01B is the next approved finance authority after BD-FIN-01A
+**Status: BD-FIN-01B1 ACTIVE_VERIFIED on PR #51, whose final reviewed head was
+`c310b4c762cd666465a2a7813f38c3642d0cbd16`. The PR was open, draft and unmerged at the
+authenticated acceptance checkpoint, and subsequently merged at merge commit
+`fe481410fdaab37e93c811e3744637de82fab370` at 21:02:21 UTC on 31 July 2026, which is
+00:02 EAT on 1 August 2026; authoritative main is now that merge commit and this status
+describes hosted and authenticated verification, not merge state. BD-FIN-01B2, BD-FIN-01C
+and BD-FIN-01D remain documentation authority only and are not implemented.** Founder-
+authenticated Principal and Operations Manager interface verification against the exact
+PR-head preview passed, covering the queue, role-specific controls, the structurally
+distinct Principal direct-authority form, the advisory draft-availability warning, the
+eligible authorised projects, both intended-custody options and approval-not-release
+wording. Because production carries zero approved claims and zero fund requests, the
+allocation, request detail, approval, amendment, resubmission, withdrawal and cancellation
+paths could not be exercised in the browser and are covered by the rolled-back hosted
+authority matrix and the automated tests; no production finance record was created for
+verification, and Staff/Viewer interface verification remains unavailable because no such
+accounts exist. BD-FIN-01B is the next approved finance authority after BD-FIN-01A
 ACTIVE_VERIFIED. It defines how Botanique requests Principal authority to make money
 available against approved internal cost claims. A fund-request approval means the
 Principal authorises Botanique to make up to the approved amount available for the
