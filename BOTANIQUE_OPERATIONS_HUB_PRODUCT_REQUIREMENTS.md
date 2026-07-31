@@ -488,9 +488,11 @@ The founder has resolved the five previously open decisions; they are now author
 ### 4.6 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
 **Status: product contract approved; ACTIVE_VERIFIED (2026-07-31) on PR #48, which contains
-the implementation introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e` (see the
-PR itself, not this document, for its live head and merge state); the PR itself was still
-open, draft and unmerged at this acceptance checkpoint — this status describes hosted and
+the implementation introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e`. The PR
+was open, draft and unmerged at the authenticated acceptance checkpoint described below; its
+final reviewed head was `de824688977c15ac86785f53b01559dbd9fde3eb`, and it subsequently
+merged on 31 July 2026 at merge commit `92055ed84a3db4eee6979b3eae54339792e1cd54`.
+Authoritative main is now that merge commit — this status describes hosted and
 authenticated verification, not merge state.** The separately authorised implementation is
 based on authoritative base `d5986af66bec550567408e99b61d170607daee75`. Migration
 `20260731000200_internal_cost_claims.sql` has been applied to hosted `botanique-admin`

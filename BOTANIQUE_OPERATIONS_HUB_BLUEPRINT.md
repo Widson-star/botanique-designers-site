@@ -342,12 +342,15 @@ as the narrow first slice and Operational Expenditure deferred to a separate sec
 ### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
 **Implementation state: ACTIVE_VERIFIED (2026-07-31).** PR #48 contains the implementation
-introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e` (see the PR itself, not this
-document, for its live head and merge state). It is
+introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e`. It was open, draft and
+unmerged at the authenticated acceptance checkpoint described below; its final reviewed head
+was `de824688977c15ac86785f53b01559dbd9fde3eb`, and it subsequently merged on 31 July 2026 at
+merge commit `92055ed84a3db4eee6979b3eae54339792e1cd54`. Authoritative main is now that merge
+commit. It was
 based on `d5986af66bec550567408e99b61d170607daee75` and adds migration
 `20260731000200_internal_cost_claims.sql`, a PostgreSQL 17 authority matrix and the Site
-Costs admin surfaces. **The PR itself remains open, draft and unmerged** — this status
-describes hosted and authenticated verification, not merge state. The migration has been
+Costs admin surfaces. This status describes hosted and authenticated verification, not
+merge state. The migration has been
 applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`) as hosted version
 `20260731160117`; schema, RLS, grants and existing-data preservation were verified with no
 unexpected change to any existing table. `APPLIED_WITH_LIMITATION` was a historical

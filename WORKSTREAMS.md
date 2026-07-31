@@ -2120,11 +2120,13 @@ deployment.
 
 **BD-FIN-01A implementation status: ACTIVE_VERIFIED (2026-07-31).** PR #48 contains the
 implementation introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e`, based on
-authoritative main `d5986af66bec550567408e99b61d170607daee75`. (PR #48 was still draft and
-unmerged at this acceptance checkpoint; see the PR itself, not this document, for the
-branch's live head and merge state — a specific commit SHA recorded here would go stale on
-the next documentation edit.) This status describes hosted and authenticated verification,
-not merge state. The additive
+authoritative main `d5986af66bec550567408e99b61d170607daee75`. PR #48 was open, draft and
+unmerged at the authenticated acceptance checkpoint described below; its final reviewed head
+was `de824688977c15ac86785f53b01559dbd9fde3eb`, and it subsequently merged on 31 July 2026 at
+merge commit `92055ed84a3db4eee6979b3eae54339792e1cd54` (parents: previous authoritative main
+`d5986af66bec550567408e99b61d170607daee75` and the final reviewed head). Authoritative main is
+now that merge commit. This status describes hosted and authenticated verification, not
+merge state. The additive
 migration `20260731000200_internal_cost_claims.sql` (hosted version `20260731160117`) has
 been applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`). Post-migration
 verification confirmed: the three new tables, all named constraints, four indexes, RLS
