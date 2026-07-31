@@ -403,8 +403,14 @@ reporting and Simple Invoice Manager integration remain outside this slice.
 
 ### 4.11 BD-FIN-01B — Project Fund Control Authority
 
-**Architecture state: BD-FIN-01B1 implemented and hosted, draft pull request open and
-unmerged (2026-07-31); BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain architecture only.**
+**Architecture state: BD-FIN-01B1 ACTIVE_VERIFIED; BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D
+remain architecture only.** PR #51 contains the implementation; its final reviewed head was
+`c310b4c762cd666465a2a7813f38c3642d0cbd16`, based on `49e02c4a7022ab112798b809c957a5794eb5c6f0`.
+It was open, draft and unmerged at the authenticated acceptance checkpoint, and subsequently
+merged at merge commit `fe481410fdaab37e93c811e3744637de82fab370` at 21:02:21 UTC on
+31 July 2026, which is 00:02 EAT on 1 August 2026. Authoritative main is now that merge
+commit, and the production deployment at it succeeded. This status describes hosted and
+authenticated verification, not merge state; the hosted tables remain at zero rows.
 
 Delivered BD-FIN-01B1 architecture. Migration `20260731000300_claim_backed_fund_requests`
 adds `fund_requests`, `fund_request_allocations` and `fund_request_events`, one sequence
