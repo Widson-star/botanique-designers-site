@@ -7,6 +7,11 @@ export default function ApprovalComparison({ request, profilesById = null, proje
   const rows = approvalComparison(request, { profilesById, project });
   const showCurrent = rows.some((row) => Object.prototype.hasOwnProperty.call(row, "current"));
   const anyStale = rows.some((row) => row.stale);
+  // Drift is actionable only while the owner can still decide the request.
+  // After approval/rejection/amendment/withdrawal, the current value may
+  // legitimately differ from the submission snapshot and must not be presented
+  // as a surviving stale warning.
+  const showStale = request.state === "awaiting_review" && anyStale;
   return (
     <div className="overflow-x-auto rounded-md border border-stone-200">
       <table className="w-full text-left text-sm">
@@ -20,13 +25,13 @@ export default function ApprovalComparison({ request, profilesById = null, proje
         </thead>
         <tbody className="divide-y divide-stone-100">
           {rows.map((row) => (
-            <tr key={row.key} className={row.stale ? "bg-amber-50" : undefined}>
+            <tr key={row.key} className={showStale && row.stale ? "bg-amber-50" : undefined}>
               <th className="px-3 py-2 font-medium text-gray-600">{row.label}</th>
               <td className="px-3 py-2 text-gray-600">{row.before}</td>
               {showCurrent && (
-                <td className={`px-3 py-2 ${row.stale ? "font-medium text-amber-800" : "text-gray-600"}`}>
+                <td className={`px-3 py-2 ${showStale && row.stale ? "font-medium text-amber-800" : "text-gray-600"}`}>
                   {row.current}
-                  {row.stale && <span className="ml-1 text-xs">(changed)</span>}
+                  {showStale && row.stale && <span className="ml-1 text-xs">(changed)</span>}
                 </td>
               )}
               <td className="px-3 py-2 font-medium text-botanique-charcoal">{row.proposed}</td>
@@ -34,7 +39,7 @@ export default function ApprovalComparison({ request, profilesById = null, proje
           ))}
         </tbody>
       </table>
-      {anyStale && (
+      {showStale && (
         <p className="border-t border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status">
           The live project changed since this proposal was submitted. Approving now is
           blocked as stale — request an amendment or reject.

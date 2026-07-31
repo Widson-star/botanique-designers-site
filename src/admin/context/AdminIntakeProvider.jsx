@@ -4,6 +4,7 @@ import { AdminIntakeContext } from "./adminIntake";
 import {
   amendAndResubmitProjectIntake as apiAmend,
   decideProjectIntake as apiDecide,
+  fetchProjectIntake,
   fetchProjectIntakeEvents,
   fetchProjectIntakes,
   requestProjectIntakeAmendment as apiRequestAmendment,
@@ -62,6 +63,20 @@ export default function AdminIntakeProvider({ children, session, isDemo, role })
     return mapped;
   }, [accessToken, eventsByIntake, isDemo]);
 
+  const loadIntake = useCallback(async (intakeId) => {
+    if (isDemo) return null;
+    const row = await fetchProjectIntake(accessToken, intakeId);
+    if (!row) return null;
+    const mapped = mapProjectIntake(row);
+    setIntakes((current) => {
+      const exists = current.some((item) => item.id === mapped.id);
+      return exists
+        ? current.map((item) => (item.id === mapped.id ? mapped : item))
+        : [mapped, ...current];
+    });
+    return mapped;
+  }, [accessToken, isDemo]);
+
   const runMutation = useCallback(async (operation, { refetchProject = false } = {}) => {
     if (isDemo) {
       return { ok: false, error: "Project intakes are unavailable in the dev preview." };
@@ -108,6 +123,7 @@ export default function AdminIntakeProvider({ children, session, isDemo, role })
     status,
     error,
     refreshIntakes,
+    loadIntake,
     loadEvents,
     submit,
     withdraw,
@@ -115,7 +131,7 @@ export default function AdminIntakeProvider({ children, session, isDemo, role })
     amendAndResubmit,
     decide,
   }), [
-    intakes, status, error, refreshIntakes, loadEvents, submit, withdraw,
+    intakes, status, error, refreshIntakes, loadIntake, loadEvents, submit, withdraw,
     requestAmendment, amendAndResubmit, decide,
   ]);
 

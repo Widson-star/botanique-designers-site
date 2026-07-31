@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAdminData } from "../context/adminData";
@@ -44,9 +44,18 @@ function AmendDialog({ intake, onCancel, onSubmit }) {
     }
     setBusy(true);
     setError("");
-    const result = await onSubmit({ proposedValues, reason: reason.trim() });
-    setBusy(false);
-    if (!result.ok) setError(result.error || "The amendment could not be submitted.");
+    try {
+      const result = await onSubmit({ proposedValues, reason: reason.trim() });
+      if (!result || typeof result.ok !== "boolean") {
+        setError("The intake service returned an invalid response. No success was recorded.");
+      } else if (!result.ok) {
+        setError(result.error || "The amendment could not be submitted.");
+      }
+    } catch (nextError) {
+      setError(nextError.message || "The amendment could not be submitted.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -69,13 +78,39 @@ function AmendDialog({ intake, onCancel, onSubmit }) {
 export default function AdminProjectIntakeDetail() {
   const { intakeId } = useParams();
   const { role, currentUserId, profilesById } = useAdminData();
-  const { intakes, loadEvents, decide, requestAmendment, amendAndResubmit, withdraw } = useAdminIntake();
+  const {
+    intakes, status, loadIntake, loadEvents, decide,
+    requestAmendment, amendAndResubmit, withdraw,
+  } = useAdminIntake();
   const [events, setEvents] = useState([]);
+  const [detailStatus, setDetailStatus] = useState("loading");
+  const [detailError, setDetailError] = useState("");
   const [action, setAction] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const actionInFlight = useRef(false);
   const intake = intakes.find((item) => item.id === intakeId);
+
+  useEffect(() => {
+    if (intake || !intakeId) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const loaded = await loadIntake(intakeId);
+        if (!cancelled) {
+          setDetailError("");
+          setDetailStatus(loaded ? "ready" : "not_found");
+        }
+      } catch (nextError) {
+        if (!cancelled) {
+          setDetailStatus("error");
+          setDetailError(nextError.message || "Unable to load this project intake.");
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [intake, intakeId, loadIntake]);
 
   useEffect(() => {
     if (!intake) return;
@@ -100,9 +135,18 @@ export default function AdminProjectIntakeDetail() {
     );
   }
   if (!intake) {
+    if (status === "loading" || detailStatus === "idle" || detailStatus === "loading") {
+      return (
+        <div className="rounded-lg border border-stone-200 bg-white p-8">
+          <h1 className="text-xl font-bold">Loading project intake…</h1>
+          <p className="mt-2 text-sm text-gray-500">Retrieving the authoritative intake record and history.</p>
+        </div>
+      );
+    }
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
         <h1 className="text-xl font-bold">Intake unavailable</h1>
+        {detailError && <p className="mt-2 text-sm text-red-700" role="alert">{detailError}</p>}
         <Link to="/admin/project-intakes" className="mt-5 inline-flex font-semibold text-botanique-green hover:underline">Back to intakes</Link>
       </div>
     );
@@ -117,16 +161,38 @@ export default function AdminProjectIntakeDetail() {
   const rows = intakeSummaryRows(intake);
 
   async function runAction(operation) {
+    if (actionInFlight.current) {
+      return { ok: false, error: "An intake action is already in progress." };
+    }
+    actionInFlight.current = true;
     setBusy(true);
     setActionError("");
-    const result = await operation();
-    setBusy(false);
-    if (result.ok) {
+    try {
+      const result = await operation();
+      if (!result || typeof result.ok !== "boolean") {
+        const error = "The intake service returned an invalid response. No success was recorded.";
+        setActionError(error);
+        return { ok: false, error };
+      }
+      if (!result.ok) {
+        setActionError(result.error || "The intake action did not complete.");
+        return result;
+      }
       setAction("");
       setNotes("");
-      setEvents(await loadEvents(intake.id, true));
-    } else {
-      setActionError(result.error);
+      try {
+        setEvents(await loadEvents(intake.id, true));
+      } catch {
+        /* the mutation succeeded; timeline refresh remains best-effort */
+      }
+      return result;
+    } catch (nextError) {
+      const error = nextError.message || "The intake action did not complete.";
+      setActionError(error);
+      return { ok: false, error };
+    } finally {
+      actionInFlight.current = false;
+      setBusy(false);
     }
   }
 

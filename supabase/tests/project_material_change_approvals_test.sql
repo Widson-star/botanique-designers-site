@@ -36,15 +36,15 @@ insert into public.projects (
   lead_person_id, start_date, actual_start_date, target_completion_date,
   archived, portfolio_eligible, portfolio_permission_status
 ) values
-  ('10000000-0000-0000-0000-000000000001', 'Alego', 'Alego Residence', 'Siaya', 'Siaya', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', '2026-07-02', null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000002', 'Karen', 'Karen Garden', 'Karen', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000003', 'Mununga', 'Mununga Estate', 'Mununga', 'Nakuru', 'Estate', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000004', 'Zaara', 'Zaara Court', 'Runda', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000001', '2026-07-01', null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000005', 'Zizu', 'Zizu Villa', 'Westlands', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000001', '2026-07-01', null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000006', 'Runda', 'Runda Home', 'Runda', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000001', '2026-07-01', null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000007', 'ActivationProj', null, null, null, 'Residential', 'Pending', 'Inquiry', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000008', 'CompletionProj', null, null, null, 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', '2026-07-02', '2026-08-31', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000009', 'StaleProj', null, 'Old Location', 'Old County', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed');
+  ('10000000-0000-0000-0000-000000000001', 'PR44 MAT — Alego', 'Alego Residence', 'Siaya', 'Siaya', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', '2026-07-02', null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000002', 'PR44 MAT — Karen', 'Karen Garden', 'Karen', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000003', 'PR44 MAT — Mununga', 'Mununga Estate', 'Mununga', 'Nakuru', 'Estate', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000004', 'PR44 MAT — Zaara', 'Zaara Court', 'Runda', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000001', '2026-07-01', null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000005', 'PR44 MAT — Zizu', 'Zizu Villa', 'Westlands', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000001', '2026-07-01', null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000006', 'PR44 MAT — Runda', 'Runda Home', 'Runda', 'Nairobi', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000001', '2026-07-01', null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000007', 'PR44 MAT — Activation', null, null, null, 'Residential', 'Pending', 'Inquiry', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000008', 'PR44 MAT — Completion', null, null, null, 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', '2026-07-02', '2026-08-31', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000009', 'PR44 MAT — Stale', null, 'Old Location', 'Old County', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, false, false, 'Not Reviewed');
 
 -- Manager (002) has an active assignment to Zaara (10...04).
 insert into public.project_assignments (project_id, user_id, assignment_role, is_active) values
@@ -56,29 +56,35 @@ set local role authenticated;
 -- A. Manager project VISIBILITY scoping (RLS SELECT).
 -- =====================================================================
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
-select pg_temp.assert_true((select count(*) = 9 from public.projects), 'owner sees all nine projects');
+select pg_temp.assert_true(
+  (select count(*) = 9 from public.projects where id::text like '10000000-0000-0000-0000-%'),
+  'owner sees all nine fixture projects'
+);
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
 -- Manager sees Alego, Karen, Mununga, Zaara (assigned), and three workflow
 -- projects they lead = 7; never Zizu or Runda.
-select pg_temp.assert_true((select count(*) = 7 from public.projects), 'manager sees only led/assigned projects');
 select pg_temp.assert_true(
-  (select bool_and(project_name in ('Alego', 'Karen', 'Mununga')) from (
-     select project_name from public.projects where project_name in ('Alego', 'Karen', 'Mununga')
-   ) s) and (select count(*) = 3 from public.projects where project_name in ('Alego', 'Karen', 'Mununga')),
+  (select count(*) = 7 from public.projects where id::text like '10000000-0000-0000-0000-%'),
+  'manager sees only led/assigned fixture projects'
+);
+select pg_temp.assert_true(
+  (select bool_and(project_name in ('PR44 MAT — Alego', 'PR44 MAT — Karen', 'PR44 MAT — Mununga')) from (
+     select project_name from public.projects where project_name in ('PR44 MAT — Alego', 'PR44 MAT — Karen', 'PR44 MAT — Mununga')
+   ) s) and (select count(*) = 3 from public.projects where project_name in ('PR44 MAT — Alego', 'PR44 MAT — Karen', 'PR44 MAT — Mununga')),
   'manager selector retains Alego, Karen and Mununga'
 );
 select pg_temp.assert_true(
-  (select count(*) = 0 from public.projects where project_name in ('Zizu', 'Runda')),
+  (select count(*) = 0 from public.projects where project_name in ('PR44 MAT — Zizu', 'PR44 MAT — Runda')),
   'manager cannot see unrelated projects (no cross-project leakage)'
 );
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
-select pg_temp.assert_true((select count(*) = 0 from public.projects), 'unrelated manager2 sees no projects');
+select pg_temp.assert_true((select count(*) = 0 from public.projects where id::text like '10000000-0000-0000-0000-%'), 'unrelated manager2 sees no fixture projects');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', true);
-select pg_temp.assert_true((select count(*) = 0 from public.projects), 'unassigned staff sees no projects');
+select pg_temp.assert_true((select count(*) = 0 from public.projects where id::text like '10000000-0000-0000-0000-%'), 'unassigned staff sees no fixture projects');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000004', true);
-select pg_temp.assert_true((select count(*) = 0 from public.projects), 'viewer sees no projects');
+select pg_temp.assert_true((select count(*) = 0 from public.projects where id::text like '10000000-0000-0000-0000-%'), 'viewer sees no fixture projects');
 
 -- =====================================================================
 -- B. Manager direct-write matrix (material blocked, low-risk permitted).
@@ -103,6 +109,19 @@ begin
   -- Status is NOT low-risk: a manager may not directly pause or resume.
   begin update public.projects set status = 'Paused' where id = '10000000-0000-0000-0000-000000000001';
     raise exception 'manager paused directly'; exception when check_violation then null; end;
+  begin update public.projects set status = 'Ongoing' where id = '10000000-0000-0000-0000-000000000007';
+    raise exception 'manager activated directly'; exception when check_violation then null; end;
+  begin
+    update public.projects
+    set status = 'Ongoing', notes = 'Generic update must not bypass status authority'
+    where id = '10000000-0000-0000-0000-000000000007';
+    raise exception 'generic manager update disguised activation';
+  exception when check_violation then null; end;
+  perform pg_temp.assert_true(
+    (select status = 'Pending' and notes is null
+     from public.projects where id = '10000000-0000-0000-0000-000000000007'),
+    'direct and generic manager activation attempts leave the fixture unchanged'
+  );
   begin update public.projects set stage = 'Detailed Design' where id = '10000000-0000-0000-0000-000000000001';
     raise exception 'manager changed stage directly'; exception when check_violation then null; end;
   begin update public.projects set lead_person_id = '00000000-0000-0000-0000-000000000003' where id = '10000000-0000-0000-0000-000000000001';
@@ -164,7 +183,7 @@ select pg_temp.assert_true(
   'unrelated project remains untouched by manager attempt'
 );
 select pg_temp.assert_true(
-  (select count(*) = 9 from public.projects),
+  (select count(*) = 9 from public.projects where id::text like '10000000-0000-0000-0000-%'),
   'no live project was created by the manager'
 );
 
@@ -385,6 +404,14 @@ begin
     raise exception 'status proposal on a pending project unexpectedly succeeded';
   exception when check_violation then null;
   end;
+  begin
+    perform public.submit_project_approval(
+      '10000000-0000-0000-0000-000000000007', 'project_material_change',
+      '{"status":"Ongoing"}', 'Disguised activation'
+    );
+    raise exception 'activation disguised as material change unexpectedly succeeded';
+  exception when check_violation then null;
+  end;
   -- Terminal statuses are never reachable via material change.
   begin
     perform public.submit_project_approval(
@@ -463,24 +490,24 @@ begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
   request := public.submit_project_approval(
     '10000000-0000-0000-0000-000000000002', 'project_material_change',
-    '{"project_name":"Karen Phase 1"}', 'Rename to reflect phasing.'
+    '{"project_name":"PR44 MAT — Karen Phase 1"}', 'Rename to reflect phasing.'
   );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   request := public.request_approval_amendment(request.id, 'Use the client-approved name.');
   perform pg_temp.assert_true(request.state = 'amendment_requested', 'owner requests amendment');
   perform pg_temp.assert_true(
-    (select project_name = 'Karen' from public.projects where id = '10000000-0000-0000-0000-000000000002'),
+    (select project_name = 'PR44 MAT — Karen' from public.projects where id = '10000000-0000-0000-0000-000000000002'),
     'amendment request does not mutate the project'
   );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
   request := public.amend_and_resubmit_approval(
-    request.id, '{"project_name":"Karen Gardens Phase 1"}', 'Client-approved name.', null
+    request.id, '{"project_name":"PR44 MAT — Karen Gardens Phase 1"}', 'Client-approved name.', null
   );
   perform pg_temp.assert_true(request.request_round = 2 and request.state = 'awaiting_review', 'amendment increments round and requeues');
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   request := public.decide_project_approval(request.id, 'approved', null);
   perform pg_temp.assert_true(
-    (select project_name = 'Karen Gardens Phase 1' from public.projects where id = '10000000-0000-0000-0000-000000000002'),
+    (select project_name = 'PR44 MAT — Karen Gardens Phase 1' from public.projects where id = '10000000-0000-0000-0000-000000000002'),
     'approved amended proposal applies the revised value'
   );
 
@@ -514,7 +541,7 @@ begin
   -- Manager submits an intake proposal; NO live project row is created.
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
   intake := public.submit_project_intake(
-    '{"project_name":"Nyali Coastal Garden","project_type":"Hospitality","location":"Nyali","county":"Mombasa","start_date":"2026-09-01"}',
+    '{"project_name":"PR44 MAT — Nyali Coastal Garden","project_type":"Hospitality","location":"Nyali","county":"Mombasa","start_date":"2026-09-01"}',
     'New enquiry qualified and ready to open as a project.'
   );
   perform pg_temp.assert_true(intake.state = 'awaiting_review', 'intake queues for review');
@@ -530,7 +557,7 @@ begin
   -- Duplicate active intake (same requester + name) is rejected.
   begin
     perform public.submit_project_intake(
-      '{"project_name":"Nyali Coastal Garden","project_type":"Residential"}', 'Duplicate'
+      '{"project_name":"PR44 MAT — Nyali Coastal Garden","project_type":"Residential"}', 'Duplicate'
     );
     raise exception 'duplicate intake unexpectedly succeeded';
   exception when unique_violation then null;
@@ -573,7 +600,7 @@ begin
     'approved intake atomically creates one live project'
   );
   perform pg_temp.assert_true(
-    (select project_name = 'Nyali Coastal Garden' and status = 'Pending' and stage = 'Inquiry'
+    (select project_name = 'PR44 MAT — Nyali Coastal Garden' and status = 'Pending' and stage = 'Inquiry'
        and lead_person_id is null and portfolio_permission_status = 'Not Reviewed'
      from public.projects where id = intake.created_project_id),
     'created project uses the safe intake defaults with no lead'
@@ -595,7 +622,7 @@ begin
   projects_before := (select count(*) from public.projects);
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
   intake := public.submit_project_intake(
-    '{"project_name":"Rejected Enquiry","project_type":"Residential"}', 'Speculative.'
+    '{"project_name":"PR44 MAT — Rejected Enquiry","project_type":"Residential"}', 'Speculative.'
   );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   intake := public.decide_project_intake(intake.id, 'rejected', 'Not viable.');
@@ -603,7 +630,7 @@ begin
 
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
   intake := public.submit_project_intake(
-    '{"project_name":"Withdrawn Enquiry","project_type":"Residential"}', 'Speculative.'
+    '{"project_name":"PR44 MAT — Withdrawn Enquiry","project_type":"Residential"}', 'Speculative.'
   );
   intake := public.withdraw_project_intake(intake.id, 'Client went quiet.');
   perform pg_temp.assert_true(intake.state = 'withdrawn', 'requester can withdraw an intake');
@@ -617,13 +644,59 @@ $$;
 
 -- Intake visibility: owner sees all; requester sees own; others see none.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
-select pg_temp.assert_true((select count(*) >= 3 from public.project_intake_requests), 'owner sees all intakes');
+select pg_temp.assert_true(
+  (select count(*) = 3 from public.project_intake_requests
+    where proposed_values->>'project_name' like 'PR44 MAT — %'),
+  'owner sees all three fixture intakes, including terminal rows'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.project_intake_requests
+    where proposed_values->>'project_name' = 'PR44 MAT — Nyali Coastal Garden'
+      and state = 'approved'
+      and created_project_id is not null),
+  'owner sees the approved intake and its created-project link'
+);
+select pg_temp.assert_true(
+  (select count(*) >= 1
+   from public.project_intake_events event
+   join public.project_intake_requests intake on intake.id = event.intake_request_id
+   where intake.proposed_values->>'project_name' = 'PR44 MAT — Nyali Coastal Garden'
+     and event.event_type = 'project_created'),
+  'owner sees the approved intake project-created history'
+);
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
-select pg_temp.assert_true((select count(*) >= 3 from public.project_intake_requests), 'requester sees own intakes');
+select pg_temp.assert_true(
+  (select count(*) = 3 from public.project_intake_requests
+    where proposed_values->>'project_name' like 'PR44 MAT — %'),
+  'requester sees all three of their terminal fixture intakes'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.project_intake_requests
+    where proposed_values->>'project_name' = 'PR44 MAT — Nyali Coastal Garden'
+      and state = 'approved'
+      and created_project_id is not null),
+  'requester sees the approved intake and its created-project link'
+);
+select pg_temp.assert_true(
+  (select count(*) >= 1
+   from public.project_intake_events event
+   join public.project_intake_requests intake on intake.id = event.intake_request_id
+   where intake.proposed_values->>'project_name' = 'PR44 MAT — Nyali Coastal Garden'
+     and event.event_type = 'project_created'),
+  'requester sees the approved intake project-created history'
+);
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
-select pg_temp.assert_true((select count(*) = 0 from public.project_intake_requests), 'other manager sees no intakes');
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.project_intake_requests
+    where proposed_values->>'project_name' like 'PR44 MAT — %'),
+  'other manager sees no fixture intakes'
+);
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', true);
-select pg_temp.assert_true((select count(*) = 0 from public.project_intake_requests), 'staff sees no intakes');
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.project_intake_requests
+    where proposed_values->>'project_name' like 'PR44 MAT — %'),
+  'staff sees no fixture intakes'
+);
 
 -- =====================================================================
 -- G. Existing six lifecycle approval types still work under this migration.
@@ -637,8 +710,19 @@ begin
   request := public.submit_project_approval(
     '10000000-0000-0000-0000-000000000007', 'project_activation', '{"status":"Ongoing"}', 'Mobilised.'
   );
+  perform pg_temp.assert_true(
+    (select status = 'Pending' from public.projects
+      where id = '10000000-0000-0000-0000-000000000007'),
+    'manager activation request leaves the live project Pending before approval'
+  );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   request := public.decide_project_approval(request.id, 'approved', null);
+  perform pg_temp.assert_true(
+    request.state = 'approved'
+    and (select status = 'Ongoing' from public.projects
+      where id = '10000000-0000-0000-0000-000000000007'),
+    'owner approval activates the project atomically'
+  );
   perform pg_temp.assert_true(
     (select status = 'Ongoing' from public.projects where id = '10000000-0000-0000-0000-000000000007'),
     'activation lifecycle type still applies'
@@ -659,6 +743,28 @@ begin
 end;
 $$;
 
+-- Owner direct activation remains the supported alternative and creates no
+-- approval request.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+insert into public.projects (
+  id, project_name, project_type, status, stage, archived,
+  portfolio_eligible, portfolio_permission_status
+) values (
+  '10000000-0000-0000-0000-000000000010',
+  'PR44 MAT — Owner Direct Activation',
+  'Residential', 'Pending', 'Inquiry', false, false, 'Not Reviewed'
+);
+update public.projects
+set status = 'Ongoing'
+where id = '10000000-0000-0000-0000-000000000010';
+select pg_temp.assert_true(
+  (select status = 'Ongoing' from public.projects
+    where id = '10000000-0000-0000-0000-000000000010')
+  and (select count(*) = 0 from public.approval_requests
+    where project_id = '10000000-0000-0000-0000-000000000010'),
+  'owner direct activation succeeds without an approval request'
+);
+
 -- =====================================================================
 -- H. Approvals counts/filters + Daily Site RLS remain correct.
 -- =====================================================================
@@ -674,12 +780,15 @@ select pg_temp.assert_true(
 -- Daily Site authority helper is untouched and still scopes the manager selector.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
 select pg_temp.assert_true(
-  (select bool_and(project_name in ('Alego', 'Karen Gardens Phase 1', 'Mununga', 'Zaara', 'ActivationProj', 'CompletionProj', 'StaleProj'))
+  (select bool_and(project_name in (
+    'PR44 MAT — Alego', 'PR44 MAT — Karen Gardens Phase 1', 'PR44 MAT — Mununga',
+    'PR44 MAT — Zaara', 'PR44 MAT — Activation', 'PR44 MAT — Completion', 'PR44 MAT — Stale'
+  ))
    from public.daily_site_authorised_projects()),
   'daily site selector still returns only the manager-authorised projects'
 );
 select pg_temp.assert_true(
-  (select count(*) = 0 from public.daily_site_authorised_projects() where project_name in ('Zizu', 'Runda')),
+  (select count(*) = 0 from public.daily_site_authorised_projects() where project_name in ('PR44 MAT — Zizu', 'PR44 MAT — Runda')),
   'daily site selector excludes unrelated projects'
 );
 
@@ -901,9 +1010,9 @@ begin
   -- Owner edits a material field DIRECTLY: succeeds, no approval request created.
   projects_before := (select count(*) from public.approval_requests
     where project_id = '10000000-0000-0000-0000-000000000001' and approval_type = 'project_material_change');
-  update public.projects set project_name = 'Alego Direct' where id = '10000000-0000-0000-0000-000000000001';
+  update public.projects set project_name = 'PR44 MAT — Alego Direct' where id = '10000000-0000-0000-0000-000000000001';
   perform pg_temp.assert_true(
-    (select project_name = 'Alego Direct' from public.projects where id = '10000000-0000-0000-0000-000000000001'),
+    (select project_name = 'PR44 MAT — Alego Direct' from public.projects where id = '10000000-0000-0000-0000-000000000001'),
     'owner direct material edit applies immediately'
   );
   perform pg_temp.assert_true(

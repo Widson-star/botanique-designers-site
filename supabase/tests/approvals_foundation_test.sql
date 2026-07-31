@@ -25,20 +25,20 @@ insert into public.profiles (id, email, full_name, role, is_active) values
   ('00000000-0000-0000-0000-000000000006', 'manager2@test.local', 'Other Manager', 'manager', true);
 
 insert into public.projects (
-  id, project_name, project_type, status, stage, start_date, actual_start_date,
+  id, project_name, project_type, status, stage, lead_person_id, start_date, actual_start_date,
   target_completion_date, actual_completion_date, archived,
   portfolio_eligible, portfolio_permission_status
 ) values
-  ('10000000-0000-0000-0000-000000000001', 'Activation', 'Residential', 'Pending', 'Inquiry', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000002', 'Completion', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', '2026-07-02', '2026-08-31', null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000003', 'Cancellation', 'Residential', 'Paused', 'Implementation', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000004', 'Archive', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000005', 'Restore', 'Residential', 'Completed', 'Completed', '2026-07-01', '2026-07-01', '2026-07-20', '2026-07-20', true, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000006', 'Target date', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', null, '2026-08-01', null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000007', 'Reject', 'Residential', 'Pending', 'Inquiry', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000008', 'Amend', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', null, '2026-08-01', null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000009', 'Withdraw', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000010', 'Stale', 'Residential', 'Pending', 'Inquiry', '2026-07-01', null, null, null, false, false, 'Not Reviewed');
+  ('10000000-0000-0000-0000-000000000001', 'PR44 DB Test — Activation', 'Residential', 'Pending', 'Inquiry', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000002', 'PR44 DB Test — Completion', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', '2026-07-02', '2026-08-31', null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000003', 'PR44 DB Test — Cancellation', 'Residential', 'Paused', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000004', 'PR44 DB Test — Archive', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000005', 'PR44 DB Test — Restore', 'Residential', 'Completed', 'Completed', '00000000-0000-0000-0000-000000000002', '2026-07-01', '2026-07-01', '2026-07-20', '2026-07-20', true, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000006', 'PR44 DB Test — Target date', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, '2026-08-01', null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000007', 'PR44 DB Test — Reject', 'Residential', 'Pending', 'Inquiry', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000008', 'PR44 DB Test — Amend', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, '2026-08-01', null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000009', 'PR44 DB Test — Withdraw', 'Residential', 'Ongoing', 'Implementation', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, null, false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000010', 'PR44 DB Test — Stale', 'Residential', 'Pending', 'Inquiry', '00000000-0000-0000-0000-000000000002', '2026-07-01', null, null, null, false, false, 'Not Reviewed');
 
 set local role authenticated;
 
@@ -446,8 +446,9 @@ begin
 end;
 $$;
 
--- Interim material guard regression: manager direct bypasses still fail while
--- Ongoing <-> Paused remains permitted. Lead guard remains attached.
+-- Final authority regression: every direct manager status transition fails on
+-- a manager-led project. Tests assert the persisted fixture state as well as
+-- the raised exception so a zero-row RLS update cannot masquerade as a pass.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', true);
 do $$
 begin
@@ -493,17 +494,26 @@ begin
     raise exception 'manager changed actual completion directly';
   exception when check_violation then null;
   end;
+  perform pg_temp.assert_true(
+    (select status = 'Pending' from public.projects
+      where id = '10000000-0000-0000-0000-000000000007'),
+    'manager direct activation leaves the authorised fixture Pending'
+  );
   begin
     update public.projects set portfolio_eligible = true
     where id = '10000000-0000-0000-0000-000000000002';
     raise exception 'manager changed portfolio authority directly';
   exception when check_violation then null;
   end;
-  update public.projects set status = 'Paused'
-  where id = '10000000-0000-0000-0000-000000000008';
+  begin
+    update public.projects set status = 'Paused'
+    where id = '10000000-0000-0000-0000-000000000008';
+    raise exception 'manager paused directly';
+  exception when check_violation then null;
+  end;
   perform pg_temp.assert_true(
-    (select status = 'Paused' from public.projects where id = '10000000-0000-0000-0000-000000000008'),
-    'manager routine Ongoing to Paused remains permitted'
+    (select status = 'Ongoing' from public.projects where id = '10000000-0000-0000-0000-000000000008'),
+    'manager direct pause leaves the authorised fixture Ongoing'
   );
   perform pg_temp.assert_true(
     exists (select 1 from pg_trigger where tgname = 'projects_lead_guard' and not tgisinternal),
@@ -511,6 +521,20 @@ begin
   );
 end;
 $$;
+
+-- Owner retains the direct alternative and can activate without creating an
+-- approval. Restore the throwaway fixture so earlier lifecycle expectations
+-- remain deterministic if this section is moved by a future harness refactor.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+update public.projects set status = 'Ongoing'
+where id = '10000000-0000-0000-0000-000000000007';
+select pg_temp.assert_true(
+  (select status = 'Ongoing' from public.projects
+    where id = '10000000-0000-0000-0000-000000000007'),
+  'owner direct activation succeeds'
+);
+update public.projects set status = 'Pending'
+where id = '10000000-0000-0000-0000-000000000007';
 
 -- Anonymous cannot read or execute workflow functions.
 reset role;

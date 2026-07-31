@@ -46,6 +46,23 @@ export async function fetchProjectIntakes(accessToken) {
   }));
 }
 
+export async function fetchProjectIntake(accessToken, intakeId) {
+  const params = new URLSearchParams({
+    select: [
+      "id", "requester_id", "state", "request_round", "proposed_values", "reason",
+      "requester_notes", "decision", "decision_notes", "created_project_id",
+      "requested_at", "reviewed_at", "decided_at", "withdrawn_at", "supersedes_request_id",
+    ].join(","),
+    id: `eq.${intakeId}`,
+    limit: "1",
+  });
+  const rows = await read(await fetch(
+    `${SUPABASE_URL}/rest/v1/project_intake_requests?${params}`,
+    { headers: headers(accessToken) }
+  ));
+  return rows[0] || null;
+}
+
 export async function fetchProjectIntakeEvents(accessToken, intakeRequestId) {
   const params = new URLSearchParams({
     select: [

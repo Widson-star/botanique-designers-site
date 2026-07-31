@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { AdminApprovalsContext } from "../context/adminApprovals";
 import AdminApprovalDetail from "./AdminApprovalDetail";
+import { STALE_APPROVAL_MESSAGE } from "../utils/approvalErrors";
 
 const project = {
   id: "project-1",
@@ -30,7 +32,7 @@ const request = {
   requestedAt: "2026-07-28T08:00:00Z",
 };
 
-function renderDetail(role = "owner", requestRow = request) {
+function renderDetail(role = "owner", requestRow = request, overrides = {}, projectRow = project) {
   const loadEvents = vi.fn().mockResolvedValue([
     {
       id: "event-1",
@@ -72,13 +74,14 @@ function renderDetail(role = "owner", requestRow = request) {
     requestAmendment: vi.fn().mockResolvedValue({ ok: true }),
     amendAndResubmit: vi.fn().mockResolvedValue({ ok: true }),
     withdraw: vi.fn().mockResolvedValue({ ok: true }),
+    ...overrides,
   };
   render(
     <MemoryRouter initialEntries={["/admin/approvals/request-1"]}>
       <AdminDataContext.Provider value={{
         role,
         currentUserId: role === "manager" ? "manager-1" : "owner-1",
-        projects: [project],
+        projects: [projectRow],
         profilesById: {
           "manager-1": { id: "manager-1", full_name: "Martine Lotom", role: "manager" },
         },
@@ -129,4 +132,72 @@ describe("Admin approval detail", () => {
     expect(screen.getByText("Please provide the confirmed mobilisation date.")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Request submitted")).toBeInTheDocument());
   });
+
+  it("surfaces a clear stale error and always restores usable controls", async () => {
+    const user = userEvent.setup();
+    renderDetail("owner", request, {
+      decide: vi.fn().mockResolvedValue({
+        ok: false,
+        stale: true,
+        error: "stale project snapshot",
+      }),
+    });
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(screen.getByRole("button", { name: "Approve and apply" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(STALE_APPROVAL_MESSAGE);
+    expect(screen.getByRole("button", { name: "Approve and apply" })).toBeEnabled();
+    expect(screen.queryByText("Working…")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["undefined response", vi.fn().mockResolvedValue(undefined), "invalid response"],
+    ["network rejection", vi.fn().mockRejectedValue(new Error("Network unavailable")), "Network unavailable"],
+    [
+      "Supabase error object",
+      vi.fn().mockResolvedValue({ ok: false, error: { message: "Supabase rejected the decision" } }),
+      "Supabase rejected the decision",
+    ],
+  ])("handles %s without a false success state", async (_label, decide, message) => {
+    const user = userEvent.setup();
+    renderDetail("owner", request, { decide });
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(screen.getByRole("button", { name: "Approve and apply" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(message);
+    expect(screen.getByRole("alertdialog", { name: "Approve request" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve and apply" })).toBeEnabled();
+  });
+
+  it("prevents duplicate decision submission while one request is in flight", async () => {
+    let finish;
+    const decide = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+    renderDetail("owner", request, { decide });
+
+    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    const confirm = screen.getByRole("button", { name: "Approve and apply" });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    expect(decide).toHaveBeenCalledTimes(1);
+    finish({ ok: false, error: "Controlled failure" });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Controlled failure");
+    expect(confirm).toBeEnabled();
+  });
+
+  it.each(["approved", "rejected", "amendment_requested", "withdrawn"])(
+    "does not retain a stale warning for terminal state %s",
+    async (state) => {
+      renderDetail("owner", {
+        ...request,
+        state,
+        decision: state,
+      }, {}, { ...project, status: "Ongoing" });
+      await waitFor(() => expect(screen.getByText("Request submitted")).toBeInTheDocument());
+      expect(screen.queryByText(/Approving now is blocked as stale/)).not.toBeInTheDocument();
+      expect(screen.queryByText("(changed)")).not.toBeInTheDocument();
+    }
+  );
 });

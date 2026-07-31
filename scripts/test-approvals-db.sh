@@ -29,4 +29,7 @@ psql_cmd=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$socket_dir" -p "$port" -d po
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260726000100_operations_hub_phase_1a_lead_data_rls.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260726000200_operations_hub_phase_1b_a1_project_integrity.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260728000100_operations_hub_approvals_foundation.sql" >/dev/null
+"${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260728000200_operations_hub_daily_site_operations.sql" >/dev/null
+"${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260729000100_operations_hub_project_material_change_approvals.sql" >/dev/null
+"${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260731000100_operations_hub_pr44_verification_repairs.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/approvals_foundation_test.sql"
