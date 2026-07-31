@@ -2238,7 +2238,7 @@ role-specific controls, the Principal direct-authority form being structurally d
 from Manager submission, the advisory-draft-availability warning, exactly the three
 eligible authorised projects, both intended-custody options, the intended Operations
 Manager custodian field, approval-not-release wording throughout, the Principal mobile
-queue, and a clean Principal console with no errors or failed requests. No screenshots,
+queue, and a clean Principal console with no errors or warnings. No screenshots,
 credentials, session identifiers or private browser information are recorded here.
 
 Verification limitations at that checkpoint:
