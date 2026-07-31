@@ -21,9 +21,13 @@ import AdminApprovalsProvider from "./context/AdminApprovalsContext";
 import AdminIntakeProvider from "./context/AdminIntakeProvider";
 import DailySiteOperationsProvider from "./context/DailySiteOperationsProvider";
 import SiteCostsProvider from "./context/SiteCostsProvider";
+import FundRequestsProvider from "./context/FundRequestsProvider";
 import AdminSiteCosts from "./routes/AdminSiteCosts";
 import AdminSiteCostForm from "./routes/AdminSiteCostForm";
 import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
+import AdminFundRequests from "./routes/AdminFundRequests";
+import AdminFundRequestForm from "./routes/AdminFundRequestForm";
+import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
 import { ROLES } from "./constants/roles";
 import {
   clearStoredSession,
@@ -194,6 +198,7 @@ export default function AdminApp() {
         <AdminIntakeProvider session={session} role={role} isDemo={isDemo}>
         <DailySiteOperationsProvider session={session} role={role} isDemo={isDemo}>
         <SiteCostsProvider session={session} role={role} isDemo={isDemo}>
+        <FundRequestsProvider session={session} role={role} isDemo={isDemo}>
           <Routes>
             <Route
               element={
@@ -223,9 +228,14 @@ export default function AdminApp() {
               <Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} />
               <Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} />
               <Route path="/admin/site-costs/:claimId/edit" element={<AdminSiteCostForm />} />
+              <Route path="/admin/fund-requests" element={<AdminFundRequests />} />
+              <Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} />
+              <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
+              <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Route>
           </Routes>
+        </FundRequestsProvider>
         </SiteCostsProvider>
         </DailySiteOperationsProvider>
         </AdminIntakeProvider>

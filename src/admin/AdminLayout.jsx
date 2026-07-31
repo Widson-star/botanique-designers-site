@@ -13,6 +13,7 @@ import { canSeeApprovals } from "./utils/approvalCapabilities";
 import { canManageStaff } from "./utils/permissions";
 import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
+import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
 
 const NAV_ITEMS = [
   {
@@ -40,6 +41,13 @@ const NAV_ITEMS = [
     end: false,
     capability: canSeeSiteCosts,
     icon: "M4 5h12v10H4V5Zm3 3h6M7 11h4",
+  },
+  {
+    to: "/admin/fund-requests",
+    label: "Fund Requests",
+    end: false,
+    capability: canSeeFundRequests,
+    icon: "M10 3v14M6.5 6.5h5a2 2 0 0 1 0 4h-3a2 2 0 0 0 0 4h5",
   },
   {
     to: "/admin/approvals",
