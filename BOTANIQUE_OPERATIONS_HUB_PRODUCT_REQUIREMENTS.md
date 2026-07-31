@@ -830,8 +830,8 @@ This is the current governing sequence:
 
 1. **Operations Hub authority revision** — this documentation-only workstream.
 2. **Approvals foundation.** *(Merged; see §5.1.)*
-3. **Daily Site Operations & Morning Compliance.** *(Authority defined in §4.5;
-   implementation not started.)*
+3. **Daily Site Operations & Morning Compliance.** *(Implemented, hosted and authenticated;
+   **ACTIVE_VERIFIED** — see §4.5.)*
 4. **Operational Expenditure.**
 5. **Project Funds & Reconciliation.**
 6. **Labour Engagements & Payments.**
@@ -843,20 +843,11 @@ This is the current governing sequence:
 12. **Reports & Management Summary.**
 13. **Leads, Site Visits and Maintenance integration.**
 
-Daily Site Operations & Morning Compliance is elevated to the next implementation
-workstream because the informal WhatsApp morning process (§4.5.1) is the most immediate
-operational-accountability gap. Project Funds and Labour Engagements remain elevated
-because recurring allocations, reconciliation and agreed-versus-paid accountability
-between Widson, Martine and project teams are immediate operational pain points.
-
-**Recommended first implementation slice:** Daily Site Entry capture **and** morning
-compliance **only**. Operational Expenditure capture — recommended by the earlier preflight
-as a combined first slice — is on reassessment deferred to a **separate second slice**:
-combining a new entry table, its lifecycle and RLS, the morning-compliance dashboard and a
-mobile-first entry flow with a full expenditure model (categories, cross-domain links,
-its own RLS) would create excessive migration, RLS, UI and authority risk in one PR. A
-narrower first slice ships the founder's first-morning obligation sooner and lets
-expenditure follow on a stable base.
+Daily Site Operations & Morning Compliance is implemented and operational. The hosted
+implementation has completed authenticated verification and remains **ACTIVE_VERIFIED**.
+Daily Site records contain operational planning signals only; they do not create payments,
+liabilities, fund releases or financial approval. Financial reconciliation and finance
+linkage remain future work under **BD-FIN-01**.
 
 Each item is a separate, reviewed workstream with its own branch and PR. Workstreams must
 not be combined into one migration or implementation branch.
