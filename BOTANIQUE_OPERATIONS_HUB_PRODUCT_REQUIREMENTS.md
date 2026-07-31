@@ -488,7 +488,9 @@ The founder has resolved the five previously open decisions; they are now author
 ### 4.6 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
 **Status: product contract approved; APPLIED_WITH_LIMITATION on PR #48
-(`feat/bd-fin-01a-internal-cost-claims`, head `74a25babc411ef42a38dad882d14e00261aca32e`);
+(`feat/bd-fin-01a-internal-cost-claims`; implementation commit
+`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head after hosted-verification
+documentation `48f1a53c551ee8f20d7579703800f08aed7a2f66`);
 open, draft and unmerged.** The separately authorised implementation is based on
 authoritative base `d5986af66bec550567408e99b61d170607daee75`. Migration
 `20260731000200_internal_cost_claims.sql` has been applied to hosted `botanique-admin`
