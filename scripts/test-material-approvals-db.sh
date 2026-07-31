@@ -33,4 +33,5 @@ psql_cmd=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$socket_dir" -p "$port" -d po
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260729000100_operations_hub_project_material_change_approvals.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260731000100_operations_hub_pr44_verification_repairs.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260731000200_internal_cost_claims.sql" >/dev/null
+"${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260731000300_claim_backed_fund_requests.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/project_material_change_approvals_test.sql"
