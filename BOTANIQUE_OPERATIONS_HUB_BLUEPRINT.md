@@ -1,6 +1,7 @@
 # Botanique Operations Hub — Architecture Blueprint (BD-OPERATIONS-HUB-01)
 
-**Authority revision:** 28 July 2026, following Phase 1B-A2 production acceptance.
+**Authority revision:** 31 July 2026. Originally established following Phase 1B-A2;
+reconciled after PR #44–#46 and the BD-FIN-01 read-only authority gate.
 
 **Status:** Architecture and system-of-record authority. This blueprint authorises no
 application, migration, RLS, integration or hosted-data change. Current implementation
@@ -17,10 +18,10 @@ Verified implementation truth:
 | Capability | Current state | Primary evidence |
 |---|---|---|
 | Authenticated `/admin` | Live | `src/admin/AdminApp.jsx` |
-| Functional navigation | Dashboard and Projects only | `src/admin/AdminLayout.jsx` |
+| Functional navigation | Dashboard, Projects, Daily Site Operations, Approvals and Project Intakes | `src/admin/AdminLayout.jsx` |
 | Project data lifecycle | Supabase-backed load, create and update with reconciliation | `src/admin/context/AdminDataContext.jsx`, `src/admin/lib/supabase.js` |
 | Project CRUD | Live, role-scoped, archive/restore only | Admin project routes and forms |
-| Material project authority | Interim database guard | `20260726000200_operations_hub_phase_1b_a1_project_integrity.sql` |
+| Material project authority | ACTIVE_VERIFIED controlled approval + scoped manager authority | `20260729000100`, `20260731000100` migrations |
 | Project history | Trigger-written immutable audit ledger | `project_activities` migration, Activity History UI |
 | Roles | `owner`, `manager`, `staff`, `viewer` | admin-foundation migration, `roles.js` |
 | Project visibility | Owner/manager portfolio access; assignment-scoped staff access | project RLS |
@@ -29,12 +30,13 @@ Verified implementation truth:
 | Client commercial documents | External authority | Simple Invoice Manager |
 | Realtime | Not implemented | save/refetch architecture |
 
-Production contains nine legitimate project records. Alego Usonga remains operational,
-and Zizu Investments Ltd is the founder-reconciled ninth operational project, not test,
-demo or seed data. Documentation and audit tasks must not mutate hosted data.
+Production contains **12 project rows: 10 genuine projects and two archived PR #44
+internal-verification fixtures**. The fixtures are audit evidence, not client or operational
+projects. Documentation and audit tasks must not mutate hosted data.
 
-The accepted admin interface exposes only Dashboard and Projects. Future destinations are
-added progressively after implementation and authorisation.
+The accepted admin interface exposes Dashboard, Projects, Daily Site Operations, Approvals
+and Project Intakes. Future destinations are added progressively after implementation and
+authorisation.
 
 ## 2. Architectural principles
 
@@ -61,14 +63,14 @@ added progressively after implementation and authorisation.
 | Project delivery state | Operations Hub `projects` | Primary authority |
 | Project change audit | Operations Hub `project_activities` | Immutable trigger-written ledger |
 | Project assignments | Operations Hub `project_assignments` | Delivery visibility/team linkage |
-| Daily site operations (morning plan, attendance intent, no-work status) | Future Operations Hub domain | Primary future authority; per-project, per-date operational record |
+| Daily site operations (morning plan, attendance intent, no-work status) | Operations Hub Daily Site | ACTIVE_VERIFIED per-project, per-date operational authority |
 | Client estimates, invoices, receipts, payments and balances | Simple Invoice Manager | Later verified references and authorised summaries only |
 | Project fund transfers, allocations and reconciliations | Future Operations Hub domain | Primary future authority |
 | Labour agreements, additions, payments and balances | Future Operations Hub domain | Primary future authority |
 | Operational expenditure | Future Operations Hub domain | Primary future authority; links to originating records |
 | Project updates and discussion | Future Operations Hub domain | Structured asynchronous operational record |
 | Evidence and documents | Future Operations Hub domain/storage policy | Linked evidence with scoped access |
-| Approval proposals and decisions | Future Operations Hub domain | Reusable immutable workflow |
+| Approval proposals and decisions | Operations Hub Approvals | ACTIVE_VERIFIED reusable immutable workflow for implemented project types |
 | Leads and lead activity | Operations Hub schema; UI future | Schema/RLS live, interface pending |
 | Site visits | Future Operations Hub domain | Primary future authority |
 | Maintenance schedules | Future Operations Hub domain | Primary future authority, preserving GardenCare boundaries |
@@ -95,9 +97,10 @@ must not be forced into an authenticated `profiles` identity. Team & Resourcing 
 deliberate identity model separating a person/worker record from optional application
 access.
 
-### 4.2 Approvals
+### 4.2 Approvals — ACTIVE_VERIFIED
 
-The Approvals foundation is the next implementation domain. Conceptually it requires:
+The Approvals foundation and expanded project material-change controls are merged, hosted
+and ACTIVE_VERIFIED. The implemented architecture provides:
 
 - approval class and lifecycle state;
 - requester and approver;
@@ -114,9 +117,9 @@ permission. Domain records retain their own business semantics; the approvals do
 records authority and decision history rather than becoming a generic replacement for the
 domain itself.
 
-The current `tg_guard_project_material_authority()` trigger remains an interim enforcement
-boundary. A future approvals implementation must retain equivalent or stronger authority
-before any reviewed replacement of that guard.
+The PR #44 material-change functions, triggers and scoped project policies close the former
+manager-material-change governance gap. Any future replacement must retain equivalent or
+stronger database authority.
 
 The first project-linked slice is merged and its additive migration
 `20260728000100_operations_hub_approvals_foundation.sql` is applied to hosted
@@ -124,10 +127,9 @@ The first project-linked slice is merged and its additive migration
 verified, with both approval tables empty. The observed React `#418` console error was a
 route-aware hydration defect on `/admin`, since repaired and merged under PR #38 (merge
 commit `f95e31f55c0d74844b79aaca3ac831ed3bb1208a`); admin routes now client-render with
-`createRoot` instead of hydrating the Vercel-rewritten homepage shell. Classification
-remains `APPLIED_WITH_LIMITATION`, with the residual limitation narrowed to manager
-authenticated production-UI verification; owner authenticated exact-head verification and
-signed-out production both passed with a clean console.
+`createRoot` instead of hydrating the Vercel-rewritten homepage shell. That initial slice's
+`APPLIED_WITH_LIMITATION` classification is a historical checkpoint. Authenticated PR #44
+verification established the current **ACTIVE_VERIFIED** status.
 `approval_requests` is the constrained current-state record and `approval_events` is the
 immutable lifecycle ledger. Narrow SECURITY DEFINER functions own submission, withdrawal,
 amendment/resubmission and owner decision. An approved decision locks and revalidates the
@@ -227,7 +229,7 @@ financial records.
 ### 4.9 Daily Site Operations & Morning Compliance
 
 This is the first implemented domain after the merged Approvals foundation.
-**APPLIED_WITH_LIMITATION — live in production; first real entry recorded.** The first narrow
+**ACTIVE_VERIFIED — live in production.** The first narrow
 slice (Daily Site Entry capture, review/correction lifecycle, owner compliance waivers,
 morning-compliance calculation, a Dashboard attention surface and a mobile-first admin
 interface) was merged in PR #41 at authoritative `main`
@@ -249,9 +251,9 @@ mobile cards, corporate-language label polish, and a single owner-only **Portfol
 status** control consolidating the old eligible-checkbox + permission-dropdown pair with **no
 migration and no public-publication automation**; the public portfolio remains a separate
 curated dataset); owner and manager authenticated exact-preview verification **PASSED**; and
-Martine's selector confirmed to list both Alego and Karen. A separate manager-material-change
-governance gap remains open as a distinct future domain (it does not change the Approvals
-classification). Accepted entries are corrected only by supersession (prior row preserved).
+Martine's selector confirmed to list both Alego and Karen. The former manager-material-change
+governance gap is closed by the ACTIVE_VERIFIED PR #44 controls. Accepted entries are
+corrected only by supersession (prior row preserved).
 Authority is **project-authority scoped**: the owner is company-wide, while a manager can
 read and act only on projects within the existing project-authority model (active
 `project_assignments` or `lead_person_id`) — enforced in RLS, revalidated inside every
@@ -337,12 +339,52 @@ the resolved compliance rules above); the first implementation slice may proceed
 normal implementation preflight, keeping Daily Site Entry capture and morning compliance
 as the narrow first slice and Operational Expenditure deferred to a separate second slice.
 
+### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
+
+BD-FIN-01A is the approved first finance slice, but this documentation revision authorises
+no implementation. Its purpose is to establish an authoritative internal project-cost
+obligation and immutable decision history before any money movement.
+
+The aggregate is a project-scoped claim with an optional Daily Site source, one recipient
+or crew, one category, one or more structured lines, a service/work date, purpose, KES total
+derived from lines, requester or Principal direct authority, and immutable lifecycle events.
+Whole-claim approval is authoritative; independently owed or approved recipients/scopes are
+separate claims. Principal-originated obligations use a distinct direct-authority event such
+as `principal_authorised`, never simulated self-approval.
+
+The compact authoritative lifecycle is `draft`, `awaiting_review`,
+`amendment_requested`, `approved`, `rejected`, `withdrawn`, `cancelled`. Submission and
+resubmission are events that enter `awaiting_review`. Funding, payment and reconciliation
+progress are deferred derived states, not claim lifecycle values.
+
+Daily Site remains the operational planning source. A future explicit **Create cost claim**
+action may copy project, date, source version and planning context to an editable draft; it
+never creates a claim automatically. Later Daily Site changes cannot rewrite submitted or
+approved claims, finance cannot rewrite Daily Site history, and one entry may support
+multiple separate claims.
+
+The Principal has company-wide decision and direct-authority access. The Operations Manager
+may create, edit, submit, amend/resubmit and withdraw only within assigned/led-project
+authority, with no self-approval or company-wide finance visibility. Staff and viewer have
+no first-slice finance visibility. Finance RLS and mutation functions must enforce this
+scope independently; UI filtering and broader manager-read policies from other domains are
+not reusable security boundaries.
+
+Archived projects and the two PR #44 fixtures are ineligible. Implementation must also
+prevent wrong/mixed-project costs, stale decisions, silent editing of approved facts,
+direct client DML and unnecessary worker-data exposure. Releases, advances, payments,
+allocations, reconciliation, reimbursements, evidence uploads, worker masters, spend
+reporting and Simple Invoice Manager integration remain outside this slice.
+
 ## 5. Progressive navigation architecture
 
 Current production:
 
 - Dashboard
 - Projects
+- Daily Site Operations
+- Approvals
+- Project Intakes
 
 Eventual groups:
 
@@ -506,27 +548,23 @@ authoritative `main` is
 
 ## 8. Implementation roadmap and dependencies
 
-Governing order:
+Governing BD-FIN-01 order:
 
-1. Operations Hub authority revision — documentation only.
-2. Approvals foundation. *(Merged.)*
-3. Daily Site Operations & Morning Compliance. *(Merged, PR #41; live in production — APPLIED_WITH_LIMITATION, first real entry recorded. §4.9.)*
-4. Operational Expenditure.
-5. Project Funds & Reconciliation.
-6. Labour Engagements & Payments.
-7. Documents & Evidence.
-8. Project Updates & Discussion.
-9. Tasks & Assignments.
-10. Team & Resourcing.
-11. Client Commercial Records.
-12. Reports & Management Summary.
-13. Leads, Site Visits and Maintenance integration.
+1. BD-FIN-01 documentation authority cleanup — documentation only.
+2. BD-FIN-01A claims vertical slice: schema, strict grants/RLS, controlled functions,
+   immutable events, database tests, minimal Manager/Principal UI and explicit Daily Site
+   copy action.
+3. Project fund requests, releases and accountable advances.
+4. Payments and explicit allocations.
+5. Reconciliation, returns, disputes, reversals and approved same-project carry-forward.
+6. Documents/evidence and any authorised worker-privacy model.
+7. Derived project and management reporting.
+8. Separately authorised Simple Invoice Manager read-only reporting contract, if approved.
 
 Dependency structure:
 
-- Daily Site Operations & Morning Compliance is the next implemented domain; its
-  recommended first slice is Daily Site Entry capture plus morning compliance only, with
-  Operational Expenditure deferred to a separate second slice.
+- Daily Site Operations and expanded Approvals are ACTIVE_VERIFIED prerequisites.
+- Every BD-FIN-01 implementation stage requires its own authority and deployment gate.
 - Approvals precedes fund reconciliation, labour amendments and exceptional expenditure.
 - Projects, profiles and RLS are the identity/delivery spine for all modules.
 - Evidence decisions are required before complete reconciliation, payment and update
@@ -550,9 +588,9 @@ agreed-versus-paid accountability are immediate operational needs.
 Unless a later workstream explicitly authorises change, preserve:
 
 - the production Phase 1B-A2 interface and design direction;
-- Dashboard and Projects as the only current navigation;
+- Dashboard, Projects, Daily Site Operations, Approvals and Project Intakes as current navigation;
 - current migrations, RLS, functions and triggers;
-- the interim material-authority guard;
+- the ACTIVE_VERIFIED project material-change authority controls;
 - immutable `project_activities`;
 - no permanent project delete;
 - Simple Invoice Manager authority;

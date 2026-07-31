@@ -1,7 +1,7 @@
 # Botanique Operations Hub — Product Requirements (BD-OPERATIONS-HUB-01)
 
-**Authority revision:** 28 July 2026, following the merge and production acceptance of
-Phase 1B-A2.
+**Authority revision:** 31 July 2026. Originally established following Phase 1B-A2;
+reconciled after PR #44–#46 and the BD-FIN-01 read-only authority gate.
 
 **Status:** Founder-requirements authority. This document defines product boundaries,
 roles, access expectations and acceptance requirements. It authorises no application,
@@ -28,13 +28,14 @@ lead to delivery, maintenance and management reporting:
 Campaign → Lead → Qualification → Site visit → Quotation → Awarded project →
 Design and implementation → Maintenance → Commercial reporting.
 
-Phase 1B-A2 is merged under PR #34 at
-`1e5f66a75336ee86d7da046b0f43c0608ff3e534` and is production-live and accepted.
+Phase 1B-A2 and the later Approvals, Daily Site Operations and project material-change
+slices are merged, production-live and accepted. The current authoritative `main` is
+`37bc71ba956c0f5a7c5db3cc38a5a099cebf15e4`.
 The current `/admin` application provides:
 
 - authenticated, role-aware access;
 - Supabase-backed project records and RLS-enforced authority;
-- a live Dashboard and Projects module;
+- live Dashboard, Projects, Daily Site Operations, Approvals and Project Intakes modules;
 - project create, edit, archive and restore within current role authority;
 - owner material actions and manager routine-edit boundaries;
 - project search and filters;
@@ -48,13 +49,14 @@ The current `/admin` application provides:
 - no direct client mutation of `project_activities`;
 - no commercial-reference editor.
 
-Production currently contains nine legitimate project records. **Alego Usonga** remains
-a real operational record. **Zizu Investments Ltd**, the Industrial Area
-exterior-corridor landscaping project, is the founder-reconciled ninth operational
-record, not test, demo or seed data. No planning, documentation or visual-verification
-task may create test projects or mutate hosted project data.
+Production currently contains **12 project rows: 10 genuine projects and two archived
+PR #44 internal-verification fixtures**. **Alego Usonga**, **Zizu Investments Ltd** and
+**Lugulu Residential Home** are genuine records. The archived fixtures are audit evidence,
+not client or operational projects. No planning, documentation or visual-verification task
+may create test projects or mutate hosted project data.
 
-The only current functional navigation destinations are **Dashboard** and **Projects**.
+The current functional navigation destinations are **Dashboard**, **Projects**,
+**Daily Site Operations**, **Approvals** and **Project Intakes**.
 Accepted Phase 1B-A2 visual and functional decisions are not reopened by this authority
 revision.
 
@@ -94,6 +96,9 @@ buttons and decorative module placeholders are prohibited.
 
 - Dashboard
 - Projects
+- Daily Site Operations
+- Approvals
+- Project Intakes
 
 **Eventual navigation architecture:**
 
@@ -222,9 +227,9 @@ verified** (auto-layout six-column desktop table + stacked mobile cards, corpora
 labels, and a single owner-only **Portfolio publication status** control replacing the old
 eligible-checkbox + permission-dropdown pair via display-only mapping — **no migration, no
 automatic public publication**); owner and manager exact-preview verification **PASSED**; and
-Martine's authenticated new-entry selector confirmed to list **both** Alego and Karen. This is
-distinct from the still-open **manager-material-change governance gap** (a separate future
-domain; it does not block this ACTIVE_VERIFIED classification and does not change Approvals). See WORKSTREAMS.md → *Daily Site Operations & Morning
+Martine's authenticated new-entry selector confirmed to list **both** Alego and Karen. The
+former manager-material-change governance gap is **closed** by the ACTIVE_VERIFIED PR #44
+controls described in §5.2. See WORKSTREAMS.md → *Daily Site Operations & Morning
 Compliance* for the full note (schema, versioning/supersession, RLS/role boundary,
 compliance/EAT handling, the verified first entry, the layout defect and remaining
 limitations). Manager authority is **project-authority scoped**
@@ -480,11 +485,69 @@ The founder has resolved the five previously open decisions; they are now author
   later actions; any future restriction needs its own evidence, approval and authority
   revision (§4.5.8c).
 
-## 5. Approvals foundation — next implementation workstream
+### 4.6 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-A reusable Approvals foundation is the next implementation workstream after this
-documentation authority revision is reviewed and merged. It must be designed once and
-reused by later operational and financial modules.
+**Status: product contract approved; implementation not authorised by this documentation
+revision.** BD-FIN-01A is the first implementation slice of BD-FIN-01. It records what
+Botanique is expected or authorised to pay for an internal project cost and its decision
+history before any actual money movement is introduced.
+
+The domain keeps **planned, claimed, submitted, approved, released, paid and reconciled**
+distinct. BD-FIN-01A implements only planned context, claimed amounts, submission and
+approval where applicable. Approved never means released or paid.
+
+The first slice includes project-scoped claims; one recipient or crew per claim; one cost
+category; one or more structured line items; a service/work date and purpose; a KES total
+derived from lines; an optional Daily Site source; manager submission; Principal amendment
+request, approval and rejection; withdrawal; controlled cancellation; Principal direct
+authority; immutable events; and strict project-scoped manager visibility.
+
+Whole-claim approval is required. Independently owed or approved recipients/scopes are
+separate claims; unrelated recipients must never be combined. A Principal-originated
+obligation is recorded as a distinct direct-authority action and immutable event, such as
+`principal_authorised`, not as a request followed by self-approval.
+
+The compact authoritative claim lifecycle is **draft → awaiting review → amendment
+requested → approved / rejected / withdrawn / cancelled**. Submission and resubmission are
+immutable events that move the claim to awaiting review. Funded, partially funded, paid,
+partially paid and reconciled are not claim lifecycle states; they are deferred, derived
+states belonging to later money-movement domains.
+
+Daily Site remains the operational planning source. A future explicit **Create cost claim**
+action may copy project, date, source version and planning context into a separate editable
+finance draft. There is no automatic claim creation. A Daily Site estimate never becomes a
+liability or actual expenditure by itself; later Daily Site changes cannot silently alter a
+submitted or approved claim, finance cannot rewrite Daily Site history, and one Daily Site
+entry may support multiple claims.
+
+Principal authority is company-wide and includes direct authorisation, approval, rejection,
+amendment request and controlled cancellation or future compensating correction. The
+Operations Manager may see only assigned/led projects, create and edit eligible drafts,
+submit, amend/resubmit when requested, and withdraw where permitted; the manager has no
+self-approval or company-wide finance visibility. Staff and viewer have no first-slice
+finance visibility or authority.
+
+Implementation must later prevent self-approval, archived/fixture use, wrong-project or
+mixed-project costs, silent editing of approved facts, stale approval after material
+amendment, direct client DML against protected finance tables, exposure of unnecessary
+worker identity data, and treatment of planning amounts as expenditure. Manager scope must
+be enforced independently in finance RLS and controlled functions using current project
+lead or active-assignment authority; application filtering is not a security boundary, and
+broader manager-read policies from other domains must not be copied automatically.
+
+Excluded from BD-FIN-01A: fund requests/releases, accountable advances, payments,
+allocations, reconciliation, returned balances, carry-forward, reimbursements, evidence
+uploads, worker master records, project-spend reporting, client-commercial records and
+Simple Invoice Manager integration. The two archived PR #44 fixtures are not eligible for
+finance selectors or mutations; current archive and operational-eligibility controls govern
+initial implementation unless a later project-classification change is separately approved.
+
+## 5. Approvals foundation — ACTIVE_VERIFIED
+
+The reusable Approvals foundation and expanded project material-change controls are merged,
+hosted and **ACTIVE_VERIFIED**. Later operational and financial domains may reuse its
+constrained authority and immutable-event patterns, but must retain their own business
+semantics and receive separate implementation authority.
 
 Approval classes must be extensible to cover:
 
@@ -524,16 +587,16 @@ rollout.
 
 ### 5.1 First implemented slice
 
-The first Approvals implementation slice is merged under PR #36 and its additive
-migration is applied to hosted `botanique-admin`. Hosted schema, RLS, grants and
-pre-existing-data integrity are verified, with all nine projects unchanged and both
-approval tables empty. The production React `#418` console error was a route-aware
+The first Approvals implementation slice merged under PR #36 and its additive migration
+was applied to hosted `botanique-admin`. At that dated checkpoint, hosted schema, RLS,
+grants and pre-existing-data integrity were verified with the then-current nine projects
+unchanged and both approval tables empty. The production React `#418` console error was a route-aware
 hydration defect on `/admin`, since repaired and merged under PR #38 (merge commit
 `f95e31f55c0d74844b79aaca3ac831ed3bb1208a`). Owner authenticated verification passed on the
 exact-head PR #38 preview with a clean console and no `#418`, and signed-out `/admin` is
-verified clean on production desktop and mobile; classification remains
-`APPLIED_WITH_LIMITATION` with the residual limitation narrowed to manager authenticated
-production verification, which the founder explicitly accepted for merge. The slice remains
+verified clean on production desktop and mobile. That initial slice's
+`APPLIED_WITH_LIMITATION` checkpoint is historical; PR #44 later closed the material-change
+gap and established the current **ACTIVE_VERIFIED** Approvals status. The slice remains
 deliberately limited to project activation,
 target-completion change, completion, cancellation, archive and restoration. Design-only
 classification, portfolio/publication permission, material scope, project-lead changes,
@@ -826,22 +889,19 @@ Protected client margins, banking details and private rates remain role-restrict
 
 ## 10. Revised implementation roadmap
 
-This is the current governing sequence:
+This is the current governing BD-FIN-01 sequence:
 
-1. **Operations Hub authority revision** — this documentation-only workstream.
-2. **Approvals foundation.** *(Merged; see §5.1.)*
-3. **Daily Site Operations & Morning Compliance.** *(Implemented, hosted and authenticated;
-   **ACTIVE_VERIFIED** — see §4.5.)*
-4. **Operational Expenditure.**
-5. **Project Funds & Reconciliation.**
-6. **Labour Engagements & Payments.**
-7. **Documents & Evidence.**
-8. **Project Updates & Discussion.**
-9. **Tasks & Assignments.**
-10. **Team & Resourcing.**
-11. **Client Commercial Records.**
-12. **Reports & Management Summary.**
-13. **Leads, Site Visits and Maintenance integration.**
+1. **BD-FIN-01 documentation authority cleanup** — documentation only.
+2. **BD-FIN-01A claims vertical slice** — schema, strict grants/RLS, controlled functions,
+   immutable events, database tests, minimal Manager/Principal UI and explicit Daily Site
+   copy action.
+3. **Project fund requests, releases and accountable advances.**
+4. **Payments and explicit allocations.**
+5. **Reconciliation, returns, disputes, reversals and approved same-project carry-forward.**
+6. **Documents/evidence and any authorised worker-privacy model.**
+7. **Derived project and management reporting.**
+8. **Separately authorised Simple Invoice Manager read-only reporting contract, if ever
+   approved.**
 
 Daily Site Operations & Morning Compliance is implemented and operational. The hosted
 implementation has completed authenticated verification and remains **ACTIVE_VERIFIED**.
@@ -849,8 +909,8 @@ Daily Site records contain operational planning signals only; they do not create
 liabilities, fund releases or financial approval. Financial reconciliation and finance
 linkage remain future work under **BD-FIN-01**.
 
-Each item is a separate, reviewed workstream with its own branch and PR. Workstreams must
-not be combined into one migration or implementation branch.
+Each implementation stage requires its own authority and deployment gate, branch and PR.
+This documentation revision authorises none of those implementation stages.
 
 ## 11. Roadmap dependencies
 

@@ -1610,11 +1610,11 @@ files are documentation/template only (`LEAD_OPERATIONS_PLAYBOOK.md`,
 
 ## BD-OPERATIONS-HUB-01 — Operations Hub Architecture and Reconciliation
 
-Status: **Active programme. Phase 1A, Phase 1B-A1 and Phase 1B-A2 are merged; Phase
-1B-A2 is production-live and accepted.** The current functional `/admin` destinations
-are Dashboard and Projects. The **Approvals foundation is the next implementation
-workstream**, but implementation remains gated until the post-merge authority revision is
-reviewed and merged. No new Operations Hub master register is required: this entry remains
+Status: **Active programme. Approvals, Daily Site Operations and project material-change
+controls are merged, hosted and ACTIVE_VERIFIED.** The current functional `/admin`
+destinations are Dashboard, Projects, Daily Site Operations, Approvals and Project Intakes.
+BD-FIN-01A is the approved next product slice, but implementation remains separately gated.
+No new Operations Hub master register is required: this entry remains
 the execution and live-state register, the Product Requirements remain founder-requirements
 authority, and the Blueprint remains architecture/system-of-record authority.
 
@@ -2064,13 +2064,15 @@ No database migration or RLS change was part of Phase 1B-A2.
   landscaping project, is the founder-reconciled ninth operational record (Pending /
   Awaiting Approval, unassigned when reconciled), not test, demo or seed data. No
   documentation or audit task may mutate either record or create additional test projects.
+  This is the dated Phase 1B-A2 baseline; the governing baseline is now 12 rows: 10 genuine
+  projects and two archived PR #44 verification fixtures.
 
 ### Post-merge authority revision — documentation only
 
-Status: **In progress on a new documentation branch from authoritative merge commit
-`1e5f66a75336ee86d7da046b0f43c0608ff3e534`.** This revision reconciles the authority
-documents with the accepted production state. It does not reopen Phase 1B-A2 and makes no
-application, migration, RLS, hosted-data or public-site change.
+Status: **Completed historical authority revision.** It began from merge commit
+`1e5f66a75336ee86d7da046b0f43c0608ff3e534` and reconciled the then-current production
+state. It did not reopen Phase 1B-A2 or make an application, migration, RLS, hosted-data or
+public-site change.
 
 Authority hierarchy:
 
@@ -2083,7 +2085,8 @@ Authority hierarchy:
 5. Historical audits and handoffs — supporting evidence only.
 
 No separate Operations Hub master workstream register is needed. The revision remains under
-`BD-OPERATIONS-HUB-01` and records the governing sequence:
+`BD-OPERATIONS-HUB-01`. Its then-governing sequence is retained below as historical context;
+the approved BD-FIN-01 sequence later in this subsection now governs finance delivery:
 
 1. Operations Hub authority revision.
 2. Approvals foundation.
@@ -2099,13 +2102,9 @@ No separate Operations Hub master workstream register is needed. The revision re
 12. Reports & Management Summary.
 13. Leads, Site Visits and Maintenance integration.
 
-The Approvals foundation was the next implementation workstream after this documentation
-revision and is now merged (see the Approvals foundation subsection). **Daily Site
-Operations & Morning Compliance** is now the next implementation workstream; its authority
-is defined below and in the revised Product Requirements/Blueprint, and its implementation
-has not started. Any future Approvals change must preserve equivalent or stronger authority
-before a separately reviewed replacement of the Phase 1B-A1 interim
-`tg_guard_project_material_authority()` control.
+The Approvals foundation, Daily Site Operations & Morning Compliance and expanded project
+material-change controls are now merged, hosted and ACTIVE_VERIFIED. Any future authority
+replacement must preserve equivalent or stronger database enforcement.
 
 The revised domain model keeps four financial domains separate:
 
@@ -2114,12 +2113,56 @@ The revised domain model keeps four financial domains separate:
 - Labour Engagements & Payments.
 - Operational Expenditure.
 
-**Future workstream — BD-FIN-01: Daily Site Financial Reconciliation, Labour Payments and
-Site-Funds Control.** This remains outside PR #44 and has no table, UI or migration here. A
-separately authorised design must cover planned labour; named workers; worker scope;
-daily/agreed rates; additional site-funds requests; approved, paid, partially paid, pending
-and disputed amounts; payment reference; payer; recipient; accountable funds held by Martine;
-reimbursement; project attribution; reconciliation state; and immutable payment events.
+**Approved product boundary — BD-FIN-01: Daily Site Financial Reconciliation, Labour
+Payments and Site-Funds Control.** No internal-finance ledger exists yet. This
+documentation cleanup authorises no table, UI, migration, RLS, function, hosted mutation or
+deployment.
+
+The approved first implementation slice is **BD-FIN-01A — Internal Cost Claims and
+Principal Decision**. It establishes an authoritative internal cost obligation and decision
+history before money movement. It includes project-scoped claims; one recipient or crew per
+claim; one category and structured line items; optional explicit Daily Site copy-to-draft;
+manager submission; Principal amendment request, whole-claim approval or rejection;
+withdrawal and controlled cancellation; Principal direct authority recorded distinctly
+(for example, `principal_authorised`, never self-approval); immutable events; and strict
+assigned/led-project manager visibility.
+
+The compact lifecycle is draft, awaiting review, amendment requested, approved, rejected,
+withdrawn and cancelled. Submission/resubmission are immutable events leading to awaiting
+review. Planned, claimed, submitted, approved, released, paid and reconciled remain distinct;
+funding, payment and reconciliation progress are deferred derived states.
+
+Daily Site remains the operational planning source. A future explicit **Create cost claim**
+action may copy project, date, source version and planning context into a separate editable
+draft. No estimate automatically becomes a liability or actual spend; later Daily Site
+changes cannot rewrite submitted/approved claims; finance cannot rewrite Daily Site history;
+and one Daily Site entry may support multiple claims.
+
+The two archived PR #44 fixtures and all archived/ineligible projects must be excluded by
+future finance selectors, RLS and controlled mutations. Finance must enforce independent
+strict manager project scope; application filtering is not a database security boundary,
+and broader manager-read policies observed in existing non-finance domains must not be
+copied automatically.
+
+Excluded from BD-FIN-01A: fund requests/releases, accountable advances, payments,
+allocations, reconciliation, returns/carry-forward, reimbursements, evidence uploads,
+worker master records, spend reporting, client-commercial records and Simple Invoice
+Manager integration. Simple Invoice Manager remains the client-commercial system of record;
+`project_financial_references` remains only a narrow legacy reference facility.
+
+Approved sequence, with an independent authority and deployment gate for every
+implementation stage:
+
+1. This documentation authority cleanup.
+2. BD-FIN-01A claims vertical slice: schema, strict grants/RLS, controlled functions,
+   immutable events, database tests, minimal Manager/Principal UI and explicit Daily Site
+   copy action.
+3. Project fund requests, releases and accountable advances.
+4. Payments and explicit allocations.
+5. Reconciliation, returns, disputes, reversals and approved same-project carry-forward.
+6. Documents/evidence and any authorised worker-privacy model.
+7. Derived project and management reporting.
+8. Separately authorised Simple Invoice Manager read-only reporting contract, if approved.
 
 The existing `project_financial_references` table does not satisfy these four domains.
 `project_activities` remains an immutable audit ledger and is not a chat system; a separate
@@ -2317,8 +2360,8 @@ recorded limitations are now closed — the responsive-list repair + corporate-l
 single owner-only Portfolio control shipped in PR #43, and the founder completed authenticated
 owner and manager verification on the exact PR #43 Vercel preview (owner PASSED; manager
 PASSED, selector confirmed to include Alego and Karen). See "All four remaining limitations are
-now CLOSED" below. This does **not** alter the Approvals classification, and it does not close
-the separate manager-material-change governance gap (a distinct, future domain). Phase 1 is
+now CLOSED" below. PR #44 subsequently closed the separate manager-material-change
+governance gap and established expanded Approvals as ACTIVE_VERIFIED. Phase 1 is
 merged, its additive migration is live on hosted `botanique-admin`, the production frontend is
 active, and **authenticated production use has now occurred**. PR #41 merged at authoritative `main`
 `dfb79373397637694fa26d730c110da58f20acae` (merge commit; parents
@@ -2330,8 +2373,7 @@ grants were verified read-only; the production Vercel deployment succeeded; and 
 is authorised for **both** current in-scope Ongoing sites — **Alego Usonga** and **Karen
 Residence — Fountain Garden & Mature Borders** — via `lead_person_id`. This domain remains
 under `BD-OPERATIONS-HUB-01` — not a new top-level workstream and no new master register. The
-Approvals classification (`APPLIED_WITH_LIMITATION`) is **unchanged** and Approvals is not
-reopened.
+Daily Site remains ACTIVE_VERIFIED and is not reopened by this authority cleanup.
 
 **First legitimate production Daily Site Entry (verified read-only, 2026-07-29).** Martine
 Lotom created and submitted the first real operational record — **not a test fixture**:
