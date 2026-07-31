@@ -403,8 +403,39 @@ reporting and Simple Invoice Manager integration remain outside this slice.
 
 ### 4.11 BD-FIN-01B — Project Fund Control Authority
 
-**Architecture state: documentation authority only; no schema, function, RLS or hosted
-change.** BD-FIN-01B is the next approved finance authority after BD-FIN-01A
+**Architecture state: BD-FIN-01B1 implemented and hosted, draft pull request open and
+unmerged (2026-07-31); BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain architecture only.**
+
+Delivered BD-FIN-01B1 architecture. Migration `20260731000300_claim_backed_fund_requests`
+adds `fund_requests`, `fund_request_allocations` and `fund_request_events`, one sequence
+backing an immutable `BDFR-YYYY-NNNNNN` request number, three SELECT-only RLS policies and
+eight authenticated RPCs (`create_fund_request_draft`, `update_fund_request`,
+`submit_fund_request`, `withdraw_fund_request`, `decide_fund_request`,
+`direct_authorise_fund_request`, `cancel_fund_request` and the read-only
+`fund_request_claim_availability`). Authenticated clients hold SELECT only; every mutation
+passes through a `SECURITY DEFINER` RPC with a pinned `search_path`, and every private
+helper and trigger function is revoked from clients.
+
+Reservation architecture: one shared writer and one shared verifier are the only code paths
+that create or re-prove reservations. Both lock the referenced approved claims with
+`FOR UPDATE` in ascending claim-id order before any availability is computed, so competing
+requests cannot deadlock or interleave; a losing request rolls back entirely, retains its
+prior status and appends no event. There is deliberately **no** editable reserved-amount
+column on `internal_cost_claims`: reservation is always derived from allocations joined to
+reserving request statuses. A narrow `before update` guard on `internal_cost_claims`
+prevents cancelling or reducing an approved claim below its reserved amount. A deferrable
+constraint trigger guarantees that a reserving request's total always equals the sum of its
+allocations, which is what allows Principal direct authority to insert an approved request
+and its allocations as one atomic action.
+
+Lifecycle architecture as delivered uses seven durable statuses and treats resubmission as
+an immutable event with an explicit `submission_round`, refining and superseding the
+provisional state list recorded below. Project eligibility, archive state and excluded
+fixtures are resolved through the existing BD-FIN-01A authorised-project surface rather
+than a duplicated rule set, and visibility reuses the existing finance project-access
+function; no parallel role system was introduced.
+
+BD-FIN-01B is the next approved finance authority after BD-FIN-01A
 ACTIVE_VERIFIED. Its purpose is to record Principal authority to make money available
 against already-approved internal cost claims, strictly before any release, transfer,
 payment or reconciliation record exists. A fund-request approval authorises Botanique to
@@ -449,7 +480,8 @@ reconciliation. Principal direct authority is architecturally a separate action 
 immutable event, never a self-request/self-approval simulation. Staff and Viewer carry no
 mutation authority; visibility follows the existing capability/project-access model.
 
-Lifecycle architecture: a manager-requested state machine — `draft`, `submitted`,
+Provisional lifecycle architecture (superseded by the delivered lifecycle recorded at the
+top of this section): a manager-requested state machine — `draft`, `submitted`,
 `amendment_requested`, `resubmitted`, `approved`, `rejected`, `withdrawn`, `cancelled` —
 with valid transitions `draft → submitted`; `submitted → approved`;
 `submitted → rejected`; `submitted → amendment_requested`;

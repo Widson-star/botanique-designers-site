@@ -1614,8 +1614,10 @@ Status: **Active programme. Approvals, Daily Site Operations and project materia
 controls are merged, hosted and ACTIVE_VERIFIED.** The current functional `/admin`
 destinations are Dashboard, Projects, Daily Site Operations, Approvals and Project Intakes.
 BD-FIN-01A (Internal Cost Claims and Principal Decision) is merged, hosted and
-ACTIVE_VERIFIED. BD-FIN-01B (Project Fund Control Authority) is now the approved next
-finance authority, but implementation remains separately gated.
+ACTIVE_VERIFIED. BD-FIN-01B (Project Fund Control Authority) is the approved next finance
+authority; its first slice, BD-FIN-01B1 (Claim-Backed Fund Requests), is implemented and
+hosted but remains in an open draft pull request and is therefore not yet merged.
+BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain separately gated and unimplemented.
 No new Operations Hub master register is required: this entry remains
 the execution and live-state register, the Product Requirements remain founder-requirements
 authority, and the Blueprint remains architecture/system-of-record authority.
@@ -2185,7 +2187,46 @@ worker master records, spend reporting, client-commercial records and Simple Inv
 Manager integration. Simple Invoice Manager remains the client-commercial system of record;
 `project_financial_references` remains only a narrow legacy reference facility.
 
-**BD-FIN-01B — Project Fund Control Authority (documentation authority, unmerged).** This
+**BD-FIN-01B1 implementation status: implemented and hosted, draft pull request open,
+unmerged (2026-07-31).** The `20260731000300_claim_backed_fund_requests` migration is
+applied to the hosted `botanique-admin` project (ref `wcacyfyxjiysfibuuhgf`) and adds
+exactly three tables — `fund_requests`, `fund_request_allocations` and
+`fund_request_events` — plus one sequence, three SELECT-only RLS policies and eight
+authenticated RPCs. Production carries **zero** fund request, allocation and event rows;
+the hosted authority and concurrency matrix was executed only inside fully rolled-back
+transactions, and pre-existing profile, project, claim and Daily Site fingerprints are
+unchanged.
+
+Implemented role model: the Operations Manager creates, edits, submits, amends, resubmits
+and withdraws their own request in an authorised, eligible project; the Principal reads
+company-wide, approves, rejects, requests amendment, records distinct direct authority and
+cancels an approved request before any release. Staff and Viewer have no navigation, no
+route, no SELECT policy and no mutation authority.
+
+Implemented status and reservation model: durable statuses are `draft`, `submitted`,
+`amendment_requested`, `approved`, `rejected`, `withdrawn` and `cancelled`. **`resubmitted`
+is deliberately not a durable status** — resubmission is an immutable event that moves an
+amendment-requested request back to `submitted` and increments an explicit
+`submission_round` (0 before first submission, 1 on first submission). This refines, and
+supersedes, the earlier documentation authority's provisional state list. `submitted`,
+`amendment_requested` and `approved` reserve approved claim value; `draft`, `rejected`,
+`withdrawn` and `cancelled` do not, so draft availability is advisory and is labelled as
+such in the interface.
+
+No-over-request enforcement is implemented in one shared reservation writer and one shared
+verifier, both of which lock the referenced approved claims in a deterministic ascending
+claim-id order before any availability is calculated. A losing request rolls back
+completely, keeps its prior status and appends no event. A narrow guard on
+`internal_cost_claims` prevents an approved claim from being cancelled or reduced below
+what a reserving fund request holds against it. Principal direct authority is one atomic
+RPC producing one approved request and a single `principal_direct_authorised` event, never
+a simulated manager request or a fabricated submit-and-approve cycle.
+
+Inherited limitation carried forward from BD-FIN-01A: authenticated Staff and Viewer
+interface verification depends on genuine accounts that do not currently exist, so those
+roles are verified through database and capability tests rather than through the browser.
+
+**BD-FIN-01B — Project Fund Control Authority.** This
 is the next approved finance authority after BD-FIN-01A ACTIVE_VERIFIED. It defines how
 Botanique requests and approves Principal authority to make money available against
 approved internal cost claims, before any actual release, transfer, payment or

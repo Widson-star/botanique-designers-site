@@ -569,8 +569,9 @@ initial implementation unless a later project-classification change is separatel
 
 ### 4.7 BD-FIN-01B — Project Fund Control Authority
 
-**Status: documentation authority (this revision); implementation not yet started or
-authorised.** BD-FIN-01B is the next approved finance authority after BD-FIN-01A
+**Status: BD-FIN-01B1 implemented and hosted; draft pull request open and unmerged
+(2026-07-31). BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain documentation authority only
+and are not implemented.** BD-FIN-01B is the next approved finance authority after BD-FIN-01A
 ACTIVE_VERIFIED. It defines how Botanique requests Principal authority to make money
 available against approved internal cost claims. A fund-request approval means the
 Principal authorises Botanique to make up to the approved amount available for the
@@ -625,7 +626,21 @@ Staff and Viewer retain restrictive finance access with no mutation authority; a
 visibility must follow the existing capability and project-access model rather than being
 assumed.
 
-**Request lifecycle.** A manager-requested lifecycle equivalent to `draft`, `submitted`,
+**Request lifecycle as implemented.** The delivered BD-FIN-01B1 lifecycle uses seven
+durable statuses — `draft`, `submitted`, `amendment_requested`, `approved`, `rejected`,
+`withdrawn`, `cancelled` — and deliberately does **not** make `resubmitted` a durable
+status. Resubmission is an immutable event that returns an amendment-requested request to
+`submitted` and increments an explicit `submission_round` (0 before first submission, 1 on
+first submission, incremented on every resubmission). This refines and supersedes the
+provisional state list recorded below, which is retained for authority history.
+
+`submitted`, `amendment_requested` and `approved` reserve approved claim value. `draft`,
+`rejected`, `withdrawn` and `cancelled` do not, so a draft's availability is advisory only
+and the interface must say so. Approval continues reserving until valid cancellation before
+release, or until future BD-FIN-01B2 release records consume the authority.
+
+**Provisional lifecycle (superseded by the implemented lifecycle above).** A
+manager-requested lifecycle equivalent to `draft`, `submitted`,
 `amendment_requested`, `resubmitted`, `approved`, `rejected`, `withdrawn`, `cancelled`, with
 valid transitions (not merely a list of states): `draft → submitted`;
 `submitted → approved`; `submitted → rejected`; `submitted → amendment_requested`;
@@ -668,9 +683,20 @@ payments by Martine; payment-to-claim allocations; supplier settlement; worker p
 status; proof-of-payment uploads; reconciliation; unspent balances; returns; same-project
 carry-forward; disputes; failed-transfer corrections; reversals; general unbacked
 operational advances; dashboards; profitability reporting; Simple Invoice Manager
-integration; new worker-privacy or identity storage; and automatic Daily Site funding. This
-documentation revision authorises no table, migration, RLS, function, hosted mutation, UI
-or deployment.
+integration; new worker-privacy or identity storage; and automatic Daily Site funding.
+BD-FIN-01B1 as delivered adds none of these; each remains separately gated.
+
+**Delivered BD-FIN-01B1 product surface.** A Fund Requests area at `/admin/fund-requests`
+with a role-aware queue, a multi-claim request form and a request detail view. The form
+shows, for every approved claim in the chosen project, the approved amount, the amount
+reserved against that approved claim by other requests, the amount in this request, and the
+amount still available after this request; it refuses an over-request before submission,
+warns that a saved draft reserves nothing, and on a reservation conflict keeps the entered
+data, refreshes availability and states plainly that nothing was saved. The Principal has a
+separate direct-authority action with no simulated submission step, and an approval
+confirmation stating that approval authorises Botanique to make up to the stated amount
+available and does not record a release or payment. Every surface carries explicit
+"no funds have been released" language. No dashboard was added.
 
 ## 5. Approvals foundation — ACTIVE_VERIFIED
 
