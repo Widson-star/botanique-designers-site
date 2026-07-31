@@ -1,7 +1,9 @@
 # Botanique Operations Hub — Product Requirements (BD-OPERATIONS-HUB-01)
 
 **Authority revision:** 31 July 2026. Originally established following Phase 1B-A2;
-reconciled after PR #44–#46 and the BD-FIN-01 read-only authority gate.
+reconciled after PR #44–#46, the BD-FIN-01 read-only authority gate and BD-FIN-01A
+ACTIVE_VERIFIED (PR #48); now establishes BD-FIN-01B — Project Fund Control Authority and
+its first slice, BD-FIN-01B1 — Claim-Backed Fund Requests.
 
 **Status:** Founder-requirements authority. This document defines product boundaries,
 roles, access expectations and acceptance requirements. It authorises no application,
@@ -172,6 +174,12 @@ It must eventually support:
 - immutable adjustments and history.
 
 This is not client finance, labour commitment management or a generic expense ledger.
+
+The approved first implementation slice toward this domain is **§4.7 BD-FIN-01B1 — Claim-
+Backed Fund Requests**, which establishes Principal authority to make funds available
+against approved internal cost claims. It does not itself implement transfer, allocation,
+spend, evidence, return or reconciliation tracking; those remain later BD-FIN-01B2/01C/01D
+slices.
 
 ### 4.3 Labour Engagements & Payments
 
@@ -559,6 +567,111 @@ Simple Invoice Manager integration. The two archived PR #44 fixtures are not eli
 finance selectors or mutations; current archive and operational-eligibility controls govern
 initial implementation unless a later project-classification change is separately approved.
 
+### 4.7 BD-FIN-01B — Project Fund Control Authority
+
+**Status: documentation authority (this revision); implementation not yet started or
+authorised.** BD-FIN-01B is the next approved finance authority after BD-FIN-01A
+ACTIVE_VERIFIED. It defines how Botanique requests Principal authority to make money
+available against approved internal cost claims. A fund-request approval means the
+Principal authorises Botanique to make up to the approved amount available for the
+identified project claims. Approval does not mean funds were transferred, cash was handed
+over, Martine received an advance, a worker or supplier was paid, a payment was allocated,
+or an expense was reconciled.
+
+Future slices remain distinct and must not be collapsed: **BD-FIN-01B1 — Claim-Backed Fund
+Requests** (this section), **BD-FIN-01B2 — Fund Releases and Accountable Advances**,
+**BD-FIN-01C — Payments and Claim Allocations**, and **BD-FIN-01D — Reconciliation, Returns
+and Reversals**.
+
+**Claim-backed requests only.** Ordinary fund requests must be backed by one or more
+approved internal cost claims. General project advances before claims exist are deferred
+and require separate authority.
+
+**One project per request.** A request may link one or more approved claims, but every
+claim must belong to the same project as the request. No request, balance or allocation
+may mix projects.
+
+**Multiple claims.** One Alego request may cover, for example, casual labour, mason work
+and mkokoteni service. Each linked claim retains its own requested allocation. Lugulu
+claims may not be included in an Alego request.
+
+**Partial requests.** A claim may be partly requested. An approved KES 20,000 claim may
+have only KES 12,000 requested, leaving KES 8,000 approved but not yet requested. The
+authority and future implementation must distinguish the approved claim amount, the amount
+previously reserved by active requests, the amount in the current request, and the
+approved amount still available for request.
+
+**No over-request.** The cumulative amount reserved against a claim by relevant active or
+approved requests must not exceed the approved claim amount. Rejected, withdrawn or validly
+cancelled requests must not continue reserving the claim amount.
+
+**Intended custody.** A request may identify the intended funding model — Operations
+Manager accountable advance, or direct recipient funding. This is only the intended custody
+or recipient model; it is not evidence that money was released.
+
+**Role and authority model.** The Operations Manager may create a draft claim-backed fund
+request, select approved claims from one project, allocate requested amounts, submit,
+amend after an amendment request, resubmit, withdraw before release, and view authorised
+project requests. He may not approve his own request, over-request a claim, mix projects,
+mark funds as released, approve his own receipt, or perform final reconciliation.
+
+The Principal may view all fund requests, approve, reject, request amendment, create a
+distinct Principal direct-authority request, cancel an approved request before any later
+release exists, and later authorise releases and approve final reconciliation. Principal
+direct authority is a distinct action and immutable event, never modelled as a fake
+self-request-and-self-approval sequence.
+
+Staff and Viewer retain restrictive finance access with no mutation authority; any
+visibility must follow the existing capability and project-access model rather than being
+assumed.
+
+**Request lifecycle.** A manager-requested lifecycle equivalent to `draft`, `submitted`,
+`amendment_requested`, `resubmitted`, `approved`, `rejected`, `withdrawn`, `cancelled`, with
+valid transitions (not merely a list of states): `draft → submitted`;
+`submitted → approved`; `submitted → rejected`; `submitted → amendment_requested`;
+`amendment_requested → resubmitted`; `draft`/`submitted`/`amendment_requested → withdrawn`,
+subject to exact authority rules; and `approved → cancelled` only through controlled
+Principal authority and only before a future release exists. A separate Principal
+direct-authority lifecycle is documented independently. Immutable events and
+non-destructive correction principles are preserved.
+
+**Product-level data authority (no migration authorised).** A **fund request** likely
+carries a request identifier/number, project, authority type, requester or Principal
+authority actor, intended custody model, intended recipient/custodian, purpose/note, total
+requested amount, status, version, and created/submitted/decided/cancelled timestamps.
+**Fund request allocations** each conceptually identify a fund request, an approved
+internal cost claim, and the amount requested against that claim. The future database must
+guarantee that the request and claim use the same project, the linked claim is approved,
+allocation amounts are positive, allocation totals equal the request total, and cumulative
+relevant requests do not exceed the approved claim amount. Immutable events are defined for
+at least draft creation, allocation addition/amendment, submission, amendment request,
+resubmission, approval, rejection, withdrawal, cancellation and Principal direct authority.
+
+**Domain relationships.** Internal cost claims remain the authority for what cost is
+recognised, who or which crew is owed, structured value and Principal decision; a fund
+request references claims but does not replace or mutate claim authority. Daily Site
+remains operational planning authority; no Daily Site amount automatically becomes a
+request, release, payment or expenditure. Future releases (BD-FIN-01B2) will record actual
+money movement — amount, date, method, recipient/custodian, approved request, direct
+funding versus accountable advance, acknowledgement status and reversal status; a release
+to Martine is a custody transfer, not automatically a worker or supplier payment. Future
+payments (BD-FIN-01C) will record delivery of money to final economic recipients and
+allocate those payments to claims. Future reconciliation (BD-FIN-01D) will establish amount
+released, valid payments, returns, approved same-project carry-forward, outstanding
+accountable balance, disputes and reversals; no carry-forward may silently cross projects.
+Simple Invoice Manager remains authoritative for client estimates, invoices, receipts,
+payments, balances and discounts and is not redesigned or integrated.
+
+**Excluded from BD-FIN-01B1:** actual fund releases; M-Pesa, bank or cash transaction
+records; transaction references; acknowledgements of receipt; direct payments; onward
+payments by Martine; payment-to-claim allocations; supplier settlement; worker payment
+status; proof-of-payment uploads; reconciliation; unspent balances; returns; same-project
+carry-forward; disputes; failed-transfer corrections; reversals; general unbacked
+operational advances; dashboards; profitability reporting; Simple Invoice Manager
+integration; new worker-privacy or identity storage; and automatic Daily Site funding. This
+documentation revision authorises no table, migration, RLS, function, hosted mutation, UI
+or deployment.
+
 ## 5. Approvals foundation — ACTIVE_VERIFIED
 
 The reusable Approvals foundation and expanded project material-change controls are merged,
@@ -912,13 +1025,22 @@ This is the current governing BD-FIN-01 sequence:
 2. **BD-FIN-01A claims vertical slice** — schema, strict grants/RLS, controlled functions,
    immutable events, database tests, minimal Manager/Principal UI and explicit Daily Site
    copy action.
-3. **Project fund requests, releases and accountable advances.**
-4. **Payments and explicit allocations.**
-5. **Reconciliation, returns, disputes, reversals and approved same-project carry-forward.**
-6. **Documents/evidence and any authorised worker-privacy model.**
-7. **Derived project and management reporting.**
-8. **Separately authorised Simple Invoice Manager read-only reporting contract, if ever
-   approved.**
+3. **This BD-FIN-01B documentation authority** — establishing Project Fund Control
+   Authority and its first slice, BD-FIN-01B1 — Claim-Backed Fund Requests.
+4. **BD-FIN-01B1 — Claim-backed fund requests** — schema, strict grants/RLS, controlled
+   functions, immutable events, partial-request and no-over-request enforcement, and
+   minimal Manager/Principal UI.
+5. **BD-FIN-01B2 — Fund releases and accountable advances.**
+6. **BD-FIN-01C — Payments and claim allocations.**
+7. **BD-FIN-01D — Reconciliation, returns, disputes, reversals and approved same-project
+   carry-forward.**
+8. **Documents/evidence and any authorised worker-privacy model.**
+9. **Derived project and management reporting.**
+10. **Separately authorised Simple Invoice Manager read-only reporting contract, if ever
+    approved.**
+
+BD-FIN-01B1, BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain distinct and must not be
+collapsed; each requires its own authority and deployment gate.
 
 Daily Site Operations & Morning Compliance is implemented and operational. The hosted
 implementation has completed authenticated verification and remains **ACTIVE_VERIFIED**.
@@ -976,4 +1098,6 @@ This documentation revision authorises:
 
 Approvals implementation may begin only after this authority revision is reviewed and
 merged, and only under a new implementation branch and separately approved workstream
-scope.
+scope. BD-FIN-01B1 implementation may likewise begin only after this authority revision is
+reviewed and merged, and only under its own separately approved implementation branch,
+migration and deployment gate.
