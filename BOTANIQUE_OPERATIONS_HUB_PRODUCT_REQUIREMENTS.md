@@ -551,11 +551,12 @@ future-domain navigation.
 
 ### 5.2 Project Material Change Approvals and Manager Project-Scope Control (Phase 1B-A4)
 
-Status: **ACTIVE_VERIFIED** (31 July 2026; draft PR; `20260729000100` and corrective
-`20260731000100` applied exactly once, structurally verified and authenticated on exact
-preview head `df5ea4eba0a278f00c311f0e93bbc95dfde6c978`). Additive to §5.1; the six
-lifecycle types are preserved and never duplicated. PR #44 remains draft and unmerged
-pending founder-authorised merge.
+Status: **ACTIVE_VERIFIED** (31 July 2026; PR #44 merged and closed; `20260729000100`
+and corrective `20260731000100` applied exactly once, structurally verified and
+authenticated on exact preview head `df5ea4eba0a278f00c311f0e93bbc95dfde6c978`).
+Additive to §5.1; the six lifecycle types are preserved and never duplicated. PR #44
+merged into authoritative `main` at
+`05b6ade06f7ba2d4fdfb5c9d4ef1b591ea4e02e7` on 31 July 2026.
 
 The controlled hosted rollout on 30 July 2026 applied only migration `20260729000100`
 through the transactional linked Supabase CLI path after a dry run listed that version
@@ -564,8 +565,9 @@ tables, functions, ownership, fixed search paths, triggers, RLS and grants passe
 verification. Deterministic pre/post fingerprints confirmed all nine projects, profiles,
 assignments, existing project activities, approvals and Daily Site rows unchanged;
 approval rows remain 0/0, intake rows remain 0/0, and no migration-generated project
-activity exists. Expanded Approvals is not `ACTIVE_VERIFIED` until authenticated owner and
-manager workflow verification is complete.
+activity exists. At this 30 July pre-authentication checkpoint, expanded Approvals was not
+yet `ACTIVE_VERIFIED`; this checkpoint is retained as history. The final authenticated
+verification completed on 31 July and established the current status above.
 
 The revised production baseline is 12 physical project rows: 10 genuine
 operational/portfolio projects and two archived PR #44 fixtures
