@@ -10,6 +10,7 @@ import { ROLE_LABELS } from "./constants/roles";
 import SaveFeedback from "./components/SaveFeedback";
 import { profilePresentationName } from "./utils/personName";
 import { canSeeApprovals } from "./utils/approvalCapabilities";
+import { canManageStaff } from "./utils/permissions";
 import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 
 const NAV_ITEMS = [
@@ -38,6 +39,13 @@ const NAV_ITEMS = [
     end: false,
     capability: canSeeApprovals,
     icon: "M5 10.5 8.25 14 15 6.5M3.5 3.5h13v13h-13v-13Z",
+  },
+  {
+    to: "/admin/project-intakes",
+    label: "Project intakes",
+    end: false,
+    capability: canManageStaff,
+    icon: "M10 3.5v13M3.5 10h13",
   },
 ];
 

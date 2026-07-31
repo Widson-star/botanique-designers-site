@@ -11,6 +11,10 @@ import {
   withdrawApprovalRequest as apiWithdraw,
 } from "../lib/approvals";
 import { mapApprovalEvent, mapApprovalRequest } from "../utils/approvalFormatters";
+import {
+  isValidApprovalMutationResponse,
+  normalizeApprovalFailure,
+} from "../utils/approvalErrors";
 
 const demoRequests = [];
 const demoEvents = {};
@@ -66,15 +70,17 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
   const runMutation = useCallback(async (operation, { refetchProject = false } = {}) => {
     try {
       const result = await operation();
+      if (!isValidApprovalMutationResponse(result)) {
+        return normalizeApprovalFailure(
+          null,
+          "The approval service returned an invalid response. No success was recorded."
+        );
+      }
       await refreshRequests();
       if (refetchProject) await refetchProjects();
       return { ok: true, request: result ? mapApprovalRequest(result) : null };
     } catch (nextError) {
-      return {
-        ok: false,
-        error: nextError.message || "The approval action did not complete.",
-        stale: nextError.code === "40001" || /stale/i.test(nextError.message),
-      };
+      return normalizeApprovalFailure(nextError);
     }
   }, [refetchProjects, refreshRequests]);
 

@@ -2,8 +2,14 @@
 // Both render the single shared ProjectForm; the mode is derived from the URL.
 import { Link, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
-import { canCreateProjects, canEditProjects } from "../utils/projectCapabilities";
+import {
+  canCreateProjectDirectly,
+  canCreateProjects,
+  canEditProjects,
+  canProposeProjectIntake,
+} from "../utils/projectCapabilities";
 import ProjectForm from "../components/ProjectForm";
+import ProjectIntakeForm from "../components/ProjectIntakeForm";
 
 export default function AdminProjectForm({ mode }) {
   const { id } = useParams();
@@ -39,6 +45,11 @@ export default function AdminProjectForm({ mode }) {
     );
   }
 
+  // On create, a manager submits a restricted intake proposal (no live project
+  // until Principal approval); only the owner creates a live project directly.
+  const managerIntake =
+    mode === "create" && canProposeProjectIntake(role) && !canCreateProjectDirectly(role);
+
   return (
     <div className="space-y-5">
       <div>
@@ -49,11 +60,19 @@ export default function AdminProjectForm({ mode }) {
           ← Back
         </Link>
         <h1 className="text-2xl font-bold mt-2">
-          {mode === "create" ? "New project" : `Edit — ${project.projectName}`}
+          {mode === "create"
+            ? managerIntake
+              ? "Propose new project"
+              : "New project"
+            : `Edit — ${project.projectName}`}
         </h1>
       </div>
 
-      <ProjectForm mode={mode} project={project} />
+      {managerIntake ? (
+        <ProjectIntakeForm />
+      ) : (
+        <ProjectForm mode={mode} project={project} />
+      )}
     </div>
   );
 }

@@ -404,6 +404,104 @@ The Phase 1B-A1 migration remains technical truth:
 
 This is an audit model, not a general discussion or approvals model.
 
+### 7.1 Phase 1B-A4 — material-change governance (ACTIVE_VERIFIED)
+
+The Phase 1B-A4 migration (`20260729000100`) tightens the model above without weakening
+any finance/Daily Site/portfolio boundary:
+
+- **Manager scope is now RLS-enforced.** `projects` SELECT/UPDATE for a manager is limited
+  to projects they lead or are actively assigned to; the owner stays company-wide. This
+  matches `can_manage_daily_site_project`, so the Daily Site selector is unchanged.
+- **Direct project creation is owner-only.** Managers submit `project_intake_requests`
+  proposals; an approved intake creates the live project atomically (`created_project_id`
+  links intake→project). A pending intake is never a live project.
+- **Material identity/authority/schedule fields are no longer a manager direct write.** A
+  new `BEFORE UPDATE` guard (`tg_guard_project_material_fields`) rejects manager changes to
+  `project_name`, `client_site_name`, `location`, `county`, `project_type`, `stage`,
+  `lead_person_id`, `start_date`, `actual_start_date`. Those route through a seventh
+  approval type, `project_material_change`, which extends the existing
+  `approval_requests`/`approval_events` lifecycle with a strict field allowlist, an
+  authoritative original snapshot, stale-request protection, manager assignment/authority
+  validation, atomic apply and a `project_activities` history event.
+- **Owner apply runs as the deciding owner**, so the manager guards and the interim
+  material-authority/lead guards early-return and never block an approved change; the six
+  lifecycle types and both interim guards remain attached as defence-in-depth.
+- Activity history now surfaces the **exact actor name and role** when the profile is
+  readable (never a raw UUID or role slug).
+
+Authority corrections applied before the migration security review:
+
+- **Project status is not low-risk.** The interim allowance for a manager to directly
+  toggle Ongoing↔Paused is revoked (`tg_guard_project_material_authority` no longer carves
+  it out and `tg_guard_project_material_fields` blocks it). Ongoing↔Paused is now a
+  `project_material_change` proposal (constrained to that transition on an active project);
+  activation/completion/cancellation/archive/restore keep their dedicated types and
+  Design-only stays owner-only. A manager direct status write is zero. The low-risk direct
+  set is exactly `next_action`, `next_action_date`, `blocker`, `notes`.
+- **Portfolio is OWNER_ONLY.** `portfolio_eligible` and `portfolio_permission_status` are
+  deliberately excluded from the material allowlist; no manager proposal path exists.
+- **Daily Site Entry eligibility ≠ project access.** `daily_site_authorised_projects()` and
+  `create_daily_site_entry_draft()` now require operational eligibility — **`status =
+  'Ongoing' AND archived = false`** — in addition to project authority (same rule for owner
+  and manager). Pending (not begun), Paused (must be resumed via approval first), Completed,
+  Cancelled, Design-only and Archived are all excluded, consistent with §4.5 Paused
+  semantics and the Ongoing-only morning-compliance scope. A completed/paused project
+  (Mununga) is excluded from the new-entry selector and the database refuses a new entry for
+  it, while its Projects visibility, history and accept/void/supersede correction workflows
+  are unchanged (`can_manage_daily_site_project` is untouched). Setting a project
+  Ongoing→Paused removes new-entry eligibility immediately; an approved resume restores it.
+
+- **No self-approval.** The owner edits/creates projects directly and never submits a
+  manager-style proposal. `project_material_change` and project intake are manager-only to
+  submit; the owner is the only decider; the decision functions also reject `requester_id =
+  auth.uid()`. The six lifecycle types keep their foundation behaviour (owner-originated
+  requests permitted). Migration `20260729000100` applies whole-file atomically under a
+  single transaction (`supabase db push` / `psql --single-transaction`); it has no
+  non-transactional statement, so partial application cannot occur under those methods — see
+  the WORKSTREAMS rollout checklist and PITR recovery.
+
+Status: **ACTIVE_VERIFIED**. Migration `20260729000100`
+remains applied once and unchanged. On 31 July 2026, production was re-baselined as 12
+physical project rows: 10 genuine projects plus two archived internal PR #44 verification
+fixtures created during the authorised Codex-controlled verification using the authenticated
+Principal session. Lugulu Residential Home is the genuine tenth project; the genuine
+returned Alego Daily Site entry explains the Daily Site baseline of 4 entries / 14 events /
+0 waivers. The original-nine project fingerprint remains
+`4bdcb35ba4017dc7215a9a83fe9b76eb`.
+
+Corrective migration `20260731000100` was the only linked dry-run item and applied
+transactionally once. It adds an independent `BEFORE UPDATE OF status` manager guard and
+re-states terminal-intake select authority as owner-or-requester for the full immutable
+lifecycle. The trigger is enabled, fixed-search-path and least-privilege; a manager direct
+status probe was rejected with zero affected rows, owner direct authority and established
+lifecycle proposal functions remain, and owner/requester/unrelated terminal reads resolved
+3/3/0. Every pre/post business fingerprint matched: the migration created no project,
+activity, approval, intake, Daily Site, Portfolio or financial row.
+
+The earlier “manager activated directly” result was a zero-row RLS no-op misclassified by
+the regression harness, not a proven production mutation. Repaired tests distinguish
+zero-row no-op, explicit rejection and committed mutation.
+
+Final focused authenticated reverification passed on exact preview head
+`df5ea4eba0a278f00c311f0e93bbc95dfde6c978`. Principal and Martine Lotom each
+reloaded and revisited the approved, rejected and withdrawn terminal intake routes with
+readable state, round, requester and immutable history; the approved project link used the
+human-readable `Open project` label. Existing material and lifecycle terminal approvals
+remained readable without stale warnings or invalid controls. Martine's Lugulu direct form
+contained only the four low-risk fields and routed status/material changes to a proposal;
+Principal retained direct status, accountable-lead and material controls. Both consoles were
+clean. Unrelated-manager denial remains database-authority verified at owner/requester/
+unrelated = 3/3/0. Automated frontend coverage proves stale, malformed/undefined, network
+and Supabase error-object cleanup because safe browser interception was unavailable and no
+production mutation was authorised.
+
+Fresh post-pass linked queries reproduced the 12/10/2 project and 4/14/0 Daily Site
+baseline plus every accepted authority fingerprint; both migrations remain applied exactly
+once. Frontend 36 files / 272 tests, all three PostgreSQL matrices, changed-file lint,
+unchanged exact-main lint baseline, 43-route build/prerender and `git diff --check` pass.
+No project, approval, intake, Daily Site, finance, Simple Invoice Manager, public Portfolio
+or Apicora state changed. PR #44 remains draft and unmerged pending founder-authorised merge.
+
 ## 8. Implementation roadmap and dependencies
 
 Governing order:

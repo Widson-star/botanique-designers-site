@@ -128,11 +128,19 @@ export default function DailySiteOperationsProvider({ children, session, role, i
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
   const [error, setError] = useState("");
 
-  // The projects the caller may record an entry for. Real mode: the
-  // authority-scoped database list (never the blanket projects list). Demo mode:
-  // the dev seed projects (preview only; the production boundary is DB-enforced).
+  // The projects the caller may record a NEW entry for. Real mode: the
+  // authority-scoped AND operationally-eligible database list (never the blanket
+  // projects list). Demo mode: the dev seed projects filtered to the same
+  // eligibility rule (Ongoing and not archived) so the preview matches the DB
+  // boundary; the production boundary is DB-enforced. Pending, Paused, Completed,
+  // Cancelled, Design-only and Archived projects are excluded from new entries.
   const authorisedProjects = useMemo(
-    () => (isDemo ? projects : remoteAuthorisedProjects),
+    () =>
+      isDemo
+        ? projects.filter(
+            (project) => !project.archived && project.status === "Ongoing"
+          )
+        : remoteAuthorisedProjects,
     [isDemo, projects, remoteAuthorisedProjects]
   );
 

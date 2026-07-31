@@ -6,6 +6,7 @@
 // profile references resolved to names where profile RLS permits. UUIDs are
 // NEVER surfaced, and raw JSON is never the primary interface.
 import { formalProfileName } from "./personName";
+import { ROLE_LABELS } from "../constants/roles";
 
 // Human labels for the operational fields the ledger diffs.
 export const FIELD_LABELS = {
@@ -65,6 +66,15 @@ export function resolveActorLabel(actorId, profilesById = {}) {
   return "Owner or authorised manager";
 }
 
+// The acting profile's role label ("Principal", "Operations Manager", …) when
+// the profile is readable; empty when it is not (never a raw role slug/UUID).
+export function resolveActorRole(actorId, profilesById = {}) {
+  if (!actorId) return "";
+  const profile = profilesById[actorId];
+  if (profile?.role && ROLE_LABELS[profile.role]) return ROLE_LABELS[profile.role];
+  return "";
+}
+
 export function formatDateTime(value) {
   if (!value) return "Not set";
   const date = new Date(value);
@@ -109,6 +119,11 @@ export function formatFieldValue(field, value, profilesById = {}) {
 
 // Turn one ledger activity row into a readable summary object. Groups every
 // changed field into a before/after row; never returns raw JSON or UUIDs.
+// The fixed, system-written marker the approval apply stamps on the history
+// event (see the 20260729000100 migration). Matched here so the UI can show an
+// "Approval-applied" badge instead of repeating the sentence as a free reason.
+export const APPROVAL_APPLIED_REASON = "Applied via an approved change request.";
+
 export function formatActivity(activity, profilesById = {}) {
   const previous = activity.previous_values || {};
   const next = activity.new_values || {};
@@ -129,13 +144,19 @@ export function formatActivity(activity, profilesById = {}) {
     ),
   }));
 
+  const viaApproval = activity.reason === APPROVAL_APPLIED_REASON;
+
   return {
     id: activity.id,
     action: activity.action,
     actionLabel: actionLabel(activity.action),
     actor: resolveActorLabel(activity.actor_id, profilesById),
+    actorRole: resolveActorRole(activity.actor_id, profilesById),
     occurredAt: formatDateTime(activity.occurred_at),
-    reason: activity.reason || null,
+    // Distinguish an approval-applied change from a direct edit. The marker is
+    // surfaced as a badge, so it is not repeated as a free-text reason.
+    viaApproval,
+    reason: viaApproval ? null : activity.reason || null,
     changes,
   };
 }

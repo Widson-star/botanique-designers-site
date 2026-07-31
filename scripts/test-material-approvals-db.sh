@@ -3,11 +3,11 @@ set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pg_bin="${PG_BIN:-/usr/local/opt/postgresql@17/bin}"
-test_root="$(mktemp -d /tmp/bd-approvals-db.XXXXXX)"
+test_root="$(mktemp -d /tmp/bd-material-approvals-db.XXXXXX)"
 data_dir="$test_root/data"
 socket_dir="$test_root/socket"
 log_file="$test_root/postgres.log"
-port="${BD_APPROVALS_TEST_PORT:-55439}"
+port="${BD_MATERIAL_TEST_PORT:-55440}"
 
 cleanup() {
   if [[ -f "$data_dir/postmaster.pid" ]]; then
@@ -32,4 +32,4 @@ psql_cmd=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$socket_dir" -p "$port" -d po
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260728000200_operations_hub_daily_site_operations.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260729000100_operations_hub_project_material_change_approvals.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260731000100_operations_hub_pr44_verification_repairs.sql" >/dev/null
-"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/approvals_foundation_test.sql"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/project_material_change_approvals_test.sql"

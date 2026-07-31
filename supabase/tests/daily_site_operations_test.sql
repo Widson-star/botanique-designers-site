@@ -46,17 +46,17 @@ insert into public.projects (
   id, project_name, project_type, status, stage, start_date, archived,
   portfolio_eligible, portfolio_permission_status
 ) values
-  ('10000000-0000-0000-0000-000000000001', 'Ongoing A', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000002', 'Ongoing B', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000003', 'Ongoing C', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000004', 'Pending', 'Residential', 'Pending', 'Inquiry', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000005', 'Completed', 'Residential', 'Completed', 'Completed', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000006', 'Design only', 'Design Concept', 'Design-only', 'Concept Design', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000007', 'Paused', 'Residential', 'Paused', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000008', 'Archived', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', true, false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-000000000009', 'Awaiting', 'Residential', 'Ongoing', 'Awaiting Approval', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000001', 'PR44 DAILY — Ongoing A', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000002', 'PR44 DAILY — Ongoing B', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000003', 'PR44 DAILY — Ongoing C', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000004', 'PR44 DAILY — Pending', 'Residential', 'Pending', 'Inquiry', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000005', 'PR44 DAILY — Completed', 'Residential', 'Completed', 'Completed', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000006', 'PR44 DAILY — Design only', 'Design Concept', 'Design-only', 'Concept Design', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000007', 'PR44 DAILY — Paused', 'Residential', 'Paused', 'Implementation', '2026-07-01', false, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000008', 'PR44 DAILY — Archived', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', true, false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-000000000009', 'PR44 DAILY — Awaiting', 'Residential', 'Ongoing', 'Awaiting Approval', '2026-07-01', false, false, 'Not Reviewed'),
   -- Ongoing D is manager B's project (manager A is never assigned to it).
-  ('10000000-0000-0000-0000-00000000000a', 'Ongoing D', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed');
+  ('10000000-0000-0000-0000-00000000000a', 'PR44 DAILY — Ongoing D', 'Residential', 'Ongoing', 'Implementation', '2026-07-01', false, false, 'Not Reviewed');
 
 -- Ongoing E is led by manager3 with NO assignment — the hosted "Alego" pattern
 -- (lead of an in-scope site is authorised without any project_assignments row).
@@ -66,7 +66,7 @@ insert into public.projects (
   id, project_name, project_type, status, stage, start_date, archived,
   lead_person_id, portfolio_eligible, portfolio_permission_status
 ) values (
-  '10000000-0000-0000-0000-00000000000b', 'Ongoing E', 'Residential', 'Ongoing', 'Implementation',
+  '10000000-0000-0000-0000-00000000000b', 'PR44 DAILY — Ongoing E', 'Residential', 'Ongoing', 'Implementation',
   '2026-07-01', false, '00000000-0000-0000-0000-000000000007', false, 'Not Reviewed'
 );
 
@@ -550,7 +550,8 @@ begin
   -- projects (A, B, C, D, E) are due. A has an entry; C has an active waiver.
   select count(*) into due_count
   from public.daily_site_morning_compliance('2026-07-28')
-  where due is true;
+  where due is true
+    and project_id::text like '10000000-0000-0000-0000-%';
   perform pg_temp.assert_true(due_count = 5, 'owner sees five in-scope projects due on the weekday');
 
   -- Owner sees manager B's Ongoing D in the company-wide view.
@@ -596,7 +597,8 @@ begin
 
   -- Weekend: no automatic due items on Saturday 2026-08-01.
   perform pg_temp.assert_true(
-    (select count(*) = 0 from public.daily_site_morning_compliance('2026-08-01') where due is true),
+    (select count(*) = 0 from public.daily_site_morning_compliance('2026-08-01')
+      where due is true and project_id::text like '10000000-0000-0000-0000-%'),
     'no automatic due items on a weekend'
   );
 
@@ -736,11 +738,12 @@ begin
     raise exception 'manager A create on manager B project unexpectedly permitted';
   exception when insufficient_privilege then null; end;
 
-  -- Authority removal (setup): manager A records a voluntary entry on the Paused
-  -- project (…07, assigned) and stashes its id for the post-removal checks below
+  -- Authority removal (setup): manager A records a voluntary entry on an
+  -- eligible Ongoing project (…02, assigned) and stashes its id for the
+  -- post-removal checks below
   -- (the assignment is deactivated as the table owner between DO blocks).
   rm_entry := public.create_daily_site_entry_draft(
-    '10000000-0000-0000-0000-000000000007', '2999-10-01', 'no_work',
+    '10000000-0000-0000-0000-000000000002', '2999-10-01', 'no_work',
     'temporarily_paused_for_day', null, null, null, null, null, null, null, null, null, 'none'
   );
   perform set_config('bd.removal_entry_id', rm_entry.id::text, false);
@@ -754,12 +757,14 @@ begin
     ),
     'manager A compliance excludes unauthorised Ongoing D'
   );
-  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28') where due is true;
+  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28')
+  where due is true and project_id::text like '10000000-0000-0000-0000-%';
   perform pg_temp.assert_true(cnt = 3, 'manager A sees exactly its three authorised due projects');
 
   -- Manager B's compliance is exactly its one authorised due project (D).
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000006', true);
-  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28') where due is true;
+  select count(*) into cnt from public.daily_site_morning_compliance('2026-07-28')
+  where due is true and project_id::text like '10000000-0000-0000-0000-%';
   perform pg_temp.assert_true(cnt = 1, 'manager B sees exactly one due project');
   perform pg_temp.assert_true(
     not exists (
@@ -778,8 +783,9 @@ begin
   );
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
   perform pg_temp.assert_true(
-    (select count(*) = 11 from public.daily_site_authorised_projects()),
-    'authorised-projects selector returns all projects for the owner'
+    (select count(*) = 6 from public.daily_site_authorised_projects()
+      where id::text like '10000000-0000-0000-0000-%'),
+    'owner selector returns only the six eligible fixture projects'
   );
   -- Staff and inactive get nothing from the selector.
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', true);
@@ -792,11 +798,11 @@ begin
 end;
 $$;
 
--- Remove manager A's authority for the Paused project as the table owner, then
+-- Remove manager A's authority for Ongoing B as the table owner, then
 -- confirm the authored draft can no longer be mutated by that manager.
 reset role;
 update public.project_assignments set is_active = false
-  where project_id = '10000000-0000-0000-0000-000000000007'
+  where project_id = '10000000-0000-0000-0000-000000000002'
     and user_id = '00000000-0000-0000-0000-000000000002';
 set local role authenticated;
 

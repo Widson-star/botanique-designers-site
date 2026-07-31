@@ -16,7 +16,7 @@
 //     defaults on create; owner-reserved fields excluded from an update patch.
 //   * Optional blanks normalise to null so an inaccessible/absent value is not
 //     coerced into an empty string.
-import { isManager, isOwner } from "./projectCapabilities";
+import { isManager, isOwner, MATERIAL_FIELD_KEYS } from "./projectCapabilities";
 
 // Blank / whitespace-only optional inputs normalise to null; otherwise trimmed.
 export function normalizeOptional(value) {
@@ -187,20 +187,11 @@ const OWNER_UPDATE_COLUMNS = [
   "portfolio_permission_status",
 ];
 
-// Manager update excludes every owner-reserved value: status is allowed as a
-// column (the form only offers Ongoing<->Paused), but target/actual completion,
-// portfolio publication and archived are never sent in a manager patch.
+// Phase 1B-A4 — a manager's DIRECT update patch carries ONLY the low-risk
+// operational fields. Every material identity/authority/schedule field —
+// including `status` (Ongoing<->Paused is Principal-approved) — is excluded here
+// and routed through a project_material_change approval (see buildMaterialProposal).
 const MANAGER_UPDATE_COLUMNS = [
-  "project_name",
-  "client_site_name",
-  "location",
-  "county",
-  "project_type",
-  "status",
-  "stage",
-  "lead_person_id",
-  "start_date",
-  "actual_start_date",
   "next_action",
   "next_action_date",
   "blocker",
@@ -225,6 +216,56 @@ export function buildUpdatePatch(form, originalProject, role) {
     }
   }
   return patch;
+}
+
+// ---- Manager material-change proposal + intake proposal -------------------
+// Build a project_material_change proposal payload from a proposed-values form
+// keyed by material field. Only genuinely changed material fields are included;
+// original snapshot mirrors the proposed key set (matching the database
+// validator). `proposed` is a partial map of material field key -> new value
+// (already form-normalised). Returns { changedKeys, originalValues, proposedValues }.
+export function buildMaterialProposal(originalProject, proposed) {
+  const current = formToOperationalValues(projectToFormState(originalProject));
+  const originalValues = {};
+  const proposedValues = {};
+  const changedKeys = [];
+  for (const key of MATERIAL_FIELD_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(proposed, key)) continue;
+    const nextValue = proposed[key];
+    if (valuesEqual(nextValue, current[key])) continue;
+    changedKeys.push(key);
+    originalValues[key] = current[key];
+    proposedValues[key] = nextValue;
+  }
+  return { changedKeys, originalValues, proposedValues };
+}
+
+// Intake proposal payload (project_intake_requests.proposed_values). Only the
+// minimum, non-owner-reserved intake fields; never status/stage/lead/portfolio.
+const INTAKE_KEYS = [
+  "project_name",
+  "project_type",
+  "client_site_name",
+  "location",
+  "county",
+  "notes",
+  "start_date",
+  "target_completion_date",
+];
+
+export function buildIntakePayload(form) {
+  const values = formToOperationalValues(form);
+  const payload = {};
+  for (const key of INTAKE_KEYS) {
+    const value = values[key];
+    // project_name and project_type are always sent; optionals only when set.
+    if (key === "project_name" || key === "project_type") {
+      payload[key] = value;
+    } else if (value !== null && value !== undefined && value !== "") {
+      payload[key] = value;
+    }
+  }
+  return payload;
 }
 
 // ---- Owner material quick-action patches ----------------------------------

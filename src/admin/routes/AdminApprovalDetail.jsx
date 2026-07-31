@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ApprovalComparison from "../components/approvals/ApprovalComparison";
 import ApprovalRequestDialog from "../components/approvals/ApprovalRequestDialog";
+import MaterialChangeAmendDialog from "../components/approvals/MaterialChangeAmendDialog";
 import ApprovalTimeline from "../components/approvals/ApprovalTimeline";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAdminData } from "../context/adminData";
@@ -18,6 +19,7 @@ import {
 } from "../utils/approvalFormatters";
 import { formatDateTime } from "../utils/activityFormat";
 import { profilePresentationName } from "../utils/personName";
+import { normalizeApprovalFailure } from "../utils/approvalErrors";
 
 export default function AdminApprovalDetail() {
   const { approvalId } = useParams();
@@ -31,6 +33,7 @@ export default function AdminApprovalDetail() {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState("");
+  const actionInFlight = useRef(false);
   const request = requests.find((item) => item.id === approvalId);
   const project = projects.find((item) => item.id === request?.projectId);
   const requester = profilesById[request?.requesterId];
@@ -74,20 +77,38 @@ export default function AdminApprovalDetail() {
   }
 
   async function runAction(operation) {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
     setBusy(true);
     setActionError("");
-    const result = await operation();
-    setBusy(false);
-    if (result.ok) {
+    try {
+      const result = await operation();
+      if (!result || typeof result.ok !== "boolean") {
+        setActionError(
+          normalizeApprovalFailure(
+            null,
+            "The approval service returned an invalid response. No success was recorded."
+          ).error
+        );
+        return;
+      }
+      if (!result.ok) {
+        setActionError(normalizeApprovalFailure(result).error);
+        return;
+      }
+
       setAction("");
       setNotes("");
-      setEvents(await loadEvents(request.id, true));
-    } else {
-      setActionError(
-        result.stale
-          ? "This request is stale because the project changed. Request an amendment or submit a new request."
-          : result.error
-      );
+      try {
+        setEvents(await loadEvents(request.id, true));
+      } catch (nextError) {
+        setEventError(nextError.message || "The request was updated, but its history could not be refreshed.");
+      }
+    } catch (nextError) {
+      setActionError(normalizeApprovalFailure(nextError).error);
+    } finally {
+      actionInFlight.current = false;
+      setBusy(false);
     }
   }
 
@@ -117,7 +138,9 @@ export default function AdminApprovalDetail() {
             <div><dt className="text-xs text-gray-500">Round</dt><dd className="mt-1 text-sm">{request.requestRound}</dd></div>
             <div><dt className="text-xs text-gray-500">Project</dt><dd className="mt-1 text-sm">{project.projectName}</dd></div>
           </dl>
-          <div className="mt-5"><ApprovalComparison request={request} /></div>
+          <div className="mt-5">
+            <ApprovalComparison request={request} profilesById={profilesById} project={project} />
+          </div>
           <div className="mt-5">
             <h3 className="text-xs font-medium text-gray-500">Reason</h3>
             <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.reason}</p>
@@ -158,7 +181,14 @@ export default function AdminApprovalDetail() {
         </section>
       </div>
 
-      {action === "edit" && (
+      {action === "edit" && request.approvalType === "project_material_change" && (
+        <MaterialChangeAmendDialog
+          request={request}
+          onCancel={() => setAction("")}
+          onSubmit={(values) => runAction(() => amendAndResubmit(request.id, values))}
+        />
+      )}
+      {action === "edit" && request.approvalType !== "project_material_change" && (
         <ApprovalRequestDialog
           open
           project={project}

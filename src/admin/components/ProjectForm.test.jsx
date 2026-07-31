@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
+import { AdminApprovalsContext } from "../context/adminApprovals";
 import ProjectForm from "./ProjectForm";
 
 const PROFILES = [
@@ -19,22 +20,32 @@ const PROFILES = [
 function renderForm({ role, mode, project, overrides = {} }) {
   const createProject = vi.fn().mockResolvedValue({ ok: true, id: "new-id" });
   const updateProject = vi.fn().mockResolvedValue({ ok: true, id: project?.id });
+  const submitApproval = vi.fn().mockResolvedValue({ ok: true });
+  const withdrawApproval = vi.fn().mockResolvedValue({ ok: true });
   const value = {
     role,
     profiles: PROFILES,
+    profilesById: Object.fromEntries(PROFILES.map((p) => [p.id, p])),
     currentUserId: role === "owner" ? "owner-1" : "manager-1",
     createProject,
     updateProject,
     ...overrides,
   };
+  const approvals = {
+    requests: overrides.requests || [],
+    submit: submitApproval,
+    withdraw: withdrawApproval,
+  };
   const utils = render(
     <MemoryRouter>
       <AdminDataContext.Provider value={value}>
-        <ProjectForm mode={mode} project={project} />
+        <AdminApprovalsContext.Provider value={approvals}>
+          <ProjectForm mode={mode} project={project} />
+        </AdminApprovalsContext.Provider>
       </AdminDataContext.Provider>
     </MemoryRouter>
   );
-  return { ...utils, createProject, updateProject };
+  return { ...utils, createProject, updateProject, submitApproval, withdrawApproval };
 }
 
 const editableProject = {
@@ -119,60 +130,114 @@ describe("owner form", () => {
   });
 });
 
-describe("manager create", () => {
-  it("forces Pending / non-portfolio / Not Reviewed and hides actual completion", async () => {
-    const { createProject } = renderForm({ role: "manager", mode: "create" });
+describe("owner edit (direct, never a proposal)", () => {
+  it("edits material fields directly and offers no material-change proposal", () => {
+    renderForm({ role: "owner", mode: "edit", project: editableProject });
+    // Material fields are directly editable for the owner.
+    expect(screen.getByLabelText(/Project name/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Location")).toBeInTheDocument();
+    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    // The owner never sees the manager material-change proposal section, and the
+    // direct save is the ordinary "Save changes".
+    expect(
+      screen.queryByRole("heading", { name: "Propose a material change" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Submit material changes for approval" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeInTheDocument();
+  });
 
-    // Status is read-only (no Status combobox), actual completion is hidden.
-    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Actual completion")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Portfolio eligible")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Portfolio publication status")).not.toBeInTheDocument();
-    expect(screen.getByText(/fixed to/)).toHaveTextContent(
-      "fixed to Not assessed for portfolio"
-    );
-
-    fireEvent.change(screen.getByLabelText(/Project name/), {
-      target: { value: "New Intake Project" },
+  it("sends a direct patch (no approval) when the owner changes a material field", async () => {
+    const { updateProject, submitApproval } = renderForm({
+      role: "owner",
+      mode: "edit",
+      project: editableProject,
     });
-    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
-
-    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
-    const payload = createProject.mock.calls[0][0];
-    expect(payload.status).toBe("Pending");
-    expect(payload.portfolio_eligible).toBe(false);
-    expect(payload.portfolio_permission_status).toBe("Not Reviewed");
-    expect(payload).not.toHaveProperty("actual_completion_date");
+    fireEvent.change(screen.getByLabelText(/Project name/), {
+      target: { value: "Karen Renamed Directly" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
+    const [, patch] = updateProject.mock.calls[0];
+    expect(patch).toMatchObject({ project_name: "Karen Renamed Directly" });
+    // No approval proposal was submitted.
+    expect(submitApproval).not.toHaveBeenCalled();
   });
 });
 
 describe("manager edit", () => {
-  it("offers only Ongoing<->Paused for status", () => {
+  it("presents material fields read-only in the main form and offers a proposal", () => {
     renderForm({ role: "manager", mode: "edit", project: editableProject });
-    const statusSelect = screen.getByLabelText("Status");
+    // The main details section is read-only for a manager (guidance banner), and
+    // stage is not an editable combobox there.
+    expect(
+      screen.getByText(/These identity fields are read-only for your role/)
+    ).toBeInTheDocument();
+    // A distinct material-change proposal section is offered instead.
+    expect(
+      screen.getByRole("heading", { name: "Propose a material change" })
+    ).toBeInTheDocument();
+    // The direct save is clearly labelled for low-risk operational updates only.
+    expect(
+      screen.getByRole("button", { name: "Save operational updates" })
+    ).toBeInTheDocument();
+  });
+
+  it("routes status Ongoing<->Paused through the material-change proposal, not a direct field", () => {
+    renderForm({ role: "manager", mode: "edit", project: editableProject });
+    // No editable Status combobox in the direct-save form (it is read-only).
+    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+    // The proposal offers the constrained Ongoing<->Paused status select.
+    const statusSelect = screen.getByLabelText("Status (Ongoing / Paused)");
     const options = Array.from(statusSelect.querySelectorAll("option")).map((o) => o.value);
     expect(options).toEqual(["Ongoing", "Paused"]);
   });
 
-  it("preserves an inaccessible lead during an unrelated edit", async () => {
+  it("saves only low-risk fields directly and never sends a material field", async () => {
     const { updateProject } = renderForm({
       role: "manager",
       mode: "edit",
       project: editableProject,
     });
 
-    // The protected lead is shown, not a select.
-    expect(screen.getByText("Current assigned lead — protected profile")).toBeInTheDocument();
+    // The protected lead is shown read-only, never an editable select.
+    expect(screen.getByText("Assigned lead (protected)")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/^Next required action/), {
       target: { value: "Call the client" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save operational updates" }));
 
     await waitFor(() => expect(updateProject).toHaveBeenCalledTimes(1));
     const [, patch] = updateProject.mock.calls[0];
     expect(patch).toEqual({ next_action: "Call the client" });
     expect(patch).not.toHaveProperty("lead_person_id");
+    expect(patch).not.toHaveProperty("project_name");
+    expect(patch).not.toHaveProperty("location");
+  });
+
+  it("submits a material-change proposal instead of a direct write", async () => {
+    const { submitApproval } = renderForm({
+      role: "manager",
+      mode: "edit",
+      project: editableProject,
+    });
+    // Change a material field within the proposal section.
+    fireEvent.change(screen.getByLabelText("Location"), {
+      target: { value: "Kilimani" },
+    });
+    fireEvent.change(screen.getByLabelText(/Reason for the Principal/), {
+      target: { value: "Client corrected the site address." },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Submit material changes for approval" })
+    );
+    await waitFor(() => expect(submitApproval).toHaveBeenCalledTimes(1));
+    const payload = submitApproval.mock.calls[0][0];
+    expect(payload.approvalType).toBe("project_material_change");
+    expect(payload.proposedValues).toMatchObject({ location: "Kilimani" });
+    expect(payload.originalValues).toMatchObject({ location: "Karen" });
   });
 
   it("does not show portfolio eligibility or permission state", () => {

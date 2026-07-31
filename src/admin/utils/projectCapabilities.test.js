@@ -12,6 +12,7 @@ import {
   projectFormCapabilities,
   stageOptionsForForm,
   statusOptionsForForm,
+  isStatusEditable,
 } from "./projectCapabilities";
 import { PROJECT_STAGES, PROJECT_STATUSES } from "../constants/projectStatus";
 
@@ -60,12 +61,14 @@ describe("manager capabilities", () => {
     expect(stages).not.toContain("Archived");
   });
 
-  it("permits status change only Ongoing<->Paused on edit", () => {
-    expect(statusOptionsForForm(MANAGER, "edit", "Ongoing")).toEqual(["Ongoing", "Paused"]);
-    expect(statusOptionsForForm(MANAGER, "edit", "Paused")).toEqual(["Ongoing", "Paused"]);
-    // Any protected status is shown read-only (single value).
+  it("never lets a manager change status directly on edit (status is material)", () => {
+    // Status is read-only in the direct form for every current value; the
+    // Ongoing<->Paused move is a project_material_change proposal instead.
+    expect(statusOptionsForForm(MANAGER, "edit", "Ongoing")).toEqual(["Ongoing"]);
+    expect(statusOptionsForForm(MANAGER, "edit", "Paused")).toEqual(["Paused"]);
     expect(statusOptionsForForm(MANAGER, "edit", "Pending")).toEqual(["Pending"]);
-    expect(statusOptionsForForm(MANAGER, "edit", "Completed")).toEqual(["Completed"]);
+    expect(isStatusEditable(MANAGER)).toBe(false);
+    expect(isStatusEditable(OWNER)).toBe(true);
   });
 
   it("cannot set or reverse a Completed/Archived stage", () => {

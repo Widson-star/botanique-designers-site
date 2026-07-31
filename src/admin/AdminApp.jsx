@@ -11,11 +11,14 @@ import AdminProjectDetail from "./routes/AdminProjectDetail";
 import AdminProjectForm from "./routes/AdminProjectForm";
 import AdminApprovals from "./routes/AdminApprovals";
 import AdminApprovalDetail from "./routes/AdminApprovalDetail";
+import AdminProjectIntakes from "./routes/AdminProjectIntakes";
+import AdminProjectIntakeDetail from "./routes/AdminProjectIntakeDetail";
 import AdminDailySiteOperations from "./routes/AdminDailySiteOperations";
 import AdminDailySiteEntryForm from "./routes/AdminDailySiteEntryForm";
 import AdminDailySiteEntryDetail from "./routes/AdminDailySiteEntryDetail";
 import { AdminDataProvider } from "./context/AdminDataContext";
 import AdminApprovalsProvider from "./context/AdminApprovalsContext";
+import AdminIntakeProvider from "./context/AdminIntakeProvider";
 import DailySiteOperationsProvider from "./context/DailySiteOperationsProvider";
 import { ROLES } from "./constants/roles";
 import {
@@ -184,6 +187,7 @@ export default function AdminApp() {
   return (
     <AdminDataProvider session={session} role={role} profile={profile} isDemo={isDemo}>
       <AdminApprovalsProvider session={session} role={role} isDemo={isDemo}>
+        <AdminIntakeProvider session={session} role={role} isDemo={isDemo}>
         <DailySiteOperationsProvider session={session} role={role} isDemo={isDemo}>
           <Routes>
             <Route
@@ -204,6 +208,8 @@ export default function AdminApp() {
               <Route path="/admin/projects/:id/edit" element={<AdminProjectForm mode="edit" />} />
               <Route path="/admin/approvals" element={<AdminApprovals />} />
               <Route path="/admin/approvals/:approvalId" element={<AdminApprovalDetail />} />
+              <Route path="/admin/project-intakes" element={<AdminProjectIntakes />} />
+              <Route path="/admin/project-intakes/:intakeId" element={<AdminProjectIntakeDetail />} />
               <Route path="/admin/daily-site-operations" element={<AdminDailySiteOperations />} />
               <Route path="/admin/daily-site-operations/new" element={<AdminDailySiteEntryForm mode="create" />} />
               <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
@@ -212,6 +218,7 @@ export default function AdminApp() {
             </Route>
           </Routes>
         </DailySiteOperationsProvider>
+        </AdminIntakeProvider>
       </AdminApprovalsProvider>
     </AdminDataProvider>
   );

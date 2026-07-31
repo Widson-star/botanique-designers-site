@@ -11,13 +11,55 @@ import { PROJECT_STAGES, PROJECT_STATUSES } from "../constants/projectStatus";
 // Stages the interim boundary reserves to the owner in BOTH directions.
 export const OWNER_ONLY_STAGES = ["Completed", "Archived"];
 
-// Operational stages a manager may set / move between.
+// Operational stages a manager may PROPOSE (material change) — never terminal.
 export const MANAGER_STAGES = PROJECT_STAGES.filter(
   (stage) => !OWNER_ONLY_STAGES.includes(stage)
 );
 
-// Statuses a manager may toggle an already-active project between.
+// The only status transition a manager may PROPOSE via project_material_change
+// (Ongoing<->Paused). Every status change — including this one — is now
+// Principal-approved; a manager has no direct status write.
 export const MANAGER_STATUS_TOGGLE = ["Ongoing", "Paused"];
+
+// Phase 1B-A4 — the material project fields a manager may no longer edit
+// directly. Changes to these route through a project_material_change approval
+// for Principal review. This list MUST match the database allowlist in
+// supabase/migrations/20260729000100_operations_hub_project_material_change_approvals.sql
+// (public.private_project_material_allowlist).
+export const MATERIAL_FIELD_KEYS = [
+  "project_name",
+  "client_site_name",
+  "location",
+  "county",
+  "project_type",
+  "status", // Ongoing<->Paused only, validated by the database
+  "stage",
+  "lead_person_id",
+  "start_date",
+  "actual_start_date",
+];
+
+export const MATERIAL_FIELD_LABELS = {
+  project_name: "Project name",
+  client_site_name: "Client / site label",
+  location: "Location",
+  county: "County",
+  project_type: "Project type",
+  status: "Status (Ongoing / Paused)",
+  stage: "Stage",
+  lead_person_id: "Accountable lead",
+  start_date: "Planned start",
+  actual_start_date: "Actual start",
+};
+
+// The low-risk operational fields a manager keeps as a direct, audited write on
+// an authorised project (never material identity/authority/schedule/status).
+export const MANAGER_LOW_RISK_KEYS = [
+  "next_action",
+  "next_action_date",
+  "blocker",
+  "notes",
+];
 
 export function isOwner(role) {
   return role === ROLES.OWNER;
@@ -27,12 +69,30 @@ export function isManager(role) {
   return role === ROLES.MANAGER;
 }
 
+// The create/edit ROUTES remain reachable for owner and manager, but the
+// behaviour differs by role (see the direct/proposal helpers below).
 export function canCreateProjects(role) {
   return isOwner(role) || isManager(role);
 }
 
 export function canEditProjects(role) {
   return isOwner(role) || isManager(role);
+}
+
+// Only the owner creates a live project directly; a manager submits a
+// restricted project-intake proposal for Principal approval.
+export function canCreateProjectDirectly(role) {
+  return isOwner(role);
+}
+
+export function canProposeProjectIntake(role) {
+  return isManager(role);
+}
+
+// A manager proposes material changes (never writes them directly); the owner
+// edits material fields directly.
+export function canProposeMaterialChange(role) {
+  return isManager(role);
 }
 
 // The owner-facing "Pending activation" list is owner-only.
@@ -97,32 +157,29 @@ export function hasOwnerMaterialActions(role, project) {
 
 export function statusOptionsForForm(role, mode, currentStatus) {
   if (isOwner(role)) return PROJECT_STATUSES;
-  // Manager create is fixed to Pending.
+  // Manager create is fixed to Pending; manager edit never changes status
+  // directly (Ongoing<->Paused is a project_material_change proposal).
   if (mode === "create") return ["Pending"];
-  // Manager edit may only toggle an already-active project Ongoing<->Paused.
-  if (MANAGER_STATUS_TOGGLE.includes(currentStatus)) return MANAGER_STATUS_TOGGLE;
-  // Any other status is protected: shown read-only, no re-selection.
   return [currentStatus];
 }
 
-export function isStatusEditable(role, mode, currentStatus) {
-  if (isOwner(role)) return true;
-  if (mode === "create") return false; // fixed Pending
-  return MANAGER_STATUS_TOGGLE.includes(currentStatus);
+export function isStatusEditable(role) {
+  // Status is now owner-only for a direct write; a manager proposes
+  // Ongoing<->Paused via project_material_change.
+  return isOwner(role);
 }
 
 export function stageOptionsForForm(role, mode, currentStage) {
   if (isOwner(role)) return PROJECT_STAGES;
-  if (mode === "create") return MANAGER_STAGES;
-  // Manager edit cannot set OR reverse a Completed/Archived stage.
-  if (OWNER_ONLY_STAGES.includes(currentStage)) return [currentStage];
-  return MANAGER_STAGES;
+  // Stage is now a MATERIAL field for managers: not a direct write. The manager
+  // intake proposal opens every project at Inquiry, so no stage choice is
+  // offered on create either; any later stage move is a material-change proposal.
+  return [currentStage];
 }
 
-export function isStageEditable(role, mode, currentStage) {
-  if (isOwner(role)) return true;
-  if (mode === "create") return true;
-  return !OWNER_ONLY_STAGES.includes(currentStage);
+export function isStageEditable(role) {
+  // Owner edits stage directly; manager stage changes are material (proposed).
+  return isOwner(role);
 }
 
 // Target completion: owner any time; manager only proposes it at creation.
@@ -161,13 +218,17 @@ export function leadOptionsForRole(role, profiles = [], currentUserId = "") {
   return [];
 }
 
-// A single capability snapshot for the shared form.
+// A single capability snapshot for the shared form. `materialEditable` gates
+// the material identity/authority/schedule fields: owner edits them directly,
+// a manager sees them read-only and proposes changes for Principal approval.
 export function projectFormCapabilities(role, mode, project) {
   const currentStatus = project?.status;
   const currentStage = project?.stage;
   return {
     owner: isOwner(role),
     manager: isManager(role),
+    materialEditable: isOwner(role),
+    proposesMaterial: isManager(role),
     statusOptions: statusOptionsForForm(role, mode, currentStatus),
     statusEditable: isStatusEditable(role, mode, currentStatus),
     stageOptions: stageOptionsForForm(role, mode, currentStage),
