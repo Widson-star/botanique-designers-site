@@ -2678,11 +2678,12 @@ Hub code/database. Changed files: `CAMPAIGN_LAUNCH_PACK_2026-07-27.md` (new),
 
 ## BD-OPERATIONS-HUB-01 — Phase 1B-A4: Project Material Change Approvals and Manager Project-Scope Control
 
-Status: **ACTIVE_VERIFIED** (31 July 2026; draft PR; corrective migration
+Status: **ACTIVE_VERIFIED** (31 July 2026; PR #44 merged and closed; corrective migration
 `20260731000100` applied once, structurally verified and authenticated on the exact PR
-preview). PR #44 remains draft and unmerged pending founder-authorised merge.
+preview). PR #44 merged into authoritative `main` at
+`05b6ade06f7ba2d4fdfb5c9d4ef1b591ea4e02e7`.
 
-Baseline `main`: `24154fee4a163378201a6db0e1d94006287c88ae`. Branch:
+Pre-implementation baseline `main`: `24154fee4a163378201a6db0e1d94006287c88ae`. Branch:
 `feat/bd-project-material-change-approvals`; corrective evidence head before this authority
 update: `579ae345087d8b1a54b7e21ec2b0ecff68ab5f11`. The current physical project count is
 12: **10 genuine operational/portfolio projects** and **2 archived internal PR #44
@@ -2704,8 +2705,10 @@ project and intake RLS, owner-only project INSERT, and Ongoing/non-archived Dail
 eligibility. All nine projects, two profiles, zero assignments, 15 existing project
 activities, 0/0 approvals, three Daily Site entries, 11 Daily Site events and zero waivers
 retained identical deterministic fingerprints; both intake tables are empty and the
-migration generated no project activity. Authenticated owner/manager workflow verification
-remains pending, so expanded Approvals is not yet `ACTIVE_VERIFIED`.
+migration generated no project activity. At this 30 July pre-authentication checkpoint,
+authenticated owner/manager workflow verification remained pending and expanded Approvals
+was not yet `ACTIVE_VERIFIED`. This checkpoint is retained as history; the final 31 July
+verification below established the current status.
 
 **31 July production-baseline reconciliation and corrective rollout.** The legitimate
 production deltas were reconciled before any schema write:
@@ -2861,11 +2864,12 @@ exact-main lint comparison (same 19 pre-existing findings; zero new), 43-route
 build/prerender and `git diff --check` pass. No project, approval, intake, Daily Site,
 financial, Simple Invoice Manager, public Portfolio or Apicora state was created or changed.
 
-Boundaries: hosted migration applied with business rows unchanged; PR remains draft/unmerged; no financial,
-Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. New/changed
-files: the migration + PG test + runner under `supabase/`; the Operations Hub docs;
-and the `src/admin` material-change / intake / activity-wording implementation and
-tests.
+Pre-merge checkpoint boundaries: hosted migration applied with business rows unchanged;
+PR #44 was still draft/unmerged at this verification checkpoint; no financial,
+Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. PR #44 subsequently
+merged and closed at the authoritative `main` commit recorded above. New/changed files:
+the migration + PG test + runner under `supabase/`; the Operations Hub docs; and the
+`src/admin` material-change / intake / activity-wording implementation and tests.
 
 **Authority corrections (pre-security-review, same PR #44 branch).** Two founder
 corrections applied on top of the above:
@@ -2904,7 +2908,9 @@ scoped manager RLS; separate-table intake isolation. Added DB concurrency-guard 
 twice, withdraw-vs-approve, duplicate intake approval creates no duplicate project) and
 hostile-JSON tests. Migration `20260729000100` remains applied once and unchanged; corrective
 migration `20260731000100` is now the seventh and latest repository/hosted migration with no
-version collision. Final focused authenticated reverification remains pending.
+version collision. At this pre-final-verification checkpoint, focused authenticated
+reverification remained pending; this statement is retained as history and was superseded
+by the completed 31 July verification recorded above.
 
 **No-self-approval correction (same PR #44 branch).** Governance fix: the owner edits and
 creates projects **directly** and must never submit a manager-style proposal that they, as

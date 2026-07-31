@@ -500,7 +500,9 @@ baseline plus every accepted authority fingerprint; both migrations remain appli
 once. Frontend 36 files / 272 tests, all three PostgreSQL matrices, changed-file lint,
 unchanged exact-main lint baseline, 43-route build/prerender and `git diff --check` pass.
 No project, approval, intake, Daily Site, finance, Simple Invoice Manager, public Portfolio
-or Apicora state changed. PR #44 remains draft and unmerged pending founder-authorised merge.
+or Apicora state changed. PR #44 subsequently merged and closed on 31 July 2026;
+authoritative `main` is
+`05b6ade06f7ba2d4fdfb5c9d4ef1b591ea4e02e7`.
 
 ## 8. Implementation roadmap and dependencies
 
