@@ -2118,30 +2118,35 @@ Payments and Site-Funds Control.** No internal-finance ledger exists yet. This
 documentation cleanup authorises no table, UI, migration, RLS, function, hosted mutation or
 deployment.
 
-**BD-FIN-01A implementation status: APPLIED_WITH_LIMITATION.** PR #48 (branch
+**BD-FIN-01A implementation status: ACTIVE_VERIFIED (2026-07-31).** PR #48 (branch
 `feat/bd-fin-01a-internal-cost-claims`; implementation commit
-`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head after hosted-verification
-documentation `48f1a53c551ee8f20d7579703800f08aed7a2f66`),
-based on authoritative main `d5986af66bec550567408e99b61d170607daee75`, remains open, draft
-and unmerged. The additive migration `20260731000200_internal_cost_claims.sql` (hosted
-version `20260731160117`) has been applied to hosted `botanique-admin`
-(`wcacyfyxjiysfibuuhgf`) on 2026-07-31. Post-migration verification confirmed: the three new
-tables, all named constraints, four indexes, RLS enabled with exactly the three intended
-SELECT policies; `authenticated` holds SELECT-only on the new tables (no INSERT/UPDATE/
-DELETE); execute is granted only on the nine intended public RPCs, with every `private_*`
-helper and the event-immutability trigger function revoked from `authenticated`; every
-`SECURITY DEFINER` function pins a fixed `search_path`. All three new tables remain at zero
-rows. Existing-data fingerprints (profiles, projects, project_assignments, activities,
-approvals, intake, Daily Site entries/events, and every pre-existing RLS policy) are
-identical before and after the migration. Principal and Operations Manager RPC/RLS authority
-— project scoping, draft/submit/decide/cancel/direct-authority separation, and Daily Site
-snapshot linkage without mutating the source entry or its events — was verified through
-fully rolled-back hosted SQL transactions against real genuine projects; zero claims persist.
-The app's own signed-out `/admin` gate was confirmed on the exact PR-head Vercel preview.
-**Limitation:** authenticated Principal/Operations Manager UI-session verification on the
-preview was not performed, since it requires entering a real account password; Staff/Viewer
-verification was likewise unavailable, as no such accounts exist. Simple Invoice Manager and
-Apicora are unchanged.
+`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head
+`83b11356232af923c1d70266e49a4b9e1f01f383`), based on authoritative main
+`d5986af66bec550567408e99b61d170607daee75`, **remains open, draft and unmerged** — this
+status describes hosted and authenticated verification, not merge state. The additive
+migration `20260731000200_internal_cost_claims.sql` (hosted version `20260731160117`) has
+been applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`). Post-migration
+verification confirmed: the three new tables, all named constraints, four indexes, RLS
+enabled with exactly the three intended SELECT policies; `authenticated` holds SELECT-only
+on the new tables (no INSERT/UPDATE/DELETE); execute is granted only on the nine intended
+public RPCs, with every `private_*` helper and the event-immutability trigger function
+revoked from `authenticated`; every `SECURITY DEFINER` function pins a fixed `search_path`.
+Existing-data fingerprints (profiles, projects, project_assignments, activities, approvals,
+intake, Daily Site entries/events, and every pre-existing RLS policy) are identical before
+and after the migration. Principal and Operations Manager RPC/RLS authority was verified
+through fully rolled-back hosted SQL transactions against real genuine projects; zero claims
+persisted. `APPLIED_WITH_LIMITATION` was a historical checkpoint: manual authenticated
+Principal and Operations Manager UI verification against the exact PR-head Vercel preview
+subsequently passed — Site Costs navigation, the empty-queue zero-state, the project
+selector (genuine eligible Ongoing projects only, archived PR #44 fixtures absent), the
+Principal direct-authorisation form, the Operations Manager claim form (no Principal
+controls, no company-wide totals), and the Daily Site "Create cost claim" copy-to-draft flow
+(planning context correctly copied, snapshot immutability noted, no claim created merely by
+opening the form) all rendered correctly with no console errors or failed requests, on both
+desktop and mobile. The signed-out `/admin` gate was reconfirmed after each session. No
+claim was submitted during verification. Staff/Viewer authenticated UI verification remains
+unavailable because no such accounts exist; their denial is covered by the PostgreSQL and
+capability-utility test matrices instead. Simple Invoice Manager and Apicora are unchanged.
 
 The approved first implementation slice is **BD-FIN-01A — Internal Cost Claims and
 Principal Decision**. It establishes an authoritative internal cost obligation and decision

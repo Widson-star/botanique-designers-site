@@ -487,18 +487,23 @@ The founder has resolved the five previously open decisions; they are now author
 
 ### 4.6 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-**Status: product contract approved; APPLIED_WITH_LIMITATION on PR #48
+**Status: product contract approved; ACTIVE_VERIFIED (2026-07-31) on PR #48
 (`feat/bd-fin-01a-internal-cost-claims`; implementation commit
-`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head after hosted-verification
-documentation `48f1a53c551ee8f20d7579703800f08aed7a2f66`);
-open, draft and unmerged.** The separately authorised implementation is based on
-authoritative base `d5986af66bec550567408e99b61d170607daee75`. Migration
+`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head
+`83b11356232af923c1d70266e49a4b9e1f01f383`);
+the PR itself remains open, draft and unmerged — this status describes hosted and
+authenticated verification, not merge state.** The separately authorised implementation is
+based on authoritative base `d5986af66bec550567408e99b61d170607daee75`. Migration
 `20260731000200_internal_cost_claims.sql` has been applied to hosted `botanique-admin`
-(`wcacyfyxjiysfibuuhgf`) on 2026-07-31 as hosted version `20260731160117`, with schema/RLS/
-grants and existing-data preservation verified and Principal/Operations Manager RPC
-authority verified via fully rolled-back hosted SQL transactions; no persisted claims exist
-and no authenticated UI-session verification was performed (requires a real account
-password). This maintained product contract does not by
+(`wcacyfyxjiysfibuuhgf`) as hosted version `20260731160117`, with schema/RLS/grants and
+existing-data preservation verified and Principal/Operations Manager RPC authority verified
+via fully rolled-back hosted SQL transactions; no persisted claims exist. `APPLIED_WITH_
+LIMITATION` was a historical checkpoint: manual authenticated Principal and Operations
+Manager UI verification against the exact PR-head Vercel preview subsequently passed, with
+no claim submitted and all three new tables remaining at zero rows; Staff/Viewer UI
+verification remains unavailable because no such accounts exist, with their denial covered
+by the PostgreSQL and capability test matrices instead. This maintained product contract
+does not by
 itself authorise deployment. BD-FIN-01A is the first implementation slice of BD-FIN-01. It records what
 Botanique is expected or authorised to pay for an internal project cost and its decision
 history before any actual money movement is introduced.

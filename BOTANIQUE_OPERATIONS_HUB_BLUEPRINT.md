@@ -341,21 +341,25 @@ as the narrow first slice and Operational Expenditure deferred to a separate sec
 
 ### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-**Implementation state: APPLIED_WITH_LIMITATION.** PR #48 (branch
+**Implementation state: ACTIVE_VERIFIED (2026-07-31).** PR #48 (branch
 `feat/bd-fin-01a-internal-cost-claims`; implementation commit
-`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head after hosted-verification
-documentation `48f1a53c551ee8f20d7579703800f08aed7a2f66`) is
+`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head
+`83b11356232af923c1d70266e49a4b9e1f01f383`) is
 based on `d5986af66bec550567408e99b61d170607daee75` and adds migration
 `20260731000200_internal_cost_claims.sql`, a PostgreSQL 17 authority matrix and the Site
-Costs admin surfaces. The PR remains open, draft and unmerged. The migration has been
-applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`) on 2026-07-31 as hosted version
+Costs admin surfaces. **The PR itself remains open, draft and unmerged** — this status
+describes hosted and authenticated verification, not merge state. The migration has been
+applied to hosted `botanique-admin` (`wcacyfyxjiysfibuuhgf`) as hosted version
 `20260731160117`; schema, RLS, grants and existing-data preservation were verified with no
-unexpected change to any existing table, and all three new tables remain at zero rows.
-Principal/Operations Manager RPC authority was verified via fully rolled-back hosted SQL
-transactions (no persisted claims); authenticated UI-session verification on the Vercel
-preview was not performed, since it requires entering a real account password. Its purpose
-is to establish an authoritative internal project-cost obligation and immutable decision
-history before any money movement.
+unexpected change to any existing table. `APPLIED_WITH_LIMITATION` was a historical
+checkpoint: manual authenticated Principal and Operations Manager UI verification against
+the exact PR-head Vercel preview subsequently passed (navigation, project scoping, the
+direct-authorisation and manager claim forms, and the Daily Site copy-to-draft flow, on
+desktop and mobile, with no console errors), with all three new tables remaining at zero
+rows and no claim submitted. Staff/Viewer UI verification remains unavailable because no
+such accounts exist; their denial is covered by the PostgreSQL and capability test matrices.
+Its purpose is to establish an authoritative internal project-cost obligation and immutable
+decision history before any money movement.
 
 The aggregate is a project-scoped claim with an optional Daily Site source, one recipient
 or crew, one category, one or more structured lines, a service/work date, purpose, KES total
