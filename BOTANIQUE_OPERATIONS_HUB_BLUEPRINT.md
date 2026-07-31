@@ -341,10 +341,9 @@ as the narrow first slice and Operational Expenditure deferred to a separate sec
 
 ### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-**Implementation state: ACTIVE_VERIFIED (2026-07-31).** PR #48 (branch
-`feat/bd-fin-01a-internal-cost-claims`; implementation commit
-`74a25babc411ef42a38dad882d14e00261aca32e`; current PR head
-`83b11356232af923c1d70266e49a4b9e1f01f383`) is
+**Implementation state: ACTIVE_VERIFIED (2026-07-31).** PR #48 contains the implementation
+introduced by commit `74a25babc411ef42a38dad882d14e00261aca32e` (see the PR itself, not this
+document, for its live head and merge state). It is
 based on `d5986af66bec550567408e99b61d170607daee75` and adds migration
 `20260731000200_internal_cost_claims.sql`, a PostgreSQL 17 authority matrix and the Site
 Costs admin surfaces. **The PR itself remains open, draft and unmerged** — this status
