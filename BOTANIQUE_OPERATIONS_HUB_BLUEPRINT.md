@@ -341,8 +341,12 @@ as the narrow first slice and Operational Expenditure deferred to a separate sec
 
 ### 4.10 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-BD-FIN-01A is the approved first finance slice, but this documentation revision authorises
-no implementation. Its purpose is to establish an authoritative internal project-cost
+**Implementation state: IMPLEMENTED_IN_DRAFT.** The proposed branch
+`feat/bd-fin-01a-internal-cost-claims` is based on
+`d5986af66bec550567408e99b61d170607daee75` and adds migration
+`20260731000200_internal_cost_claims.sql`, a PostgreSQL 17 authority matrix and the Site
+Costs admin surfaces. It is not merged or hosted-applied; production and hosted records are
+unchanged. Its purpose is to establish an authoritative internal project-cost
 obligation and immutable decision history before any money movement.
 
 The aggregate is a project-scoped claim with an optional Daily Site source, one recipient
@@ -357,7 +361,7 @@ The compact authoritative lifecycle is `draft`, `awaiting_review`,
 resubmission are events that enter `awaiting_review`. Funding, payment and reconciliation
 progress are deferred derived states, not claim lifecycle values.
 
-Daily Site remains the operational planning source. A future explicit **Create cost claim**
+Daily Site remains the operational planning source. The draft implementation's explicit **Create cost claim**
 action may copy project, date, source version and planning context to an editable draft; it
 never creates a claim automatically. Later Daily Site changes cannot rewrite submitted or
 approved claims, finance cannot rewrite Daily Site history, and one entry may support

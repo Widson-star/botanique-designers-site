@@ -2118,6 +2118,15 @@ Payments and Site-Funds Control.** No internal-finance ledger exists yet. This
 documentation cleanup authorises no table, UI, migration, RLS, function, hosted mutation or
 deployment.
 
+**BD-FIN-01A implementation status: IMPLEMENTED_IN_DRAFT.** Branch
+`feat/bd-fin-01a-internal-cost-claims`, based on authoritative main
+`d5986af66bec550567408e99b61d170607daee75`, contains the proposed additive migration
+`20260731000200_internal_cost_claims.sql`, its isolated PostgreSQL 17 matrix, the role-
+scoped **Site Costs** admin module and explicit Daily Site copy action. This classification
+means code exists for review only: it is not merged, not production-live, and the migration
+has not been applied to hosted `botanique-admin`. No hosted record was created or changed.
+Simple Invoice Manager and Apicora are unchanged.
+
 The approved first implementation slice is **BD-FIN-01A — Internal Cost Claims and
 Principal Decision**. It establishes an authoritative internal cost obligation and decision
 history before money movement. It includes project-scoped claims; one recipient or crew per
@@ -2132,7 +2141,7 @@ withdrawn and cancelled. Submission/resubmission are immutable events leading to
 review. Planned, claimed, submitted, approved, released, paid and reconciled remain distinct;
 funding, payment and reconciliation progress are deferred derived states.
 
-Daily Site remains the operational planning source. A future explicit **Create cost claim**
+Daily Site remains the operational planning source. The draft implementation's explicit **Create cost claim**
 action may copy project, date, source version and planning context into a separate editable
 draft. No estimate automatically becomes a liability or actual spend; later Daily Site
 changes cannot rewrite submitted/approved claims; finance cannot rewrite Daily Site history;

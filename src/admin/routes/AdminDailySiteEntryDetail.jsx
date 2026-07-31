@@ -12,6 +12,7 @@ import {
   canVoidDailyEntry,
   canEditDailyDraft,
 } from "../utils/dailySiteCapabilities";
+import { canCopyDailySiteToCost } from "../utils/siteCostCapabilities";
 import {
   DISPOSITION_LABELS,
   ENTRY_EVENT_LABELS,
@@ -186,6 +187,11 @@ export default function AdminDailySiteEntryDetail() {
       {/* Actions */}
       {!showCorrect && !showSupersede && (
         <section className="flex flex-wrap gap-2">
+          {canCopyDailySiteToCost(entry, role) && (
+            <Link to={`/admin/site-costs/new?dailySiteEntryId=${encodeURIComponent(entry.id)}`} className="rounded-md border border-botanique-green px-4 py-2 text-sm font-semibold text-botanique-green hover:bg-[#edf2ef]">
+              Create cost claim
+            </Link>
+          )}
           {canEditDailyDraft(role, entry, currentUserId) && (
             <Link to={`/admin/daily-site-operations/${entry.id}/edit`} className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
               Edit draft

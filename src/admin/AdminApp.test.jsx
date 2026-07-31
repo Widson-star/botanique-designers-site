@@ -36,6 +36,10 @@ vi.mock("./context/DailySiteOperationsProvider", () => ({
   default: ({ children }) => children,
 }));
 
+vi.mock("./context/SiteCostsProvider", () => ({
+  default: ({ children }) => children,
+}));
+
 vi.mock("./AdminLayout", () => ({
   default: ({ role, onSignOut }) => (
     <div>

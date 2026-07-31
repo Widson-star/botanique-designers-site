@@ -487,8 +487,11 @@ The founder has resolved the five previously open decisions; they are now author
 
 ### 4.6 BD-FIN-01A — Internal Cost Claims and Principal Decision
 
-**Status: product contract approved; implementation not authorised by this documentation
-revision.** BD-FIN-01A is the first implementation slice of BD-FIN-01. It records what
+**Status: product contract approved; IMPLEMENTED_IN_DRAFT on
+`feat/bd-fin-01a-internal-cost-claims`; not merged, not hosted-applied and not production-
+live.** The separately authorised implementation is proposed from authoritative base
+`d5986af66bec550567408e99b61d170607daee75`; this maintained product contract does not by
+itself authorise deployment. BD-FIN-01A is the first implementation slice of BD-FIN-01. It records what
 Botanique is expected or authorised to pay for an internal project cost and its decision
 history before any actual money movement is introduced.
 
@@ -513,7 +516,7 @@ immutable events that move the claim to awaiting review. Funded, partially funde
 partially paid and reconciled are not claim lifecycle states; they are deferred, derived
 states belonging to later money-movement domains.
 
-Daily Site remains the operational planning source. A future explicit **Create cost claim**
+Daily Site remains the operational planning source. The draft implementation's explicit **Create cost claim**
 action may copy project, date, source version and planning context into a separate editable
 finance draft. There is no automatic claim creation. A Daily Site estimate never becomes a
 liability or actual expenditure by itself; later Daily Site changes cannot silently alter a
