@@ -2678,10 +2678,9 @@ Hub code/database. Changed files: `CAMPAIGN_LAUNCH_PACK_2026-07-27.md` (new),
 
 ## BD-OPERATIONS-HUB-01 — Phase 1B-A4: Project Material Change Approvals and Manager Project-Scope Control
 
-Status: **REPAIRED_WITH_FINAL_FOCUSED_REVERIFICATION_PENDING** (31 July 2026; draft PR;
-corrective migration `20260731000100` applied and structurally/business-integrity verified
-on hosted Supabase). Expanded Approvals is not `ACTIVE_VERIFIED` until the final focused
-authenticated Principal/Operations Manager reverification is complete.
+Status: **ACTIVE_VERIFIED** (31 July 2026; draft PR; corrective migration
+`20260731000100` applied once, structurally verified and authenticated on the exact PR
+preview). PR #44 remains draft and unmerged pending founder-authorised merge.
 
 Baseline `main`: `24154fee4a163378201a6db0e1d94006287c88ae`. Branch:
 `feat/bd-project-material-change-approvals`; corrective evidence head before this authority
@@ -2828,15 +2827,39 @@ lifecycle types still working, and Daily Site RLS unaffected. The existing appro
 and daily-site matrices still pass. Frontend: `vitest` full suite green (249+),
 `eslint` introduces no new errors, `npm run build` prerenders successfully.
 
-Remaining prerequisite before `ACTIVE_VERIFIED`: a focused authenticated pass on the
-deployed final PR head as Principal and Martine Lotom. It must reload the existing approved,
-rejected and withdrawn terminal intakes for owner/requester visibility; confirm unrelated
-manager denial; confirm terminal approval/intake detail has no stale warning; confirm stale
-or malformed mutation failures release `Working…` and show the repaired message; confirm
-manager status remains proposal-only while owner direct authority and established lifecycle
-proposal paths remain available; and finish with a clean console plus unchanged 12/10/2 and
-4/14/0 fingerprints. It must not create or reuse a genuine project or alter the archived
-fixtures without separate explicit authority.
+**Final focused authenticated reverification (31 July 2026).** On exact preview head
+`df5ea4eba0a278f00c311f0e93bbc95dfde6c978`, the authenticated Principal and Martine
+Lotom each directly opened, reloaded, navigated away from and returned to all three existing
+terminal intake routes. Approved/rejected/withdrawn state, requester, request round and full
+immutable history remained readable; the approved record exposed a human-readable
+`Open project` link without using the UUID as its primary label. No invalid terminal controls,
+stale warning, blank state, redirect loop or access loss appeared. Existing approved/rejected
+material-change and pause/resume/accountable-lead terminal routes likewise remained readable
+without an obsolete stale banner. Browser consoles for both accounts contained no React
+error, uncaught TypeError, hydration failure, blocking Supabase error, warning or error.
+
+Martine's Lugulu edit route rendered project identity, current status, stage, accountable
+lead and schedule as read-only in the direct operational form; direct save exposed exactly
+`next_action`, `next_action_date`, `blocker` and `notes`, while status and other material
+changes appeared only in the Principal-approval proposal section, with no owner decision
+controls. The Principal Lugulu edit route retained direct status, accountable-lead and
+material controls plus normal `Save changes`, with no manager proposal section. The prior
+read-only database authority evidence remains 3 terminal intakes for owner, 3 for requester
+and 0 for an isolated unrelated actor (`DATABASE_AUTHORITY_VERIFIED`); no third production
+profile was manufactured. Browser request interception was unavailable, so no production
+mutation was attempted for failure simulation; complete frontend coverage proves stale RPC,
+undefined/malformed response, network rejection and Supabase error-object cleanup, including
+lock release, restored controls, understandable errors, no false success and no TypeError.
+
+Post-pass linked queries reproduced every accepted count and fingerprint: projects 12
+(10 genuine + 2 archived fixtures), profiles 2, assignments 0, activities 25, approvals
+5/21, intakes 3/13, Daily Site 4/14/0, zero financial references, zero fixture/Lugulu Daily
+Site entries, and unchanged all/genuine/original/Lugulu/fixture/profile/activity/approval/
+intake/Daily Site/Portfolio/financial hashes. Both migrations remain present exactly once.
+Frontend 36 files / 272 tests, all three isolated PG17 matrices, changed-file lint,
+exact-main lint comparison (same 19 pre-existing findings; zero new), 43-route
+build/prerender and `git diff --check` pass. No project, approval, intake, Daily Site,
+financial, Simple Invoice Manager, public Portfolio or Apicora state was created or changed.
 
 Boundaries: hosted migration applied with business rows unchanged; PR remains draft/unmerged; no financial,
 Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. New/changed
@@ -2971,7 +2994,7 @@ Controlled hosted rollout checklist (completed 30 July 2026):
 Migration ordering: `20260729000100` is strictly the latest of the six repository
 migrations (after `20260728000200`); no collision, no rename required. Lint baseline:
 exact main `24154fee` reports 19 pre-existing errors (`server/index.js` Buffer/process,
-`FadeIn.jsx`, `AppContext.jsx`) and PR #44 reports the same 19 — zero new. PG17
-material matrix + existing Approvals + existing Daily Site matrices pass; frontend
-`vitest` full suite green (251); `npm run build` prerenders 43 routes; `git diff --check`
-clean.
+`PaidConsultancyModal.jsx`, `AppContext.jsx`) and PR #44 reports the same 19 — zero new.
+PG17 material matrix + existing Approvals + existing Daily Site matrices pass; frontend
+`vitest` full suite green (36 files / 272 tests); `npm run build` prerenders 43 routes;
+`git diff --check` clean.

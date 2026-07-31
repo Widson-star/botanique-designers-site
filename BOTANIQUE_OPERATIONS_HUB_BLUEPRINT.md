@@ -404,7 +404,7 @@ The Phase 1B-A1 migration remains technical truth:
 
 This is an audit model, not a general discussion or approvals model.
 
-### 7.1 Phase 1B-A4 — material-change governance (repaired; final focused reverification pending)
+### 7.1 Phase 1B-A4 — material-change governance (ACTIVE_VERIFIED)
 
 The Phase 1B-A4 migration (`20260729000100`) tightens the model above without weakening
 any finance/Daily Site/portfolio boundary:
@@ -460,7 +460,7 @@ Authority corrections applied before the migration security review:
   non-transactional statement, so partial application cannot occur under those methods — see
   the WORKSTREAMS rollout checklist and PITR recovery.
 
-Status: **REPAIRED_WITH_FINAL_FOCUSED_REVERIFICATION_PENDING**. Migration `20260729000100`
+Status: **ACTIVE_VERIFIED**. Migration `20260729000100`
 remains applied once and unchanged. On 31 July 2026, production was re-baselined as 12
 physical project rows: 10 genuine projects plus two archived internal PR #44 verification
 fixtures created during the authorised Codex-controlled verification using the authenticated
@@ -480,11 +480,27 @@ activity, approval, intake, Daily Site, Portfolio or financial row.
 
 The earlier “manager activated directly” result was a zero-row RLS no-op misclassified by
 the regression harness, not a proven production mutation. Repaired tests distinguish
-zero-row no-op, explicit rejection and committed mutation. Frontend stale-error/loading,
-terminal-warning and terminal-intake reload repairs are complete. The PR remains draft and
-must not be `ACTIVE_VERIFIED` until a final focused authenticated Principal/Operations
-Manager pass confirms the deployed repair surfaces without mutating the genuine projects or
-the archived fixtures.
+zero-row no-op, explicit rejection and committed mutation.
+
+Final focused authenticated reverification passed on exact preview head
+`df5ea4eba0a278f00c311f0e93bbc95dfde6c978`. Principal and Martine Lotom each
+reloaded and revisited the approved, rejected and withdrawn terminal intake routes with
+readable state, round, requester and immutable history; the approved project link used the
+human-readable `Open project` label. Existing material and lifecycle terminal approvals
+remained readable without stale warnings or invalid controls. Martine's Lugulu direct form
+contained only the four low-risk fields and routed status/material changes to a proposal;
+Principal retained direct status, accountable-lead and material controls. Both consoles were
+clean. Unrelated-manager denial remains database-authority verified at owner/requester/
+unrelated = 3/3/0. Automated frontend coverage proves stale, malformed/undefined, network
+and Supabase error-object cleanup because safe browser interception was unavailable and no
+production mutation was authorised.
+
+Fresh post-pass linked queries reproduced the 12/10/2 project and 4/14/0 Daily Site
+baseline plus every accepted authority fingerprint; both migrations remain applied exactly
+once. Frontend 36 files / 272 tests, all three PostgreSQL matrices, changed-file lint,
+unchanged exact-main lint baseline, 43-route build/prerender and `git diff --check` pass.
+No project, approval, intake, Daily Site, finance, Simple Invoice Manager, public Portfolio
+or Apicora state changed. PR #44 remains draft and unmerged pending founder-authorised merge.
 
 ## 8. Implementation roadmap and dependencies
 

@@ -551,11 +551,11 @@ future-domain navigation.
 
 ### 5.2 Project Material Change Approvals and Manager Project-Scope Control (Phase 1B-A4)
 
-Status: **REPAIRED_WITH_FINAL_FOCUSED_REVERIFICATION_PENDING** (31 July 2026; draft PR;
-`20260729000100` and corrective `20260731000100` applied once and structurally/business-
-integrity verified on hosted Supabase). Additive to §5.1; the six lifecycle types are
-preserved and never duplicated. Do not classify `ACTIVE_VERIFIED` until the focused
-authenticated Principal/Operations Manager pass is complete.
+Status: **ACTIVE_VERIFIED** (31 July 2026; draft PR; `20260729000100` and corrective
+`20260731000100` applied exactly once, structurally verified and authenticated on exact
+preview head `df5ea4eba0a278f00c311f0e93bbc95dfde6c978`). Additive to §5.1; the six
+lifecycle types are preserved and never duplicated. PR #44 remains draft and unmerged
+pending founder-authorised merge.
 
 The controlled hosted rollout on 30 July 2026 applied only migration `20260729000100`
 through the transactional linked Supabase CLI path after a dry run listed that version
@@ -598,9 +598,28 @@ The earlier “manager activated directly” test result was a harness false pos
 proven production mutation: an out-of-scope fixture was filtered by manager RLS, the UPDATE
 affected zero rows, and the test treated the no-op as success. Repaired tests distinguish a
 zero-row no-op, an explicit rejection and a committed mutation. The independent trigger is
-retained as defence in depth. Stale mutation loading/error handling, terminal warnings and
-terminal intake reload are repaired; focused authenticated reverification of those deployed
-flows remains required.
+retained as defence in depth.
+
+Final focused authenticated reverification passed on 31 July 2026. Principal and Martine
+Lotom each reloaded and revisited the existing approved, rejected and withdrawn intake
+details: terminal state, requester, round, immutable timeline and the approved
+human-readable project link remained available; no stale warning, invalid terminal control,
+blank state, redirect or access loss appeared. Existing approved/rejected material and
+pause/resume/accountable-lead routes remained readable. Principal retained direct status,
+lead and material edit authority with normal Save; Martine's direct form exposed only
+`next_action`, `next_action_date`, `blocker` and `notes`, with status/material changes
+proposal-only and no owner controls. Both consoles were clean. Unrelated-manager denial
+remains `DATABASE_AUTHORITY_VERIFIED` through the isolated 3/3/0 owner/requester/unrelated
+probe; no third profile was created. Browser interception was unavailable, so failure
+cleanup was not manually driven against production; frontend tests cover stale RPC,
+undefined/malformed response, network rejection and Supabase error objects without false
+success, stuck `Working…` or TypeError.
+
+Post-pass counts and every authority fingerprint matched the accepted baseline, including
+12/10/2 projects and Daily Site 4/14/0; no genuine project or fixture changed and no project,
+approval, intake, Daily Site or financial row was created. Frontend 36/272, all three
+isolated PostgreSQL matrices, changed-file lint, the unchanged 19-finding exact-main lint
+baseline, 43-route build/prerender and `git diff --check` passed.
 
 **Verified governance gap.** Beyond the six lifecycle transitions already reserved to the
 owner, a manager could directly change material project **identity, authority and schedule**
