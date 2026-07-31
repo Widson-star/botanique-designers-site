@@ -2114,6 +2114,13 @@ The revised domain model keeps four financial domains separate:
 - Labour Engagements & Payments.
 - Operational Expenditure.
 
+**Future workstream — BD-FIN-01: Daily Site Financial Reconciliation, Labour Payments and
+Site-Funds Control.** This remains outside PR #44 and has no table, UI or migration here. A
+separately authorised design must cover planned labour; named workers; worker scope;
+daily/agreed rates; additional site-funds requests; approved, paid, partially paid, pending
+and disputed amounts; payment reference; payer; recipient; accountable funds held by Martine;
+reimbursement; project attribution; reconciliation state; and immutable payment events.
+
 The existing `project_financial_references` table does not satisfy these four domains.
 `project_activities` remains an immutable audit ledger and is not a chat system; a separate
 future Project Updates & Discussion domain provides auditable asynchronous communication.
@@ -2671,18 +2678,20 @@ Hub code/database. Changed files: `CAMPAIGN_LAUNCH_PACK_2026-07-27.md` (new),
 
 ## BD-OPERATIONS-HUB-01 — Phase 1B-A4: Project Material Change Approvals and Manager Project-Scope Control
 
-Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING** (draft PR; migration
-applied and structurally verified on hosted Supabase; authenticated owner/manager
-workflow verification still pending). Daily Site Operations
-remains **ACTIVE_VERIFIED** (unchanged). Approvals remains a project-lifecycle
-foundation *plus* this expanded, field-level material-change type — it is **not**
-reclassified ACTIVE_VERIFIED until authenticated verification.
+Status: **REPAIRED_WITH_FINAL_FOCUSED_REVERIFICATION_PENDING** (31 July 2026; draft PR;
+corrective migration `20260731000100` applied and structurally/business-integrity verified
+on hosted Supabase). Expanded Approvals is not `ACTIVE_VERIFIED` until the final focused
+authenticated Principal/Operations Manager reverification is complete.
 
 Baseline `main`: `24154fee4a163378201a6db0e1d94006287c88ae`. Branch:
-`feat/bd-project-material-change-approvals`. Additive, forward-only. No hosted
-project mutated; no Daily Site record altered; production `approval_requests` /
-`approval_events` remain 0/0; Simple Invoice Manager unchanged; no financial,
-portfolio-behaviour or Apicora work.
+`feat/bd-project-material-change-approvals`; corrective evidence head before this authority
+update: `579ae345087d8b1a54b7e21ec2b0ecff68ab5f11`. The current physical project count is
+12: **10 genuine operational/portfolio projects** and **2 archived internal PR #44
+verification fixtures**. The fixtures were created during the authorised Codex-controlled
+verification using the authenticated Principal session; they are immutable audit evidence,
+not ordinary founder-created production projects, and are excluded from genuine-project
+counts/fingerprints. Simple Invoice Manager, financial implementation, public Portfolio
+behaviour and Apicora remain unchanged.
 
 **Hosted rollout (30 July 2026).** After the Daily Site migration-history alias was
 reconciled through the official Supabase history-repair mechanism, hosted history was
@@ -2698,6 +2707,75 @@ activities, 0/0 approvals, three Daily Site entries, 11 Daily Site events and ze
 retained identical deterministic fingerprints; both intake tables are empty and the
 migration generated no project activity. Authenticated owner/manager workflow verification
 remains pending, so expanded Approvals is not yet `ACTIVE_VERIFIED`.
+
+**31 July production-baseline reconciliation and corrective rollout.** The legitimate
+production deltas were reconciled before any schema write:
+
+- **Lugulu Residential Home** (`f4c3d970-eaf9-4639-8e53-fdf1088a5855`) is the genuine tenth
+  project: Residential, Lugulu/Bungoma, Ongoing/Implementation, client/site label Eugen
+  Awori, blocker “Sourcing of murram for parking area”, next action “Winding up the planting
+  and housekeeping”, created directly under the authenticated Principal at 06:18:40 UTC
+  (09:18:40 EAT), then assigned to Martine Lotom at 06:21:18 UTC. Its two activity rows are
+  exactly project creation and accountable-lead assignment; no approval or intake created it.
+- The two archived fixture UUIDs remain
+  `bf257eb0-e144-416c-a72e-67dfc09df3ee` and
+  `0197700b-4f86-4b33-94ed-0ee208f100bb`, classified
+  `ARCHIVED_INTERNAL_VERIFICATION_FIXTURE`. Both retain complete audit history, have no Daily
+  Site or financial row and no public Portfolio publication, and were not changed after
+  cleanup.
+- Alego Daily Site entry `b3e1703a-3140-4555-ad2f-0db7ee1fd5f6` is a genuine Martine
+  submission for 31 July: 16 workers × KES 500 = KES 8,000 planned labour, KES 350 additional
+  funds requested, note “350 for mkokoteni”, evidence expected later. Widson Omutelema
+  Ambaisi returned it for correction at 09:12 EAT with the recorded cart/mason/scope and
+  Alego-versus-Lugulu separation instructions. Its created/submitted/returned events explain
+  the Daily Site delta from 3/11/0 to **4/14/0**; it created no payment, liability, approval
+  or fund release and was not mutated by this reconciliation.
+
+The accepted pre-apply counts were projects 12 (10 genuine + 2 fixtures), profiles 2,
+assignments 0, project activities 25, approvals 5/21, intakes 3/13 and Daily Site 4/14/0.
+Authority-compatible fingerprints were: all projects
+`2bbc8c4dff3b2d7bc71407dd2c41ede9`; genuine ten
+`b688a025237d65af78f42ba5576672c9`; original nine
+`4bdcb35ba4017dc7215a9a83fe9b76eb`; Lugulu
+`a6cb9e443a479b226fe1cd26c53c88bc`; fixtures
+`dc4ab01248bb72c31c88f3aafb182ff8` /
+`623f0ae1a9e47e026cb2f10e29c725fd`; profiles
+`2c43244e40d974801b4c1e5419362890`; assignments
+`d751713988987e9331980363e24189ce`; activities
+`a457e5983ef51dea30b237f8941a6182`; approvals
+`7eaf6655a749c966003023268f4458d3` /
+`d3b0c0bf51fcce579a6fefe6ed4aed78`; intakes
+`fe0e6d69e062e941aaef5184456790f8` /
+`702eb1a6a9732a45228aa126eaf198e5`; Daily Site entries/events/waivers
+`f4d0816b122bb5598a391fe007289d7b` /
+`c0c5cb29aa1bebf921c1da8a0e772224` /
+`d751713988987e9331980363e24189ce`; Alego entry
+`942d4b0d21c99a99d5b3cb8f6ae13167`; Portfolio all/genuine
+`dba2e833eb8a85f997e52b33d84071ed` /
+`cc787b037f0b906cf61534aa93718993`; financial references
+`d751713988987e9331980363e24189ce`.
+
+CLI `2.109.1` dry-run listed only
+`20260731000100_operations_hub_pr44_verification_repairs.sql`. The linked transactional
+apply ran from 07:01:59–07:02:21 UTC and recorded `20260731000100` exactly once. The
+migration adds the independent manager direct-status trigger and re-states terminal-intake
+owner/requester visibility; it is forward-only, contains no finance/Daily Site linkage or
+Portfolio-publication change, and uses no non-transactional statement. Post-apply the new
+trigger was enabled with fixed `search_path = public` and no public/anon/authenticated direct
+execute grant. A manager-authorised Lugulu direct-status probe was explicitly rejected,
+affected zero rows and left status/activity unchanged. Terminal intake reads returned 3 for
+the owner, 3 for the requester and 0 for an unrelated actor. All counts and every fingerprint
+above matched pre-apply exactly, proving zero migration-generated project, activity,
+approval, intake, Daily Site, Portfolio or financial row.
+
+**Correct test interpretation.** The earlier “manager activated directly” result was not a
+confirmed production status mutation. The regression fixture was outside manager RLS scope;
+the UPDATE affected zero rows and the defective harness reported that no-op as success.
+Repaired tests now distinguish zero-row no-op, explicit permission rejection and successful
+committed mutation. The independent status trigger remains a valid defence-in-depth control.
+The frontend repairs also clear in-flight/loading state for stale/malformed failures, suppress
+stale warnings after terminal decisions and reload terminal intake detail through an
+RLS-scoped direct fetch.
 
 **Verified governance gap closed.** The interim Phase 1B-A1 boundary already
 reserved the six lifecycle transitions (activation, target completion, completion,
@@ -2750,10 +2828,15 @@ lifecycle types still working, and Daily Site RLS unaffected. The existing appro
 and daily-site matrices still pass. Frontend: `vitest` full suite green (249+),
 `eslint` introduces no new errors, `npm run build` prerenders successfully.
 
-Remaining prerequisite before ACTIVE_VERIFIED: authenticated preview verification as owner
-**and** manager (visibility scoping, a material-change proposal round-trip, an intake
-round-trip, activity wording); re-confirm production `approval_requests`/
-`approval_events` counts and the nine untouched projects.
+Remaining prerequisite before `ACTIVE_VERIFIED`: a focused authenticated pass on the
+deployed final PR head as Principal and Martine Lotom. It must reload the existing approved,
+rejected and withdrawn terminal intakes for owner/requester visibility; confirm unrelated
+manager denial; confirm terminal approval/intake detail has no stale warning; confirm stale
+or malformed mutation failures release `Working…` and show the repaired message; confirm
+manager status remains proposal-only while owner direct authority and established lifecycle
+proposal paths remain available; and finish with a clean console plus unchanged 12/10/2 and
+4/14/0 fingerprints. It must not create or reuse a genuine project or alter the archived
+fixtures without separate explicit authority.
 
 Boundaries: hosted migration applied with business rows unchanged; PR remains draft/unmerged; no financial,
 Simple-Invoice-Manager, public-portfolio-behaviour or Apicora work. New/changed
@@ -2796,9 +2879,9 @@ keys, malformed UUIDs and empty proposals; authoritative original snapshots; sta
 protection; owner-only decisions with no manager/requester self-approval; atomic apply;
 scoped manager RLS; separate-table intake isolation. Added DB concurrency-guard tests (decide-
 twice, withdraw-vs-approve, duplicate intake approval creates no duplicate project) and
-hostile-JSON tests. Migration `20260729000100` is now applied and remains strictly the
-latest of the six repository migrations (no collision/rename); authenticated workflow
-verification remains pending.
+hostile-JSON tests. Migration `20260729000100` remains applied once and unchanged; corrective
+migration `20260731000100` is now the seventh and latest repository/hosted migration with no
+version collision. Final focused authenticated reverification remains pending.
 
 **No-self-approval correction (same PR #44 branch).** Governance fix: the owner edits and
 creates projects **directly** and must never submit a manager-style proposal that they, as

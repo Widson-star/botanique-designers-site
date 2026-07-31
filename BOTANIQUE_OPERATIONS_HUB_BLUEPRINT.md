@@ -404,7 +404,7 @@ The Phase 1B-A1 migration remains technical truth:
 
 This is an audit model, not a general discussion or approvals model.
 
-### 7.1 Phase 1B-A4 — material-change governance (hosted apply complete; authenticated verification pending)
+### 7.1 Phase 1B-A4 — material-change governance (repaired; final focused reverification pending)
 
 The Phase 1B-A4 migration (`20260729000100`) tightens the model above without weakening
 any finance/Daily Site/portfolio boundary:
@@ -460,14 +460,31 @@ Authority corrections applied before the migration security review:
   non-transactional statement, so partial application cannot occur under those methods — see
   the WORKSTREAMS rollout checklist and PITR recovery.
 
-Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING**. Migration `20260729000100`
-was applied once through the transactional linked Supabase CLI path on 30 July 2026 after
-the dry run listed that migration alone. Hosted structural verification passed for tables,
-functions, ownership, fixed search paths, triggers, RLS and grants. Pre/post deterministic
-fingerprints confirmed all project, profile, assignment, project-activity, approval and
-Daily Site business rows unchanged; intake tables are empty and no migration-generated
-activity exists. The PR remains draft and expanded Approvals is not yet
-`ACTIVE_VERIFIED`; authenticated owner/manager workflow verification remains pending.
+Status: **REPAIRED_WITH_FINAL_FOCUSED_REVERIFICATION_PENDING**. Migration `20260729000100`
+remains applied once and unchanged. On 31 July 2026, production was re-baselined as 12
+physical project rows: 10 genuine projects plus two archived internal PR #44 verification
+fixtures created during the authorised Codex-controlled verification using the authenticated
+Principal session. Lugulu Residential Home is the genuine tenth project; the genuine
+returned Alego Daily Site entry explains the Daily Site baseline of 4 entries / 14 events /
+0 waivers. The original-nine project fingerprint remains
+`4bdcb35ba4017dc7215a9a83fe9b76eb`.
+
+Corrective migration `20260731000100` was the only linked dry-run item and applied
+transactionally once. It adds an independent `BEFORE UPDATE OF status` manager guard and
+re-states terminal-intake select authority as owner-or-requester for the full immutable
+lifecycle. The trigger is enabled, fixed-search-path and least-privilege; a manager direct
+status probe was rejected with zero affected rows, owner direct authority and established
+lifecycle proposal functions remain, and owner/requester/unrelated terminal reads resolved
+3/3/0. Every pre/post business fingerprint matched: the migration created no project,
+activity, approval, intake, Daily Site, Portfolio or financial row.
+
+The earlier “manager activated directly” result was a zero-row RLS no-op misclassified by
+the regression harness, not a proven production mutation. Repaired tests distinguish
+zero-row no-op, explicit rejection and committed mutation. Frontend stale-error/loading,
+terminal-warning and terminal-intake reload repairs are complete. The PR remains draft and
+must not be `ACTIVE_VERIFIED` until a final focused authenticated Principal/Operations
+Manager pass confirms the deployed repair surfaces without mutating the genuine projects or
+the archived fixtures.
 
 ## 8. Implementation roadmap and dependencies
 

@@ -551,10 +551,11 @@ future-domain navigation.
 
 ### 5.2 Project Material Change Approvals and Manager Project-Scope Control (Phase 1B-A4)
 
-Status: **APPLIED_WITH_AUTHENTICATED_VERIFICATION_PENDING** (draft PR; migration
-`20260729000100` applied and structurally verified on hosted Supabase; authenticated
-owner/manager workflow verification pending). Additive to §5.1; the six lifecycle types
-are preserved and never duplicated.
+Status: **REPAIRED_WITH_FINAL_FOCUSED_REVERIFICATION_PENDING** (31 July 2026; draft PR;
+`20260729000100` and corrective `20260731000100` applied once and structurally/business-
+integrity verified on hosted Supabase). Additive to §5.1; the six lifecycle types are
+preserved and never duplicated. Do not classify `ACTIVE_VERIFIED` until the focused
+authenticated Principal/Operations Manager pass is complete.
 
 The controlled hosted rollout on 30 July 2026 applied only migration `20260729000100`
 through the transactional linked Supabase CLI path after a dry run listed that version
@@ -565,6 +566,41 @@ assignments, existing project activities, approvals and Daily Site rows unchange
 approval rows remain 0/0, intake rows remain 0/0, and no migration-generated project
 activity exists. Expanded Approvals is not `ACTIVE_VERIFIED` until authenticated owner and
 manager workflow verification is complete.
+
+The revised production baseline is 12 physical project rows: 10 genuine
+operational/portfolio projects and two archived PR #44 fixtures
+(`bf257eb0-e144-416c-a72e-67dfc09df3ee`,
+`0197700b-4f86-4b33-94ed-0ee208f100bb`). The fixtures are
+`ARCHIVED_INTERNAL_VERIFICATION_FIXTURE` records created during the authorised
+Codex-controlled verification using the authenticated Principal session. They remain
+immutable audit evidence and are excluded from genuine-project reporting; neither has a
+Daily Site/financial/public-Portfolio record. The original-nine fingerprint remains
+`4bdcb35ba4017dc7215a9a83fe9b76eb`.
+
+The genuine tenth project is Lugulu Residential Home
+(`f4c3d970-eaf9-4639-8e53-fdf1088a5855`), created directly under the authenticated
+Principal and subsequently assigned to Martine Lotom; no approval or intake created it.
+The genuine 31 July Alego Daily Site entry
+`b3e1703a-3140-4555-ad2f-0db7ee1fd5f6` is returned for correction and its three immutable
+events explain the Daily Site change from 3/11/0 to 4/14/0. It is an operational planning
+record only: no payment, liability, approval or fund release was created.
+
+Corrective migration `20260731000100` was the only linked dry-run item and applied
+transactionally from 07:01:59–07:02:21 UTC with Supabase CLI 2.109.1. It adds an independent
+manager direct-status guard and repairs terminal-intake owner/requester visibility. The
+enabled fixed-search-path trigger rejected a manager-authorised Lugulu status attempt with
+zero affected rows; terminal intake reads returned all three rows for owner/requester and
+zero for an unrelated actor. Every pre/post count and fingerprint matched, including all
+12 projects, genuine ten, original nine, Lugulu, both fixtures, activities, approvals,
+intakes, Daily Site, Portfolio and zero financial references.
+
+The earlier “manager activated directly” test result was a harness false positive, not a
+proven production mutation: an out-of-scope fixture was filtered by manager RLS, the UPDATE
+affected zero rows, and the test treated the no-op as success. Repaired tests distinguish a
+zero-row no-op, an explicit rejection and a committed mutation. The independent trigger is
+retained as defence in depth. Stale mutation loading/error handling, terminal warnings and
+terminal intake reload are repaired; focused authenticated reverification of those deployed
+flows remains required.
 
 **Verified governance gap.** Beyond the six lifecycle transitions already reserved to the
 owner, a manager could directly change material project **identity, authority and schedule**
