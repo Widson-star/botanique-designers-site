@@ -1622,6 +1622,13 @@ BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain separately gated and unimplemented
 **BD-FIN-01B2 implementation is additionally paused** pending the 1 August 2026
 information-architecture authority recorded below; its approved product conclusions stand
 unchanged and are not reopened by that pause.
+Against the twelve-stage sequence in that authority: stage 1 (information architecture) and
+stage 2 (read-only backup and recovery posture verification) are recorded below; **stage 3
+(Work Inbox and Notifications authority) remains outstanding**; **stage 4A (Reports and
+Derived-Summary Authority) is documentation authority only**, establishing
+**BD-REPORTS-01A — Project Summary and Current-Authority Reporting** with **execution not
+authorised** and stages 4B, 4C and 4D separately gated; stages 5–12 remain unauthorised. No
+Reports code, migration, view, route or component exists.
 No new Operations Hub master register is required: this entry remains
 the execution and live-state register, the Product Requirements remain founder-requirements
 authority, and the Blueprint remains architecture/system-of-record authority.
@@ -1909,6 +1916,158 @@ permission, member, backup, Storage object, deployment, DNS record or configurat
 altered or deleted by it. No code, migration or RLS policy is changed. No Apicora project is
 inspected or altered. **BD-FIN-01B2 is neither reopened nor weakened**, and every settled
 BD-FIN-01B2 decision stands unchanged.
+
+### 2 August 2026 — Stage 4A: Reports and Derived-Summary Authority (documentation only)
+
+**Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026. Execution: not
+authorised.** This is **stage 4A of the twelve-stage sequence** recorded in the 1 August 2026
+information-architecture authority above. The stage order is **unchanged and not reordered**:
+stage 3 (Work Inbox and Notifications authority and implementation planning) remains
+**outstanding** and is not superseded, absorbed or replaced by this entry. Stages 5–12 are
+unchanged and unauthorised.
+
+Status: **Documentation authority only.** This entry authorises no application code, route,
+component, migration, RLS policy, function, view, grant, test, hosted mutation or deployment.
+No hosted Supabase, Vercel, Render, Google Workspace or DNS system was accessed while it was
+written. Exactly three files changed: this register,
+`BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md` and
+`BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md`. Authoritative base `main` at the time of writing was
+`ffdc2e1e5c881ae86cd6ff5a15cc43c528e99973`.
+
+**Reports boundary.** Reports is a first-class Operations Hub product area and a controlled
+presentation, analysis and management-summary layer over authoritative source records. It may
+aggregate, calculate, filter, compare, group, present, provide role-authorised drill-through,
+and support future separately authorised printing and exports. It may **not** become another
+editable ledger, independently approve, fund, release funds, record payments or reconcile,
+alter source records, widen access beyond source permissions, or present a fact as stronger
+than its source proves. The originating operational or financial domain remains authoritative.
+The Work Inbox likewise remains an attention and presentation layer, and decisions continue
+through the originating domain or the Approvals workflow.
+
+**Fact classification.** Every report value is an **authoritative fact** (directly represented
+by an implemented source record), a **derived summary** (calculated from authoritative records
+without changing their meaning), or an **unavailable future fact** (dependent on an authority
+or workflow that does not yet exist). An unavailable value must never be displayed as zero
+where zero would falsely imply the value was measured; it must show a clear unavailable state
+or the section must be omitted.
+
+**Currently supportable source facts.** Projects — identity, location, dates, status,
+responsible lead and authorised notes. Daily Site Operations — work plans, work completed,
+submission timing, missing, late and waived status, crew counts, attendance evidence status
+and planned labour. BD-FIN-01A — submitted and approved internal cost claims, categories,
+lifecycle states and frozen recipient or crew snapshots. BD-FIN-01B1 — submitted fund requests,
+approved funding amounts, associated approved claims, intended custody model and lifecycle
+states. Approvals and immutable events — current decision state, requester, authority,
+submission date, decision date, amendment history and event history.
+
+**Not currently supportable, and not to be reported, implied or shown as zero:** funds
+released; payments made; unpaid authoritative obligations; actual project expenditure;
+accountable advances; reconciled or unreconciled balances; cash held by a custodian; project
+profit or loss; complete project financial position; complete employee or subcontractor
+compensation; complete Operations Manager compensation; authoritative material procurement
+requirements; stored Documents & Evidence; and client invoice, receipt or commercial balance
+data duplicated by hand from Simple Invoice Manager.
+
+**Report families authorised from current records.** Project Summary; Daily Site Activity;
+Attendance and Workforce Summary; Internal Cost Claims; Fund Requests; Approvals and Decisions;
+Management Attention Summary; Project Activity Timeline. Later finance, People, materials,
+payments, reconciliation and document reports may appear in the product taxonomy but must
+remain visibly future and must never be presented as active authoritative capabilities.
+
+**First implementation slice: BD-REPORTS-01A — Project Summary and Current-Authority
+Reporting.** Purpose: a project-centred, date-filtered management report derived only from
+already-authoritative Operations Hub records. Minimum future product surface: a Reports
+navigation entry; a project selector; a reporting-period selector; a responsive desktop and
+mobile Project Summary; role-authorised drill-through to originating records; clear empty
+states; clear unavailable states; and no editable report totals. Initial sections: Project
+Overview; Needs Attention; Daily Site Activity; Attendance and Planned Labour; Internal Cost
+Claims; Fund Requests; Approvals and Decisions; Recent Activity.
+
+**Explicitly excluded from BD-REPORTS-01A:** fund-release implementation; payment
+implementation; reconciliation implementation; client-invoice integration; a generic materials
+domain; document upload; PDF generation; export implementation; stored report snapshots;
+generated-document custody; any new generic project-event entry model; any duplicate finance
+ledger; and any hosted-system mutation.
+
+**Required terminology, binding across dashboards, mobile views, reports and future printing
+and exports.** Planned labour amount is not labour paid; recorded attendance is not payroll
+attendance; cost submitted is not amount owed; internal cost approved is not amount spent;
+funding requested is not cash immediately required; funding authorised is not funds released;
+fund release is not payment; payment recorded is not reconciled; estimate issued is not
+revenue; invoice issued is not payment received; payment received is not profit; and expected
+project cost is not actual project spend.
+
+**Calculation and lifecycle rules.** Drafts are excluded from official totals; submitted
+records appear only in separately labelled pending figures; approved records contribute to
+approved totals; rejected, withdrawn and returned records do not; superseded versions do not,
+and only the current authoritative version contributes; historical versions remain available
+through event history; records must not be double-counted through amendments or linked
+workflows; each report definition must state which date controls period inclusion; and no
+currency conversion is authorised unless separately approved.
+
+**Live reports and snapshots.** Standard reports and dashboards calculate live from current
+authoritative records. Selecting filters creates no authoritative record, and a report is not
+a second ledger. Future printing is a presentation of the underlying records. A stored,
+signed, issued or immutable report snapshot is a **separate future capability**, deferred
+pending decisions on issuance, supersession, numbering, custody, retention and reproduction.
+Documents & Evidence constraints continue to apply.
+
+**Role boundaries.** The Principal may view all authorised Botanique project reports,
+portfolio-wide management summaries, sensitive authorised cost and funding figures, and
+cross-project comparisons and approval histories. The Operations Manager may view authorised
+managed projects, Daily Site, attendance and planned-labour summaries, and cost claims and
+fund requests only within existing source permissions, together with returned records and
+required actions; he must not automatically receive unrestricted company-wide finance,
+banking data, client-commercial information or unrelated-project sensitive information.
+Project Team and read-only users receive only expressly authorised report sections and inherit
+source-record visibility. **A report must never expand source permissions.**
+
+**Drill-through and actions.** Report counts and totals should link to the exact originating
+records or correctly filtered lists, never to a generic administration landing page where a
+precise source route exists. BD-REPORTS-01A introduces no independent inline approval control;
+any future inline decision is a presentation convenience only and executes through the
+originating domain.
+
+**Mobile.** Mobile is a primary reporting environment. The Project Summary uses stacked cards
+rather than compressed desktop tables; amount, state, project and attention information stay
+visible; touch targets are usable; horizontal scrolling is not required for the primary mobile
+workflow; and drill-through preserves project context.
+
+**Simple Invoice Manager boundary.** Simple Invoice Manager remains the external source of
+truth for existing estimates, invoices, receipts and client balances unless a future
+integration is separately authorised. No manual duplication is authorised merely to populate
+Operations Hub reporting. Any future integration must separately define identity matching,
+direction of authority, synchronisation timing, failure behaviour, cancellations, amendments
+and audit evidence.
+
+**Documents and backup constraint.** Report-file custody, generated PDFs and stored exports
+remain outside BD-REPORTS-01A. **Documents & Evidence remains blocked** until an independent
+Storage backup is approved, implemented and restore-tested. A live report may exist without
+storing a generated document, and future document generation must not become an unprotected
+evidence repository. The backup and recovery posture remains
+`PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS` and is not upgraded by this entry.
+
+**Next gated stages within stage 4.** (4A) this documentation authority; (4B) read-only
+repository and data-readiness inspection; (4C) technical implementation authority;
+(4D) implementation. **Stage 4B must inspect existing data structures, routes, RLS policies,
+role boundaries, status semantics, currency and date rules before any Reports code is
+authorised.** No table, view, function, index, route, API or component is named or authorised
+by this entry, because none has yet been inspected. 4B, 4C and 4D each require their own
+authority, branch, review and deployment gate.
+
+**Execution remains not authorised.** This entry changes no hosted system, no database, no
+RLS policy, no configuration and no application code. **BD-FIN-01B2 remains paused** and every
+settled BD-FIN-01B2 decision stands unchanged and unreopened, including that
+`release_authority_closed` increments the request version; that no separate
+`custody_model_overridden` event is needed; that the earlier provisional reversal-status
+promise is superseded with real reversals remaining BD-FIN-01D; that release eligibility must
+not require project status `Ongoing`; that closure of unused release authority is final and
+cannot be reopened; that direct-recipient releases reference exactly one existing
+`fund_request_allocation`, inherit its frozen recipient snapshot and are capped at that
+allocation's approved requested amount; and that the Work Inbox remains presentation only with
+decisions executing through the originating domain or the Approvals workflow. Full founder
+requirements are in the Product Requirements §§18.1–18.13; full architecture is in the
+Blueprint §§12.1–12.10. No Apicora project content is affected.
 
 ### Phase 1A — Lead Data and RLS Foundation
 

@@ -1345,6 +1345,258 @@ restriction that applies to the underlying record.
 **Not authorised by this section:** PDF generation, export implementation, or any report
 code.
 
+### 18.1 Reports and derived summaries — Stage 4A authority (2 August 2026)
+
+Sections 18.1–18.13 are the **Stage 4 — Reports and Derived-Summary Authority** founder
+requirements, approved 2 August 2026 by Widson Omutelema Ambaisi and recorded in
+`WORKSTREAMS.md`. They are requirements, not implementation claims, and they authorise no
+application code, route, component, migration, RLS policy, function, test, hosted mutation or
+deployment. They refine and extend the report families listed above without replacing them.
+The delivery sequence in §23 is unchanged and is not reordered: this is stage 4 of that
+sequence, stage 3 (Work Inbox and Notifications authority and implementation planning)
+remains outstanding and is neither superseded nor absorbed, and no later stage is authorised.
+
+**Product purpose.** Reports is a first-class Operations Hub product area whose purpose is to
+present, analyse and summarise authoritative source records for management use. Reports is a
+controlled presentation, analysis and management-summary layer, never a second place where
+operational or financial truth is created.
+
+Reports **may** aggregate, calculate, filter, compare, group and present; may provide
+role-authorised drill-through to the originating records; and may support future separately
+authorised printing and exports.
+
+Reports **may not** become another editable ledger; may not independently approve, fund,
+release funds, record payments or reconcile; may not alter source records; may not widen
+access beyond source permissions; and may not present a fact as stronger than its source
+proves. The originating operational or financial domain remains authoritative in every case.
+
+The Work Inbox (§14) remains an attention and presentation layer on the same terms. Decisions
+continue to execute through the originating domain or the Approvals workflow, and nothing in
+this section moves decision authority into a report.
+
+### 18.2 Fact classification
+
+Every value shown in any report, dashboard, summary or future printed output must be one of
+exactly three kinds, and the interface must not blur them:
+
+1. **Authoritative fact** — directly represented by an implemented source record.
+2. **Derived summary** — calculated from authoritative records without changing their meaning.
+3. **Unavailable future fact** — dependent on a source authority or workflow that does not yet
+   exist.
+
+**An unavailable value must never be displayed as zero where zero would falsely imply that the
+value was measured.** A report must either show a clear unavailable state that names the
+missing authority, or omit the section entirely. "KES 0 paid" where no payments domain exists
+is a false statement of fact, not an empty state.
+
+### 18.3 Source-of-truth contract
+
+The following facts are currently supportable from implemented, verified source records:
+
+- **Projects** — project identity, location, dates, status, responsible lead and authorised
+  project notes.
+- **Daily Site Operations** — work plans, work completed, submission timing, missing, late and
+  waived status, crew counts, attendance evidence status, and planned labour.
+- **BD-FIN-01A Internal Cost Claims** — submitted internal cost claims, approved internal cost
+  claims, cost categories, lifecycle states, and frozen recipient or crew snapshots.
+- **BD-FIN-01B1 Claim-Backed Fund Requests** — submitted fund requests, approved funding
+  amounts, the approved claims a request is associated with, the intended custody model, and
+  lifecycle states.
+- **Approvals and immutable events** — current decision state, requester, deciding authority,
+  submission date, decision date, amendment history and event history.
+
+The following are **not** currently supportable as authoritative facts and must not be
+reported, implied, estimated or shown as zero:
+
+funds released; payments made; unpaid authoritative obligations; actual project expenditure;
+accountable advances; reconciled or unreconciled balances; cash held by a custodian; project
+profit or loss; complete project financial position; complete employee or subcontractor
+compensation; complete Operations Manager compensation; authoritative material procurement
+requirements; stored Documents & Evidence; and client invoice, receipt or commercial balance
+data duplicated by hand from Simple Invoice Manager.
+
+Each of these becomes reportable only when its own domain authority is separately approved and
+implemented — releases under BD-FIN-01B2, payments under BD-FIN-01C, reconciliation under
+BD-FIN-01D, materials and People under their own future authority, Documents & Evidence under
+the constraint in §18.12, and client-commercial data under §18.11.
+
+### 18.4 Report families authorised from current records
+
+The following report families are authorised as derivable from the source-of-truth contract in
+§18.3:
+
+1. Project Summary
+2. Daily Site Activity
+3. Attendance and Workforce Summary
+4. Internal Cost Claims
+5. Fund Requests
+6. Approvals and Decisions
+7. Management Attention Summary
+8. Project Activity Timeline
+
+The wider taxonomy earlier in §18 may continue to identify later finance, People, materials,
+payments, reconciliation and document reports. Those must remain **visibly future** wherever
+they appear and must never be presented as active authoritative capabilities, enabled
+navigation, or empty reports awaiting data.
+
+### 18.5 BD-REPORTS-01A — Project Summary and Current-Authority Reporting
+
+**BD-REPORTS-01A** is the approved first implementation slice of Reports. Its purpose is to
+provide a project-centred, date-filtered management report derived **only** from records that
+are already authoritative in the Operations Hub.
+
+Minimum future product surface:
+
+- a Reports navigation entry, appearing only once the module is functional and authorised;
+- a project selector;
+- a reporting-period selector;
+- a responsive desktop and mobile Project Summary;
+- role-authorised drill-through to the originating records;
+- clear empty states, distinct from unavailable states;
+- clear unavailable states that name the missing authority;
+- no editable report totals.
+
+Initial Project Summary sections: **Project Overview; Needs Attention; Daily Site Activity;
+Attendance and Planned Labour; Internal Cost Claims; Fund Requests; Approvals and Decisions;
+Recent Activity.**
+
+**Explicitly excluded from BD-REPORTS-01A:** fund-release implementation; payment
+implementation; reconciliation implementation; client-invoice integration; a generic materials
+domain; document upload; PDF generation; export implementation; stored report snapshots;
+generated-document custody; any new generic project-event entry model; any duplicate finance
+ledger; and any hosted-system mutation.
+
+### 18.6 Required terminology
+
+These distinctions are binding and must be carried, unchanged, across every dashboard, mobile
+view, report, future printed document and future export:
+
+- planned labour amount is **not** labour paid;
+- recorded attendance is **not** payroll attendance;
+- cost submitted is **not** amount owed;
+- internal cost approved is **not** amount spent;
+- funding requested is **not** cash immediately required;
+- funding authorised is **not** funds released;
+- fund release is **not** payment;
+- payment recorded is **not** reconciled;
+- estimate issued is **not** revenue;
+- invoice issued is **not** payment received;
+- payment received is **not** profit;
+- expected project cost is **not** actual project spend.
+
+This restates and reinforces the vocabulary rules in §17 and does not weaken them. The
+prohibited vocabulary in §17 continues to apply to every report surface.
+
+### 18.7 Calculation and lifecycle rules
+
+Every report definition must obey the following:
+
+- drafts are excluded from official totals;
+- submitted records may appear only in separately labelled pending figures, never folded into
+  an approved total;
+- approved records contribute to approved totals;
+- rejected, withdrawn and returned records do not contribute to approved totals;
+- superseded versions do not contribute to current totals;
+- only the current authoritative version of a record contributes to a current total;
+- historical versions remain available through event history and are not deleted or hidden;
+- records must not be double-counted through amendments, resubmissions or linked workflows —
+  in particular, an approved claim and a fund request that references it are not two costs;
+- each report definition must state **which date controls period inclusion** — for example
+  work date, submission date or decision date — and must not silently mix them;
+- no currency conversion is authorised. All figures are KES unless a separate authority
+  approves otherwise.
+
+### 18.8 Live reports and snapshots
+
+Standard reports and dashboards **calculate live from current authoritative records**.
+Selecting filters, choosing a period or opening a report does not create a new authoritative
+record, and a report is not a second ledger. Future printing is a presentation of the
+underlying records, consistent with §19.
+
+A stored, signed, issued or immutable report snapshot is a **separate future capability**.
+Formal snapshot authority is deferred pending founder decisions on issuance, supersession,
+numbering, custody, retention and reproduction. The Documents & Evidence constraints in §18.12
+apply to any such future capability.
+
+### 18.9 Permissions and role boundaries
+
+A report must never expand source permissions.
+
+*Principal.* May view all authorised Botanique project reports; portfolio-wide management
+summaries; sensitive authorised cost and funding figures; and cross-project comparisons and
+approval histories.
+
+*Operations Manager.* May view authorised managed projects; Daily Site, attendance and
+planned-labour summaries; cost claims and fund requests **only within existing source
+permissions**; and returned records and required actions. Must **not** automatically receive
+unrestricted company-wide finance, banking data, client-commercial information or sensitive
+information about unrelated projects.
+
+*Project Team and read-only users.* Receive only expressly authorised report sections, inherit
+source-record visibility, and never gain additional access merely because data appears in a
+report.
+
+### 18.10 Drill-through, actions and mobile
+
+*Drill-through.* Report counts and totals should link to the exact originating records, or to a
+correctly filtered list of them. A report component must not route a user to a generic
+administration landing page where a precise source route exists.
+
+*Actions.* BD-REPORTS-01A must not introduce independent inline approval controls. Any future
+inline decision remains a presentation convenience only and must execute through the
+originating domain under the same role, project-scope and version checks, consistent with §14.
+
+*Mobile.* Mobile is a **primary reporting environment**, not a compressed desktop view. The
+Project Summary should use stacked cards rather than compressed desktop tables. Important
+amount, state, project and attention information must remain visible without expansion.
+Touch targets must be usable. Horizontal scrolling must not be required for the primary mobile
+workflow. Drill-through must preserve project context and allow a safe return. This is the
+§21 mobile authority applied to Reports, not a relaxation of it.
+
+### 18.11 Simple Invoice Manager boundary
+
+Simple Invoice Manager remains the **external source of truth** for existing estimates,
+invoices, receipts and client balances unless a future integration is separately authorised.
+
+No manual duplication of client-commercial data into the Operations Hub should be required
+merely to populate Operations Hub reporting; a report that would need such duplication is
+deferred, not hand-filled. A future integration must separately define identity matching,
+direction of authority, synchronisation timing, failure behaviour, cancellations, amendments
+and audit evidence before it is promised to any user.
+
+### 18.12 Documents, evidence and backup constraint
+
+Report-file custody, generated PDFs and stored exports remain **outside BD-REPORTS-01A**.
+
+Documents & Evidence remains blocked until an independent Supabase Storage backup is approved,
+implemented **and** restore-tested, per §22 and §22.1. A live report may exist without storing
+any generated document, and that is the authorised shape of Reports today. Future document
+generation must not become an unprotected evidence repository, and must not be introduced
+ahead of the Storage backup gate.
+
+### 18.13 Acceptance expectations
+
+A future Reports implementation is acceptable only if, at minimum:
+
+- every displayed figure is traceable to an implemented source record and classified under
+  §18.2;
+- no unavailable fact is rendered as zero, blank or "none";
+- no report total is editable, and no report writes to any source record;
+- lifecycle and calculation rules in §18.7 are demonstrably applied, including the stated
+  controlling date for each section;
+- terminology in §18.6 is used verbatim in labels and helper text;
+- a Principal session and an Operations Manager session return results consistent with their
+  source permissions, with the manager receiving no unrelated-project or company-wide
+  finance disclosure;
+- drill-through from every count and total reaches the exact record or a correctly filtered
+  list;
+- the mobile Project Summary is usable without horizontal scrolling;
+- no snapshot, PDF, export or stored artefact is produced.
+
+**Not authorised by §§18.1–18.13:** any report implementation, migration, view, RPC, route,
+component, test, PDF, export, snapshot or hosted change. Execution remains unauthorised and
+requires the separately gated stages recorded in `WORKSTREAMS.md`.
+
 ## 19. Printable documents
 
 Printable documents are generated presentations of authoritative records. The source record
@@ -1514,3 +1766,16 @@ and verified Simple Invoice summaries if separately approved.
 Sections 14–23 authorise stage 1 only. Every later stage requires its own authority, branch,
 review and deployment gate, and none of them is authorised here. The §13 exclusions apply to
 this revision in full.
+
+**Sequence status (2 August 2026).** The order above is unchanged and is not reordered.
+Stage 1 (information architecture) and stage 2 (read-only backup and recovery posture
+verification) are recorded in `WORKSTREAMS.md`. Stage 3 (Work Inbox and Notifications
+authority and implementation planning) remains **outstanding** and is not superseded, absorbed
+or reordered by any later entry. Stage 4 is **Reports and derived-summary authority**; its
+documentation authority — stage 4A — is recorded in §§18.1–18.13 and in `WORKSTREAMS.md`.
+Stage 4 itself proceeds as 4A documentation authority, then 4B read-only repository and
+data-readiness inspection, then 4C technical implementation authority, then 4D implementation.
+**Stage 4B must inspect existing data structures, routes, RLS policies, role boundaries,
+status semantics, currency and date rules before any Reports code is authorised.** Stages 5–12
+are unchanged and unauthorised. **Reports execution remains not authorised**, and BD-FIN-01B2
+remains paused with every settled BD-FIN-01B2 decision unchanged.

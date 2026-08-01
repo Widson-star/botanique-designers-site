@@ -858,6 +858,147 @@ read-only composition over authoritative records.
 PDF generation, export mechanics and any storage of generated artefacts are unauthorised
 here and depend on the future Documents & Evidence domain.
 
+### 12.1 Reports architecture — Stage 4A (2 August 2026)
+
+Sections 12.1–12.10 are the **Stage 4 — Reports and Derived-Summary Authority** architecture
+record, approved 2 August 2026 and recorded in `WORKSTREAMS.md`. They extend §12 without
+replacing it and authorise no migration, RLS policy, view, function, RPC, route, component,
+test or hosted change. Founder requirements for the same subject matter are in the Product
+Requirements §§18.1–18.13 and are not restated here. The first implementation slice is
+identified as **BD-REPORTS-01A — Project Summary and Current-Authority Reporting**.
+
+**Reports is a projection, not a domain.** Under the three-layer model in §10, Reports sits
+wholly in the projection layer. It owns no system-of-record row, no lifecycle and no decision
+authority. Every projection invariant in §10 applies to it in full: derived and never
+authored; never widening access; never merging lifecycles; rebuildable without loss; and
+leaving domain authority unchanged.
+
+### 12.2 Source-domain ownership
+
+Each report figure traces to exactly one owning domain, and that domain — not the report —
+defines the fact, its permitted transitions and its access rule:
+
+| Reported subject | Owning system of record |
+|---|---|
+| Project identity, location, dates, status, responsible lead, authorised notes | `projects` |
+| Project change history and activity timeline | `project_activities` |
+| Work plans, work completed, submission timing, missing/late/waived status, crew counts, attendance evidence status, planned labour | Daily Site Operations (§4.9) |
+| Submitted and approved internal cost claims, categories, lifecycle states, frozen recipient snapshots | BD-FIN-01A (§4.10) |
+| Submitted fund requests, approved funding amounts, associated approved claims, intended custody model, lifecycle states | BD-FIN-01B1 (§4.11) |
+| Decision state, requester, deciding authority, submission and decision dates, amendment and event history | Approvals foundation and the domain immutable event ledgers (§4.2) |
+
+Facts with **no implemented owning domain** are not reportable. This includes funds released,
+payments made, unpaid authoritative obligations, actual project expenditure, accountable
+advances, reconciled and unreconciled balances, custodian cash holdings, project profit or
+loss, complete project financial position, complete compensation for any person or role,
+authoritative material procurement requirements, stored Documents & Evidence, and
+client-commercial data. Each awaits BD-FIN-01B2, BD-FIN-01C, BD-FIN-01D, a future materials or
+People authority, the Documents & Evidence gate, or a separately approved Simple Invoice
+contract. **An absent owning domain must surface as an unavailable state, never as zero.**
+
+### 12.3 No duplicate ledger
+
+No report table, no report-entry form and no stored report figure is authorised, restating
+§12. Specifically: Reports must not persist totals, must not write to any source table, must
+not hold a second approval, funding, release, payment or reconciliation record, and must not
+introduce a **new generic project-event entry model**. The existing `project_activities`
+history and the domain immutable event ledgers remain the only history, and Reports reads
+them rather than shadowing them.
+
+### 12.4 Live-derived calculation
+
+The architectural default is **live derivation at read time** from current authoritative
+records. Filter and period selection are query parameters, not persisted state, and produce no
+authoritative row. Lifecycle arithmetic follows Product Requirements §18.7: drafts excluded;
+submitted only in separately labelled pending figures; approved contributing to approved
+totals; rejected, withdrawn, returned and superseded excluded from current totals; only the
+current authoritative version counted; no double-counting across amendments, submission rounds
+or linked claim-to-request relationships; an explicit controlling date per section; and no
+currency conversion.
+
+### 12.5 Read-model decision deferred to Stage 4B
+
+Whether BD-REPORTS-01A composes its figures from direct client queries, SQL views, security
+definer functions, or a separately authorised derived summary structure is **an open technical
+decision deferred to Stage 4B**, the read-only repository and data-readiness inspection. No
+table, view, function, index, route, API or component is named or authorised here, because
+none has yet been inspected against the delivered schema. Stage 4B must establish existing
+data structures, routes, RLS policies, role boundaries, status semantics, currency handling
+and date semantics; Stage 4C then carries technical implementation authority; Stage 4D is
+implementation. Any performance-motivated materialisation remains subject to §12 and requires
+its own authority.
+
+### 12.6 Permission inheritance
+
+Report access is bounded by the access of the underlying rows, and aggregation must not become
+an indirect route around row-level security. Concretely, and consistent with §6 and §14:
+
+- role-scoped aggregation is computed **within** the caller's access, not computed globally and
+  then filtered for display;
+- cross-domain report sections compose per-domain queries and apply each domain's own access
+  rule to its own rows;
+- the Operations Manager's project-authority scope — current project lead or an active
+  assignment — governs every managed-project report section, and no report may disclose
+  unrelated-project, company-wide finance, banking or client-commercial information to that
+  session;
+- Staff and Viewer inherit source visibility only and gain nothing by a fact appearing in a
+  report;
+- application-side filtering is not a security boundary, and a report is not an exception to
+  that rule.
+
+### 12.7 Drill-through and action routing
+
+Every count and total carries a stable reference to its originating domain and record, so it
+can link to the exact record or a correctly filtered list rather than a module index page.
+Drill-through re-applies access checks on arrival; a report link is never an access grant.
+
+BD-REPORTS-01A introduces **no independent decision control**. Any future inline action
+originates in the projection and executes the originating domain's own controlled mutation
+under the same role, project-scope and expected-version checks, per §10 invariant 5. No second
+approval record and no competing decision path may exist.
+
+### 12.8 Mobile composition
+
+Mobile is a first-class presentation target of the same authoritative records, per §15. Reports
+adds no mobile-only data path, no mobile-only validation and no relaxed authority. The Project
+Summary composes as stacked cards rather than a compressed desktop table; amount, state,
+project and attention information stay visible; horizontal scrolling is not required for the
+primary mobile workflow; and deep links resolve to a specific record with project context
+preserved.
+
+### 12.9 Snapshot, document and backup boundary
+
+Live reporting and stored artefacts are architecturally separate. A stored, signed, issued or
+immutable report snapshot is a **future capability** whose issuance, supersession, numbering,
+custody, retention and reproduction rules are undecided, and it is not authorised here.
+
+PDF generation, export mechanics and custody of any generated artefact remain unauthorised and
+depend on the future Documents & Evidence domain, which remains **blocked** until an
+independent Supabase Storage backup is approved, implemented and restore-tested (§16). A live
+report may exist without storing any generated document, and that is the authorised shape of
+Reports today. Report output must not become an unprotected evidence repository.
+
+### 12.10 Relationship to adjacent areas
+
+- **Work Inbox** — both are projections. The Work Inbox answers "what needs action now"; the
+  Management Attention Summary and Needs Attention sections answer "what is outstanding across
+  a period". They may share derivations, but neither becomes a ledger and neither owns a
+  decision. Stage 3 remains outstanding and is not superseded by this stage.
+- **Projects** — the project record and `project_activities` are the spine of the Project
+  Summary and Project Activity Timeline. Reports reads them; project-centred creation (§10)
+  remains a routing concern that Reports does not participate in.
+- **Finance** — Reports presents claims and fund requests within the unified Finance vocabulary
+  of Product Requirements §17 and §18.6. Approved is not released; released is not paid; paid is
+  not reconciled. BD-FIN-01B2 remains paused and every settled BD-FIN-01B2 decision stands
+  unchanged; no Reports section may anticipate release, payment or reconciliation data.
+- **People** — recipient identity in BD-FIN-01A claims and its frozen snapshots in BD-FIN-01B1
+  allocations remain the authoritative recipient reference (§13). Attendance and workforce
+  reporting derives from Daily Site records and must not be presented as payroll attendance or
+  as complete compensation.
+- **Simple Invoice Manager** — remains the external client-commercial system of record. No
+  integration exists, none is implied, and no manual duplication is authorised to populate
+  Operations Hub reporting.
+
 ## 13. People and payee identity separation
 
 The existing spine rule in §4.1 — that external workers who need engagement and payment
