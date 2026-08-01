@@ -1456,8 +1456,49 @@ Acceptance expectations, with current status:
 Additionally unverified: complete older Vercel Instant Rollback depth.
 
 Verification remains **read-only**. This section authorises no hosted access, no configuration
-change, no enabling of PITR or MFA, no backup creation, no restore, and no assertion that any
-unmet expectation above has been satisfied.
+change, no enabling of PITR or MFA, no backup creation, no restore, no account, email, member,
+permission, break-glass, plan or configuration change, and no assertion that any unmet
+expectation above has been satisfied.
+
+### 22.1 Account security and recovery custody
+
+**Authority decision: approved. Execution: not authorised.** Approved 1 August 2026 as a narrow
+standalone authority decision, recorded in `WORKSTREAMS.md`. It does not upgrade the posture in
+section 22, which remains `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+**Approved custody model.** For Botanique governance, Widson Omutelema Ambaisi remains the sole
+current platform authority. This is accepted as the interim operating model only. It does not
+resolve the verified absence of an independent human recovery authority and does not make the
+recovery posture sufficient. Recovery custody is defined as encrypted and sealed offline custody
+of platform recovery codes, encryption-key recovery material and written succession instructions
+sufficient to support platform-account recovery under an approved succession or emergency-access
+process. It must not contain ordinary working passwords or shared day-to-day credentials.
+**Sealed offline custody does not count as a human secondary authority.**
+
+**Approved requirement — multi-factor authentication.** MFA on the sole owner account is an
+approved account-security requirement, not an implemented or scheduled one. No factor is
+selected and no account is modified by this decision. The security and recovery posture of the
+account email must itself be addressed before that email is relied upon as the recovery chain
+for downstream platforms.
+
+**Deferred.** A break-glass account, a limited administrator role, or a named second human
+authority is a separate future founder decision, contingent on verifying platform permission
+models, cost, and Botanique–Apicora administrative separation implications.
+
+**Consequences for the acceptance expectations above.** Expectation 1 remains partially met:
+approving a custody model does not enable MFA, does not add a secondary authority and does not
+alter restore authority. Expectation 4 remains incomplete: no founder-approved recovery point or
+recovery time objective exists, and this decision does not supply one. Expectation 5 remains
+unmet: no restore test has been carried out.
+
+**Gates.** Unrelated Operations Hub authority and design work is not blocked. Documents &
+Evidence remains blocked until an independent Storage backup is approved, implemented and
+restore-tested. **Payments and Reconciliation must not be activated for authoritative production
+use, or relied upon as Botanique's authoritative financial record**, until independent database
+backup and restore testing are complete and founder-approved recovery point and recovery time
+objective decisions have been recorded. Any MFA, account, email, member, permission,
+break-glass, plan or configuration change requires a separate founder-approved execution gate.
+BD-FIN-01B2 is not reopened or weakened.
 
 ## 23. Delivery sequence and gate for sections 14–23
 

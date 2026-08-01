@@ -1846,6 +1846,70 @@ remain **requirements**, not solved problems.
 settled BD-FIN-01B2 decision is preserved unchanged and is not reopened, reinterpreted or
 weakened by this entry.
 
+### 1 August 2026 — Account Security and Recovery Custody Authority (standalone)
+
+**Authority decision: approved. Execution: not authorised.** The overall posture remains
+**`PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`** and is not upgraded by this decision.
+
+**Scope.** This is a narrow standalone authority decision arising from the material gaps
+recorded in the backup and recovery posture verification entry above. It is **not** a stage of
+the twelve-stage sequence recorded in the information-architecture authority, it creates **no**
+new product stage, and it delivers no feature. It records custody decisions and gates only.
+
+**Approved — interim sole platform authority.** For Botanique governance, Widson Omutelema
+Ambaisi remains the sole current platform authority. This is accepted as the interim operating
+model only. It does not resolve the verified absence of an independent human recovery authority
+and does not make the recovery posture sufficient.
+
+**Approved — sealed offline recovery custody.** Encrypted and sealed offline custody of platform
+recovery codes, encryption-key recovery material and written succession instructions sufficient
+to support platform-account recovery under an approved succession or emergency-access process.
+It must not contain ordinary working passwords or shared day-to-day credentials.
+
+**Recorded — no human secondary administrator exists.** There is currently no second human
+administrator on either platform. This is recorded as a fact of the estate, is not softened, and
+is not treated as discharged by any documentary control. **Sealed offline custody is recoverable
+material and does not count as a human secondary authority.**
+
+**Deferred — second authority mechanism.** A break-glass account, a limited administrator role,
+or a named second human authority remains a **separate future founder decision**. It may not be
+taken until platform permission models, cost, and Botanique–Apicora administrative separation
+implications are verified. Nothing in this entry selects among those options or authorises any
+of them.
+
+**Approved requirement — multi-factor authentication.** MFA on the sole owner account is an
+approved account-security requirement. It is **not** enabled by this entry, no factor is
+selected, no account is modified, and no implementation is scheduled: it requires a separate
+founder-approved execution gate. **The security and recovery posture of the account email must
+itself be addressed before that email is relied upon as the recovery chain for downstream
+platforms**, because an email account that can be taken over or lost silently transfers or
+destroys control of every platform that recovers through it.
+
+**Gates established.**
+
+- **Not blocked.** Unrelated Operations Hub authority and design work continues, including Work
+  Inbox and Notifications; People and payee identity; Daily Site Operations; Daily Labour
+  Register; reports and derived summaries; and BD-FIN-01B2 authority work. The absence of a
+  human secondary authority is not a reason to pause any of these.
+- **Recovery may not be treated as fully verified.** The posture remains
+  `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`, and no document may upgrade it on the strength of
+  this decision.
+- **Documents & Evidence** remains blocked until an independent Storage backup is approved,
+  implemented **and** restore-tested. Approval and implementation alone are insufficient.
+- **Payments (BD-FIN-01C) and Reconciliation (BD-FIN-01D)** must not be activated for
+  authoritative production use, or relied upon as Botanique's authoritative financial record,
+  until independent database backup and restore testing are complete and founder-approved
+  recovery point and recovery time objective decisions have been recorded.
+- **Separate execution gate required.** Any MFA, account, email, member, permission,
+  break-glass, plan or configuration change requires a separate founder-approved execution gate
+  and must not be carried out under this authority.
+
+**No execution authorised.** This entry changes no hosted system. No account, email, plan,
+permission, member, backup, Storage object, deployment, DNS record or configuration is created,
+altered or deleted by it. No code, migration or RLS policy is changed. No Apicora project is
+inspected or altered. **BD-FIN-01B2 is neither reopened nor weakened**, and every settled
+BD-FIN-01B2 decision stands unchanged.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`

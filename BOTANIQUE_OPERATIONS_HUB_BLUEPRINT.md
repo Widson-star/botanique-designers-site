@@ -968,6 +968,33 @@ no restore may be used to erase, rewrite or selectively reinstate authoritative 
 any restore that changes authoritative state is itself an event requiring a recorded audit
 trail.
 
+**Custody model approved 1 August 2026; the continuity dependency is unchanged.** For Botanique
+governance, Widson Omutelema Ambaisi remains the sole current platform authority. This is
+accepted as the interim operating model only. It does not resolve the verified absence of an
+independent human recovery authority and does not make the recovery posture sufficient. Recovery
+custody is defined as encrypted and sealed offline custody of platform recovery codes,
+encryption-key recovery material and written succession instructions sufficient to support
+platform-account recovery under an approved succession or emergency-access process; it must not
+contain ordinary working passwords or shared day-to-day credentials. Architecturally this changes
+nothing about dependency 5 above — **sealed offline custody is recoverable material and does not
+count as a human secondary authority** — and a break-glass account, limited administrator role or
+named second human authority remains a deferred founder decision pending verification of platform
+permission models, cost and Botanique–Apicora administrative separation. Multi-factor
+authentication on the sole owner account is an approved requirement rather than an implemented
+control, and the account email is itself part of the recovery chain: its own security and
+recovery posture must be addressed before any downstream platform recovery is assumed to depend
+on it safely.
+
+**Recovery-dependent product gates.** Two modules are gated on recovery evidence rather than on
+their own design readiness, and the architecture must carry both. **Documents & Evidence** remains
+blocked until an independent Storage backup is approved, implemented and restore-tested, because a
+database restore reinstates metadata referencing objects that were never restored. **Payments
+(BD-FIN-01C) and Reconciliation (BD-FIN-01D) must not be activated for authoritative production
+use, or relied upon as Botanique's authoritative financial record**, until independent database
+backup and restore testing are complete and founder-approved recovery point and recovery time
+objective decisions have been recorded. Unrelated Operations Hub authority and design work is not
+blocked by either gate.
+
 ## 17. Relationship to BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D
 
 BD-FIN-01B2 implementation is paused pending §§10–17 and Product Requirements §§14–23. The
