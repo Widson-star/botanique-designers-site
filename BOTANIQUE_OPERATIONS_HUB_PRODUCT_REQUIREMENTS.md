@@ -1402,29 +1402,62 @@ designed, reviewed and verified.
 
 ## 22. Backup and recovery acceptance expectations
 
-**No claim of adequacy may be made until the posture is verified.** This repository contains
-no backup script, no scheduled export, no continuous-integration workflow and no recorded
-platform-plan or retention evidence. An existing Phase 1B-A4 runbook in `WORKSTREAMS.md`
-already instructs recovery "via Supabase point-in-time recovery", but nothing in this
-repository establishes that point-in-time recovery is available on the current plan or what
-its retention window is. That is an assumption to verify, not a capability on record.
+**Posture: `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS` — partially verified with material gaps.**
+The read-only verification required by the earlier revision of this section was completed on
+1 August 2026 and is recorded in `WORKSTREAMS.md`. The posture is **not** adequate, complete,
+resilient or disaster-recovery ready. The expectations below remain **requirements**; the
+verified items record what the platform provides, not that the gaps are solved.
 
-The following are acceptance expectations to be satisfied, each currently **unverified**:
+**Verified.** Platform scheduled database backups on the Supabase Pro project
+`botanique-admin` are **operational**: daily cadence, seven visible restore points each
+exposing a Restore control, latest observed successful backup 2026-08-01 04:04:43 UTC
+(07:04:43 EAT), visible retention consistent with approximately seven days.
+**Point-in-Time Recovery is disabled** — it is a separate add-on and must never be inferred
+from the Pro plan. **Supabase Storage objects are excluded from database backups**, which
+carry Storage metadata only and do not restore objects deleted through the Storage API.
+Vercel deployment retention is 30 days across cancelled, errored, pre-production and
+production deployments, and the current production deployment exposes Instant Rollback.
 
-1. *Platform database backups* — confirm the Supabase plan; confirm automatic backup
-   availability; confirm retention period; restrict restore authority to named people.
-2. *Independent logical backups* — a scheduled encrypted database export, stored outside the
-   primary Supabase project, with defined daily, weekly and monthly retention.
-3. *Document and evidence backup* — a separate policy for uploaded files that preserves
-   database-to-file references; database backup must not be assumed to include storage
-   objects.
-4. *Recovery procedure* — named restoration authority, ordered recovery steps, expected
-   downtime, post-restore verification and an audit record.
-5. *Recovery testing* — isolated restore tests, suggested quarterly, with an annual
-   disaster-recovery review.
+**Restore authority is sole-owner with no secondary authority.** The Supabase organisation has
+exactly one member — Widson Omutelema Ambaisi, Owner — and the Vercel team has exactly one
+member with Owner role. **MFA is disabled on the sole owner account**, which is a **critical
+access-continuity gap**: there is currently no second person and no second factor standing
+between account loss and loss of the estate. Botanique and Apicora share the same Supabase
+organisation and Vercel team administrative boundaries, and project-scoped roles are
+unavailable on the current plans. Application RLS does not separate organisation-level
+restoration authority and must never be presented as doing so.
 
-Verification must be carried out **read-only**. This section authorises no hosted access, no
-configuration change and no assertion that any of the above currently exists.
+**Environment variables are inventoried but not recoverable on this evidence.** The verified
+names and targets are `VITE_SUPABASE_ANON_KEY` (Production, Preview), `VITE_SUPABASE_URL`
+(Production, Preview) and `VITE_BACKEND_URL` (Production). No values were revealed, and no
+independent secure custody or recreation instruction is evidenced, so loss of the Vercel
+account could block redeployment even where source code survives.
+
+Acceptance expectations, with current status:
+
+1. *Platform database backups* — **partially met.** Plan, operational daily backups, restore
+   points and retention are verified. **Unmet:** PITR is disabled; restore authority is a
+   single account with MFA disabled and no named secondary authority.
+2. *Independent logical backups* — **unmet.** No scheduled encrypted database export exists
+   outside the primary Supabase project, and no daily, weekly or monthly off-platform
+   retention is defined. No encrypted backup-key custody exists.
+3. *Document and evidence backup* — **unmet, and now verified as a real exclusion rather than
+   a precaution.** Database backups carry Storage metadata only. **Documents & Evidence must
+   not be treated as recoverable** until an independent Storage backup policy exists and has
+   been tested; otherwise a database restore reinstates references to objects that were never
+   restored.
+4. *Recovery procedure* — **incomplete.** No complete runbook exists with named restoration
+   authority, ordered steps, expected downtime, post-restore verification and an audit record.
+   No formal founder-approved recovery point or recovery time objective exists.
+5. *Recovery testing* — **unmet.** No isolated restore test has ever been carried out.
+   Supabase restore-to-new-project is available as a beta capability and is the appropriate
+   vehicle for such a test, because it leaves production untouched.
+
+Additionally unverified: complete older Vercel Instant Rollback depth.
+
+Verification remains **read-only**. This section authorises no hosted access, no configuration
+change, no enabling of PITR or MFA, no backup creation, no restore, and no assertion that any
+unmet expectation above has been satisfied.
 
 ## 23. Delivery sequence and gate for sections 14–23
 

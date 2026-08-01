@@ -1707,7 +1707,9 @@ not a recorded capability.** Nothing in this authority may be read as a claim th
 backup, export, retention or recovery-testing regime currently exists. The required
 verification is recorded as founder acceptance expectations in the Product Requirements §22
 and as architectural dependencies in the Blueprint §16, and must be carried out read-only
-before any statement of adequacy is made.
+before any statement of adequacy is made. **That verification has since been carried out —
+see the dated backup and recovery verification entry immediately below, which supersedes the
+"wholly unverified" characterisation in this paragraph.**
 
 **Preserved without weakening.** BD-FIN-01A and BD-FIN-01B1 remain ACTIVE_VERIFIED and are
 not reopened. The approved BD-FIN-01B2 conclusions stand: accountable advance and
@@ -1753,6 +1755,96 @@ returns and reversals; (11) printable documents and shared Documents & Evidence;
 (12) expanded management reporting and verified Simple Invoice summaries if separately
 approved. Each stage remains separately gated with its own authority, branch, review and
 deployment gate. This entry authorises none of stages 2–12.
+
+### 1 August 2026 — Backup and recovery posture verification (stage 2, read-only)
+
+Status: **`PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`** — partially verified with material gaps.
+This is **stage 2 of the PR #54 sequence**. The posture is **not** adequate, complete,
+resilient or disaster-recovery ready, and must not be described as such.
+
+**Method.** Read-only inspection of hosted platform metadata, plus founder dashboard
+observation carried out personally by Widson Omutelema Ambaisi. **No hosted system was
+mutated.** No SQL was executed, no backup was created, no restore was initiated, no data was
+downloaded, no environment-variable value was revealed, no configuration was changed, and
+neither Apicora project was opened. PITR was not enabled. MFA was not enabled. This entry is
+documentation only and authorises no implementation.
+
+**Verified — Supabase.** Project `botanique-admin` (ref `wcacyfyxjiysfibuuhgf`) in
+organisation `Widson-star's Org`, plan **Pro**. Scheduled physical database backups are
+**operational**, not merely entitled. Seven completed restore points were observed, each
+exposing a Restore control: 2026-08-01 04:04:43 UTC, 2026-07-31 04:08:08 UTC, 2026-07-30
+04:03:56 UTC, 2026-07-29 04:06:52 UTC, 2026-07-28 04:10:07 UTC, 2026-07-27 04:03:58 UTC and
+2026-07-26 15:00:54 UTC. Observed cadence is daily; visible retention is seven restore
+points, consistent with approximately seven days. The latest observed successful backup was
+**2026-08-01 04:04:43 UTC (07:04:43 EAT)**. Restore-to-new-project is available in the
+dashboard as a beta capability and was **not** exercised.
+
+**Verified — PITR is disabled.** The Point in Time page states that point-in-time recovery is
+available as an add-on and exposes an `Enable add-on` control. The consequence is recorded in
+the superseding correction to the Phase 1B-A4 migration runbook below. Because the only
+restore points are daily snapshots, the effective recovery point objective is bounded by the
+gap since the last daily backup; no formal founder-approved objective exists.
+
+**Verified — Storage is excluded from database backups.** The dashboard states explicitly
+that database backups do not include Storage objects, that backups contain Storage **metadata
+only**, and that restoring an old database backup does not restore objects deleted through the
+Storage API. Database backup and Storage-object backup are therefore **separate recovery
+domains** and must remain so. **Documents & Evidence must not be treated as recoverable**
+until an independent Storage backup policy exists and has been tested; a database restore
+would otherwise reinstate metadata referencing objects that were never restored.
+
+**Verified — Supabase organisation authority.** The organisation has exactly one member:
+Widson Omutelema Ambaisi, role **Owner**, **MFA disabled**. Restoration and administration
+authority is therefore concentrated in a single account with **no secondary recovery
+authority**. MFA disabled on the sole owner account is a **critical remediation item**:
+account compromise or loss of access is currently indistinguishable from loss of the estate.
+Botanique and Apicora share the same Supabase organisation administrative boundary.
+Application RLS is **not** claimed to separate organisation-level restoration authority, and
+must never be represented as doing so.
+
+**Verified — Vercel.** Production project `botanique-designers-site-gpm1`, team plan
+**Hobby**, serving `botaniquedesigners.com` and `www.botaniquedesigners.com`. The latest
+production deployment is the PR #54 merge commit
+`22cb2e723f7ff7460a3cfe7d3a50df85cd8edd83`, state **Ready**. Deployment Retention Policy is
+**30 days** for cancelled, errored, pre-production and production deployments alike. Recently
+deleted production deployments are visible with recovery menus, and the dashboard states that
+most deleted deployments can be restored within 30 days of initial deletion. **No deployment
+was restored.** The current production deployment exposes an Instant Rollback control.
+**Complete historical Instant Rollback depth is not claimed and remains unverified.**
+
+**Verified — Vercel authority.** The team has exactly one member, `widson-star`, role
+**Owner**, holding sole deployment, settings and rollback authority with **no secondary
+recovery authority**. Botanique and Apicora share the same Vercel team administrative
+boundary, and project-specific role assignment is unavailable on the current plan.
+
+**Supporting evidence only — Vercel security controls.** Build Logs and Source Protection
+enabled; Git Fork Protection enabled; OIDC issuer mode team-scoped. These are access-control
+measures and are **not** substitutes for backup or recovery.
+
+**Verified — environment-variable inventory.** For `botanique-designers-site-gpm1` the
+observed variable names and target environments are `VITE_SUPABASE_ANON_KEY`
+(Production, Preview), `VITE_SUPABASE_URL` (Production, Preview) and `VITE_BACKEND_URL`
+(Production). **No values were revealed and none are recorded here.** Names and targets are
+verified; independent secure custody or recreation instructions for the values are **not
+evidenced**, so loss of the Vercel account or project could block redeployment even where
+source code survives.
+
+**Verified — source code.** Source code and authority history are versioned in GitHub, and
+production deployments trace to commit SHAs, so source reconstruction from Git is available.
+This does **not** by itself recover Supabase data, Storage objects, environment-variable
+values, DNS administration or hosted account access.
+
+**Residual material gaps — absent or unverified.** Independent encrypted logical database
+exports; off-platform database retention; independent Storage-object backups; encrypted
+backup-key custody; any completed restore test; a complete disaster-recovery runbook; a named
+secondary recovery authority; a formal founder-approved recovery point objective; a formal
+founder-approved recovery time objective; and complete older Vercel Instant Rollback depth.
+The acceptance expectations in Product Requirements §22 and the dependencies in Blueprint §16
+remain **requirements**, not solved problems.
+
+**BD-FIN-01B2 remains paused** pending review and merge of this authority correction. Every
+settled BD-FIN-01B2 decision is preserved unchanged and is not reopened, reinterpreted or
+weakened by this entry.
 
 ### Phase 1A — Lead Data and RLS Foundation
 
@@ -3336,11 +3428,34 @@ Controlled hosted rollout checklist (completed 30 July 2026):
 9. **Unchanged business data** — re-run steps 3–4 and diff: counts unchanged (0/0 approvals,
    9 projects), project fingerprints identical, no Daily Site row changed.
 10. **Recovery / stop conditions** — if step 5 errors: the transaction rolled back, DB is
-    unchanged (verify via steps 6–7 showing nothing applied); fix and retry. If a partial
-    state is ever observed (only from a non-atomic apply): **restore via Supabase
-    point-in-time recovery to the pre-apply timestamp** (recorded before step 5) rather than
-    hand-reconstructing the replaced functions; then re-apply atomically. Because the
-    migration is additive, a clean re-apply after PITR is safe.
+    unchanged (verify via steps 6–7 showing nothing applied); fix and retry.
+    **SUPERSEDED 1 August 2026 — see the dated backup and recovery verification entry
+    above.** The original instruction read: "If a partial state is ever observed (only from
+    a non-atomic apply): **restore via Supabase point-in-time recovery to the pre-apply
+    timestamp** (recorded before step 5) rather than hand-reconstructing the replaced
+    functions; then re-apply atomically. Because the migration is additive, a clean re-apply
+    after PITR is safe." That instruction is **operationally invalid** and is preserved here
+    only as superseded evidence: point-in-time recovery is a Supabase add-on and is
+    **disabled** on `botanique-admin`, so no pre-apply timestamp is recoverable and no
+    operator may be sent to look for one during an incident.
+
+    **Current recovery instruction.** Atomic application remains the primary protection, and
+    non-atomic partial application remains prohibited — a partial state should not arise from
+    a correctly executed apply. If one is nonetheless observed, first establish exactly what
+    was and was not applied through steps 6–7; do not assume the additive character of a
+    migration makes a blind re-apply sufficient in every partial-state scenario, because the
+    correct remedy depends on which objects exist and whether any replaced function is in a
+    mixed state. Where the evidence shows the migration is simply absent or wholly present,
+    re-apply atomically. Where it does not, resolve the specific partial state deliberately
+    before re-applying. **No restore of a scheduled backup may be used as a routine migration
+    remedy:** the only restore points are the daily scheduled backups (observed cadence
+    approximately 04:0x UTC, seven visible restore points), and restoring one discards **all**
+    committed data after that snapshot, not merely the migration. Any production restore is a
+    last-resort action requiring explicit Principal approval. Where isolated inspection or
+    recovery testing is what is actually needed, prefer the dashboard's restore-to-new-project
+    capability, which leaves production untouched. Restoring a database backup does **not**
+    restore Supabase Storage objects. Point-in-time-recovery wording may be reinstated only
+    after PITR is separately enabled and verified.
 
 Migration ordering: `20260729000100` is strictly the latest of the six repository
 migrations (after `20260728000200`); no collision, no rename required. Lint baseline:

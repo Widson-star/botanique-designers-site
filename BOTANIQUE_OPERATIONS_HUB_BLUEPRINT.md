@@ -913,31 +913,60 @@ separate data path. Architectural consequences:
 
 ## 16. Backup, recovery and continuity dependencies
 
-**Current posture: unverified.** This repository contains no backup script, no scheduled
-export, no continuous-integration workflow and no recorded platform-plan or retention
-evidence. The Phase 1B-A4 runbook in `WORKSTREAMS.md` instructs recovery via Supabase
-point-in-time recovery, but no repository evidence establishes that this capability is
-available on the current plan or what retention it carries. This blueprint therefore records
-it as a dependency to verify, not as an architectural guarantee.
+**Current posture: `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`** — partially verified with
+material gaps, following the read-only verification of 1 August 2026 recorded in
+`WORKSTREAMS.md`. The architecture distinguishes **verified platform capability** from
+**unresolved continuity gaps**; the former does not discharge the latter, and the posture is
+not adequate, complete, resilient or disaster-recovery ready.
 
-Architectural dependencies to establish, all currently unverified and all to be verified
-read-only:
+**Six recovery domains, architecturally separate.** A restore in one domain recovers nothing
+in another, and no domain may be assumed to cover a neighbour:
 
-1. Platform backup availability, retention and restore authority for the hosted
-   `botanique-admin` project.
-2. Independent logical export, encrypted and stored outside the primary Supabase project,
-   with defined daily, weekly and monthly retention.
-3. A separate policy for storage objects, because a database backup must not be assumed to
-   include uploaded files; database-to-file references must survive a restore of either
-   side independently.
-4. A documented recovery procedure with named authority, ordered steps, expected downtime,
+| Domain | Verified capability | Status |
+|---|---|---|
+| Database | Supabase Pro scheduled backups, daily cadence, seven visible restore points | Verified operational; **PITR disabled** (separate add-on) |
+| Storage objects | None — database backups carry **Storage metadata only** | **Excluded from database backups**; no independent backup exists |
+| Source code | GitHub; production deployments trace to commit SHAs | Recoverable |
+| Deployments | Vercel retention 30 days; current production deployment exposes Instant Rollback | Verified; **complete historical rollback depth unproven** |
+| Secrets and configuration | Environment-variable names and targets inventoried | **Values have no evidenced independent custody** |
+| Operational documents | Deferred to Documents & Evidence | Not yet applicable |
+
+**Storage is the sharpest architectural consequence.** Because database backups preserve
+Storage *metadata* without the objects, a database restore reinstates rows referencing files
+that were never restored — a dangling-reference state that fails silently rather than
+visibly. Documents & Evidence therefore acquires a hard prerequisite: it must not be treated
+as recoverable, and should not ship, before an independent Storage backup policy exists and
+has been tested.
+
+**Sole-owner concentration is a continuity dependency, not merely a governance observation.**
+The Supabase organisation has exactly one member (Widson Omutelema Ambaisi, Owner) and the
+Vercel team has exactly one member with Owner role. There is no secondary recovery authority
+in either platform, MFA is disabled on the sole Supabase owner account, and project-scoped
+roles are unavailable on the current plans. Botanique and Apicora share both administrative
+boundaries. Application RLS operates strictly inside the database and does **not** separate
+organisation-level restoration authority; it must never be represented as doing so.
+
+Architectural dependencies still required, all unmet or unverified:
+
+1. Independent logical export, encrypted and stored outside the primary Supabase project,
+   with defined daily, weekly and monthly retention, and defined encrypted key custody.
+2. Independent Storage-object backup, preserving database-to-file references such that either
+   side can be restored independently without orphaning the other.
+3. A documented recovery procedure with named authority, ordered steps, expected downtime,
    post-restore verification and an audit record.
-5. Periodic isolated restore testing, suggested quarterly, with an annual disaster-recovery
-   review.
+4. Periodic isolated restore testing, suggested quarterly, with an annual disaster-recovery
+   review. Supabase restore-to-new-project is the appropriate vehicle, because it exercises
+   recovery without touching production.
+5. A named secondary recovery authority, and formal founder-approved recovery point and
+   recovery time objectives.
+6. Verification of complete older Vercel Instant Rollback depth.
 
-Continuity interacts with two existing invariants and must not weaken either: immutable
-event ledgers must survive restore intact, and no restore procedure may become a route to
-permanent deletion of authoritative records.
+Continuity interacts with two existing invariants and must not weaken either: immutable event
+ledgers must survive restore intact, and no restore procedure may become a route to permanent
+deletion of authoritative records. **A restore is a recovery action, never an editorial one:**
+no restore may be used to erase, rewrite or selectively reinstate authoritative history, and
+any restore that changes authoritative state is itself an event requiring a recorded audit
+trail.
 
 ## 17. Relationship to BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D
 
