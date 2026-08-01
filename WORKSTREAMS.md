@@ -2150,7 +2150,7 @@ selector (genuine eligible Ongoing projects only, archived PR #44 fixtures absen
 Principal direct-authorisation form, the Operations Manager claim form (no Principal
 controls, no company-wide totals), and the Daily Site "Create cost claim" copy-to-draft flow
 (planning context correctly copied, snapshot immutability noted, no claim created merely by
-opening the form) all rendered correctly with no console errors or failed requests, on both
+opening the form) all rendered correctly with no console errors or warnings, on both
 desktop and mobile. The signed-out `/admin` gate was reconfirmed after each session. No
 claim was submitted during verification. Staff/Viewer authenticated UI verification remains
 unavailable because no such accounts exist; their denial is covered by the PostgreSQL and
