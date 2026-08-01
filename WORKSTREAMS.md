@@ -1619,6 +1619,9 @@ ACTIVE_VERIFIED. BD-FIN-01B (Project Fund Control Authority) is the approved nex
 authority; its first slice, BD-FIN-01B1 (Claim-Backed Fund Requests), is merged, hosted and
 ACTIVE_VERIFIED on PR #51.
 BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D remain separately gated and unimplemented.
+**BD-FIN-01B2 implementation is additionally paused** pending the 1 August 2026
+information-architecture authority recorded below; its approved product conclusions stand
+unchanged and are not reopened by that pause.
 No new Operations Hub master register is required: this entry remains
 the execution and live-state register, the Product Requirements remain founder-requirements
 authority, and the Blueprint remains architecture/system-of-record authority.
@@ -1644,6 +1647,112 @@ admin shell, project operations and initial dashboard.
 Original architecture-slice boundaries were documentation-only. Current protected
 boundaries and future dependencies are maintained in the revised Product Requirements and
 Blueprint.
+
+### 1 August 2026 — Information architecture, reporting, notifications, mobile and recovery authority (documentation only)
+
+Status: **Documentation authority only.** This entry authorises no application code, route,
+component, migration, RLS policy, function, grant, test, hosted mutation or deployment. No
+hosted Supabase or Vercel system was accessed while it was written. Exactly three files
+changed: this register, `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md` and
+`BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md`.
+
+**Why BD-FIN-01B2 implementation is paused.** BD-FIN-01B2 (Fund Releases and Accountable
+Advances) completed its critical review against merged BD-FIN-01A and BD-FIN-01B1
+implementation truth, and its product conclusions are approved and preserved. It is not
+paused because of a defect in that authority. It is paused because delivering it as drafted
+would add an eighth workstream-shaped destination to a sidebar that is already failing the
+comprehension test for its most authorised user.
+
+**The observed problem.** The current functional destinations are Dashboard, Projects, Daily
+site ops, Site Costs, Fund Requests, Approvals and Project intakes. Every one of those names
+is correct, and every one of them is an internal workstream or database concept exposed
+directly as a user-facing destination. The founder has observed that the sidebar is becoming
+hard to reason about even for the Principal. A user should be able to answer what is
+happening on a project, who is working, what was requested, what was approved, what has been
+funded, what has been paid, what remains outstanding and what needs attention **without
+knowing which database domain owns each answer**. The underlying authority separation is
+correct and is not the problem; its direct presentation is.
+
+**Approved direction.** Enter information once in the correct authoritative operational
+record; derive dashboards, work queues, notifications, reports, printable documents,
+balances and management summaries from those records rather than re-entering them. Record
+creation becomes project-centred and phrased as what happened or what is needed, not as
+which module to open. Top-level navigation simplifies toward Dashboard, Projects, People,
+Finance, Reports and More, with a single role-aware Work Inbox for anything needing
+attention and a Notifications capability that deep-links to the exact record. Mobile is a
+primary operating environment, not a compressed desktop. Strict backend authority
+separation, immutable events, project-scoped database authority, role boundaries and
+system-of-record ownership are unchanged — this is a presentation and derivation authority,
+not a data-model merge. Full founder requirements are in the Product Requirements
+(§§14–23); full architecture, derivation rules and dependencies are in the Blueprint
+(§§10–17).
+
+**Reporting, notifications, mobile and recovery.** Reports become a first-class product area
+derived from authoritative records, never a duplicate report-entry form. Printable documents
+become generated presentations of existing records, never a re-keying exercise. Notifications
+are an attention projection created from authoritative events and are explicitly **not** an
+audit ledger; the immutable domain event ledgers remain authoritative. Mobile requires
+stacked records, immediate visibility of amount and state, no mandatory horizontal tables,
+and exact-record deep links. External push, email, WhatsApp and SMS delivery are **not**
+authorised and require separate review. Offline mutation is **not** authorised.
+
+**Backup and recovery posture is unverified.** This repository carries **no evidence** of a
+configured backup, retention, restore-authority or disaster-recovery posture: there is no
+backup script, no scheduled export, no continuous-integration workflow and no recorded
+platform-plan or retention evidence. The Phase 1B-A4 runbook at the end of this register
+already instructs a recovery path "via Supabase point-in-time recovery", but no evidence in
+this repository establishes that point-in-time recovery is available on the current plan or
+what its retention window is. That instruction is therefore an **assumption to be verified,
+not a recorded capability.** Nothing in this authority may be read as a claim that any
+backup, export, retention or recovery-testing regime currently exists. The required
+verification is recorded as founder acceptance expectations in the Product Requirements §22
+and as architectural dependencies in the Blueprint §16, and must be carried out read-only
+before any statement of adequacy is made.
+
+**Preserved without weakening.** BD-FIN-01A and BD-FIN-01B1 remain ACTIVE_VERIFIED and are
+not reopened. The approved BD-FIN-01B2 conclusions stand: accountable advance and
+direct-recipient funding models; direct-recipient releases bound to exactly one existing
+`fund_request_allocation`; no new recipient identity authored at release; derived release
+progress; final closure of unused release authority; receipt acknowledgment derived from
+immutable events; administrative annulment only where no money moved; real reversals
+deferred to BD-FIN-01D; no `Ongoing`-only release restriction; and no release-allocation
+table. **The direct-recipient identity model is settled authority, not an open question:**
+the founder approved the allocation-bound model before this documentation task. Recipient
+identity is inherited from that allocation's frozen claim-recipient snapshot; a
+multi-recipient request is executed through separate release records; and cumulative active
+direct-recipient releases against one allocation may never exceed that allocation's approved
+requested amount. The reference identifies whose approved obligation the money moved toward
+and establishes no payment, counterparty confirmation or settlement, all of which remain
+BD-FIN-01C. A direct-recipient release still never means paid or settled, and no part of the
+BD-FIN-01B2 documentation authority is blocked by this decision. The one thing this
+authority changes about
+BD-FIN-01B2 is where its interface lives: inside the unified Finance experience, not as
+another permanent standalone top-level destination. Also preserved: the planned, claimed,
+approved, requested, released, paid and reconciled distinctions; strict project-level
+database authority; immutable financial and operational events; Principal and Operations
+Manager boundaries; Staff and Viewer restrictions; Daily Site Operations authority;
+Approvals as the authoritative decision workflow for its implemented types; Simple Invoice
+Manager as the client-commercial system of record with no claimed integration; Documents &
+Evidence as the future shared evidence domain; no permanent deletion; and no hosted
+verification records.
+
+**Forward-compatible extension, not pretence.** Where later implementation must extend a
+delivered surface, that is stated plainly rather than disguised. The Work Inbox is a
+presentation layer over existing domain authority, not a replacement ledger. The current
+`/admin/site-costs` and `/admin/fund-requests` routes may remain during transition but are
+**not** the permanent top-level architecture. Navigation remains capability-led: a
+destination appears only when its module is functional and authorised.
+
+**Next gated sequence.** (1) This information-architecture authority; (2) read-only backup
+and recovery posture verification; (3) Work Inbox and Notifications authority and
+implementation planning; (4) Reports and derived-summary authority; (5) People and payee
+identity authority; (6) progressive navigation and mobile-shell implementation;
+(7) BD-FIN-01B2 database authority and concurrency; (8) BD-FIN-01B2 unified Finance
+interface; (9) BD-FIN-01C payments and claim allocations; (10) BD-FIN-01D reconciliation,
+returns and reversals; (11) printable documents and shared Documents & Evidence;
+(12) expanded management reporting and verified Simple Invoice summaries if separately
+approved. Each stage remains separately gated with its own authority, branch, review and
+deployment gate. This entry authorises none of stages 2–12.
 
 ### Phase 1A — Lead Data and RLS Foundation
 

@@ -1,9 +1,11 @@
 # Botanique Operations Hub — Architecture Blueprint (BD-OPERATIONS-HUB-01)
 
-**Authority revision:** 31 July 2026. Originally established following Phase 1B-A2;
+**Authority revision:** 1 August 2026. Originally established following Phase 1B-A2;
 reconciled after PR #44–#46, the BD-FIN-01 read-only authority gate and BD-FIN-01A
-ACTIVE_VERIFIED (PR #48); now establishes BD-FIN-01B — Project Fund Control Authority and
-its first slice, BD-FIN-01B1 — Claim-Backed Fund Requests.
+ACTIVE_VERIFIED (PR #48); established BD-FIN-01B — Project Fund Control Authority and its
+first slice, BD-FIN-01B1 — Claim-Backed Fund Requests, on 31 July 2026; now adds the
+projection, notification, reporting, identity-separation, mobile and continuity
+architecture in §§10–17.
 
 **Status:** Architecture and system-of-record authority. This blueprint authorises no
 application, migration, RLS, integration or hosted-data change. Current implementation
@@ -537,6 +539,10 @@ Eventual groups:
 Routes and links are added only with functional modules, reviewed access policy and useful
 role-appropriate empty states. No module is exposed as a disabled future destination.
 
+The groups above remain the **authority** structure. They are superseded as the
+**presentation** structure by the simplified top-level architecture in the Product
+Requirements §14; the projection architecture that makes that separation safe is §10 below.
+
 ## 6. Role and access architecture
 
 Presentation labels do not change database role values:
@@ -752,3 +758,210 @@ Unless a later workstream explicitly authorises change, preserve:
 No new master register is needed. `WORKSTREAMS.md` remains the execution register, this
 blueprint remains architecture authority, and the Product Requirements remain founder
 requirements authority.
+
+## 10. Projection architecture — systems of record versus derived views
+
+Sections 10–17 are the 1 August 2026 architecture authority. They are numbered from 10
+deliberately: earlier sections are cross-referenced by number from `WORKSTREAMS.md` and the
+Product Requirements, so nothing above is renumbered. They authorise no migration, RLS
+policy, function, route, component or hosted change. Founder requirements for the same
+subject matter are in the Product Requirements §§14–23 and are not restated here; this
+section defines only how those requirements are structured architecturally.
+
+The architecture separates three layers, and the separation is the point:
+
+| Layer | Definition | Authority |
+|---|---|---|
+| System of record | The domain table set that owns a fact and its permitted transitions | Authoritative |
+| Immutable event ledger | The append-only history of that domain's decisions | Authoritative history |
+| Projection | Any inbox, dashboard, notification, report, balance or printable document computed from the two above | Never authoritative |
+
+Projection invariants:
+
+1. A projection is **derived, never authored**. No projection holds a fact its sources do not
+   contain, and no user action mutates a projection directly.
+2. A projection **never widens access**. Every projection is filtered by the same
+   project-scoped policies as its sources; aggregation must not become an indirect route
+   around row-level security. Where a projection spans domains, it applies each domain's
+   own access rule to its own rows rather than a single relaxed rule to all of them.
+3. A projection **never merges lifecycles**. A cross-domain view may present items together,
+   but each item keeps its own domain status vocabulary, permitted transitions and decision
+   authority. A shared presentation label is a label, not a state.
+4. A projection is **rebuildable**. Losing or rebuilding a projection must lose no
+   authoritative fact.
+5. Domain authority is unchanged by presentation. The Approvals foundation remains the
+   authoritative decision workflow for its implemented approval types. A projection may
+   *originate* an action, but every such action executes the originating domain's own
+   controlled mutation under its own role, project-scope and version checks. No projection
+   may hold a second approval record or open a competing decision path. Whether a decision
+   control is rendered inline or routes to the authoritative detail view is presentation
+   design, and either choice satisfies this invariant.
+
+Project-centred creation is a **routing** concern, not a data-model concern. A single
+operational intent captured from a project is written to the correct existing domain record;
+it does not create a generic record type, and no free-form entity is authorised that would
+bypass domain authority. Where a required domain does not yet exist, the intent is not
+capturable until that domain is separately authorised.
+
+The system-of-record matrix in §3 is extended by exactly one row class, and it is a
+projection row rather than an authority row:
+
+| Record/domain | System of record | Operations Hub role |
+|---|---|---|
+| Work inbox items, notifications, dashboard values, report figures, printable documents | The originating domain in §3 | Derived projection; never authoritative |
+
+## 11. Notification architecture
+
+A notification is a projection of an authoritative event, produced by the domain that owns
+that event. It is not an audit ledger and is not a substitute for one: deleting, reading or
+losing a notification must leave the domain event ledgers untouched and complete.
+
+Architectural rules:
+
+- Notifications are generated **from** committed authoritative events, never in place of
+  them. A notification must not be the only record that something happened.
+- Notification generation must not weaken the transactional guarantees of the originating
+  domain. A failure to project must never roll back or block an authoritative mutation.
+- Every notification carries a stable reference to the originating domain and record, so it
+  can deep-link to the exact record rather than a module index.
+- Recipient resolution is derived from existing role and project-access authority, not from
+  a parallel recipient list.
+- Read/unread state is per-recipient presentation state and carries no authority.
+- Retention and pruning of notifications is permitted and is not deletion of history,
+  precisely because notifications are not the ledger. The no-permanent-delete rule continues
+  to apply to authoritative records and events.
+
+External delivery channels — push, email, WhatsApp, SMS — are **not** part of this
+architecture and require separate authority, including a data-egress review before any
+Botanique record content leaves the platform. Supabase Realtime remains not an architectural
+prerequisite.
+
+## 12. Report and printable-document derivation architecture
+
+Reports and printable documents are the same architectural thing at different fidelities: a
+read-only composition over authoritative records.
+
+- No report table, no report-entry form and no stored report figure is authorised. A report
+  is computed at read time from its sources, or from an explicitly derived and separately
+  authorised summary structure if performance later requires one.
+- A document number, where a printable document needs one, is issued by the originating
+  domain, not by the document layer.
+- Documents compose existing fields — identity, project, date, requester, approver, line
+  items, totals, status, history — and add none of their own. A field that only a document
+  needs is a missing field on the source record.
+- Client-commercial reporting has no data source inside the Operations Hub. It remains
+  unavailable until later verified Simple Invoice references or a separately approved
+  read-only contract exist. No integration is implied by listing the report family.
+- Report access is bounded by the access of the underlying rows. Owner-only protected
+  commercial and financial visibility survives into every report and export.
+
+PDF generation, export mechanics and any storage of generated artefacts are unauthorised
+here and depend on the future Documents & Evidence domain.
+
+## 13. People and payee identity separation
+
+The existing spine rule in §4.1 — that external workers who need engagement and payment
+records must not be forced into an authenticated `profiles` identity — is extended into a
+two-axis model:
+
+- **Identity kind:** person or organisation. These are architecturally distinct; a supplier
+  or nursery is not a person record with unused workforce fields.
+- **System access:** present or absent, and independent of identity kind. `profiles` remains
+  the authenticated-application-user record and must not become the register of everyone
+  Botanique pays.
+
+Category vocabularies for workforce and for organisations are defined once and reused across
+Projects, Daily Site, claims, payments and reports, so that a person or payee referenced in
+one domain is the same entity in another. Finance domains reference identity; they do not
+define it.
+
+Nothing here authorises identity-document storage, full bank details or personal financial
+history. Existing recipient identity in BD-FIN-01A claims (`recipient_type`,
+`recipient_label`) and its frozen snapshots in BD-FIN-01B1 allocations remain the
+authoritative recipient reference for finance until a People domain is separately
+authorised; a later People domain must reconcile with those snapshots rather than
+retroactively rewriting them.
+
+## 14. Dashboard aggregation architecture
+
+Dashboards are projections under §10 and add three constraints:
+
+- Every dashboard value is computed from authoritative records. No editable total, no
+  manually maintained figure and no cached value without a defined derivation exist.
+- Role-scoped aggregation is computed within the caller's access, not computed globally and
+  then filtered for display. Principal-only company-wide commercial and banking aggregates
+  must not be computable by an Operations Manager session.
+- Cross-domain dashboard sections compose per-domain queries; they do not join across domain
+  authority boundaries in a way that would let one domain's access rule govern another's
+  rows.
+
+## 15. Mobile presentation architecture
+
+Mobile is a first-class presentation target of the same authoritative records, not a
+separate data path. Architectural consequences:
+
+- No mobile-only write path, no mobile-only validation and no relaxed authority on small
+  screens. Controlled RPCs and RLS are identical across form factors.
+- Deep links resolve to a specific record and re-apply access checks on arrival; a link is
+  never an access grant.
+- Draft preservation and duplicate-submit prevention are client-side resilience over the
+  same idempotency and optimistic-concurrency guarantees the domains already enforce through
+  expected-version arguments.
+- Offline mutation is **not** authorised. It would require conflict resolution against the
+  optimistic-concurrency and immutable-event models and must be designed and verified
+  separately before it is offered.
+
+## 16. Backup, recovery and continuity dependencies
+
+**Current posture: unverified.** This repository contains no backup script, no scheduled
+export, no continuous-integration workflow and no recorded platform-plan or retention
+evidence. The Phase 1B-A4 runbook in `WORKSTREAMS.md` instructs recovery via Supabase
+point-in-time recovery, but no repository evidence establishes that this capability is
+available on the current plan or what retention it carries. This blueprint therefore records
+it as a dependency to verify, not as an architectural guarantee.
+
+Architectural dependencies to establish, all currently unverified and all to be verified
+read-only:
+
+1. Platform backup availability, retention and restore authority for the hosted
+   `botanique-admin` project.
+2. Independent logical export, encrypted and stored outside the primary Supabase project,
+   with defined daily, weekly and monthly retention.
+3. A separate policy for storage objects, because a database backup must not be assumed to
+   include uploaded files; database-to-file references must survive a restore of either
+   side independently.
+4. A documented recovery procedure with named authority, ordered steps, expected downtime,
+   post-restore verification and an audit record.
+5. Periodic isolated restore testing, suggested quarterly, with an annual disaster-recovery
+   review.
+
+Continuity interacts with two existing invariants and must not weaken either: immutable
+event ledgers must survive restore intact, and no restore procedure may become a route to
+permanent deletion of authoritative records.
+
+## 17. Relationship to BD-FIN-01B2, BD-FIN-01C and BD-FIN-01D
+
+BD-FIN-01B2 implementation is paused pending §§10–17 and Product Requirements §§14–23. The
+pause is architectural placement, not a reopening: its approved conclusions — the two
+release models, direct-recipient releases bound to exactly one existing
+`fund_request_allocation` and capped at that allocation's approved requested amount, no new
+recipient identity authored at release, derived release progress, final closure of unused
+release authority, receipt acknowledgment derived from immutable events, administrative
+annulment only where no money moved, real reversals deferred to BD-FIN-01D, no
+`Ongoing`-only release restriction and no release-allocation table — remain unchanged and
+authoritative.
+
+The single architectural addition is placement: the Fund Releases interface is delivered
+inside the unified Finance presentation rather than as a further standalone top-level
+destination. Its database authority, RLS, controlled RPCs, concurrency model and immutable
+events are unaffected by presentation, which is exactly what §10 is designed to guarantee.
+
+Forward-compatible extension is stated plainly rather than disguised. Where later work must
+extend a delivered surface — as BD-FIN-01B2 must extend the `fund_request_events` event-type
+domain and add an active-release guard to `cancel_fund_request` — it is documented as a
+controlled, forward-only extension of an ACTIVE_VERIFIED implementation, not as a claim that
+nothing delivered will change.
+
+BD-FIN-01C and BD-FIN-01D inherit the same rule: their user-facing surfaces are Finance
+presentations, their authority remains their own domain tables, immutable events and
+controlled functions, and each remains independently gated.

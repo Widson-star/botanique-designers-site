@@ -1,9 +1,11 @@
 # Botanique Operations Hub — Product Requirements (BD-OPERATIONS-HUB-01)
 
-**Authority revision:** 31 July 2026. Originally established following Phase 1B-A2;
+**Authority revision:** 1 August 2026. Originally established following Phase 1B-A2;
 reconciled after PR #44–#46, the BD-FIN-01 read-only authority gate and BD-FIN-01A
-ACTIVE_VERIFIED (PR #48); now establishes BD-FIN-01B — Project Fund Control Authority and
-its first slice, BD-FIN-01B1 — Claim-Backed Fund Requests.
+ACTIVE_VERIFIED (PR #48); established BD-FIN-01B — Project Fund Control Authority and its
+first slice, BD-FIN-01B1 — Claim-Backed Fund Requests, on 31 July 2026; now adds the
+information-architecture, reporting, notifications, mobile and recovery authority in
+§§14–23, under which BD-FIN-01B2 implementation is paused.
 
 **Status:** Founder-requirements authority. This document defines product boundaries,
 roles, access expectations and acceptance requirements. It authorises no application,
@@ -98,9 +100,20 @@ buttons and decorative module placeholders are prohibited.
 
 - Dashboard
 - Projects
-- Daily Site Operations
+- Daily site ops
+- Site Costs
+- Fund Requests
 - Approvals
-- Project Intakes
+- Project intakes
+
+**This list is the problem §14 addresses.** Every entry above is an internal workstream or
+database concept exposed directly as a user-facing destination. The eventual domain grouping
+recorded below remains the correct *authority* structure and is not withdrawn, but it is no
+longer the intended *presentation* structure. The simplified top-level architecture, the
+project-centred creation model and the Work Inbox that supersede it as presentation
+authority are defined in §14. Sections 15–23 define notifications, people and payees,
+finance presentation, reports, printable documents, dashboards, mobile and recovery
+expectations.
 
 **Eventual navigation architecture:**
 
@@ -1141,3 +1154,289 @@ merged, and only under a new implementation branch and separately approved works
 scope. BD-FIN-01B1 implementation may likewise begin only after this authority revision is
 reviewed and merged, and only under its own separately approved implementation branch,
 migration and deployment gate.
+
+## 14. Information architecture and project-centred record creation (1 August 2026)
+
+Sections 14–23 are the 1 August 2026 founder-requirements authority. They are numbered from
+14 deliberately: earlier sections are cross-referenced by number from `WORKSTREAMS.md` and
+the Blueprint, so nothing above is renumbered. They authorise no application code, route,
+component, migration, RLS policy, function, test, hosted mutation or deployment.
+
+**The governing principle.** Enter information once, in the correct authoritative
+operational record. Dashboards, work queues, notifications, reports, printable documents,
+balances and management summaries must **derive** from those records rather than requiring
+duplicate entry. A Daily Site entry feeds operational reporting; a material requirement
+feeds a project record and, where required, an approval; an approved cost feeds funding
+eligibility; a fund release feeds the funding position; a payment later feeds the paid and
+outstanding position; and existing records generate printable documents.
+
+This principle does **not** authorise a generic free-form record that bypasses domain
+authority. Every record retains an explicit type and one system of record. Deriving a view
+never transfers authority to the view.
+
+**Project-centred creation.** From a project, an authorised user must eventually be able to
+choose an action phrased as what happened or what is needed — add site entry; add project
+update; record material need; record cost; submit request; add task or issue; add document
+or photo — rather than choosing which database module to open. The user answers the
+operational question; the application routes the answer to the correct authoritative record.
+
+**Worked requirement (Lugulu).** The Operations Manager is on site and has sourced paving
+slabs. He must be able to create **one** structured material or purchase requirement
+carrying, as applicable: project; item; description or purpose; quantity; unit; supplier or
+source where known; expected or quoted amount; date required; whether it is documentation
+only or requires approval; a note; and later evidence linkage. That single record may then
+derive a project update, a material-requirements view, a Principal work-inbox item, a
+notification, an approved project cost where separately authorised, later funding
+eligibility, later payment linkage, and report and printable-document content.
+
+**Documenting a need is not incurring an obligation.** Recording a material requirement must
+never, by itself, create a financial obligation, an approved cost, a fund request or a
+payment. The record must state plainly whether it is documentation only or is being put
+forward for approval, and the two must be visually and semantically distinct.
+
+**Simplified top-level navigation (immediate and medium term).** The intended desktop
+primary destinations are Dashboard, Projects, People, Finance, Reports and More. "More" may
+contain Work Inbox / Approvals, Notifications, Documents, Project Intakes, Settings and
+Administration. This is product authority for progressive implementation, not an instruction
+to change routes now. Navigation remains capability-led: a destination appears only when its
+module is functional and authorised, and disabled future destinations remain prohibited. The
+current `/admin/site-costs` and `/admin/fund-requests` routes may remain during transition
+but must not be treated as the permanent top-level architecture.
+
+**Unified Work Inbox.** One role-aware inbox collects everything requiring attention, with
+user-facing tabs *Needs my action*, *Submitted*, *Approved*, *Returned* and *Completed*. It
+may aggregate project changes, material requests, internal cost claims, fund requests,
+release acknowledgments, reconciliation submissions, project intakes, document reviews and
+later people or engagement requests. Each item must show project, record type, a short
+description, requester, amount where applicable, date, current state and the action
+required.
+
+The Work Inbox is a **presentation and attention layer, not a replacement ledger.** Approved
+records from different domains become discoverable in one place, but each record's status,
+lifecycle, permitted transitions and decision authority remain domain-specific and
+unchanged. The existing Approvals module remains the authoritative decision workflow for its
+implemented approval types.
+
+**Where the inbox and the authoritative workflow meet.** The authority boundary is settled:
+the authoritative mutation always belongs to the originating domain or to the existing
+Approvals workflow, never to the inbox. Within that boundary, a future interface may let a
+user *start* an action from the inbox. Whether the final decision control is presented
+inline in the inbox or opens the authoritative detail view is an **implementation-design
+choice deferred to Work Inbox implementation design**, not an open product-authority
+question. Either interaction must invoke the same controlled domain mutation, with the same
+role, project-scope and version checks, and must never create a second approval record or a
+competing decision path.
+
+## 15. Notifications
+
+Notifications are a shared platform capability: an **attention projection created from an
+authoritative event**. A notification is never the audit ledger. The immutable domain event
+ledgers remain the authoritative history, and a missing, read, dismissed or deleted
+notification must never alter or obscure them.
+
+Minimum conceptual fields: recipient; originating domain; originating record; event; a
+concise message; created time; read/unread state; a direct destination; and optionally a due
+time or priority.
+
+Initial trigger classes: a submission requiring another person's action; approval, rejection
+or return; correction required; an accountable advance assigned; receipt acknowledgment
+required; reconciliation overdue; a missing or late Daily Site obligation; a document review
+request; task assignment; project mention or escalation; and an approaching due date.
+
+Worked role expectations: the Operations Manager submits a cost or material request → notify
+the Principal; the Principal approves, rejects or returns it → notify the Operations
+Manager; the Principal releases an accountable advance → notify the assigned custodian; the
+custodian acknowledges receipt → notify the Principal; any record returned for correction →
+notify its requester.
+
+Every notification must open **the exact record requiring attention**, never merely a module
+index page.
+
+Desktop acceptance: a notification bell, an unread count, a recent dropdown and a full
+Notifications page. Mobile acceptance: visible notification access, direct deep links to the
+record, an unambiguous unread state, and no dependence on a horizontal table.
+
+**Not authorised by this section:** external push notifications, email alerts, WhatsApp
+alerts and SMS. Each requires separate review before it is promised to any user.
+
+## 16. People and payees
+
+One coherent People area must eventually serve both workforce and non-person payees, using
+categories that stay consistent across Projects, Daily Site, claims, payments and reports.
+
+Workforce and person categories: Principal; Operations Manager; regular staff; casual
+worker; crew; crew representative; subcontractor; consultant.
+
+Organisations and non-person payees, defined separately: supplier; nursery; service
+provider; transport provider; equipment provider; other authorised organisation.
+
+Two rules follow, and both are requirements rather than preferences. A supplier must not be
+forced into a workforce or HR structure. An external worker must not be forced into an
+authenticated application profile in order to be engaged, recorded or paid.
+
+The model must preserve the future need for person or organisation identity; optional system
+access; project engagement; role or category; agreed rate or amount; attendance; payments;
+outstanding balance; and history.
+
+**This section authorises no new worker identity-document storage.** Identity documents,
+photographs of identification, full bank details and personal financial history remain
+excluded and unauthorised.
+
+## 17. Finance presentation
+
+Finance authority stays separated in the database; only its presentation is unified. The
+intended Finance area contains Overview, Project costs, Funding, Payments and advances,
+Reconciliation, and Client commercial summaries.
+
+The internal lifecycle may be presented to users as **Needed → Under review → Approved →
+Funded → Paid → Accounted for**. This is presentation language only. It never replaces,
+renames or collapses the authoritative states, which remain distinct and may include funding
+requested; funding approved; partially released; fully released; partially paid; fully paid;
+accountability outstanding; and reconciled. The distinctions between planned, claimed,
+approved, requested, released, paid and reconciled amounts are unchanged and remain binding.
+
+**Prohibited vocabulary.** "Invoiced" must never be used for internal workers, crews or
+accountable advances. "Released" must never be presented as paid, and a direct-recipient
+release must never be presented as paid or settled.
+
+The client-commercial lifecycle is separate and is presented as **Quoted → Invoiced →
+Partially paid → Fully paid / Balance outstanding**. Simple Invoice Manager remains
+authoritative for client estimates, invoices, receipts, payments and balances. The
+Operations Hub must not duplicate it and must not claim or imply an integration that does
+not exist.
+
+**BD-FIN-01B2 placement.** When BD-FIN-01B2 is implemented, its Fund Releases interface must
+live inside this unified Finance experience. It must not become another permanent standalone
+top-level destination. Its approved product conclusions are unchanged by this requirement.
+
+## 18. Reports
+
+Reports are a first-class product area derived from authoritative records. A report must
+never require a duplicate report-entry form, and no report may hold a figure that its source
+records do not support.
+
+*Project reports:* project summary; Daily Site activity; workforce and attendance; work
+completed; material requirements; project costs; funding and releases; payments; outstanding
+accountability; project timeline; approvals and decisions; project document register.
+
+*People reports:* staff and crews by project; attendance; days worked; rates and agreed
+amounts; amount paid; outstanding balance; subcontractor engagements; Operations Manager
+compensation by project; person-level payment history.
+
+*Finance reports:* costs submitted; costs approved; funding requested; funding authorised;
+funds released; payments made; unpaid obligations; unreconciled advances; spend by project;
+cost by category; supplier or payee history; project financial position.
+
+*Client-commercial summaries:* estimates; invoices; payments received; balances; overdue
+amounts; project or client ledger; income by project or service. These are available **only**
+from later verified Simple Invoice references or a separately approved integration contract,
+and until then must not appear at all.
+
+*Management reports:* portfolio summary; active-project health; projects needing attention;
+labour cost across projects; project cost comparison; cash requirements; outstanding client
+receivables; current internal liabilities; monthly operations summary; Principal management
+report.
+
+Reports may later support project filter, date range, category, person or crew, status,
+print, PDF and authorised export. Protected client margins, banking details and private
+rates remain role-restricted, and a report must never become a route around a role
+restriction that applies to the underlying record.
+
+**Not authorised by this section:** PDF generation, export implementation, or any report
+code.
+
+## 19. Printable documents
+
+Printable documents are generated presentations of authoritative records. The source record
+remains authoritative; the document remains a derived output.
+
+Potential future document types: Material Request; Purchase Request; Cost Approval; Fund
+Request; Fund Release Voucher; Payment Record; Accountable Advance Statement; Reconciliation
+Statement; Daily Site Report; Workforce Register; Project Progress Report; Project Cost
+Summary; Project Financial Statement.
+
+A printable document reuses Botanique identity, a document number, project, date, requester,
+approver, line items, totals, status and relevant history. **Users must never re-enter
+project, person, amount or line-item information solely to produce a document.** A document
+that cannot be produced from existing records is evidence that a record is missing, not a
+reason to add a parallel entry form.
+
+## 20. Dashboards
+
+Dashboards are role-specific and derived. **No dashboard total is editable**, and no
+dashboard value may exist that is not computed from authoritative records.
+
+*Principal dashboard* summarises: **needs attention** — requests awaiting decision, returned
+or escalated records, releases awaiting action, overdue accountability, project risks;
+**today** — active sites, staff and crews expected, missing or late site entries,
+significant updates; **project finance** — approved costs, funding still required, released
+funds, unpaid obligations, unreconciled advances; **client position** — invoiced, received,
+outstanding, overdue; **portfolio** — ongoing projects, upcoming starts, delayed or blocked
+projects, recent activity.
+
+*Operations Manager dashboard* prioritises today's sites; Daily Site actions; returned
+records; approved requests; advances assigned; acknowledgments; payments or reconciliations
+requiring action; project labour and material needs; and notifications.
+
+Principal-only company-wide commercial and banking information must not be exposed on the
+Operations Manager dashboard, and dashboard aggregation must not become an indirect route
+around project-scoped visibility.
+
+## 21. Mobile-first requirements
+
+Mobile is a primary operating environment, not a compressed desktop interface. The suggested
+bottom navigation is Home, Projects, People, Finance and More, with Reports under More on
+smaller screens.
+
+Mobile acceptance requirements: one clear page title; one primary action; no mandatory
+horizontal tables; stacked cards; amount and state visible immediately; large touch targets;
+minimal form steps; retained project context; filters that do not dominate the screen;
+exact-record notification deep links; camera and document capture once Documents & Evidence
+is separately implemented; duplicate-submit prevention; draft preservation; and a safe
+return to the originating project.
+
+Typical field actions should be reachable from a project within two or three taps.
+
+**Offline mutation is not authorised** and must not be promised until it is separately
+designed, reviewed and verified.
+
+## 22. Backup and recovery acceptance expectations
+
+**No claim of adequacy may be made until the posture is verified.** This repository contains
+no backup script, no scheduled export, no continuous-integration workflow and no recorded
+platform-plan or retention evidence. An existing Phase 1B-A4 runbook in `WORKSTREAMS.md`
+already instructs recovery "via Supabase point-in-time recovery", but nothing in this
+repository establishes that point-in-time recovery is available on the current plan or what
+its retention window is. That is an assumption to verify, not a capability on record.
+
+The following are acceptance expectations to be satisfied, each currently **unverified**:
+
+1. *Platform database backups* — confirm the Supabase plan; confirm automatic backup
+   availability; confirm retention period; restrict restore authority to named people.
+2. *Independent logical backups* — a scheduled encrypted database export, stored outside the
+   primary Supabase project, with defined daily, weekly and monthly retention.
+3. *Document and evidence backup* — a separate policy for uploaded files that preserves
+   database-to-file references; database backup must not be assumed to include storage
+   objects.
+4. *Recovery procedure* — named restoration authority, ordered recovery steps, expected
+   downtime, post-restore verification and an audit record.
+5. *Recovery testing* — isolated restore tests, suggested quarterly, with an annual
+   disaster-recovery review.
+
+Verification must be carried out **read-only**. This section authorises no hosted access, no
+configuration change and no assertion that any of the above currently exists.
+
+## 23. Delivery sequence and gate for sections 14–23
+
+Recommended sequence: (1) this information-architecture authority; (2) read-only backup and
+recovery posture verification; (3) Work Inbox and Notifications authority and implementation
+planning; (4) Reports and derived-summary authority; (5) People and payee identity
+authority; (6) progressive navigation and mobile-shell implementation; (7) BD-FIN-01B2
+database authority and concurrency; (8) BD-FIN-01B2 unified Finance interface; (9) BD-FIN-01C
+payments and claim allocations; (10) BD-FIN-01D reconciliation, returns and reversals;
+(11) printable documents and shared Documents & Evidence; (12) expanded management reporting
+and verified Simple Invoice summaries if separately approved.
+
+Sections 14–23 authorise stage 1 only. Every later stage requires its own authority, branch,
+review and deployment gate, and none of them is authorised here. The §13 exclusions apply to
+this revision in full.
