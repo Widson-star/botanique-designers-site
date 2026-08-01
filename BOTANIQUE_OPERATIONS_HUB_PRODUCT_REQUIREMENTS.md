@@ -1215,8 +1215,17 @@ The Work Inbox is a **presentation and attention layer, not a replacement ledger
 records from different domains become discoverable in one place, but each record's status,
 lifecycle, permitted transitions and decision authority remain domain-specific and
 unchanged. The existing Approvals module remains the authoritative decision workflow for its
-implemented approval types; the inbox surfaces its items and never decides them
-independently.
+implemented approval types.
+
+**Where the inbox and the authoritative workflow meet.** The authority boundary is settled:
+the authoritative mutation always belongs to the originating domain or to the existing
+Approvals workflow, never to the inbox. Within that boundary, a future interface may let a
+user *start* an action from the inbox. Whether the final decision control is presented
+inline in the inbox or opens the authoritative detail view is an **implementation-design
+choice deferred to Work Inbox implementation design**, not an open product-authority
+question. Either interaction must invoke the same controlled domain mutation, with the same
+role, project-scope and version checks, and must never create a second approval record or a
+competing decision path.
 
 ## 15. Notifications
 

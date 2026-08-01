@@ -790,8 +790,12 @@ Projection invariants:
 4. A projection is **rebuildable**. Losing or rebuilding a projection must lose no
    authoritative fact.
 5. Domain authority is unchanged by presentation. The Approvals foundation remains the
-   authoritative decision workflow for its implemented approval types; the Work Inbox reads
-   it and never decides on its behalf.
+   authoritative decision workflow for its implemented approval types. A projection may
+   *originate* an action, but every such action executes the originating domain's own
+   controlled mutation under its own role, project-scope and version checks. No projection
+   may hold a second approval record or open a competing decision path. Whether a decision
+   control is rendered inline or routes to the authoritative detail view is presentation
+   design, and either choice satisfies this invariant.
 
 Project-centred creation is a **routing** concern, not a data-model concern. A single
 operational intent captured from a project is written to the correct existing domain record;
@@ -939,7 +943,8 @@ permanent deletion of authoritative records.
 
 BD-FIN-01B2 implementation is paused pending §§10–17 and Product Requirements §§14–23. The
 pause is architectural placement, not a reopening: its approved conclusions — the two
-release models, direct-recipient releases bound to one fund-request allocation, no new
+release models, direct-recipient releases bound to exactly one existing
+`fund_request_allocation` and capped at that allocation's approved requested amount, no new
 recipient identity authored at release, derived release progress, final closure of unused
 release authority, receipt acknowledgment derived from immutable events, administrative
 annulment only where no money moved, real reversals deferred to BD-FIN-01D, no

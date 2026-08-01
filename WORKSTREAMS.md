@@ -1711,12 +1711,21 @@ before any statement of adequacy is made.
 
 **Preserved without weakening.** BD-FIN-01A and BD-FIN-01B1 remain ACTIVE_VERIFIED and are
 not reopened. The approved BD-FIN-01B2 conclusions stand: accountable advance and
-direct-recipient funding models; direct-recipient releases bound to one fund-request
-allocation; no new recipient identity authored at release; derived release progress; final
-closure of unused release authority; receipt acknowledgment derived from immutable events;
-administrative annulment only where no money moved; real reversals deferred to BD-FIN-01D;
-no `Ongoing`-only release restriction; and no release-allocation table. A direct-recipient
-release still never means paid or settled. The one thing this authority changes about
+direct-recipient funding models; direct-recipient releases bound to exactly one existing
+`fund_request_allocation`; no new recipient identity authored at release; derived release
+progress; final closure of unused release authority; receipt acknowledgment derived from
+immutable events; administrative annulment only where no money moved; real reversals
+deferred to BD-FIN-01D; no `Ongoing`-only release restriction; and no release-allocation
+table. **The direct-recipient identity model is settled authority, not an open question:**
+the founder approved the allocation-bound model before this documentation task. Recipient
+identity is inherited from that allocation's frozen claim-recipient snapshot; a
+multi-recipient request is executed through separate release records; and cumulative active
+direct-recipient releases against one allocation may never exceed that allocation's approved
+requested amount. The reference identifies whose approved obligation the money moved toward
+and establishes no payment, counterparty confirmation or settlement, all of which remain
+BD-FIN-01C. A direct-recipient release still never means paid or settled, and no part of the
+BD-FIN-01B2 documentation authority is blocked by this decision. The one thing this
+authority changes about
 BD-FIN-01B2 is where its interface lives: inside the unified Finance experience, not as
 another permanent standalone top-level destination. Also preserved: the planned, claimed,
 approved, requested, released, paid and reconciled distinctions; strict project-level
