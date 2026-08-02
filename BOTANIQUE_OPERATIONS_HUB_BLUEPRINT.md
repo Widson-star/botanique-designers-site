@@ -12,6 +12,16 @@ application, migration, RLS, integration or hosted-data change. Current implemen
 state is maintained in `WORKSTREAMS.md`; founder requirements are maintained in
 `BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md`.
 
+**Visual authority.** Presentation of every portal surface is additionally governed by the
+four Founder-approved screens in `docs/ui-authority/operations-hub/`, adopted 3 August 2026,
+under the binding interpretation rules in that directory's `README.md`:
+`01-dashboard-authority.png`, `02-alerts-popover-authority.png`,
+`03-reports-centre-authority.png` and `04-project-summary-authority.png`. They must be
+inspected before any portal UI implementation. They govern shell, hierarchy, density, card
+rhythm, colour restraint and navigation model — not capability: they authorise no invented
+field, figure, metric, report, module or action. Where a screen and this blueprint appear to
+conflict, implementation stops and the conflict is reported to the Founder.
+
 ## 1. Verified production foundation
 
 Phase 1B-A2 is merged under PR #34 at
@@ -542,6 +552,16 @@ role-appropriate empty states. No module is exposed as a disabled future destina
 The groups above remain the **authority** structure. They are superseded as the
 **presentation** structure by the simplified top-level architecture in the Product
 Requirements §14; the projection architecture that makes that separation safe is §10 below.
+
+`01-dashboard-authority.png` illustrates the eventual grouped navigation. Illustration is not
+authorisation: the grouped restructure is still gated by this section and by current stage
+authority, and is not implemented merely because a screen depicts it.
+
+**Attention surfaces are not navigation destinations.** Per
+`02-alerts-popover-authority.png`, current attention items reach the reader through a
+top-right bell beside the user profile, opening a compact popover. Alerts must not occupy a
+permanent sidebar destination under any name, and no fuller alerts view may be presented as a
+long scrolling operational page.
 
 ## 6. Role and access architecture
 
