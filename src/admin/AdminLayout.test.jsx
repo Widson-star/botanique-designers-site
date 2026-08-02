@@ -56,10 +56,9 @@ describe("AdminLayout visual boundary", () => {
     })[0];
     expect(within(desktopNav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Dashboard",
-      // BD-INBOX-01 (Stage 3). The Work Inbox is a delivered destination and
-      // sits directly after Dashboard: it is the authoritative place for what
-      // needs attention, so it is reached before the module lists.
-      "Work Inbox",
+      // BD-ALERTS-01 removed the Work Inbox destination. Attention items are
+      // not a navigation destination under any name — they reach the reader
+      // through the header bell, per 02-alerts-popover-authority.png.
       "Projects",
       "Project intakes",
       "Daily site operations",
@@ -85,10 +84,8 @@ describe("AdminLayout visual boundary", () => {
   // Finance, Team, Tasks, Assignments, Documents or a summary area — may
   // appear, and no entry may be disabled, decorative or a placeholder.
   //
-  // BD-INBOX-01 (Stage 3) removed Work Inbox from that prohibited list, and
-  // ONLY because it is now a working destination with a real route. It is still
-  // held to every check below: a real href, no disabled state, no placeholder
-  // wording.
+  // BD-ALERTS-01 returned Work Inbox to that prohibited list: it is no longer a
+  // destination at all, and no Alerts destination replaced it.
   it("introduces no dead, disabled or placeholder navigation item", () => {
     renderLayout();
     const desktopNav = screen.getAllByRole("navigation", { name: "Admin sections" })[0];
@@ -104,28 +101,49 @@ describe("AdminLayout visual boundary", () => {
     ).not.toBeInTheDocument();
   });
 
-  // BD-INBOX-01 (Stage 3) delivered an in-app Work Inbox with an unread count.
-  // It did NOT deliver notifications, and the shell must not imply otherwise:
-  // event-backed notification history, a bell, a dropdown and any external
-  // delivery remain later, separately authorised capabilities.
-  it("adds no notification bell, dropdown or notification centre", () => {
+  // BD-ALERTS-01. The Founder rejected the Work Inbox presentation on
+  // 3 August 2026: the name, the permanent sidebar destination and the
+  // full-page list are all gone. Nothing may reintroduce them, and no Alerts
+  // destination may take their place.
+  it("renders no Work Inbox destination, and no Alerts destination in its place", () => {
+    renderLayout();
+    expect(screen.queryByText(/work inbox/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Work Inbox|Alerts|Inbox/i })).not.toBeInTheDocument();
+    for (const link of screen.getAllByRole("link")) {
+      expect(link.getAttribute("href")).not.toBe("/admin/work-inbox");
+    }
+  });
+
+  // Alerts live behind a bell in the top-right header beside the profile, per
+  // 02-alerts-popover-authority.png. It is a control, not a destination.
+  it("renders the Alerts bell in the header for an authorised role", () => {
+    renderLayout();
+    const bell = screen.getByRole("button", { name: /^Alerts/ });
+    expect(bell).toHaveAttribute("aria-haspopup", "dialog");
+    expect(bell).toHaveAttribute("aria-expanded", "false");
+    expect(bell.closest("header")).toBeInTheDocument();
+  });
+
+  // This is still not a notification centre. No notification record exists, so
+  // nothing may offer notification settings, history or delivery.
+  it("still offers no notification record, history or delivery surface", () => {
     renderLayout();
     expect(
-      screen.queryByRole("link", { name: /Notification|Alerts|Bell/i })
+      screen.queryByRole("link", { name: /Notification/i })
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Notification|Alerts|Bell/i })
+      screen.queryByRole("button", { name: /Notification/i })
     ).not.toBeInTheDocument();
   });
 
-  // The badge is a count of NEW items needing action. With no session there is
-  // nothing read and therefore no count — a confident "0" is never shown for a
-  // read that did not happen.
-  it("shows no unread badge when no inbox read has happened", () => {
+  // The badge counts NEW items needing action. With no session nothing was
+  // read, so there is no count — a confident "0" is never shown for a read that
+  // did not happen.
+  it("shows no unread badge when no alerts read has happened", () => {
     renderLayout();
-    const inbox = screen.getAllByRole("link", { name: /Work Inbox/ })[0];
-    expect(inbox).toHaveAttribute("href", "/admin/work-inbox");
-    expect(inbox.textContent).toBe("Work Inbox");
+    const bell = screen.getByRole("button", { name: /^Alerts/ });
+    expect(bell).toHaveAccessibleName("Alerts");
+    expect(bell.textContent).toBe("");
   });
 
   // Every sidebar label matches the title its destination gives itself, so a
