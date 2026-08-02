@@ -2475,6 +2475,10 @@ Fund Requests and Approvals & Decisions load correctly. Deployment requires its 
 **Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026.** The EAT offset correction
 recorded immediately above has been deployed and verified on the hosted production system under two
 separate authenticated browser sessions. BD-REPORTS-01A is now classified **`ACTIVE_VERIFIED`**.
+**This entry supersedes the `DEPLOYED_WITH_MATERIAL_GAPS` classification recorded immediately above**,
+whose stated condition — an authenticated hosted check confirming that Internal Cost Claims, Fund
+Requests and Approvals & Decisions load correctly — is satisfied and evidenced below. Earlier entries
+retain their original wording as the historical record and are not restated.
 
 **Production commit and deployment.** Authoritative main is
 `88b56091432ed4766fa61bfe8831595c83448cee`, the merge commit of **PR #61** (reviewed head
