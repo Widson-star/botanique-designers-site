@@ -3052,6 +3052,29 @@ correcting it means renaming destination screens in other modules.
 The eventual grouped presentation — Dashboard, Projects, People, Finance, Reports, More —
 remains deferred to its authorised stage.
 
+#### Validation, and one pre-existing flaky test recorded rather than hidden
+
+Frontend `vitest` full suite **48 files / 415 tests**; `npm run build` prerenders **43** routes,
+unchanged from exact main; changed-file `eslint` clean; repository-wide `eslint` reports the same
+**19** pre-existing errors as exact main — zero new; `git diff --check` clean. The dev preview
+confirmed the sidebar order, the heading, the introductory wording and the absence of console
+errors. No database suite was run because no database object was touched.
+
+**A pre-existing flaky test is recorded here rather than passed over.** During validation,
+`src/admin/AdminApp.test.jsx > "shows profile loading before authenticated content"` failed
+intermittently — roughly one full-suite run in four — and passed on every other run and on every
+isolated run of that file. It was investigated rather than retried until green, and the cause is
+**structural and pre-existing, not introduced by this change**: the test assigns its promise
+resolver inside the `fetchCurrentProfile` mock implementation, so the resolver exists only once
+that mock is called, but it then waits for "Loading admin profile…", which `AdminApp` renders
+from its **initial** `authStatus === "loading"` state, before the effect issuing the fetch has
+run. The wait can therefore succeed while the resolver is still undefined. This change adds six
+tests to the parallel pool and so surfaces the race more often; it touches no authentication,
+hydration or profile-loading code, and nothing in the diff can affect that test's subject. The
+fix belongs to the test, not to `AdminApp`, and is **out of scope for this narrowly authorised
+correction**; it is registered as separate work. **This entry does not claim a uniformly green
+suite.**
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`
