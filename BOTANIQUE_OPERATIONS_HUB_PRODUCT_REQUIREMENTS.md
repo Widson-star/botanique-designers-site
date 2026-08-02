@@ -1356,6 +1356,16 @@ The delivery sequence in §23 is unchanged and is not reordered: this is stage 4
 sequence, stage 3 (Work Inbox and Notifications authority and implementation planning)
 remains outstanding and is neither superseded nor absorbed, and no later stage is authorised.
 
+**Why stage 4A may be recorded while stage 3 is outstanding.** The sequence gates each stage
+separately — each requires its own authority, branch, review and deployment gate — and it
+gates *implementation*, not the order in which product authority may be written. §22.1
+expressly records that unrelated Operations Hub authority and design work is not blocked,
+naming reports and derived summaries among the work that continues. Recording stage 4A
+therefore neither completes nor bypasses stage 3: **stage 3 remains responsible for the unified
+Work Inbox and Notifications capability**, including its persistence, recipient rules,
+read/unread state and action routing, none of which is defined here. Stage 4 may only derive
+attention summaries from existing source states.
+
 **Product purpose.** Reports is a first-class Operations Hub product area whose purpose is to
 present, analyse and summarise authoritative source records for management use. Reports is a
 controlled presentation, analysis and management-summary layer, never a second place where
@@ -1395,8 +1405,13 @@ The following facts are currently supportable from implemented, verified source 
 
 - **Projects** — project identity, location, dates, status, responsible lead and authorised
   project notes.
-- **Daily Site Operations** — work plans, work completed, submission timing, missing, late and
-  waived status, crew counts, attendance evidence status, and planned labour.
+- **Daily Site Operations** — the work plan for the day; the working or no-work disposition and
+  its reason; **expected** worker count; crew reference; rate per worker or agreed labour total;
+  **planned** labour amount; funds noted as available and any additional amount requested; entry
+  notes; evidence status; submission timing including late flagging; missing, late and waived
+  morning-compliance status; entry lifecycle state, version and supersession; and the immutable
+  entry event history. This is the delivered first slice, which captures **the plan and its
+  submission**, not the day's outcome.
 - **BD-FIN-01A Internal Cost Claims** — submitted internal cost claims, approved internal cost
   claims, cost categories, lifecycle states, and frozen recipient or crew snapshots.
 - **BD-FIN-01B1 Claim-Backed Fund Requests** — submitted fund requests, approved funding
@@ -1408,12 +1423,23 @@ The following facts are currently supportable from implemented, verified source 
 The following are **not** currently supportable as authoritative facts and must not be
 reported, implied, estimated or shown as zero:
 
-funds released; payments made; unpaid authoritative obligations; actual project expenditure;
-accountable advances; reconciled or unreconciled balances; cash held by a custodian; project
-profit or loss; complete project financial position; complete employee or subcontractor
-compensation; complete Operations Manager compensation; authoritative material procurement
-requirements; stored Documents & Evidence; and client invoice, receipt or commercial balance
-data duplicated by hand from Simple Invoice Manager.
+**actual work completed**; **actual worker count and person-level attendance**; **actual labour
+cost**; funds released; payments made; unpaid authoritative obligations; actual project
+expenditure; accountable advances; reconciled or unreconciled balances; cash held by a
+custodian; project profit or loss; complete project financial position; complete employee or
+subcontractor compensation; complete Operations Manager compensation; authoritative material
+procurement requirements; stored Documents & Evidence; and client invoice, receipt or
+commercial balance data duplicated by hand from Simple Invoice Manager.
+
+**Actual work completed, actual worker count and actual labour cost are unavailable future
+facts.** §4.5.3 defers the Daily Site day-end fields — actual worker count, actual labour cost,
+actual work completed, day-end notes and any unresolved difference — and the delivered slice
+does not capture them. They therefore depend on a **separately approved Daily Site day-end
+authority and implementation**, which this section does not authorise, request or schedule.
+They must **not** be inferred from the work plan, from entry notes, from project updates, from
+evidence status, or from an entry having been accepted; and they must **not** be displayed as
+zero. Until that authority exists, any report section that would carry them shows a clear
+unavailable state or is omitted.
 
 Each of these becomes reportable only when its own domain authority is separately approved and
 implemented — releases under BD-FIN-01B2, payments under BD-FIN-01C, reconciliation under
@@ -1434,10 +1460,20 @@ The following report families are authorised as derivable from the source-of-tru
 7. Management Attention Summary
 8. Project Activity Timeline
 
+A family being authorised means only that it is derivable from §18.3 — **not** that every value
+its name suggests is available. Two names require this qualification, and it is binding:
+
+- **Daily Site Activity** derives from work plans, dispositions, submission timing and
+  compliance status. It does **not** report actual work completed.
+- **Attendance and Workforce Summary** derives from expected worker counts, crew references,
+  planned labour amounts and evidence status. It is **not** an attendance register, does **not**
+  report actual persons present or actual worker counts, and is **not** payroll.
+
 The wider taxonomy earlier in §18 may continue to identify later finance, People, materials,
-payments, reconciliation and document reports. Those must remain **visibly future** wherever
-they appear and must never be presented as active authoritative capabilities, enabled
-navigation, or empty reports awaiting data.
+payments, reconciliation and document reports — including work completed and person-level
+attendance. Those must remain **visibly future** wherever they appear and must never be
+presented as active authoritative capabilities, enabled navigation, or empty reports awaiting
+data.
 
 ### 18.5 BD-REPORTS-01A — Project Summary and Current-Authority Reporting
 
@@ -1460,6 +1496,19 @@ Initial Project Summary sections: **Project Overview; Needs Attention; Daily Sit
 Attendance and Planned Labour; Internal Cost Claims; Fund Requests; Approvals and Decisions;
 Recent Activity.**
 
+**Attendance and Planned Labour — content boundary.** The initial implementation may display
+only expected worker count where present, crew reference where present, planned labour amount
+where present, evidence status, and the applicable Daily Site obligation and submission
+indicators. It must **not** claim or display actual persons present, actual worker count,
+actual labour cost, labour paid, payroll attendance or completed work. Where a reader might
+expect those, the section states plainly that they are not yet recorded. The section name is
+retained; its content is bounded by §18.3.
+
+**Needs Attention — content boundary.** This section is a derived summary of existing source
+states — outstanding Daily Site obligations, records returned for correction, and items
+awaiting a decision in their originating domain. It is not a Work Inbox, holds no state of its
+own, and carries no decision control (§18.1, §18.10).
+
 **Explicitly excluded from BD-REPORTS-01A:** fund-release implementation; payment
 implementation; reconciliation implementation; client-invoice integration; a generic materials
 domain; document upload; PDF generation; export implementation; stored report snapshots;
@@ -1472,7 +1521,13 @@ These distinctions are binding and must be carried, unchanged, across every dash
 view, report, future printed document and future export:
 
 - planned labour amount is **not** labour paid;
-- recorded attendance is **not** payroll attendance;
+- planned labour amount is **not** actual labour cost;
+- expected worker count is **not** recorded attendance, and neither is an accepted Daily Site
+  entry;
+- evidence status is **not** proof of actual attendance;
+- work planned is **not** work completed;
+- recorded attendance is **not** payroll attendance, and no Daily Site figure may be presented
+  as payroll;
 - cost submitted is **not** amount owed;
 - internal cost approved is **not** amount spent;
 - funding requested is **not** cash immediately required;
@@ -1526,8 +1581,9 @@ A report must never expand source permissions.
 summaries; sensitive authorised cost and funding figures; and cross-project comparisons and
 approval histories.
 
-*Operations Manager.* May view authorised managed projects; Daily Site, attendance and
-planned-labour summaries; cost claims and fund requests **only within existing source
+*Operations Manager.* May view authorised managed projects; Daily Site, workforce and
+planned-labour summaries within the §18.3 boundary; cost claims and fund requests **only
+within existing source
 permissions**; and returned records and required actions. Must **not** automatically receive
 unrestricted company-wide finance, banking data, client-commercial information or sensitive
 information about unrelated projects.
@@ -1581,6 +1637,8 @@ A future Reports implementation is acceptable only if, at minimum:
 - every displayed figure is traceable to an implemented source record and classified under
   §18.2;
 - no unavailable fact is rendered as zero, blank or "none";
+- no actual work completed, actual worker count, person-level attendance or actual labour cost
+  appears anywhere, and no expected or planned figure is labelled as an actual one;
 - no report total is editable, and no report writes to any source record;
 - lifecycle and calculation rules in §18.7 are demonstrably applied, including the stated
   controlling date for each section;
@@ -1766,6 +1824,14 @@ and verified Simple Invoice summaries if separately approved.
 Sections 14–23 authorise stage 1 only. Every later stage requires its own authority, branch,
 review and deployment gate, and none of them is authorised here. The §13 exclusions apply to
 this revision in full.
+
+**Reading the "stage 1 only" statement (2 August 2026).** The retained sentence above concerns
+**implementation authority**: of the twelve stages, sections 14–23 granted execution authority
+for stage 1 alone, and that is unchanged. It does not prevent a later stage's
+documentation/product authority from being recorded within these sections. The Stage 4A
+subsections §§18.1–18.13 are documentation and product authority only; they authorise no
+implementation, and **Stage 4 implementation remains unauthorised**. The twelve-stage sequence
+is unchanged.
 
 **Sequence status (2 August 2026).** The order above is unchanged and is not reordered.
 Stage 1 (information architecture) and stage 2 (read-only backup and recovery posture

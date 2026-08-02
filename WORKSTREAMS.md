@@ -1926,6 +1926,15 @@ stage 3 (Work Inbox and Notifications authority and implementation planning) rem
 **outstanding** and is not superseded, absorbed or replaced by this entry. Stages 5–12 are
 unchanged and unauthorised.
 
+**Why this may be recorded while stage 3 is outstanding.** The sequence gates each stage
+separately and gates *implementation*, not the order in which product authority is written; the
+Account Security and Recovery Custody Authority entry above expressly records that unrelated
+Operations Hub authority and design work is not blocked, naming reports and derived summaries.
+**Stage 3 retains ownership of the unified Work Inbox and Notifications capability** — its
+persistence, recipient rules, read/unread state and action routing are stage 3 concerns and are
+deliberately undefined here. Stage 4 may derive attention summaries from existing source states
+only, so this entry neither completes nor bypasses stage 3.
+
 Status: **Documentation authority only.** This entry authorises no application code, route,
 component, migration, RLS policy, function, view, grant, test, hosted mutation or deployment.
 No hosted Supabase, Vercel, Render, Google Workspace or DNS system was accessed while it was
@@ -1952,15 +1961,20 @@ where zero would falsely imply the value was measured; it must show a clear unav
 or the section must be omitted.
 
 **Currently supportable source facts.** Projects — identity, location, dates, status,
-responsible lead and authorised notes. Daily Site Operations — work plans, work completed,
-submission timing, missing, late and waived status, crew counts, attendance evidence status
-and planned labour. BD-FIN-01A — submitted and approved internal cost claims, categories,
+responsible lead and authorised notes. Daily Site Operations — the work plan; the working or
+no-work disposition; **expected** worker count; crew reference; rate or agreed labour total;
+**planned** labour amount; funds available and additional amount requested; notes; evidence
+status; submission timing including late flagging; missing, late and waived compliance status;
+entry lifecycle state, version and supersession; and entry event history. The delivered Daily
+Site slice captures **the plan and its submission, not the day's outcome**. BD-FIN-01A —
+submitted and approved internal cost claims, categories,
 lifecycle states and frozen recipient or crew snapshots. BD-FIN-01B1 — submitted fund requests,
 approved funding amounts, associated approved claims, intended custody model and lifecycle
 states. Approvals and immutable events — current decision state, requester, authority,
 submission date, decision date, amendment history and event history.
 
-**Not currently supportable, and not to be reported, implied or shown as zero:** funds
+**Not currently supportable, and not to be reported, implied or shown as zero:** **actual work
+completed; actual worker count and person-level attendance; actual labour cost;** funds
 released; payments made; unpaid authoritative obligations; actual project expenditure;
 accountable advances; reconciled or unreconciled balances; cash held by a custodian; project
 profit or loss; complete project financial position; complete employee or subcontractor
@@ -1968,11 +1982,25 @@ compensation; complete Operations Manager compensation; authoritative material p
 requirements; stored Documents & Evidence; and client invoice, receipt or commercial balance
 data duplicated by hand from Simple Invoice Manager.
 
+**Correction recorded 2 August 2026 — Daily Site source contract.** An earlier draft of this
+entry listed *work completed* among currently supportable Daily Site facts. That was wrong and
+is corrected here. PRD §4.5.3 defers the day-end fields — actual worker count, actual labour
+cost, actual work completed, day-end notes and any unresolved difference — and the delivered
+`daily_site_entries` slice holds none of them. **Actual work completed, actual worker count and
+actual labour cost are unavailable future facts** dependent on a separately approved Daily Site
+day-end authority and implementation, which this entry does not authorise, request or schedule.
+They must not be inferred from work plans, notes, project updates, evidence status or an
+accepted entry, and must not be displayed as zero.
+
 **Report families authorised from current records.** Project Summary; Daily Site Activity;
 Attendance and Workforce Summary; Internal Cost Claims; Fund Requests; Approvals and Decisions;
-Management Attention Summary; Project Activity Timeline. Later finance, People, materials,
-payments, reconciliation and document reports may appear in the product taxonomy but must
-remain visibly future and must never be presented as active authoritative capabilities.
+Management Attention Summary; Project Activity Timeline. A family being authorised means only
+that it is derivable from the source facts above: **Daily Site Activity does not report actual
+work completed**, and **Attendance and Workforce Summary is not an attendance register, reports
+no actual persons present or actual worker count, and is not payroll**. Later finance, People,
+materials, payments, reconciliation and document reports — including work completed and
+person-level attendance — may appear in the product taxonomy but must remain visibly future and
+must never be presented as active authoritative capabilities.
 
 **First implementation slice: BD-REPORTS-01A — Project Summary and Current-Authority
 Reporting.** Purpose: a project-centred, date-filtered management report derived only from
@@ -1981,7 +2009,13 @@ navigation entry; a project selector; a reporting-period selector; a responsive 
 mobile Project Summary; role-authorised drill-through to originating records; clear empty
 states; clear unavailable states; and no editable report totals. Initial sections: Project
 Overview; Needs Attention; Daily Site Activity; Attendance and Planned Labour; Internal Cost
-Claims; Fund Requests; Approvals and Decisions; Recent Activity.
+Claims; Fund Requests; Approvals and Decisions; Recent Activity. **Attendance and Planned
+Labour** may display only expected worker count, crew reference, planned labour amount,
+evidence status and the applicable Daily Site obligation and submission indicators; it must not
+claim actual persons present, actual worker count, actual labour cost, labour paid, payroll
+attendance or completed work. **Needs Attention** is a derived summary of existing source
+states — outstanding Daily Site obligations, returned records and items awaiting a decision in
+their originating domain — and is not a Work Inbox.
 
 **Explicitly excluded from BD-REPORTS-01A:** fund-release implementation; payment
 implementation; reconciliation implementation; client-invoice integration; a generic materials
@@ -1990,8 +2024,11 @@ generated-document custody; any new generic project-event entry model; any dupli
 ledger; and any hosted-system mutation.
 
 **Required terminology, binding across dashboards, mobile views, reports and future printing
-and exports.** Planned labour amount is not labour paid; recorded attendance is not payroll
-attendance; cost submitted is not amount owed; internal cost approved is not amount spent;
+and exports.** Planned labour amount is not labour paid and is not actual labour cost; expected
+worker count is not recorded attendance, and neither is an accepted Daily Site entry; evidence
+status is not proof of actual attendance; work planned is not work completed; recorded
+attendance is not payroll attendance, and no Daily Site figure may be presented as payroll;
+cost submitted is not amount owed; internal cost approved is not amount spent;
 funding requested is not cash immediately required; funding authorised is not funds released;
 fund release is not payment; payment recorded is not reconciled; estimate issued is not
 revenue; invoice issued is not payment received; payment received is not profit; and expected
@@ -2015,7 +2052,8 @@ Documents & Evidence constraints continue to apply.
 **Role boundaries.** The Principal may view all authorised Botanique project reports,
 portfolio-wide management summaries, sensitive authorised cost and funding figures, and
 cross-project comparisons and approval histories. The Operations Manager may view authorised
-managed projects, Daily Site, attendance and planned-labour summaries, and cost claims and
+managed projects, Daily Site, workforce and planned-labour summaries within the source
+boundary above, and cost claims and
 fund requests only within existing source permissions, together with returned records and
 required actions; he must not automatically receive unrestricted company-wide finance,
 banking data, client-commercial information or unrelated-project sensitive information.
@@ -2056,18 +2094,24 @@ by this entry, because none has yet been inspected. 4B, 4C and 4D each require t
 authority, branch, review and deployment gate.
 
 **Execution remains not authorised.** This entry changes no hosted system, no database, no
-RLS policy, no configuration and no application code. **BD-FIN-01B2 remains paused** and every
-settled BD-FIN-01B2 decision stands unchanged and unreopened, including that
-`release_authority_closed` increments the request version; that no separate
-`custody_model_overridden` event is needed; that the earlier provisional reversal-status
-promise is superseded with real reversals remaining BD-FIN-01D; that release eligibility must
-not require project status `Ongoing`; that closure of unused release authority is final and
-cannot be reopened; that direct-recipient releases reference exactly one existing
-`fund_request_allocation`, inherit its frozen recipient snapshot and are capped at that
-allocation's approved requested amount; and that the Work Inbox remains presentation only with
-decisions executing through the originating domain or the Approvals workflow. Full founder
-requirements are in the Product Requirements §§18.1–18.13; full architecture is in the
-Blueprint §§12.1–12.10. No Apicora project content is affected.
+RLS policy, no configuration and no application code.
+
+**BD-FIN-01B2 remains paused, and every settled BD-FIN-01B2 decision stands unchanged and
+unreopened.** Those decisions are recorded in the *Preserved without weakening* paragraph of
+the 1 August 2026 information-architecture authority entry above and in Product Requirements
+§4.7; this entry references them rather than restating them, and changes none of them. Nothing
+in Reports authority reopens, weakens, reinterprets or anticipates B2 — no Reports section may
+present release, payment or reconciliation data, because no such source exists.
+
+Two settled B2 decisions are **not** carried by that paragraph or by any other repository text,
+so they are recorded here to avoid losing them: `release_authority_closed` increments the
+request version, and no separate `custody_model_overridden` event is needed. **This is
+placement of record only — it is not Reports authority, and both belong in the BD-FIN-01B2
+authority document when that work resumes.** They are stated unchanged and are not reopened
+here.
+
+Full founder requirements are in the Product Requirements §§18.1–18.13; full architecture is in
+the Blueprint §§12.1–12.10. No Apicora project content is affected.
 
 ### Phase 1A — Lead Data and RLS Foundation
 

@@ -882,19 +882,30 @@ defines the fact, its permitted transitions and its access rule:
 |---|---|
 | Project identity, location, dates, status, responsible lead, authorised notes | `projects` |
 | Project change history and activity timeline | `project_activities` |
-| Work plans, work completed, submission timing, missing/late/waived status, crew counts, attendance evidence status, planned labour | Daily Site Operations (§4.9) |
+| Work plan, working/no-work disposition, **expected** worker count, crew reference, rate or agreed labour total, **planned** labour amount, funds available and additional amount requested, notes, evidence status, submission timing and late flagging, missing/late/waived compliance status, entry lifecycle state and version, entry event history | Daily Site Operations (§4.9) |
 | Submitted and approved internal cost claims, categories, lifecycle states, frozen recipient snapshots | BD-FIN-01A (§4.10) |
 | Submitted fund requests, approved funding amounts, associated approved claims, intended custody model, lifecycle states | BD-FIN-01B1 (§4.11) |
 | Decision state, requester, deciding authority, submission and decision dates, amendment and event history | Approvals foundation and the domain immutable event ledgers (§4.2) |
 
-Facts with **no implemented owning domain** are not reportable. This includes funds released,
+Facts with **no implemented owning domain** are not reportable. This includes actual work
+completed, actual worker count and person-level attendance, actual labour cost, funds released,
 payments made, unpaid authoritative obligations, actual project expenditure, accountable
 advances, reconciled and unreconciled balances, custodian cash holdings, project profit or
 loss, complete project financial position, complete compensation for any person or role,
 authoritative material procurement requirements, stored Documents & Evidence, and
-client-commercial data. Each awaits BD-FIN-01B2, BD-FIN-01C, BD-FIN-01D, a future materials or
-People authority, the Documents & Evidence gate, or a separately approved Simple Invoice
-contract. **An absent owning domain must surface as an unavailable state, never as zero.**
+client-commercial data. Each awaits a future Daily Site day-end authority, BD-FIN-01B2,
+BD-FIN-01C, BD-FIN-01D, a future materials or People authority, the Documents & Evidence gate,
+or a separately approved Simple Invoice contract. **An absent owning domain must surface as an
+unavailable state, never as zero.**
+
+**The Daily Site boundary is a plan/outcome boundary, and it is architectural.** The delivered
+`daily_site_entries` slice owns the plan and its submission; §4.9 defers the day-end fields
+(actual worker count, actual labour cost, actual work completed, day-end notes, unresolved
+difference), and no column, function or view currently holds them. A projection may therefore
+not synthesise an outcome from a plan: an accepted entry, entry notes, evidence status or a
+project update is **not** evidence that planned work was completed or that expected workers
+attended. Expected worker count is plan data and must never be composed into an attendance or
+payroll figure.
 
 ### 12.3 No duplicate ledger
 
@@ -983,7 +994,11 @@ Reports today. Report output must not become an unprotected evidence repository.
 - **Work Inbox** — both are projections. The Work Inbox answers "what needs action now"; the
   Management Attention Summary and Needs Attention sections answer "what is outstanding across
   a period". They may share derivations, but neither becomes a ledger and neither owns a
-  decision. Stage 3 remains outstanding and is not superseded by this stage.
+  decision. **Stage 3 remains outstanding and retains ownership of the unified Work Inbox and
+  Notifications capability** — its persistence, recipient resolution, read/unread state and
+  action routing are stage 3 concerns and are deliberately undefined here. Stage 4 derives
+  attention summaries from existing source states only, so recording stage 4A neither completes
+  nor bypasses stage 3; the two remain independently gated (§8).
 - **Projects** — the project record and `project_activities` are the spine of the Project
   Summary and Project Activity Timeline. Reports reads them; project-centred creation (§10)
   remains a routing concern that Reports does not participate in.
@@ -992,9 +1007,10 @@ Reports today. Report output must not become an unprotected evidence repository.
   not reconciled. BD-FIN-01B2 remains paused and every settled BD-FIN-01B2 decision stands
   unchanged; no Reports section may anticipate release, payment or reconciliation data.
 - **People** — recipient identity in BD-FIN-01A claims and its frozen snapshots in BD-FIN-01B1
-  allocations remain the authoritative recipient reference (§13). Attendance and workforce
-  reporting derives from Daily Site records and must not be presented as payroll attendance or
-  as complete compensation.
+  allocations remain the authoritative recipient reference (§13). Workforce reporting derives
+  from Daily Site **expected** worker counts, crew references and **planned** labour amounts;
+  it is not an attendance register, not person-level attendance, not payroll and not complete
+  compensation. Person-level attendance awaits a future People authority.
 - **Simple Invoice Manager** — remains the external client-commercial system of record. No
   integration exists, none is implied, and no manual duplication is authorised to populate
   Operations Hub reporting.
