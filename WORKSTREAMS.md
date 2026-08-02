@@ -4748,8 +4748,16 @@ PG17 material matrix + existing Approvals + existing Daily Site matrices pass; f
 
 ## BD-INBOX-01 — Stage 3: Work Inbox and Notifications
 
-Status: ACTIVE_VERIFIED (Operations Manager hosted-verified; Principal verified at data
-and deployment level only — see *Verification* below)
+Status: **PRESENTATION SUPERSEDED** by BD-ALERTS-01 on 3 August 2026. The technical model
+recorded below — derived items, no duplicated business truth, per-user seen state only,
+reading resolving nothing, source-state resolution, role scoping, RLS and exact
+drill-through — was **accepted and is preserved unchanged**. Only the surface it was shown
+on was rejected: the "Work Inbox" name, the permanent sidebar destination and the full-page
+list. Everything below remains an accurate record of what was built and verified on 2–3
+August 2026; read it together with the BD-ALERTS-01 entry that follows.
+
+Original status: ACTIVE_VERIFIED (Operations Manager hosted-verified; Principal verified at
+data and deployment level only — see *Verification* below)
 
 Date: 2–3 August 2026
 
@@ -4945,3 +4953,208 @@ already recorded in §§18.1–18.13. Stage 4 proceeds 4A → **4B read-only rep
 data-readiness inspection** → 4C technical implementation authority → 4D implementation.
 **Reports execution remains not authorised.** Stages 5–12 are unchanged and unauthorised,
 and BD-FIN-01B2 remains paused with every settled decision unchanged.
+
+---
+
+## BD-ALERTS-01 — Operations Hub visual authority, and the Alerts presentation correction
+
+Status: **DEPLOYED_PENDING_FOUNDER_WALKTHROUGH.** Merged, deployed and verified against the
+production bundle and the hosted database. The authenticated Principal and Operations
+Manager browser walkthroughs are **not** claimed — production `/admin` is an invite-only
+email/password gate, no session was available, and entering credentials is not done.
+
+Date: 3 August 2026
+
+### Founder decision
+
+The Stage 3 presentation delivered under BD-INBOX-01 was **rejected**. Not authorised as
+final UX: "Work Inbox" as a user-facing product name; Work Inbox as a permanent sidebar
+destination; a long full-page list of alert cards; another machine-generated vertical
+operational archive.
+
+The agreed product is **Alerts**, behind a bell in the top-right header near the user
+profile.
+
+The Stage 3 **technical foundation was explicitly accepted** and carried forward without
+change.
+
+### Visual authority adopted
+
+Four Founder-approved screens were adopted into the repository at
+`docs/ui-authority/operations-hub/` as binding structural and visual authority alongside the
+Product Requirements and the Blueprint:
+
+| File | SHA-256 (leading 16) | Governs |
+|---|---|---|
+| `01-dashboard-authority.png` | `688f95b6d0c07e5e` | Shell, grouped navigation, hierarchy, density, card rhythm, colour restraint |
+| `02-alerts-popover-authority.png` | `ea1cd249f1b27b47` | Bell placement and compact alert interaction |
+| `03-reports-centre-authority.png` | `1c0eefe3cdb2f521` | Report-category navigation, one report at a time |
+| `04-project-summary-authority.png` | `7793b3b0123aa7dd` | Compact Project Summary composition |
+
+The images are **byte-identical** to the Founder-provided pack; only filenames were
+normalised. `docs/ui-authority/operations-hub/README.md` carries the nine binding
+interpretation rules, including that the screens authorise **no** invented business field,
+figure, metric, report, module or action, and that a conflict between visual and functional
+authority stops implementation rather than being improvised away.
+
+The Product Requirements now list the assets as companion authority and state the
+visual-authority rule; the Blueprint states it too, records in §5 that attention surfaces
+are **not** navigation destinations, and records that the grouped navigation the dashboard
+screen illustrates is **not** thereby authorised.
+
+No new AI-governance file was created: the repository has no existing AI or implementation
+guidance file, so the rule was placed in the two existing governing documents.
+
+GitHub Pages, previously enabled at `main:/docs` and erroring, now returns 404 — confirmed
+before adding `docs/`, so re-creating that directory does not publish these internal screens.
+
+### Technical foundation preserved
+
+Unchanged, because the model was accepted: items **derived** from authoritative source
+records on every read; no duplicated business truth; `work_inbox_read_state` storing only
+per-user seen state; reading resolving nothing; source-state change alone removing an item;
+role scoping and RLS; exact drill-through routes; the migration `20260802000200`; and the
+tested security boundaries. `scripts/test-work-inbox-db.sh` passes unchanged, exit 0, no
+failed assertions. Internal identifiers deliberately keep the persisted table's name.
+
+### What the user experience now is
+
+- **Alerts** is the user-facing name everywhere. No Work Inbox, Work Email, Notification
+  Centre or Tasks Inbox.
+- A **header bell** sits immediately before the profile, carrying a small unread count. A
+  failed or incomplete read shows **no** badge rather than a confident zero.
+- Opening it gives a **compact popover** of the five most pressing items — the count the
+  authority screen shows. Each row carries only category, short title, project context,
+  unread mark and the exact link. No long descriptions, record details or tables.
+- **Mark all as read** writes only seen-markers. **View all alerts** appears only when items
+  exceed the popover.
+- **View all alerts** opens a **contained bounded panel** — modal-sized, internally
+  scrolling, keeping the two honest Stage 3 groupings. It is not a page and not a sidebar
+  destination.
+- The **Work Inbox sidebar destination is removed and not replaced.** `/admin/work-inbox` is
+  no longer routed; stale links fall through to the Dashboard rather than 404.
+- Keyboard: Escape closes both surfaces and returns focus to the bell; the popover is
+  reachable and operable by keyboard throughout.
+
+Dashboard and Project Summary were **not** changed. Both are project-scoped, carry no unread
+state and do not duplicate the alert list, so the Dashboard and Project Summary rules were
+already satisfied. The Alerts bell owns personal unread state exclusively.
+
+### Two defects found in the design review against the authority screen
+
+Both were found by comparing the running application side by side with
+`02-alerts-popover-authority.png`, and both are real:
+
+1. **The contained panel was positioned against the header, not the viewport.** The admin
+   header carries `backdrop-blur`, and a backdrop-filter makes an element the containing
+   block for its `fixed` descendants, so the panel hung off the top of the screen with no
+   backdrop. It is now rendered through a portal to `document.body`.
+2. **The panel rendered wider than the phone screen.** A `fixed` element follows the
+   *visual* viewport; on a zoomed phone `inset-0` produced a 512px panel inside a 375px
+   layout viewport, pushed off the right edge. It is now sized in viewport units, measured
+   at exactly 0–375 on a 375px viewport.
+
+A third, smaller correction: the popover initially anchored to the bell and stopped short of
+the profile. It now anchors to the header's right-hand cluster so its right edge lands on the
+page margin, as the authority screen shows.
+
+### Deliberately not implemented
+
+- **No relative timestamps**, although `02-alerts-popover-authority.png` shows one on every
+  row. Derived items have **no arrival time** — nothing is stored, so there is no moment at
+  which an item "arrived". Inventing one would be a fabricated business field, which rule 7
+  of the authority manifest forbids. This is recorded rather than silently omitted.
+- **No grouped sidebar navigation**, although `01-dashboard-authority.png` illustrates it.
+  That restructure remains gated by Blueprint §5 and current stage authority.
+- **Still not Notifications.** No notification record, no event-backed history, no external
+  delivery. Nothing in the shell implies any of these exist.
+- One presentation change beyond the strict ask, flagged on the PR: the role badge is hidden
+  below the `sm` breakpoint so the mobile header cannot overflow once the bell is present.
+
+### Validation
+
+Full frontend suite **470 passed across 51 files**; new `AlertsBell.test.jsx` 21 tests;
+`AdminLayout.test.jsx` 17 tests. Stage 3 database suite exit 0. Production build **43
+routes**, identical to base. Changed-file lint clean; repo-wide lint **19 problems on both
+base and branch** — none added. `git diff --check` clean.
+
+One order-dependent flake was observed once in `AdminReports.test.jsx` (project-selector
+options). It passes in isolation and on a full re-run and is unrelated to this change. It is
+recorded rather than absorbed.
+
+### Merge and deployment
+
+**PR #70** — visual authority. Base exactly `cb066f00128a35a31883488ef4b4904199a763e6`,
+reviewed head `a40634ae4ebef189bf2c994503c4fe3f548216d9`, merged as true merge commit
+**`4f27837c2cbf7bf0f69294741b5d70259809625e`** whose two parents are precisely those. Zero
+code files touched.
+
+**PR #71** — the Alerts presentation. Base exactly `4f27837c`, reviewed head
+`04bc7ecd49febafadfb3ec12630503cd0e76d014`, merged as true merge commit
+**`1b551afe197144680b348c06112eb5688d53b989`** whose two parents are precisely those.
+
+No competing UI, navigation, Alerts or Stage 3 PR existed at any point in either merge.
+
+Vercel production deployment **`dpl_A1CUFBguh3pX4JVgLaui4rsEAwiU`** built exactly `1b551af`
+and reached READY. No migration was required.
+
+### Hosted seen-state cleanup
+
+The BD-INBOX-01 hosted verification had marked Martine Lotom's seven Stage 3 items seen. All
+seven carried one identical write instant, `2026-08-02 21:02:50.518245+00`, confirming a
+single verification-time "mark all as seen" rather than ordinary use. Evidence of the exact
+seven `item_key` values was captured before any change.
+
+**Exactly 7 rows were deleted**, scoped to that user and that instant. Verified afterwards:
+Martine 0 rows; the Principal's 10 rows **untouched**, as instructed; and every operational
+table identical in both row count and latest timestamp — `projects` 12, `approval_requests`
+5, `internal_cost_claims` 5, `fund_requests` 0, `daily_site_entries` 9, `project_activities`
+26, each with an unchanged maximum timestamp. **No operational record changed.**
+
+The Principal's own 10 read-state rows are **also** verification artefacts from
+`2026-08-02 21:12:50`. They were deliberately left in place because the instruction was to
+clear no other user's state. Clearing them is a Founder decision.
+
+### Verification
+
+**Production bundle**, read directly from `https://www.botaniquedesigners.com/admin` rather
+than inferred from the repository:
+
+* `"Work Inbox"` — **0** occurrences. `"/admin/work-inbox"` — **0** occurrences.
+* `"Notification Centre"`, `"Tasks Inbox"`, `"Work Email"` — **0** occurrences each.
+* Sidebar labels are exactly: Dashboard, Projects, Project intakes, Daily site operations,
+  Site Costs, Fund Requests, Approvals, Project Summary. **No Work Inbox destination and no
+  Alerts destination.**
+* Alerts strings live: the bell's `"Alerts, "` accessible name, `"Mark all as read"`,
+  `"View all alerts"`, `"All alerts"`, `"Needs my action"`, `"Awaiting others"`,
+  `"Nothing needs your attention right now."`, `"Loading your alerts…"`, `"Unread"` and the
+  item categories.
+
+**Database:** role scoping and RLS unchanged and re-proven by the Stage 3 suite; read state
+now personal to the Principal only.
+
+**Not claimed — the authenticated walkthroughs.** Production `/admin` presents the ordinary
+invite-only email/password gate and no authenticated session was available. Signing in would
+require entering credentials, which is not done. The **Principal** and **Operations Manager**
+browser walkthroughs therefore remain outstanding and are what the Founder should confirm
+directly:
+
+1. Bell visible top-right beside the profile, on ordinary portal pages.
+2. Unread count reconciles — the badge number equals the "Needs my action (N)" count. Because
+   Martine's seen rows were cleared, her badge should now equal her full action-item count.
+3. Compact dropdown opens, shows at most five items, closes on Escape and on outside click.
+4. Only authorised alerts appear; the Operations Manager sees no Principal-only item, in
+   particular no *Project activation required*.
+5. Each item links to its exact record.
+6. Marking seen does **not** resolve — items stay in "Needs my action" after being marked.
+7. No Work Inbox item anywhere in the sidebar, under either role.
+8. Mobile: header does not overflow, popover and panel stay inside the screen.
+
+### Programme position
+
+Unchanged. Stage 4 — Reports and derived-summary authority — remains the next authorised
+stage, proceeding 4A → 4B → 4C → 4D, with Reports execution still **not** authorised. Stages
+5–12 are unchanged and unauthorised. BD-FIN-01B2 remains paused with every settled decision
+unchanged. BD-REPORTS-01B remains rejected and frozen; the category-based Reports Centre that
+`03-reports-centre-authority.png` governs is still deferred to its own stage and is **not**
+authorised by the adoption of that screen.

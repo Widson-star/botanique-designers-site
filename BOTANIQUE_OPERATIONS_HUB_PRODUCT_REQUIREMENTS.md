@@ -1222,6 +1222,14 @@ module is functional and authorised, and disabled future destinations remain pro
 current `/admin/site-costs` and `/admin/fund-requests` routes may remain during transition
 but must not be treated as the permanent top-level architecture.
 
+**Presentation superseded (3 August 2026).** The Founder rejected the Work Inbox
+presentation and replaced it with **Alerts**, behind a bell in the top-right header beside
+the profile, governed by `docs/ui-authority/operations-hub/02-alerts-popover-authority.png`
+and recorded as BD-ALERTS-01 in `WORKSTREAMS.md`. "Work Inbox" is no longer a user-facing
+name, Alerts are **not** a sidebar destination under any name, and the full-page list is
+retired. The derived model described in this section was **accepted and is preserved
+unchanged** — only its surface changed. Read the delivery note below in that light.
+
 **Delivery note (3 August 2026).** Stage 3 delivered a first Work Inbox as BD-INBOX-01,
 recorded in `WORKSTREAMS.md`. It is **derived** from current authoritative source records
 with no inbox table, and carries two tabs — *Needs my action* and *Awaiting others*. The
@@ -2313,11 +2321,18 @@ read state needed for new/seen indication and a reconciled unread badge; reading
 resolves the underlying issue; and recipients are the Principal and the Operations Manager
 only, each within their existing authorised access.
 
-**Stage 3 delivered the Work Inbox, not Notifications.** Event-backed notification history, a
-notification bell or dropdown, retention, a general notification ledger, and email, SMS,
-WhatsApp and push delivery are all **explicitly not delivered and not authorised**, and are
-recorded as a later, separately authorised capability. Nothing in the shell may imply
-otherwise. The §14 *Approved* and *Completed* tabs were also deliberately not built, because a
+**Stage 3's presentation was corrected on 3 August 2026** by BD-ALERTS-01: the user-facing
+product is **Alerts** behind a top-right header bell, the Work Inbox sidebar destination is
+removed and not replaced, and the full-page list is retired. The derived model, stored read
+state, unread reconciliation, non-resolving reads and Principal/Operations Manager recipient
+rules recorded here are unchanged.
+
+**Stage 3 delivered the Work Inbox, not Notifications.** Event-backed notification history,
+retention, a general notification ledger, and email, SMS, WhatsApp and push delivery are all
+**explicitly not delivered and not authorised**, and are recorded as a later, separately
+authorised capability. Nothing in the shell may imply otherwise. The Alerts bell added by
+BD-ALERTS-01 is **not** a notification centre: it presents items derived from current source
+state and is backed by no notification record and no event history. The §14 *Approved* and *Completed* tabs were also deliberately not built, because a
 resolved record leaves a derived inbox rather than accumulating in it.
 
 Stage 4 is **Reports and derived-summary authority**; its
