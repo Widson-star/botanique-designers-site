@@ -58,9 +58,18 @@ async function get(path, params, accessToken, context) {
 // date inside the period. Two records of the same claim/request are never
 // produced: one row is returned, and the metrics module decides which figure it
 // contributes to.
-function submittedOrDecidedIn(bounds) {
+//
+// This returns the bare `or` VALUE, never `or=...` query text. EAT bounds carry
+// a literal `+03:00` offset, and `+` is a space in application/x-www-form-
+// urlencoded data. Any prebuilt query string fed back through
+// `new URLSearchParams(text)` therefore decodes the offset to a space, and the
+// re-serialised request reaches PostgREST as `...000 03:00`, which PostgreSQL
+// rejects as an invalid timestamptz (22007). Appending the value as a key/value
+// pair lets URLSearchParams encode `+` as `%2B` exactly once, so the offset
+// survives server-side form-urlencoded decoding intact.
+export function submittedOrDecidedIn(bounds) {
   return (
-    `or=(and(submitted_at.gte.${bounds.from},submitted_at.lte.${bounds.to}),` +
+    `(and(submitted_at.gte.${bounds.from},submitted_at.lte.${bounds.to}),` +
     `and(decided_at.gte.${bounds.from},decided_at.lte.${bounds.to}))`
   );
 }
@@ -160,8 +169,8 @@ export async function fetchReportClaims(accessToken, projectId, bounds) {
     order: "submitted_at.desc",
     limit: String(REPORT_ROW_LIMIT),
   });
-  const query = `${params.toString()}&${submittedOrDecidedIn(bounds)}`;
-  return get("internal_cost_claims", new URLSearchParams(query), accessToken, "internal cost claims");
+  params.append("or", submittedOrDecidedIn(bounds));
+  return get("internal_cost_claims", params, accessToken, "internal cost claims");
 }
 
 // A bounded existence probe: does this project hold ANY claim at all? It is the
@@ -194,8 +203,8 @@ export async function fetchReportFundRequests(accessToken, projectId, bounds) {
     order: "submitted_at.desc",
     limit: String(REPORT_ROW_LIMIT),
   });
-  const query = `${params.toString()}&${submittedOrDecidedIn(bounds)}`;
-  return get("fund_requests", new URLSearchParams(query), accessToken, "fund requests");
+  params.append("or", submittedOrDecidedIn(bounds));
+  return get("fund_requests", params, accessToken, "fund requests");
 }
 
 export async function fetchReportFundRequestExists(accessToken, projectId) {
@@ -227,11 +236,15 @@ export async function fetchReportApprovals(accessToken, projectId, bounds) {
     order: "requested_at.desc",
     limit: String(REPORT_ROW_LIMIT),
   });
-  const query =
-    `${params.toString()}&or=(and(requested_at.gte.${bounds.from},requested_at.lte.${bounds.to}),` +
-    `and(reviewed_at.gte.${bounds.from},reviewed_at.lte.${bounds.to}),` +
-    `and(decided_at.gte.${bounds.from},decided_at.lte.${bounds.to}))`;
-  return get("approval_requests", new URLSearchParams(query), accessToken, "approvals and decisions");
+  // Same encoding rule as submittedOrDecidedIn(): the bare `or` value is
+  // appended so URLSearchParams encodes the EAT `+03:00` offset as `%2B03%3A00`.
+  params.append(
+    "or",
+    `(and(requested_at.gte.${bounds.from},requested_at.lte.${bounds.to}),` +
+      `and(reviewed_at.gte.${bounds.from},reviewed_at.lte.${bounds.to}),` +
+      `and(decided_at.gte.${bounds.from},decided_at.lte.${bounds.to}))`,
+  );
+  return get("approval_requests", params, accessToken, "approvals and decisions");
 }
 
 // Project approvals still awaiting a decision, regardless of when they were

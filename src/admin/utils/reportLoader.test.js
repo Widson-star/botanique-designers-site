@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_READERS,
   deriveApprovalsProjection,
   deriveNeedsAttention,
   isAuthorisedProject,
@@ -475,5 +476,97 @@ describe("Needs Attention derivation", () => {
       today: TODAY,
     });
     expect(items.map((item) => item.id)).toContain("target-completion-passed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The lifetime-empty state, end to end through the real readers
+// ---------------------------------------------------------------------------
+// The tests above drive the loader with stubbed readers, so they proved the
+// EMPTY_PERIOD / EMPTY_EVER distinction in isolation. They could not see the
+// production defect: the real claim, fund-request and approval period reads
+// sent a corrupted `+03:00` offset, PostgREST answered 22007, and those three
+// sections resolved to ERROR — so EMPTY_EVER was unreachable for them however
+// empty the project actually was.
+//
+// This test runs DEFAULT_READERS against a fetch stub that behaves like
+// PostgREST: it decodes the query as application/x-www-form-urlencoded and
+// rejects any malformed timestamptz exactly as the database did. Nothing is
+// swallowed — a corrupted read still surfaces as ERROR.
+describe("the lifetime-empty state is reachable through the real readers", () => {
+  const MALFORMED_TIMESTAMP = /\d{4}-\d{2}-\d{2}T[\d:.]+ \d{2}:\d{2}/;
+
+  function stubPostgrest() {
+    const rejected = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url) => {
+        const query = String(url).split("?")[1] || "";
+        // The server's own decoding: `+` in form-urlencoded data is a space.
+        for (const [, value] of new URLSearchParams(query)) {
+          if (MALFORMED_TIMESTAMP.test(value)) {
+            rejected.push(value);
+            return {
+              ok: false,
+              text: async () =>
+                JSON.stringify({ code: "22007", message: "invalid input syntax for type timestamp with time zone" }),
+            };
+          }
+        }
+        if (String(url).includes("/rpc/")) return { ok: true, text: async () => "[]" };
+        // The project row itself exists; every reportable source is empty.
+        const isProject = String(url).includes("/projects?");
+        return { ok: true, text: async () => (isProject ? JSON.stringify([PROJECT_ROW]) : "[]") };
+      })
+    );
+    return rejected;
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("resolves the finance and approval sections to empty_ever, not error", async () => {
+    const rejected = stubPostgrest();
+    const report = await loadProjectReport({
+      accessToken: "token",
+      projectId: "p1",
+      range: RANGE,
+      role: "owner",
+      today: TODAY,
+      authorisedProjectIds: ["p1"],
+      readers: DEFAULT_READERS,
+    });
+
+    // The database rejected nothing, so no timestamp reached it corrupted.
+    expect(rejected).toEqual([]);
+    expect(report.claims.state).toBe(SECTION_STATE.EMPTY_EVER);
+    expect(report.fundRequests.state).toBe(SECTION_STATE.EMPTY_EVER);
+    expect(report.approvals.state).toBe(SECTION_STATE.EMPTY_EVER);
+    // Distinct from a failure, and distinct from a readable-but-not-in-period
+    // result — the loader still reports the project itself.
+    expect(report.claims.state).not.toBe(SECTION_STATE.ERROR);
+    expect(report.overview.state).toBe(SECTION_STATE.READY);
+  });
+
+  it("still reports a genuine rejection as an error, never as empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        text: async () => JSON.stringify({ code: "22007", message: "invalid input syntax" }),
+      }))
+    );
+    const report = await loadProjectReport({
+      accessToken: "token",
+      projectId: "p1",
+      range: RANGE,
+      role: "owner",
+      today: TODAY,
+      authorisedProjectIds: ["p1"],
+      readers: DEFAULT_READERS,
+    });
+    expect(report.claims.state).toBe(SECTION_STATE.ERROR);
+    expect(report.claims.state).not.toBe(SECTION_STATE.EMPTY_EVER);
   });
 });
