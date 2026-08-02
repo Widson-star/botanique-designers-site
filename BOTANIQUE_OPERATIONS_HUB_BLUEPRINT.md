@@ -1266,6 +1266,36 @@ recorded: the fund-request metric labels could not be exercised against live val
 holds no fund-request records; the reader itself returned HTTP 200 and rendered the correct
 lifetime-empty state.
 
+### 12.22 BD-REPORTS-01B — as-built architecture of the concise report (2 August 2026)
+
+**No database change.** No migration, view, function, policy, grant or index was added, altered
+or removed. `public.daily_site_range_compliance` is unchanged and is still called exactly once
+per selected period. The report remains live, stores nothing and writes to no source record.
+
+**Composition.** `ProjectSummary` renders seven section components. Each receives its already
+loaded section state plus the project id and the reporting range, and renders figures and one
+drill-through link. The per-record report card and record list components were removed with the
+record lists they rendered, so no component in the Reports tree can render a source record.
+
+**Reader chain unchanged, one caller fewer.** `loadProjectReport` still loads the project,
+Daily Site, claims, fund requests and approvals in parallel, and still derives Needs Attention
+and the approvals projection from them. It no longer calls `loadRecentActivity`, so an ordinary
+report issues **no read against the five event sources**. `loadRecentActivity`,
+`projectActivityItems` and the event readers in `lib/reports.js` are retained, exported and
+tested for the deferred activity-timeline report.
+
+**Metrics authority unchanged.** `reportMetrics.js` remains the single place inclusion rules,
+amount selection and totals live; presentation components never re-derive a total. Two derived
+statistics were added there — `complianceRate` and `approvalsSummary` — and both return counts
+or a rate over data the page already held, never a new read.
+
+**One drill-through builder.** `utils/reportLinks.js` exports `moduleLink`, the single place a
+Reports link is constructed. It encodes its parameters, carries project, status and period, and
+omits an incomplete range rather than sending half of one. Approvals is passed no range because
+its list route supports no period filter (§12.17). A report link remains an addressable filter
+and never an access grant: every destination re-applies its own access checks and reads under
+the caller's own RLS.
+
 ## 13. People and payee identity separation
 
 The existing spine rule in §4.1 — that external workers who need engagement and payment

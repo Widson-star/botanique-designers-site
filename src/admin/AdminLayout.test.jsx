@@ -43,7 +43,7 @@ describe("AdminLayout visual boundary", () => {
     expect(heading.closest(".admin-shell")).not.toHaveClass("font-sans");
   });
 
-  it("shows only live Dashboard, Projects, Daily site ops, Site Costs, Fund Requests, Approvals, Reports and Project intakes navigation", () => {
+  it("shows only live Dashboard, Projects, Daily site operations, Site Costs, Fund Requests, Approvals, Reports and Project intakes navigation", () => {
     renderLayout();
     const desktopNav = screen.getAllByRole("navigation", {
       name: "Admin sections",
@@ -51,7 +51,7 @@ describe("AdminLayout visual boundary", () => {
     expect(within(desktopNav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Dashboard",
       "Projects",
-      "Daily site ops",
+      "Daily site operations",
       "Site Costs",
       "Fund Requests",
       "Approvals",
@@ -59,6 +59,35 @@ describe("AdminLayout visual boundary", () => {
       "Project intakes",
     ]);
     expect(screen.queryByRole("link", { name: /Leads|Site visits|Payments|Expenses/i })).not.toBeInTheDocument();
+  });
+
+  // BD-REPORTS-01B navigation review. The sidebar names a destination only
+  // where a working route already exists, so no unbuilt module — People,
+  // Finance, Work Inbox, Team, Tasks, Assignments, Documents or a summary area
+  // — may appear, and no entry may be disabled, decorative or a placeholder.
+  it("introduces no dead, disabled or placeholder navigation item", () => {
+    renderLayout();
+    const desktopNav = screen.getAllByRole("navigation", { name: "Admin sections" })[0];
+    const links = within(desktopNav).getAllByRole("link");
+    for (const link of links) {
+      const href = link.getAttribute("href");
+      expect(href).toMatch(/^\/admin(\/[a-z-]+)?$/);
+      expect(link).not.toHaveAttribute("aria-disabled");
+      expect(link.textContent).not.toMatch(/soon|coming|todo|placeholder/i);
+    }
+    expect(
+      screen.queryByRole("link", { name: /People|Finance|Work Inbox|Team|Tasks|Assignments|Documents/i })
+    ).not.toBeInTheDocument();
+  });
+
+  // Every sidebar label matches the title its destination gives itself, so a
+  // reader never has to translate an abbreviation into a screen name.
+  it("names Daily site operations exactly as its destination titles itself", () => {
+    renderLayout();
+    expect(
+      screen.getAllByRole("link", { name: "Daily site operations" }).length
+    ).toBeGreaterThan(0);
+    expect(screen.queryByRole("link", { name: "Daily site ops" })).not.toBeInTheDocument();
   });
 
   it("shows the compact founder name, Principal badge and restrained finance boundary note", () => {

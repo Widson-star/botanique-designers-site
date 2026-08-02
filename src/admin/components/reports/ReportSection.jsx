@@ -81,44 +81,10 @@ export function ReportFigureGrid({ children }) {
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
 }
 
-// A stacked record card. Mobile is a primary environment, so the primary layout
-// is a card list rather than a compressed table; no horizontal scrolling is
-// required and every touch target is full width.
-export function ReportRecordCard({ title, meta, amount, state, children, to }) {
-  const body = (
-    <>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <span className="min-w-0 break-words font-semibold text-botanique-charcoal">{title}</span>
-        {amount && <span className="shrink-0 font-semibold tabular-nums">{amount}</span>}
-      </div>
-      {meta && <p className="mt-1 break-words text-xs text-gray-500">{meta}</p>}
-      {children}
-      {state && (
-        <span className="mt-3 inline-block rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-          {state}
-        </span>
-      )}
-    </>
-  );
-
-  if (to) {
-    return (
-      <li>
-        <Link
-          to={to}
-          className="block min-h-11 rounded-lg border border-stone-200 bg-white p-4 transition hover:border-botanique-green/40 hover:bg-stone-50"
-        >
-          {body}
-        </Link>
-      </li>
-    );
-  }
-  return <li className="rounded-lg border border-stone-200 bg-white p-4">{body}</li>;
-}
-
-export function ReportRecordList({ children }) {
-  return <ul className="space-y-3">{children}</ul>;
-}
+// BD-REPORTS-01B — the per-record card and record list that used to live here
+// were removed with the record lists they rendered. Reports states figures;
+// the modules state records. Nothing renders a report record card any more, so
+// keeping one would only invite the duplication back.
 
 // The drill-through affordance. Reports always links to the exact record or a
 // correctly filtered source list — never to the admin homepage and never to an

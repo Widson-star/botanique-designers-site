@@ -1,10 +1,16 @@
-// BD-REPORTS-01A — /admin/reports.
+// BD-REPORTS-01A / BD-REPORTS-01B — /admin/reports.
 //
 // One project, one reporting period, one Project Summary. The reader never
 // needs to know about tables, row level security, remote procedures, event
 // schemas, source-domain versions, internal status names or security-invoker
 // mechanics: the page speaks in project names, dates, plain figures and plain
 // state sentences.
+//
+// BD-REPORTS-01B narrowed what the summary contains, not how it is read.
+// Reports is a management summary — figures, one clear statistic per question,
+// and an exact link into the module that owns the records behind them. It is
+// not a second copy of Daily Site Operations, Site Costs, Fund Requests or
+// Approvals, and it never reproduces their records row by row.
 //
 // The report is live. Choosing a project or a period reads current records and
 // stores nothing: no snapshot, no report row, no second ledger. Every figure is
@@ -57,7 +63,6 @@ function demoReport(projectId, range, project) {
     fundRequests: empty,
     approvals: empty,
     approvalsProjection: { state: SECTION_STATE.EMPTY_EVER, decisions: [], awaiting: [], sourceNotes: [] },
-    recentActivity: empty,
     needsAttention: [],
   };
 }
@@ -238,8 +243,8 @@ export default function AdminReports() {
         </p>
         <h1 className="mt-1 text-2xl font-semibold">Reports</h1>
         <p className="mt-1 max-w-2xl text-sm text-gray-600">
-          A live summary of one project over one period, built only from records Botanique already
-          holds. Nothing here is stored, and nothing here can be edited.
+          A live summary of one project over one period. Open a section&rsquo;s module for the
+          records behind its figures.
         </p>
       </header>
 

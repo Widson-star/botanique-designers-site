@@ -47,7 +47,6 @@ function readyReport(range) {
     fundRequests: { state: "no_access" },
     approvals: { state: "empty_ever" },
     approvalsProjection: { state: "empty_period", decisions: [], awaiting: [], sourceNotes: [] },
-    recentActivity: { state: "empty_period", items: [] },
     needsAttention: [],
   };
 }
@@ -178,7 +177,6 @@ describe("Reports route", () => {
     expect(loadProjectReport).not.toHaveBeenCalled();
     expect(screen.queryByRole("heading", { name: "Project overview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Approvals and decisions" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Recent activity" })).not.toBeInTheDocument();
     // The unavailable project contributes no name, no count and no timing to
     // the page, and no raw error is shown. The selector still lists the
     // caller's own authorised projects, which is unchanged behaviour.

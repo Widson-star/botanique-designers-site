@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  approvalsSummary,
   claimTotals,
+  complianceRate,
   countsAsPlannedLabour,
   fundRequestTotals,
   plannedLabourTotals,
@@ -222,5 +224,59 @@ describe("Daily Site period compliance summary", () => {
     expect(summary.missing).toBe(1);
     expect(summary.notDue).toBe(1);
     expect(summary.missingDays).toHaveLength(1);
+  });
+});
+
+// BD-REPORTS-01B — the two statistics that replaced the record lists.
+describe("compliance rate", () => {
+  it("reports the share of due days that were not missing", () => {
+    expect(complianceRate({ due: 4, missing: 1 })).toBe(75);
+    expect(complianceRate({ due: 4, missing: 0 })).toBe(100);
+    expect(complianceRate({ due: 4, missing: 4 })).toBe(0);
+  });
+
+  it("has no rate at all when nothing was due, rather than 0% or 100%", () => {
+    expect(complianceRate({ due: 0, missing: 0 })).toBeNull();
+    expect(complianceRate({})).toBeNull();
+    expect(complianceRate(undefined)).toBeNull();
+  });
+
+  it("counts a waived and a late day as met, because neither is missing", () => {
+    // 5 due: 2 on time, 1 late, 1 waived, 1 missing.
+    expect(complianceRate({ due: 5, missing: 1 })).toBe(80);
+  });
+});
+
+describe("approvals summary", () => {
+  const projection = {
+    decisions: [
+      { state: "approved" },
+      { state: "approved" },
+      { state: "rejected" },
+      { state: "amendment_requested" },
+      { state: "withdrawn" },
+    ],
+    awaiting: [{ state: "awaiting_review" }, { state: "submitted" }],
+  };
+
+  it("counts each decision state apart and keeps returned distinct from rejected", () => {
+    const summary = approvalsSummary(projection);
+    expect(summary.approved).toBe(2);
+    expect(summary.rejected).toBe(1);
+    expect(summary.returned).toBe(1);
+    expect(summary.awaiting).toBe(2);
+  });
+
+  it("accounts for every decision, so a state outside the named groups is not dropped", () => {
+    const summary = approvalsSummary(projection);
+    expect(summary.otherDecisions).toBe(1);
+    expect(summary.approved + summary.rejected + summary.returned + summary.otherDecisions).toBe(
+      summary.decisionTotal
+    );
+  });
+
+  it("counts nothing from an empty or absent projection", () => {
+    expect(approvalsSummary({ decisions: [], awaiting: [] }).decisionTotal).toBe(0);
+    expect(approvalsSummary(undefined).awaiting).toBe(0);
   });
 });

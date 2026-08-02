@@ -1,50 +1,49 @@
-// BD-REPORTS-01A — Daily Site Activity.
+// BD-REPORTS-01B — Daily site activity, as a statistical summary.
 //
-// Reports the PLAN and its submission, and nothing beyond it: what was planned,
-// whether a work day was planned or not, the recorded reason, the expected
-// worker count, the crew reference, evidence status, submission timing and
-// lateness, obligation and compliance state, and the entry's own state.
+// Reports how the period's morning obligation turned out — days due, entries
+// submitted, submitted late, missing, waived, and the resulting compliance
+// rate — and nothing record by record. The list of dates and the individual
+// site-entry cards were removed: Daily Site Operations owns those records, and
+// the link below opens them for this project and this period.
 //
-// It does not show, imply or allow an inference of actual work completed.
-// Botanique records no day-end outcome, so no figure here can be read as work
-// done, and an accepted entry means an accepted PLAN.
+// It reports the PLAN and its submission, and nothing beyond it. It does not
+// show, imply or allow an inference of actual work completed. Botanique
+// records no day-end outcome, so no figure here can be read as work done, and
+// an accepted entry means an accepted PLAN.
 import ReportSection, {
   ReportDrillLink,
   ReportFigure,
   ReportFigureGrid,
-  ReportRecordCard,
-  ReportRecordList,
 } from "./ReportSection";
-import {
-  COMPLIANCE_LABELS,
-  DISPOSITION_LABELS,
-  ENTRY_STATE_LABELS,
-  EVIDENCE_STATUS_LABELS,
-  formatReportCount,
-  formatReportText,
-} from "../../utils/reportFormat";
-import { NO_WORK_REASON_LABELS } from "../../utils/dailySiteFormatters";
-import { formatReportDate, formatReportDateTime } from "../../utils/reportPeriod";
+import { moduleLink } from "../../utils/reportLinks";
+import ComplianceBreakdown from "./ComplianceBreakdown";
+import { formatReportCount } from "../../utils/reportFormat";
+import { complianceRate } from "../../utils/reportMetrics";
 
-export default function DailySiteActivitySection({ section, projectId }) {
+export default function DailySiteActivitySection({ section, projectId, range }) {
   const summary = section.summary || {};
-  const entries = section.entries || [];
-  const compliance = section.compliance || [];
+  const rate = complianceRate(summary);
+  const onTime = (summary.submitted || 0) - (summary.submittedLate || 0);
 
   return (
     <ReportSection
       title="Daily site activity"
-      description="What was planned on site, and whether the morning entry was submitted. This section reports plans and submissions only — it does not report work completed."
+      description="How the morning site obligation was met over this period. Plans and submissions only — never work completed."
       state={section.state}
       actions={
         <ReportDrillLink
-          to={`/admin/daily-site-operations?project=${projectId}&status=all`}
+          to={moduleLink("/admin/daily-site-operations", { projectId, status: "all", range })}
         >
           Open daily site operations
         </ReportDrillLink>
       }
     >
       <ReportFigureGrid>
+        <ReportFigure
+          label="Entries due"
+          value={formatReportCount(summary.due)}
+          note="Days a morning entry was required for this project."
+        />
         <ReportFigure label="Entries submitted" value={formatReportCount(summary.submitted)} />
         <ReportFigure
           label="Submitted late"
@@ -58,84 +57,23 @@ export default function DailySiteActivitySection({ section, projectId }) {
           note="A morning entry was due and none was submitted or waived."
         />
         <ReportFigure label="Waived" value={formatReportCount(summary.waived)} />
+        <ReportFigure
+          label="Compliance rate"
+          // A period in which nothing was due has no rate. It is stated as
+          // such: neither 0% nor 100% would be true.
+          value={rate === null ? "No entries were due" : `${rate}%`}
+          note="Of the days an entry was due, the share met by a submitted entry or a waiver."
+        />
       </ReportFigureGrid>
 
-      {compliance.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-sm font-semibold text-botanique-charcoal">Days in this period</h3>
-          <ul className="mt-2 flex flex-wrap gap-2">
-            {compliance.slice(0, 40).map((day) => (
-              <li
-                key={`${day.workDate}-${day.projectId}`}
-                className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs text-gray-600"
-              >
-                {formatReportDate(day.workDate)} — {COMPLIANCE_LABELS[day.complianceStatus] || "Not due"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {entries.length > 0 && (
-        <div className="mt-5">
-          <h3 className="text-sm font-semibold text-botanique-charcoal">Site entries</h3>
-          <ReportRecordList>
-            {entries.map((entry) => (
-              <ReportRecordCard
-                key={entry.id}
-                to={`/admin/daily-site-operations/${entry.id}`}
-                title={formatReportDate(entry.workDate)}
-                meta={`${DISPOSITION_LABELS[entry.disposition] || "Not recorded"}${
-                  entry.disposition === "no_work"
-                    ? ` — ${NO_WORK_REASON_LABELS[entry.noWorkReason] || "Reason not recorded"}`
-                    : ""
-                }`}
-                state={ENTRY_STATE_LABELS[entry.state] || "Not recorded"}
-              >
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  {entry.disposition === "working" && (
-                    <div>
-                      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                        Work planned
-                      </dt>
-                      <dd className="mt-0.5 break-words">{formatReportText(entry.workPlanned)}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                      Supporting evidence
-                    </dt>
-                    <dd className="mt-0.5">
-                      {EVIDENCE_STATUS_LABELS[entry.evidenceStatus] || "Not recorded"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                      Submitted
-                    </dt>
-                    <dd className="mt-0.5">
-                      {entry.submittedAt ? formatReportDateTime(entry.submittedAt) : "Not submitted"}
-                      {entry.isLate && (
-                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                          Submitted late
-                        </span>
-                      )}
-                    </dd>
-                  </div>
-                  {entry.returnedReason && (
-                    <div>
-                      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                        Returned for correction
-                      </dt>
-                      <dd className="mt-0.5 break-words">{entry.returnedReason}</dd>
-                    </div>
-                  )}
-                </dl>
-              </ReportRecordCard>
-            ))}
-          </ReportRecordList>
-        </div>
-      )}
+      <ComplianceBreakdown
+        rows={[
+          { key: "submitted", label: "Submitted on time", value: onTime > 0 ? onTime : 0 },
+          { key: "late", label: "Submitted late", value: summary.submittedLate || 0 },
+          { key: "waived", label: "Waived", value: summary.waived || 0 },
+          { key: "missing", label: "Missing", value: summary.missing || 0 },
+        ]}
+      />
     </ReportSection>
   );
 }

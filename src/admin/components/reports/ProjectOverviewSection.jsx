@@ -1,7 +1,16 @@
-// BD-REPORTS-01A — Project Overview.
+// BD-REPORTS-01B — Project overview: the report's project-and-period header.
 //
-// Only facts the project record actually holds. The deprecated `last_updated`
-// column is never read and never shown.
+// Only the context a reader needs to know WHICH project and WHICH period the
+// figures below describe: identity, where it is, where it has got to, who is
+// accountable, and when it is meant to finish.
+//
+// The rest of the project record — planned and actual start, actual
+// completion, the next action, the recorded blocker and the archive timestamp
+// — is not reproduced here. Projects owns it, one click away. A blocker, an
+// overdue next action and an approaching target completion still reach the
+// reader, through Needs attention, which is where an alert belongs.
+//
+// The deprecated `last_updated` column is never read and never shown.
 import ReportSection, { ReportDrillLink } from "./ReportSection";
 import { formatReportDate } from "../../utils/reportPeriod";
 import { NOT_RECORDED } from "../../utils/reportFormat";
@@ -21,10 +30,10 @@ function text(value) {
   return trimmed ? String(trimmed) : NOT_RECORDED;
 }
 
-function date(value) {
-  return value ? formatReportDate(value) : NOT_RECORDED;
-}
-
+// The reporting period is NOT repeated here. The sticky bar above carries the
+// project and the period, stays visible the whole way down the report, and the
+// period control states the range in full — a third copy on the first screen
+// is the repetition this workstream set out to remove.
 export default function ProjectOverviewSection({ section, profilesById = {} }) {
   const project = section?.project;
   return (
@@ -47,29 +56,21 @@ export default function ProjectOverviewSection({ section, profilesById = {} }) {
           <Fact label="Location">
             {[project.location, project.county].filter(Boolean).join(", ") || NOT_RECORDED}
           </Fact>
-          <Fact label="Status">{text(project.status)}</Fact>
+          <Fact label="Status">
+            {text(project.status)}
+            {project.archived && (
+              <span className="ml-2 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                Archived
+              </span>
+            )}
+          </Fact>
           <Fact label="Stage">{text(project.stage)}</Fact>
           <Fact label="Accountable lead">
             {project.leadPersonId ? resolveProfileLabel(project.leadPersonId, profilesById) : NOT_RECORDED}
           </Fact>
-          <Fact label="Planned start">{date(project.startDate)}</Fact>
-          <Fact label="Actual start">{date(project.actualStartDate)}</Fact>
-          <Fact label="Target completion">{date(project.targetCompletionDate)}</Fact>
-          <Fact label="Actual completion">{date(project.actualCompletionDate)}</Fact>
-          <Fact label="Next action">
-            {text(project.nextAction)}
-            {project.nextActionDate && (
-              <span className="mt-0.5 block text-xs text-gray-500">
-                Due {formatReportDate(project.nextActionDate)}
-              </span>
-            )}
+          <Fact label="Target completion">
+            {project.targetCompletionDate ? formatReportDate(project.targetCompletionDate) : NOT_RECORDED}
           </Fact>
-          <Fact label="Blocker">{text(project.blocker)}</Fact>
-          {project.archived && (
-            <Fact label="Archive state">
-              Archived{project.archivedAt ? ` on ${formatReportDate(project.archivedAt.slice(0, 10))}` : ""}
-            </Fact>
-          )}
         </dl>
       )}
     </ReportSection>

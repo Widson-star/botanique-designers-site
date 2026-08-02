@@ -1,9 +1,13 @@
-// BD-REPORTS-01A — Fund Requests.
+// BD-REPORTS-01B — Fund requests, as a statistical summary.
 //
 // Two figures, again kept apart:
 //   * funding REQUESTED  — requests at submitted status, dated by submission.
 //   * funding AUTHORISED — requests at approved status, dated by decision, and
 //     labelled "Funding authorised — not released" everywhere it appears.
+//
+// Each carries its own request count. The individual request cards were
+// removed — Fund Requests owns each request, its intended custody model and
+// its history, and the link below opens them for this project and this period.
 //
 // Approval of a fund request is Principal authority to make money available. It
 // records no release, no transfer, no advance receipt, no payment, no
@@ -17,21 +21,12 @@ import ReportSection, {
   ReportDrillLink,
   ReportFigure,
   ReportFigureGrid,
-  ReportRecordCard,
-  ReportRecordList,
 } from "./ReportSection";
-import {
-  CUSTODY_LABELS,
-  formatReportCount,
-  formatReportMoney,
-  FUND_STATUS_LABELS,
-  REPORT_LABELS,
-} from "../../utils/reportFormat";
-import { formatReportTimestampDate } from "../../utils/reportPeriod";
+import { moduleLink } from "../../utils/reportLinks";
+import { formatReportCount, formatReportMoney, REPORT_LABELS } from "../../utils/reportFormat";
 
-export default function FundRequestsSection({ section, projectId }) {
+export default function FundRequestsSection({ section, projectId, range }) {
   const totals = section.totals || {};
-  const requests = section.requests || [];
   const currency = totals.currency || "KES";
 
   return (
@@ -40,7 +35,7 @@ export default function FundRequestsSection({ section, projectId }) {
       description="Requests for Principal authority to make money available against approved internal costs. No funds have been released, transferred or paid."
       state={section.state}
       actions={
-        <ReportDrillLink to={`/admin/fund-requests?project=${projectId}&status=all`}>
+        <ReportDrillLink to={moduleLink("/admin/fund-requests", { projectId, status: "all", range })}>
           Open fund requests
         </ReportDrillLink>
       }
@@ -57,43 +52,6 @@ export default function FundRequestsSection({ section, projectId }) {
           note={`${formatReportCount(totals.authorisedCount, "request")} authorised, by decision date. Authorised is not released.`}
         />
       </ReportFigureGrid>
-
-      {requests.length > 0 && (
-        <div className="mt-5">
-          <h3 className="text-sm font-semibold text-botanique-charcoal">Requests in this period</h3>
-          <ReportRecordList>
-            {requests.map((request) => (
-              <ReportRecordCard
-                key={request.id}
-                to={`/admin/fund-requests/${request.id}`}
-                title={request.requestNumber || "Fund request"}
-                amount={formatReportMoney(request.totalRequestedAmount, request.currency)}
-                meta={CUSTODY_LABELS[request.intendedCustodyType] || "Intended custody not recorded"}
-                state={FUND_STATUS_LABELS[request.status] || "Not recorded"}
-              >
-                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                      Submitted
-                    </dt>
-                    <dd className="mt-0.5">
-                      {formatReportTimestampDate(request.submittedAt, "Not submitted")}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                      Decided
-                    </dt>
-                    <dd className="mt-0.5">
-                      {formatReportTimestampDate(request.decidedAt, "No decision yet")}
-                    </dd>
-                  </div>
-                </dl>
-              </ReportRecordCard>
-            ))}
-          </ReportRecordList>
-        </div>
-      )}
     </ReportSection>
   );
 }

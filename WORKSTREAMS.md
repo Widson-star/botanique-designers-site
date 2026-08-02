@@ -2568,6 +2568,166 @@ decision** and was not touched. Vercel Analytics on admin routes, generic sign-i
 rate limiting, form validation, XSS review, `PUBLIC` execute on `daily_site_morning_compliance` and
 historical Daily Site obligation semantics likewise remain outside this record.
 
+### 2 August 2026 — BD-REPORTS-01B: Reports UX rationalisation (repository only)
+
+Status: **Implemented in the repository, pending review, merge and hosted verification.**
+This is a **narrow follow-up workstream** to BD-REPORTS-01A, not a reopening of it.
+BD-REPORTS-01A remains `ACTIVE_VERIFIED`; its access controls, Kenyan date semantics, query
+encoding, project scoping, period scoping, empty states and Principal / Operations Manager
+access behaviour are unchanged by this entry and were not reopened. The completed PR #61
+encoding correction and PR #62 authority record stand. Authoritative base `main` was
+`183d6f1801b6428c37d47b086e1ed46df2def929`.
+
+**No database change.** This entry authorises and contains no migration, RLS policy,
+function, view, grant, role change, hosted mutation or manager-authority change. The single
+BD-REPORTS-01A database object, `public.daily_site_range_compliance`, is unchanged and is
+still called exactly once per selected period. Documents & Evidence remains blocked, the
+backup and recovery posture remains `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`, BD-FIN-01B2
+remains paused, and every settled B2 decision stands unreopened.
+
+**The problem corrected.** BD-REPORTS-01A was technically correct and operationally
+confused. The delivered Reports page reproduced extensive detail from across the Operations
+Hub — every day in the reporting period, every site-entry card, every planned-by-day
+workforce card, every claim card, every fund-request card, every approval and decision card,
+and a long cross-domain Recent Activity feed. The result was an endlessly scrolling archive
+that duplicated the modules rather than summarising them.
+
+**The Reports product principle, now binding.** Reports provides **concise statistical and
+management information for quick reference**. It is a summary layer, not a second copy of
+every operational module. Detailed records belong in their authoritative modules — Daily
+Site Operations, Site Costs, Fund Requests, Approvals and Projects — and Reports summarises
+those records and links through to them. This restates, and does not weaken, the Stage 4A
+Reports boundary: Reports may aggregate, calculate, filter, compare, group and provide
+role-authorised drill-through, and may not become another editable ledger, widen access
+beyond source permissions, or present a fact as stronger than its source proves.
+
+**The default Project Summary is now seven summary groups**, each figures plus one exact
+drill-through link:
+
+1. **Project overview** — the project-and-period header: project, client or site, location,
+   status with an archived badge where applicable, stage, accountable lead, target
+   completion, and the reporting period the figures describe.
+2. **Needs attention** — the derived management alert summary.
+3. **Daily site activity** — entries due, submitted, submitted late, missing, waived, and a
+   compliance rate, with a compact compliance breakdown.
+4. **Attendance and planned labour** — expected workers, planned labour, site entries
+   counted, and the plain statement that recorded attendance does not exist.
+5. **Internal cost claims** — internal costs submitted and internal costs approved, each
+   with its claim count.
+6. **Fund requests** — funding requested and funding authorised — not released, each with
+   its request count.
+7. **Approvals and decisions** — awaiting a decision, approved, returned for correction,
+   rejected, and any other decision state, as counts.
+
+**Removed from the default report.** The full "Days in this period" list; the individual
+site-entry cards; the individual planned-by-day workforce cards; the individual claim cards;
+the individual fund-request cards; the individual approval and decision cards; the full
+Recent Activity feed; the repeated operational disclaimers; and the narrative explanations
+already stated elsewhere. The shared per-record report card and record list were removed with
+them, so nothing invites the duplication back.
+
+**Nothing authoritative was deleted.** No source record, no reader, no module screen and no
+route was removed. `loadRecentActivity`, `projectActivityItems` and the five event readers
+are **retained, exported and still tested**: the merged cross-domain activity timeline is a
+**deferred report category, not a withdrawn capability**. `loadProjectReport` no longer calls
+it, so an ordinary report now issues **no event read at all** — five reads per report were
+removed, and a test proves it for owner, manager and staff.
+
+**Two new derived statistics, both stated in words.** *Compliance rate* is, of the days an
+entry was **due**, the share met by a submitted entry (on time or late) or an active waiver
+— exactly `(due − missing) / due`. A period in which nothing was due has **no rate**: it
+renders "No entries were due", never 0% and never 100%. *Approvals counts* are lengths of
+subsets of the same projection the page already held, so a count and its module always agree;
+returned is kept distinct from rejected, and any decision state outside the named groups is
+shown rather than silently dropped, so the counts always account for every decision.
+
+**Drill-through is now period-exact.** Because the records are no longer reproduced, the link
+is the whole of the drill-through. A single builder, `moduleLink`, carries the same project
+**and the same reporting period** into Daily Site Operations, Site Costs and Fund Requests,
+which already accept URL-addressable project, status and period filters. Approvals carries no
+period filter, so none is claimed for it: its link narrows by project and open state only. A
+URL parameter only narrows what the caller can already see — every destination re-reads under
+the caller's own row level security and re-checks its own access exactly as before.
+
+**Preserved without weakening.** The project selector under effective Projects RLS; no
+Reports read before project selection; invalid and inaccessible project ids failing closed
+and identically; Kenyan This week / This month / Custom range semantics; project-scoped and
+period-scoped reads; column whitelisting; bounded limits; no event payload or snapshot reads;
+no access tokens in URLs; one `daily_site_range_compliance` call per selected period; the
+selected-period and lifetime-empty distinction; genuine errors remaining errors; and the rule
+that no figure claims attendance, completed work, payroll, labour paid or money spent.
+
+**Needs attention was retained deliberately**, as a justified variation from a report of
+figures alone. Stage 4A names it an initial Reports section and authorises the Management
+Attention Summary report family; it is a short list of links rather than a record dump; and
+it is now the only place a reader learns that a project blocker, an overdue next action or an
+approaching target completion exists, since the full project record is one click away rather
+than reproduced. It remains a derived summary of current source states and is **not** Work
+Inbox state — Stage 3 retains ownership of the unified Work Inbox and Notifications
+capability, and this entry neither completes nor bypasses it.
+
+**Page-length and usability expectation.** The selected-project report behaves as a
+management summary, not an archive: compact cards, restrained spacing and a clear section
+hierarchy, understandable within a few screen lengths at desktop width. Brevity is **not**
+achieved by tiny text, clipped content, unexplained abbreviations or horizontal scrolling.
+Mobile remains a primary environment: cards stack, no table is used anywhere in the report,
+and no horizontal overflow is required.
+
+#### Sidebar and navigation authority review
+
+The current sidebar was compared against the authoritative module plan **independently** of
+the Reports work. The controlling authority is the 1 August 2026 information-architecture
+entry, which approves a direction — navigation simplifying toward Dashboard, Projects,
+People, Finance, Reports and More, with a single role-aware Work Inbox — and gates its
+**implementation** as **stage 6, progressive navigation and mobile-shell implementation**,
+which is **unauthorised** and sits behind stage 3 (Work Inbox) and stage 5 (People). This
+workstream therefore does **not** restructure the sidebar.
+
+**Findings.**
+
+1. *Names.* Seven of the eight labels match the title their destination gives itself.
+   "Daily site ops" did not: it was the only abbreviated label in the sidebar and its
+   destination titles itself "Daily site operations", which is also the authority's name for
+   the module.
+2. *Order.* Dashboard, Projects, Daily site operations, Site Costs, Fund Requests, Approvals,
+   Reports, Project intakes follows the operational workflow and is not defective.
+3. *Built but omitted.* **None.** Every route that exists is reachable from the sidebar.
+4. *Authorised but not built.* Work Inbox and Notifications; People and payee identity; the
+   unified Finance interface; Labour Engagements & Payments; Documents & Evidence; Project
+   Updates & Discussion; Tasks & Assignments; Team & Resourcing; Client Commercial Records.
+   All are correctly **absent**, and all remain **pending**, not present.
+5. *Correctly hidden.* Every area in (4). No placeholder, disabled or decorative entry exists,
+   and none was introduced.
+6. *"Site Costs".* It does **not** represent the full planned finance and expenditure area. It
+   is the delivered BD-FIN-01A internal cost claims surface, and the 1 August authority
+   expressly records that `/admin/site-costs` and `/admin/fund-requests` may remain **during
+   transition** and are **not** the permanent top-level architecture. Retained unchanged.
+7. *Team, Tasks, Assignments, Payments/Labour, Summary, Documents.* None has explicit current
+   navigation authority and none is implemented. Documents & Evidence additionally remains
+   blocked on an independent, restore-tested Storage backup. Correctly absent.
+8. *Project intakes.* Its position is a navigation-architecture question owned by stage 6.
+   Deferred, unchanged.
+9. *Reports placement.* After the transactional modules, which is consistent with the approved
+   future architecture, where Reports follows Finance. Unchanged.
+
+**The single correction made.** `Daily site ops` → `Daily site operations`. It satisfies both
+required conditions — clear authority and an already-working route — and it removes the one
+unexplained abbreviation in the shell.
+
+**Deliberately deferred, and recorded rather than silently left.** The mixed sentence-case and
+title-case labelling across the sidebar ("Site Costs" and "Fund Requests" against "Daily site
+operations" and "Project intakes"): each label matches its own destination's title exactly, so
+correcting the inconsistency means renaming destination screens in modules outside this
+workstream, and it belongs with the stage 6 navigation work. Also deferred: the position of
+Project intakes; the permanent Finance grouping; and the merged cross-domain activity timeline
+as a dedicated future report category.
+
+**Validation.** Frontend `vitest` full suite green (48 files / 410 tests); `npm run build`
+prerenders **43** routes, unchanged from exact main; changed-file `eslint` clean; repository-wide
+`eslint` reports the same **19** pre-existing errors as exact main — zero new; `git diff --check`
+clean. No database suite was run because no database object, migration, policy, grant or function
+was touched.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`

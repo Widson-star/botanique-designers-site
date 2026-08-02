@@ -126,7 +126,6 @@ function unavailableProjectReport(projectId, range) {
       awaiting: [],
       sourceNotes: [],
     },
-    recentActivity: NO_ACCESS(),
     needsAttention: [],
   };
 }
@@ -411,7 +410,16 @@ export function projectActivityItems({ projectEvents, dailySiteEvents, claimEven
     .slice(0, RECENT_ACTIVITY_LIMIT);
 }
 
-async function loadRecentActivity(readers, accessToken, projectId, bounds, role) {
+// BD-REPORTS-01B — RETAINED, and deliberately not part of the default report.
+//
+// Reports is a statistical summary, so the merged cross-domain activity feed no
+// longer belongs on the Project Summary: every record's own history is on the
+// record itself, in its own module. The projection, its readers and its tests
+// are kept intact and exported because the cross-domain timeline is a DEFERRED
+// report category, not a withdrawn capability — see the BD-REPORTS-01B entry in
+// WORKSTREAMS.md. `loadProjectReport` does not call it, so the five event
+// sources are not read for an ordinary report.
+export async function loadRecentActivity(readers, accessToken, projectId, bounds, role) {
   const sources = [];
   if (canSeeProjectHistoryReport(role)) {
     sources.push(["projectEvents", () => readers.fetchProjectHistoryEvents(accessToken, projectId, bounds)]);
@@ -764,12 +772,11 @@ export async function loadProjectReport({
     overview = section(SECTION_STATE.ERROR);
   }
 
-  const [dailySite, claims, fundRequests, approvals, recentActivity] = await Promise.all([
+  const [dailySite, claims, fundRequests, approvals] = await Promise.all([
     loadDailySite(readers, accessToken, projectId, range, role),
     loadClaims(readers, accessToken, projectId, range, bounds, role),
     loadFundRequests(readers, accessToken, projectId, range, bounds, role),
     loadApprovals(readers, accessToken, projectId, bounds, role),
-    loadRecentActivity(readers, accessToken, projectId, bounds, role),
   ]);
 
   const needsAttention = deriveNeedsAttention({
@@ -798,7 +805,6 @@ export async function loadProjectReport({
     fundRequests,
     approvals,
     approvalsProjection,
-    recentActivity,
     needsAttention,
   };
 }
