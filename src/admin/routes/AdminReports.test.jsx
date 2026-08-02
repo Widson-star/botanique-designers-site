@@ -168,6 +168,71 @@ describe("Reports route", () => {
     expect(fetchReportProjects).not.toHaveBeenCalled();
   });
 
+  it("refuses a hand-typed project the caller's own Projects read did not return", async () => {
+    // A manager who neither leads nor is assigned to this project never gets it
+    // from Projects RLS, so Reports must not load a single section for it —
+    // even though approval_requests and project_activities would return rows to
+    // any manager company-wide.
+    renderReports({ role: "manager", initial: "/admin/reports?project=p9" });
+    expect(await screen.findByText("This project is not available to your account.")).toBeInTheDocument();
+    expect(loadProjectReport).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "Project overview" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Approvals and decisions" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Recent activity" })).not.toBeInTheDocument();
+    // The unavailable project contributes no name, no count and no timing to
+    // the page, and no raw error is shown. The selector still lists the
+    // caller's own authorised projects, which is unchanged behaviour.
+    expect(screen.queryByText("Selected project")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Needs attention" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("treats an invalid project id exactly as an inaccessible one", async () => {
+    renderReports({ role: "manager", initial: "/admin/reports?project=not-a-uuid" });
+    expect(await screen.findByText("This project is not available to your account.")).toBeInTheDocument();
+    expect(loadProjectReport).not.toHaveBeenCalled();
+  });
+
+  it("validates the URL project against the Projects read before loading any section", async () => {
+    // A direct load or refresh must not read anything while the authorised
+    // project list is still outstanding.
+    let release;
+    fetchReportProjects.mockImplementationOnce(
+      () => new Promise((resolve) => { release = () => resolve([{ id: "p1", project_name: "Alego Usonga", status: "Ongoing", stage: "Implementation", archived: false }]); })
+    );
+    renderReports({ initial: "/admin/reports?project=p1" });
+    await screen.findByText("Loading your projects…");
+    expect(loadProjectReport).not.toHaveBeenCalled();
+    release();
+    await waitFor(() => expect(loadProjectReport).toHaveBeenCalled());
+    expect(loadProjectReport.mock.calls[0][0].authorisedProjectIds).toEqual(["p1"]);
+  });
+
+  it("reads nothing when the authorised project list itself failed", async () => {
+    fetchReportProjects.mockImplementationOnce(async () => {
+      throw new Error("PGRST301 JWT expired");
+    });
+    renderReports({ initial: "/admin/reports?project=p1" });
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/Data could not be loaded/);
+    expect(loadProjectReport).not.toHaveBeenCalled();
+  });
+
+  it("still loads a project the Projects read returned, for staff as well", async () => {
+    renderReports({ role: "staff", initial: "/admin/reports?project=p2" });
+    await waitFor(() => expect(loadProjectReport).toHaveBeenCalled());
+    expect(loadProjectReport.mock.calls[0][0].projectId).toBe("p2");
+    expect(loadProjectReport.mock.calls[0][0].role).toBe("staff");
+    expect(screen.queryByText("This project is not available to your account.")).not.toBeInTheDocument();
+  });
+
+  it("keeps a viewer off the route regardless of the project in the URL", async () => {
+    renderReports({ role: "viewer", initial: "/admin/reports?project=p1" });
+    expect(screen.getByRole("heading", { name: "Reports unavailable" })).toBeInTheDocument();
+    expect(fetchReportProjects).not.toHaveBeenCalled();
+    expect(loadProjectReport).not.toHaveBeenCalled();
+  });
+
   it("keeps demo mode at parity without reaching Supabase", async () => {
     renderReports({
       isDemo: true,

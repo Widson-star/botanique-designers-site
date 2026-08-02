@@ -19,7 +19,7 @@ import ReportProjectSelector from "../components/reports/ReportProjectSelector";
 import { ReportStateMessage } from "../components/reports/ReportSection";
 import { canSeeReports } from "../utils/reportCapabilities";
 import { SAFE_LOAD_ERROR, SECTION_STATE } from "../utils/reportFormat";
-import { loadProjectReport } from "../utils/reportLoader";
+import { loadProjectReport, PROJECT_CONTEXT } from "../utils/reportLoader";
 import {
   customRange,
   defaultRange,
@@ -50,6 +50,7 @@ function demoReport(projectId, range, project) {
   return {
     projectId,
     range,
+    projectContext: PROJECT_CONTEXT.AUTHORISED,
     overview: { state: SECTION_STATE.READY, project },
     dailySite: empty,
     claims: empty,
@@ -94,6 +95,21 @@ export default function AdminReports() {
   // A role with no reportable section issues no read at all.
   const permitted = canSeeReports(role);
 
+  // The project id in the URL is INPUT, never proof of access. A report loads
+  // only for a project the caller's own Projects read returned, so a hand-typed
+  // or stale `?project=` cannot reach a single report source. Until that read
+  // has succeeded the context is unresolved and nothing is loaded — the gate
+  // fails closed, including when the project list itself failed.
+  const authorisedProjectIds = useMemo(() => projects.map((project) => project.id), [projects]);
+  const projectContext = useMemo(() => {
+    if (!selectedProjectId) return "none";
+    if (projectsStatus !== "ready") return projectsStatus;
+    return authorisedProjectIds.includes(selectedProjectId)
+      ? PROJECT_CONTEXT.AUTHORISED
+      : PROJECT_CONTEXT.UNAVAILABLE;
+  }, [authorisedProjectIds, projectsStatus, selectedProjectId]);
+  const authorised = projectContext === PROJECT_CONTEXT.AUTHORISED;
+
   // Project selector: the ordinary projects read under the caller's own RLS.
   useEffect(() => {
     if (isDemo || !accessToken || !permitted) return undefined;
@@ -121,9 +137,10 @@ export default function AdminReports() {
     };
   }, [accessToken, isDemo, permitted]);
 
-  // No project selected means no report source is read at all.
+  // No project selected — or a project the caller's Projects read did not
+  // return — means no report source is read at all.
   useEffect(() => {
-    if (isDemo || !selectedProjectId || !accessToken || !permitted) return undefined;
+    if (isDemo || !authorised || !accessToken || !permitted) return undefined;
     let cancelled = false;
     (async () => {
       const next = await loadProjectReport({
@@ -132,6 +149,7 @@ export default function AdminReports() {
         range,
         role,
         today,
+        authorisedProjectIds,
       });
       if (cancelled) return;
       setRemoteReport(next);
@@ -140,7 +158,7 @@ export default function AdminReports() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, isDemo, permitted, range, role, selectedProjectId, today]);
+  }, [accessToken, authorised, authorisedProjectIds, isDemo, permitted, range, role, selectedProjectId, today]);
 
   // A stale report from a previous project or period is never shown: the loaded
   // report must match the current selection before it is rendered.
@@ -149,7 +167,7 @@ export default function AdminReports() {
     [demoProjects, selectedProjectId]
   );
   const report = useMemo(() => {
-    if (!selectedProjectId) return null;
+    if (!authorised) return null;
     if (isDemo) return demoReport(selectedProjectId, range, demoSelectedProject);
     if (
       remoteReport &&
@@ -160,9 +178,9 @@ export default function AdminReports() {
       return remoteReport;
     }
     return null;
-  }, [demoSelectedProject, isDemo, range, remoteReport, selectedProjectId]);
+  }, [authorised, demoSelectedProject, isDemo, range, remoteReport, selectedProjectId]);
 
-  const reportStatus = !selectedProjectId
+  const reportStatus = !authorised
     ? "idle"
     : isDemo
       ? "ready"
@@ -247,12 +265,26 @@ export default function AdminReports() {
         </p>
       )}
 
-      {projectsStatus === "ready" && projects.length === 0 && (
+      {projectsStatus === "ready" && projects.length === 0 && !selectedProjectId && (
         <div className="rounded-lg border border-stone-200 bg-white p-8 text-center" role="status">
           <h2 className="text-base font-semibold">No projects available to report on</h2>
           <p className="mx-auto mt-1 max-w-xl text-sm leading-relaxed text-gray-500">
             You are not yet the lead of, or assigned to, any project. Ask the Principal to assign
             you to the sites you work on and they will appear here.
+          </p>
+        </div>
+      )}
+
+      {projectContext === PROJECT_CONTEXT.UNAVAILABLE && (
+        <div
+          className="rounded-lg border border-stone-300 bg-white p-8 text-center"
+          role="status"
+          data-report-state="project_unavailable"
+        >
+          <h2 className="text-base font-semibold">This project is not available to your account.</h2>
+          <p className="mx-auto mt-1 max-w-xl text-sm leading-relaxed text-gray-500">
+            Nothing has been read for it. Choose a project from the list above, or ask the Principal
+            if you should have access to this one.
           </p>
         </div>
       )}
@@ -266,7 +298,7 @@ export default function AdminReports() {
         </div>
       )}
 
-      {selectedProjectId && (
+      {authorised && (
         <>
           <div className="sticky top-16 z-20 rounded-lg border border-stone-200 bg-white px-4 py-3 shadow-sm">
             <p className="break-words text-sm font-semibold text-botanique-charcoal">

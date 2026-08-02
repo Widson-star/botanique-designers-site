@@ -77,6 +77,60 @@ function section(state, data = {}) {
 
 const NO_ACCESS = () => section(SECTION_STATE.NO_ACCESS);
 
+// ---------------------------------------------------------------------------
+// Project context
+// ---------------------------------------------------------------------------
+// A report is about ONE project, and the project arrives from the URL. A URL
+// parameter is input, never proof of access, so before any section is read the
+// project id must be present in the caller's ordinary Projects result — the
+// same read, under the same Projects RLS, that fills the selector.
+//
+// This matters because the source domains are not equally scoped: projects is
+// owner / actively-assigned / leading-manager, while approval_requests and
+// project_activities are readable by ANY manager company-wide. Without this
+// gate, a hand-typed project id could return approval and activity rows for a
+// project the caller cannot see in Projects at all.
+//
+// The gate is an ADDITIONAL fail-closed prerequisite. It does not replace the
+// per-domain policies, which remain authoritative for every read issued after
+// it, and it can never widen what the database returns.
+export const PROJECT_CONTEXT = {
+  AUTHORISED: "authorised",
+  UNAVAILABLE: "unavailable",
+};
+
+export function isAuthorisedProject(projectId, authorisedProjectIds) {
+  if (!projectId || !authorisedProjectIds) return false;
+  const ids =
+    authorisedProjectIds instanceof Set ? authorisedProjectIds : new Set(authorisedProjectIds);
+  return ids.has(projectId);
+}
+
+// The whole report for an unavailable project: no section is read, no source is
+// touched, and nothing about the project — its name, its existence, its
+// activity, its approval count or its timing — is asserted either way. An
+// invalid project id and a real but inaccessible one land here identically.
+function unavailableProjectReport(projectId, range) {
+  return {
+    projectId,
+    range,
+    projectContext: PROJECT_CONTEXT.UNAVAILABLE,
+    overview: NO_ACCESS(),
+    dailySite: NO_ACCESS(),
+    claims: NO_ACCESS(),
+    fundRequests: NO_ACCESS(),
+    approvals: NO_ACCESS(),
+    approvalsProjection: {
+      state: SECTION_STATE.NO_ACCESS,
+      decisions: [],
+      awaiting: [],
+      sourceNotes: [],
+    },
+    recentActivity: NO_ACCESS(),
+    needsAttention: [],
+  };
+}
+
 // Run a section's reads, converting any failure into the error state. A failure
 // in one section never fails the whole report.
 async function attempt(load) {
@@ -686,17 +740,26 @@ export async function loadProjectReport({
   range,
   role,
   today,
+  authorisedProjectIds,
   readers = DEFAULT_READERS,
 }) {
   const bounds = periodInstants(range);
   if (!projectId || !bounds) return null;
+
+  // Fail closed: an omitted, empty or non-matching authorised set reads nothing.
+  if (!isAuthorisedProject(projectId, authorisedProjectIds)) {
+    return unavailableProjectReport(projectId, range);
+  }
 
   let overview;
   try {
     overview = section(SECTION_STATE.READY, {
       project: mapReportProject(await readers.fetchReportProject(accessToken, projectId)),
     });
-    if (!overview.project) overview = section(SECTION_STATE.ERROR);
+    // The project passed the context gate, so an absent row is an access or
+    // visibility fact, not a failed read. It is never shown as a load error, an
+    // empty project or zero activity.
+    if (!overview.project) overview = NO_ACCESS();
   } catch {
     overview = section(SECTION_STATE.ERROR);
   }
@@ -728,6 +791,7 @@ export async function loadProjectReport({
   return {
     projectId,
     range,
+    projectContext: PROJECT_CONTEXT.AUTHORISED,
     overview,
     dailySite,
     claims,

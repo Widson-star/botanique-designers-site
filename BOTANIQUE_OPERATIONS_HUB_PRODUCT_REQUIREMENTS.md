@@ -1879,6 +1879,49 @@ Fund Requests list routes still coerce an absent amount to zero for display. Tho
 outside BD-REPORTS-01A and were left unchanged; correcting them is a separate authorised change
 to those modules. No Reports figure uses that coercion.
 
+### 18.24 Pre-deployment correction — Reports project context (2 August 2026)
+
+**Status: corrected in the repository, not deployed and not hosted-verified.** No hosted system
+was accessed or changed. BD-REPORTS-01A remains **not** `ACTIVE_VERIFIED`.
+
+**The condition corrected.** A Reports project arrives in the URL as `/admin/reports?project=<uuid>`.
+As delivered in §18.23, that parameter reached the report loader directly, so section reads were
+issued for whatever project id was supplied and each section relied solely on its own source
+policy. Those policies are **not equally scoped**: `projects` SELECT admits the owner, anyone
+actively assigned, or a manager who leads the project, while `approval_requests` and
+`project_activities` SELECT admit **any** manager company-wide. An unassigned, non-lead manager
+who supplied a project id by hand could therefore reach approval and project-history rows for a
+project their own Projects read never returned.
+
+**The rule now enforced.** A Reports project may load **only** if that exact project id is present
+in the caller's ordinary Projects read result under Projects RLS. **A URL project id is input, not
+an access grant.** Before any report-section read is issued the selected project is checked against
+that authorised result; if it is absent, no Daily Site read, claim read, fund-request read,
+approval read, project-activity read or Daily Site range-function call is issued at all, and the
+page shows a project-level unavailable state. The gate fails closed: an unresolved, failed or
+absent Projects result loads nothing.
+
+**Non-disclosure.** An inaccessible project reveals no name, no existence, no activity, no
+approval count and no timing. An invalid project id and a real but inaccessible one behave
+identically, and no raw RLS, database or PostgREST message is shown.
+
+**Project Overview state.** A selected project whose row is not returned is presented as a
+project-level access state, never as a load failure, an empty project, no records or zero
+activity. A genuine read failure remains the error state.
+
+**This is an additional prerequisite, not a replacement.** Every per-domain policy remains active
+and authoritative for every read issued after the project is validated. Nothing here widens what
+the database returns, and no application-side check substitutes for RLS. Section-level access
+behaviour is unchanged: assigned Staff still pass the project gate and still receive explicit
+no-access states for the source domains they cannot read; a Viewer still cannot reach the route.
+
+**Left unresolved, deliberately.** Whether company-wide manager SELECT on `approval_requests` and
+`project_activities` should itself be narrowed to led or assigned projects is a **separate
+authority decision** and was not attempted here. No approval, project-activity or client-commercial
+policy was rewritten, and the Daily Site range-function security model is unchanged.
+
+**Deployment and hosted verification remain outstanding.**
+
 ## 19. Printable documents
 
 Printable documents are generated presentations of authoritative records. The source record

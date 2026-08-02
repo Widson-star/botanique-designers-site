@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   deriveApprovalsProjection,
   deriveNeedsAttention,
+  isAuthorisedProject,
   loadProjectReport,
+  PROJECT_CONTEXT,
   projectActivityItems,
 } from "./reportLoader";
 import { SECTION_STATE } from "./reportFormat";
@@ -50,13 +52,16 @@ function emptyReaders(overrides = {}) {
   };
 }
 
-function load(role, readers) {
+// "p1" is the project the caller's own Projects read returned, so every test
+// below runs with an authorised project context unless it says otherwise.
+function load(role, readers, authorisedProjectIds = ["p1"]) {
   return loadProjectReport({
     accessToken: "token",
     projectId: "p1",
     range: RANGE,
     role,
     today: TODAY,
+    authorisedProjectIds,
     readers,
   });
 }
@@ -127,6 +132,114 @@ describe("role isolation across the manager access asymmetry", () => {
     expect(report.dailySite.state).toBe(SECTION_STATE.NO_ACCESS);
     expect(report.recentActivity.state).toBe(SECTION_STATE.NO_ACCESS);
     expect(readers.fetchProjectHistoryEvents).not.toHaveBeenCalled();
+  });
+});
+
+describe("the project-context gate", () => {
+  // Every reader the loader knows about. If the gate holds, not one of them is
+  // called for a project outside the caller's authorised Projects result.
+  function expectNothingRead(readers) {
+    for (const [name, reader] of Object.entries(readers)) {
+      expect(reader, `${name} must not be called`).not.toHaveBeenCalled();
+    }
+  }
+
+  function loadUnauthorised(role, readers, projectId = "p2") {
+    return loadProjectReport({
+      accessToken: "token",
+      projectId,
+      range: RANGE,
+      role,
+      today: TODAY,
+      // The caller's Projects read returned p1 only.
+      authorisedProjectIds: ["p1"],
+      readers,
+    });
+  }
+
+  it("loads a project the caller's authorised Projects result returned", async () => {
+    const readers = emptyReaders();
+    const report = await load("owner", readers);
+    expect(report.projectContext).toBe(PROJECT_CONTEXT.AUTHORISED);
+    expect(report.overview.state).toBe(SECTION_STATE.READY);
+    expect(readers.fetchReportProject).toHaveBeenCalled();
+  });
+
+  it("reads no source for a manager who supplies a project id they cannot see in Projects", async () => {
+    // The exact live asymmetry: approval_requests and project_activities are
+    // readable by ANY manager, while projects is not. Without the gate this
+    // manager would receive approval and activity rows for a project their own
+    // Projects read never returned.
+    const readers = emptyReaders();
+    const report = await loadUnauthorised("manager", readers);
+    expect(report.projectContext).toBe(PROJECT_CONTEXT.UNAVAILABLE);
+    expectNothingRead(readers);
+    // No Daily Site range call, no approvals, no activity — and no shape.
+    expect(readers.fetchReportRangeCompliance).not.toHaveBeenCalled();
+    expect(readers.fetchReportApprovals).not.toHaveBeenCalled();
+    expect(readers.fetchOpenReportApprovals).not.toHaveBeenCalled();
+    expect(readers.fetchProjectHistoryEvents).not.toHaveBeenCalled();
+    expect(report.overview.project).toBeUndefined();
+    expect(report.approvals.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.approvalsProjection.decisions).toEqual([]);
+    expect(report.approvalsProjection.awaiting).toEqual([]);
+    expect(report.recentActivity.items).toBeUndefined();
+    expect(report.needsAttention).toEqual([]);
+    expect(JSON.stringify(report)).not.toContain("Alego Usonga");
+  });
+
+  it("treats an invalid project id exactly as it treats an inaccessible real one", async () => {
+    const invalid = await loadUnauthorised("manager", emptyReaders(), "not-a-uuid");
+    const inaccessible = await loadUnauthorised("manager", emptyReaders(), "p2");
+    expect(invalid.projectContext).toBe(PROJECT_CONTEXT.UNAVAILABLE);
+    expect(invalid.overview).toEqual(inaccessible.overview);
+    expect(invalid.approvals).toEqual(inaccessible.approvals);
+    expect(invalid.recentActivity).toEqual(inaccessible.recentActivity);
+  });
+
+  it("fails closed when no authorised project set is supplied at all", async () => {
+    const readers = emptyReaders();
+    const report = await loadProjectReport({
+      accessToken: "token",
+      projectId: "p1",
+      range: RANGE,
+      role: "owner",
+      today: TODAY,
+      readers,
+    });
+    expect(report.projectContext).toBe(PROJECT_CONTEXT.UNAVAILABLE);
+    expectNothingRead(readers);
+  });
+
+  it("accepts the authorised set as a Set as well as an array", () => {
+    expect(isAuthorisedProject("p1", new Set(["p1"]))).toBe(true);
+    expect(isAuthorisedProject("p1", ["p2"])).toBe(false);
+    expect(isAuthorisedProject("", ["p1"])).toBe(false);
+    expect(isAuthorisedProject("p1", [])).toBe(false);
+  });
+
+  it("does not replace source RLS: an authorised staff project still yields section-level no access", async () => {
+    const readers = emptyReaders();
+    const report = await load("staff", readers);
+    // The gate passed…
+    expect(report.projectContext).toBe(PROJECT_CONTEXT.AUTHORISED);
+    expect(report.overview.state).toBe(SECTION_STATE.READY);
+    // …and the per-domain rules still decide every section independently.
+    expect(report.claims.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.fundRequests.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.dailySite.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.approvals.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(readers.fetchReportClaims).not.toHaveBeenCalled();
+    expect(readers.fetchReportRangeCompliance).not.toHaveBeenCalled();
+    // Project history remains readable for an assigned staff member.
+    expect(readers.fetchProjectHistoryEvents).toHaveBeenCalled();
+  });
+
+  it("shows an authorised project whose row is no longer returned as no access, never as a load error", async () => {
+    const readers = emptyReaders({ fetchReportProject: vi.fn(async () => null) });
+    const report = await load("owner", readers);
+    expect(report.overview.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.overview.state).not.toBe(SECTION_STATE.ERROR);
   });
 });
 
