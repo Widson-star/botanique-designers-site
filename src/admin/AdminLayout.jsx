@@ -31,7 +31,15 @@ const NAV_ITEMS = [
   },
   {
     to: "/admin/daily-site-operations",
-    label: "Daily site ops",
+    // BD-REPORTS-01B navigation review: "Daily site ops" was the only
+    // abbreviated label in the sidebar, and it did not match the destination,
+    // which titles itself "Daily site operations". The remaining navigation
+    // findings — mixed sentence and title case, the position of Project
+    // intakes, and the transitional Site Costs / Fund Requests names — are
+    // recorded in WORKSTREAMS.md and deferred to the gated progressive
+    // navigation stage, because each needs authority this workstream does not
+    // hold.
+    label: "Daily site operations",
     end: false,
     capability: canSeeDailySiteOperations,
     icon: "M6 3v2m8-2v2M3.5 7.5h13M4.5 5.5h11a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z",

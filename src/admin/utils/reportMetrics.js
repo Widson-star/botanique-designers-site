@@ -180,6 +180,22 @@ export function singleCurrency(records = []) {
 // ---------------------------------------------------------------------------
 // Daily Site period compliance
 // ---------------------------------------------------------------------------
+// BD-REPORTS-01B — the one compliance statistic Reports states in words.
+//
+// Of the days an entry was DUE, the share that were not missing: a day is met
+// by a submitted entry (on time or late) or by an active waiver. It is not a
+// quality measure, not a measure of work done, and it says nothing about days
+// on which no entry was ever due.
+//
+// It returns null when nothing was due in the period, so "no obligation" is
+// never rendered as 0% and never as 100%.
+export function complianceRate(summary) {
+  const due = summary?.due;
+  if (!Number.isFinite(due) || due <= 0) return null;
+  const missing = Number.isFinite(summary?.missing) ? summary.missing : 0;
+  return Math.round(((due - missing) / due) * 100);
+}
+
 export function summariseRangeCompliance(rows = []) {
   const summary = { due: 0, submitted: 0, submittedLate: 0, waived: 0, missing: 0, notDue: 0, missingDays: [] };
   for (const row of rows) {
@@ -205,4 +221,38 @@ export function summariseRangeCompliance(rows = []) {
     }
   }
   return summary;
+}
+
+// ---------------------------------------------------------------------------
+// Approvals and decisions — counts only
+// ---------------------------------------------------------------------------
+// BD-REPORTS-01B replaced the per-record decision and awaiting card lists with
+// counts over the SAME projection. Nothing new is read and no state is
+// invented: every count below is the length of a subset of the projection the
+// page already held, so a count and its module always agree.
+//
+// "Returned" and "rejected" are kept apart because they mean different things:
+// a returned record is back with its requester and may yet be decided, while a
+// rejected one is decided against.
+const RETURNED_DECISION_STATES = ["amendment_requested"];
+const APPROVED_DECISION_STATES = ["approved"];
+const REJECTED_DECISION_STATES = ["rejected"];
+
+export function approvalsSummary(projection) {
+  const decisions = projection?.decisions || [];
+  const awaiting = projection?.awaiting || [];
+  const count = (states) => decisions.filter((item) => states.includes(item.state)).length;
+  const approved = count(APPROVED_DECISION_STATES);
+  const returned = count(RETURNED_DECISION_STATES);
+  const rejected = count(REJECTED_DECISION_STATES);
+  return {
+    awaiting: awaiting.length,
+    approved,
+    returned,
+    rejected,
+    // Any decision state the three named groups do not cover — surfaced as a
+    // total rather than silently dropped, so the counts always add up.
+    otherDecisions: decisions.length - approved - returned - rejected,
+    decisionTotal: decisions.length,
+  };
 }

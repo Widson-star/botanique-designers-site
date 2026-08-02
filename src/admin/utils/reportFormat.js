@@ -77,6 +77,16 @@ export function formatReportText(value) {
 // ---------------------------------------------------------------------------
 // These are the words readers see. Raw statuses are never shown where a clearer
 // approved label exists, and no label strengthens what the record proves.
+//
+// BD-REPORTS-01B note. The concise Project Summary states figures, so several
+// maps below — the claim, fund, custody, category, recipient, compliance and
+// activity vocabularies — are no longer rendered by a Reports component. They
+// are kept deliberately, not by oversight: this is the terminology Stage 4A
+// declared binding across dashboards, mobile views, reports and future printing
+// and exports, and `activityEventLabel` is what the retained, deferred
+// cross-domain activity timeline will render. Removing them would delete
+// approved wording that a later surface must reuse verbatim rather than
+// reinvent.
 export const REPORT_LABELS = {
   internalCostsSubmitted: "Internal costs submitted",
   internalCostsApproved: "Internal costs approved",

@@ -1974,6 +1974,64 @@ overflow, nothing materially clipped.
 `DELETE` or table `POST`, and no change to any role, policy, grant, function, migration, deployment
 setting or analytics configuration.
 
+### 18.26 BD-REPORTS-01B — Reports information architecture (2 August 2026)
+
+**Founder requirement.** Reports provides **concise statistical and management information for
+quick reference**. It must not become a second copy of every operational module. Detailed
+records belong in their authoritative modules — Daily Site Operations, Site Costs, Fund
+Requests, Approvals and Projects — and Reports summarises them and links through to them.
+
+This narrows §§18.14–18.25 in one respect only: **what the default Project Summary contains**.
+Every other requirement in those sections — the fact classification, the terminology, the five
+states, the role boundaries, the currency and date rules, the drill-through rule, the mobile
+rule and the no-editable-totals rule — is unchanged and continues to bind.
+
+**The default selected-project report contains seven summary groups**, each figures plus one
+exact drill-through link: Project overview (the project-and-period header); Needs attention;
+Daily site activity; Attendance and planned labour; Internal cost claims; Fund requests;
+Approvals and decisions. Each group states figures. None reproduces the source records behind
+them.
+
+**Removed from the default report:** the full list of days in the period; individual
+site-entry cards; individual planned-by-day workforce cards; individual claim cards;
+individual fund-request cards; individual approval and decision cards; the full Recent
+Activity feed; repeated operational disclaimers; and narrative explanation already stated
+elsewhere.
+
+**Not removed:** any source record, reader, module screen or route. The merged cross-domain
+activity timeline is a **deferred report category**, not a withdrawn capability; its reader and
+projection are retained and tested, and the default report simply does not call them.
+
+**Two derived statistics are authorised.** *Compliance rate* — of the days an entry was due,
+the share met by a submitted entry or an active waiver. A period in which nothing was due has
+**no rate**, and must state so rather than showing 0% or 100%. *Approvals counts* — awaiting a
+decision, approved, returned for correction, rejected, and any other decision state, counted
+over the existing projection, with returned kept distinct from rejected and no decision
+silently dropped.
+
+**Drill-through must be period-exact.** Because the records are no longer reproduced, the link
+carries the same project **and the same reporting period** wherever the destination supports a
+period filter, and claims no period filter where the destination has none.
+
+**Page length and ordinary-user usability.** The report behaves as a management summary, not an
+archive: compact cards, restrained spacing, clear hierarchy, understandable within a few screen
+lengths at desktop width. Brevity must **not** be achieved through tiny text, clipped content,
+unexplained abbreviations or horizontal scrolling. Mobile remains primary: cards stack, no table
+is used, and no horizontal overflow is required.
+
+**Charts.** Only a chart that helps an ordinary Botanique user answer a real management question
+quickly is authorised. Decorative charts are not. One is delivered: a compact site-entry
+compliance breakdown, in which a category with no days draws no bar.
+
+**Navigation.** The sidebar names a destination only where a working route already exists. No
+dead, disabled, decorative or placeholder entry may be introduced, and an agreed-but-unbuilt
+module is recorded as pending rather than shown. The single correction made under this
+requirement is the label `Daily site ops` → `Daily site operations`, matching both the module's
+authority name and the title its destination gives itself. The wider navigation restructure
+toward Dashboard, Projects, People, Finance, Reports and More remains **stage 6, progressive
+navigation and mobile-shell implementation**, which is unauthorised and gated behind stage 3
+(Work Inbox) and stage 5 (People).
+
 ## 19. Printable documents
 
 Printable documents are generated presentations of authoritative records. The source record

@@ -5,6 +5,7 @@ import {
   deriveNeedsAttention,
   isAuthorisedProject,
   loadProjectReport,
+  loadRecentActivity,
   PROJECT_CONTEXT,
   projectActivityItems,
 } from "./reportLoader";
@@ -93,9 +94,9 @@ describe("the five report section states stay distinct", () => {
     expect(readers.fetchReportFundRequests).not.toHaveBeenCalled();
     expect(readers.fetchReportDailySiteEntries).not.toHaveBeenCalled();
     expect(readers.fetchReportApprovals).not.toHaveBeenCalled();
-    // Assigned staff still see the project itself and its history.
+    // Assigned staff still see the project itself.
     expect(report.overview.state).toBe(SECTION_STATE.READY);
-    expect(readers.fetchProjectHistoryEvents).toHaveBeenCalled();
+    expect(readers.fetchReportProject).toHaveBeenCalled();
   });
 
   it("reports a load failure as a failure, never as empty and never as zero", async () => {
@@ -127,12 +128,55 @@ describe("role isolation across the manager access asymmetry", () => {
     }
   });
 
-  it("gives a viewer no source section and no activity", async () => {
+  it("gives a viewer no source section", async () => {
     const readers = emptyReaders();
     const report = await load("viewer", readers);
     expect(report.dailySite.state).toBe(SECTION_STATE.NO_ACCESS);
-    expect(report.recentActivity.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.claims.state).toBe(SECTION_STATE.NO_ACCESS);
+    expect(report.approvals.state).toBe(SECTION_STATE.NO_ACCESS);
+  });
+});
+
+// BD-REPORTS-01B — Reports is a statistical summary, so the merged
+// cross-domain activity feed is no longer part of the default report. The
+// projection and its readers are retained for the deferred activity-timeline
+// report and are proved below; what changed is that an ordinary report does
+// not read the five event sources at all.
+describe("the default report reads no event source", () => {
+  it("carries no activity feed and issues no event read, for any role", async () => {
+    for (const role of ["owner", "manager", "staff"]) {
+      const readers = emptyReaders();
+      const report = await load(role, readers);
+      expect(report.recentActivity).toBeUndefined();
+      expect(readers.fetchProjectHistoryEvents).not.toHaveBeenCalled();
+      expect(readers.fetchDailySiteEvents).not.toHaveBeenCalled();
+      expect(readers.fetchClaimEvents).not.toHaveBeenCalled();
+      expect(readers.fetchFundRequestEvents).not.toHaveBeenCalled();
+      expect(readers.fetchApprovalEvents).not.toHaveBeenCalled();
+    }
+  });
+
+  it("still reads every source the summary figures are built from", async () => {
+    const readers = emptyReaders();
+    await load("owner", readers);
+    expect(readers.fetchReportRangeCompliance).toHaveBeenCalled();
+    expect(readers.fetchReportDailySiteEntries).toHaveBeenCalled();
+    expect(readers.fetchReportClaims).toHaveBeenCalled();
+    expect(readers.fetchReportFundRequests).toHaveBeenCalled();
+    expect(readers.fetchReportApprovals).toHaveBeenCalled();
+    expect(readers.fetchOpenReportApprovals).toHaveBeenCalled();
+  });
+
+  it("keeps the retained activity reader working and access-gated", async () => {
+    const readers = emptyReaders();
+    const bounds = { startInstant: "2026-08-01T00:00:00+03:00", endInstant: "2026-09-01T00:00:00+03:00" };
+    const denied = await loadRecentActivity(readers, "token", "p1", bounds, "viewer");
+    expect(denied.state).toBe(SECTION_STATE.NO_ACCESS);
     expect(readers.fetchProjectHistoryEvents).not.toHaveBeenCalled();
+
+    const allowed = await loadRecentActivity(readers, "token", "p1", bounds, "owner");
+    expect(allowed.state).toBe(SECTION_STATE.EMPTY_PERIOD);
+    expect(readers.fetchProjectHistoryEvents).toHaveBeenCalled();
   });
 });
 
@@ -184,7 +228,7 @@ describe("the project-context gate", () => {
     expect(report.approvals.state).toBe(SECTION_STATE.NO_ACCESS);
     expect(report.approvalsProjection.decisions).toEqual([]);
     expect(report.approvalsProjection.awaiting).toEqual([]);
-    expect(report.recentActivity.items).toBeUndefined();
+    expect(report.recentActivity).toBeUndefined();
     expect(report.needsAttention).toEqual([]);
     expect(JSON.stringify(report)).not.toContain("Alego Usonga");
   });
@@ -195,7 +239,6 @@ describe("the project-context gate", () => {
     expect(invalid.projectContext).toBe(PROJECT_CONTEXT.UNAVAILABLE);
     expect(invalid.overview).toEqual(inaccessible.overview);
     expect(invalid.approvals).toEqual(inaccessible.approvals);
-    expect(invalid.recentActivity).toEqual(inaccessible.recentActivity);
   });
 
   it("fails closed when no authorised project set is supplied at all", async () => {
@@ -232,8 +275,8 @@ describe("the project-context gate", () => {
     expect(report.approvals.state).toBe(SECTION_STATE.NO_ACCESS);
     expect(readers.fetchReportClaims).not.toHaveBeenCalled();
     expect(readers.fetchReportRangeCompliance).not.toHaveBeenCalled();
-    // Project history remains readable for an assigned staff member.
-    expect(readers.fetchProjectHistoryEvents).toHaveBeenCalled();
+    // The project record itself remains readable for an assigned staff member.
+    expect(readers.fetchReportProject).toHaveBeenCalled();
   });
 
   it("shows an authorised project whose row is no longer returned as no access, never as a load error", async () => {
