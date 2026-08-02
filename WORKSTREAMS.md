@@ -3075,6 +3075,58 @@ fix belongs to the test, not to `AdminApp`, and is **out of scope for this narro
 correction**; it is registered as separate work. **This entry does not claim a uniformly green
 suite.**
 
+### 2 August 2026 — Provisional Project Summary rename: merged, deployed and production-checked
+
+Status: **Merged and deployed. Production content verified unauthenticated; the authenticated
+two-role walkthrough remains for the Founder.**
+
+**Merge.** PR #66 merged on 2 August 2026 at merge commit
+`05257feb3825f2becc5a76a821c790d1524e2cd9` — a true merge commit whose two parents are the
+previous authoritative main `2817bd853ce4344fbcde35eff61542b7605e19dc` and the reviewed head
+`64c0f3dac8cdf570734562cb00944011c15d7b4c`. Authoritative main is now that merge commit. The
+merge was guarded against the reviewed head SHA, PR #66 is closed and no longer open, and no
+competing pull request existed at any point. Exactly six files entered `main`: this register,
+`BOTANIQUE_OPERATIONS_HUB_PRODUCT_REQUIREMENTS.md`, `src/admin/AdminLayout.jsx`,
+`src/admin/AdminLayout.test.jsx`, `src/admin/routes/AdminReports.jsx` and
+`src/admin/routes/AdminReports.test.jsx`. **No migration was required and none was applied.**
+
+**Deployment.** Vercel production deployment `dpl_9A1SYyyqMyeFyY4YuVcfzoS1Xrjv` built exactly
+`05257feb3825f2becc5a76a821c790d1524e2cd9` from `main`, target `production`, and reached
+`READY`. `https://www.botaniquedesigners.com/admin` returns HTTP 200 and presents the ordinary
+sign-in gate, unchanged.
+
+**Verified in the deployed production bundle**, by reading the served JavaScript asset rather
+than by inference from the repository:
+
+- the navigation order is exactly `Dashboard`, `Projects`, `Project intakes`, `Daily site
+  operations`, `Site Costs`, `Fund Requests`, `Approvals`, `Project Summary`;
+- `Project Summary` and `Project Summary unavailable` are both present;
+- **`label:"Reports"` is absent** — no destination is presented as Reports anywhere in the shell;
+- the introduction reads "A provisional live summary of one selected project over one period.
+  This is not the Reports Centre, which will arrive later with its own report categories."
+
+**No production data was changed.** Every hosted interaction was an unauthenticated `GET` of the
+public admin entry point and its static asset. No sign-in was attempted, no credential was
+entered, no `POST`, `PATCH`, `PUT` or `DELETE` was issued, and no Supabase role, policy, grant,
+function, migration or setting was touched.
+
+**What is NOT claimed, and why.** The authenticated **Principal and Operations Manager**
+walkthrough was **not** performed. Production `/admin` is invite-only behind Supabase Auth, no
+authenticated session was available, and entering credentials is not something this workstream
+may do. The deployed-bundle evidence above establishes that the renamed label, headings, wording
+and navigation order are live for every reader; it does **not** by itself establish the
+in-session behaviour. **Outstanding for the Founder, and short:** sign in as each role and
+confirm the sidebar reads `Project Summary` in last position, the page heading reads `Project
+Summary`, the sidebar order matches the list above, project and period selection still work, and
+no route or permission regression exists. No functional change was made to any of those
+behaviours, and the full frontend suite covers them.
+
+**Validation carried at merge:** frontend `vitest` 48 files / 415 tests, with the one
+**pre-existing** `AdminApp.test.jsx` race recorded in the entry above rather than hidden;
+`npm run build` prerendered 43 routes, unchanged from exact main; changed-file `eslint` clean;
+repository-wide `eslint` 19 pre-existing errors, identical to exact main; `git diff --check`
+clean.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`
