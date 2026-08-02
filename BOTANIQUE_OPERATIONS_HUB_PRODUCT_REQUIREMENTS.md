@@ -18,11 +18,30 @@ separately gated.
 2. This document — founder requirements and acceptance boundaries.
 3. `BOTANIQUE_OPERATIONS_HUB_BLUEPRINT.md` — domain architecture, systems of record,
    relationships and dependencies.
-4. Migrations and application code — implemented technical truth.
-5. Historical audits and handoffs — supporting evidence, not governing authority.
+4. `docs/ui-authority/operations-hub/` — **visual product authority.** Four
+   Founder-approved screens, adopted 3 August 2026, with their binding interpretation rules
+   in `docs/ui-authority/operations-hub/README.md`:
+   `01-dashboard-authority.png` (portal shell, grouped navigation, page hierarchy, spacing
+   and density, controlled card composition, colour restraint);
+   `02-alerts-popover-authority.png` (top-right alert-bell placement and compact alert
+   interaction);
+   `03-reports-centre-authority.png` (report-category navigation, one selected report at a
+   time);
+   `04-project-summary-authority.png` (compact Project Summary composition).
+5. Migrations and application code — implemented technical truth.
+6. Historical audits and handoffs — supporting evidence, not governing authority.
 
 Where current-state wording conflicts, `WORKSTREAMS.md` and the merged implementation
 govern implementation state. This document governs the founder-required product boundary.
+
+**Visual authority rule.** The screens in `docs/ui-authority/operations-hub/` are binding
+structural and visual authority and must be inspected before any portal UI implementation.
+They govern presentation only. They do **not** authorise invented business fields, invented
+figures, unbuilt modules, unsupported metrics, unsupported reports or unsupported actions —
+where a screen shows illustrative data or a future capability, this document, the Blueprint
+and the implemented domain authority still govern whether it may be built. Where visual
+authority and functional authority appear to conflict, implementation stops and the conflict
+is reported to the Founder rather than resolved by improvisation.
 
 ## 1. Product purpose and current production baseline
 
