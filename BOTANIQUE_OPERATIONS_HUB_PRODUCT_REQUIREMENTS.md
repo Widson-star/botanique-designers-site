@@ -1976,6 +1976,13 @@ setting or analytics configuration.
 
 ### 18.26 BD-REPORTS-01B — Reports information architecture (2 August 2026)
 
+> **SUPERSEDED IN PART — see §18.27.** The Founder's hosted review on 2 August 2026 rejected the
+> single-page information architecture this section describes. The **summary principle below
+> stands**: Reports summarises and links through, and does not reproduce operational records.
+> What is superseded is the **shape** — the seven groups presented together on one page. Reports
+> must instead become a category-based reporting centre, built after the major source domains are
+> complete. Nothing in this section authorises further sections on the current page.
+
 **Founder requirement.** Reports provides **concise statistical and management information for
 quick reference**. It must not become a second copy of every operational module. Detailed
 records belong in their authoritative modules — Daily Site Operations, Site Costs, Fund
@@ -2031,6 +2038,39 @@ authority name and the title its destination gives itself. The wider navigation 
 toward Dashboard, Projects, People, Finance, Reports and More remains **stage 6, progressive
 navigation and mobile-shell implementation**, which is unauthorised and gated behind stage 3
 (Work Inbox) and stage 5 (People).
+
+### 18.27 Reports information architecture rejected — the reporting centre is deferred (2 August 2026)
+
+**Founder decision: the Reports information architecture is not approved.** Recorded from the
+Principal's own production walkthrough. This is a product finding, not a defect report: no wrong
+figure, access failure or functional fault was found.
+
+**The requirement now binding on any future Reports work.**
+
+1. Reducing individual records was **insufficient**. The single-page model is itself the problem.
+2. Reports must carry its **own compact report-category navigation**.
+3. The user selects **one** report category, and **only that report** occupies the main panel.
+4. Each report may carry its **own filters, totals, chart and compact table**.
+5. Reports must **never** display every report domain simultaneously on one endless page.
+6. The Simple Invoice references are **structural authority** for this shape, not visual
+   inspiration to be copied.
+
+**Sequencing.** The final category-based Reports centre must be built **after** the major source
+domains are complete — Projects; People and engagements; Daily Site operations; labour registers
+and payments; Project Updates and Tasks; internal costs; Fund Requests and releases; payments and
+reconciliation; operational expenditure; Documents and Evidence. It is a natural fit for stage 12
+of the 1 August 2026 sequence, *expanded management reporting*, rather than stage 4.
+
+**Immediate constraint.** The currently deployed `/admin/reports` route must **not** be expanded.
+No new report section, category, chart or filter may be added to it, because each addition
+deepens a model already rejected. Its minimum temporary treatment, the corrected implementation
+order and the sidebar position are the subject of a Founder decision recorded in `WORKSTREAMS.md`
+and are not settled by this section.
+
+**Unaffected.** §§18.14–18.25 continue to bind every Reports surface: the fact classification,
+the terminology, the five states, the role boundaries, the currency and date rules, the
+drill-through rule, the mobile rule and the no-editable-totals rule. A category-based centre
+changes the shape of Reports, not its truthfulness.
 
 ## 19. Printable documents
 
