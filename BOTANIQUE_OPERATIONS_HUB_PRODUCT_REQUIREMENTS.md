@@ -1922,6 +1922,58 @@ policy was rewritten, and the Daily Site range-function security model is unchan
 
 **Deployment and hosted verification remain outstanding.**
 
+### 18.25 Hosted verification record — BD-REPORTS-01A `ACTIVE_VERIFIED` (2 August 2026)
+
+**Status: deployed, hosted-verified under two authenticated roles, and classified
+`ACTIVE_VERIFIED`.** This supersedes the "not yet hosted-verified" status carried in §18.23 and
+§18.24. Production runs `88b56091432ed4766fa61bfe8831595c83448cee` — the merge commit of PR #61,
+reviewed head `67ac54a488459b2002125eed55c82c4787775d77` — served by Vercel deployment
+`dpl_6UBLRKrrxCFdCBe1uGmALyNa4pQZ` (`READY`, production, aliased to `botaniquedesigners.com`). No
+migration was required.
+
+**The three affected sections load.** Internal Cost Claims, Fund Requests and Approvals & Decisions
+were each confirmed loading in production as Principal and again as Operations Manager. Every
+affected request carried `%2B03%3A00`, decoded to a literal `+03:00`, contained no `" 03:00"`
+corruption and no `%252B` double encoding, and returned **HTTP 200** with no SQLSTATE `22007`.
+
+**Acceptance requirements confirmed against the live system** (§18.22): every read project-scoped and
+period-scoped; explicit column lists with no `select=*`; bounded at 200 rows for lists, 50 for events
+and 1 for existence probes; no event payload or snapshot column requested — no `daily_site_snapshot`,
+no `original_values` or `proposed_values`, no `previous_values` or `new_values`; no access token in
+any URL, with authentication remaining in the `Authorization` header; and
+`daily_site_range_compliance` called exactly once per selected period rather than once per day.
+
+**The five section states behave as specified.** The selected-period state ("No records in the
+selected period.") and the lifetime-empty state ("No records exist for this project.") rendered in the
+same view and were correctly distinguished. A rejected reader produced the error state, never an empty
+state and never a zero; where one source behind the Approvals projection fails, the section names it.
+
+**Africa/Nairobi period semantics confirmed live:** This week 27 Jul – 2 Aug 2026 (Monday–Sunday),
+This month 1 – 31 Aug 2026, Custom range inclusive, each stated as "on Kenyan dates"; an inverted
+range is refused plainly and issues no request.
+
+**Project-context gate confirmed live** (§18.24): under both roles a malformed project id and a
+well-formed but inaccessible one behaved identically, issued **zero** section reads, and disclosed no
+name, existence or activity. As Operations Manager the selector offered five projects against the
+Principal's twelve, the manager received **no action control** in Reports, and Recent Activity
+attributed Principal actions as "Owner or authorised manager" rather than by name.
+
+**Currency and terminology.** "Internal costs submitted" and "Internal costs approved" rendered
+correctly against live figures. **"Funding requested" and "Funding authorised — not released" remain
+unexercised against live values** because production holds zero fund-request records across all
+projects and statuses; both labels are present in the deployed bundle, the Fund Requests reader
+returned HTTP 200 and rendered the correct lifetime-empty state, and no implementation defect is
+implied. This is a documented production-data evidence limitation, to be closed the first time a real
+fund request exists. No record was created to manufacture the evidence.
+
+**Mobile requirements confirmed** (§21) at a live 400 × 725 viewport under both roles: single stacked
+column, usable selector and period controls, cards within the viewport, no table, no horizontal
+overflow, nothing materially clipped.
+
+**No hosted data was mutated** during verification: reads and navigation only, with no `PATCH`, `PUT`,
+`DELETE` or table `POST`, and no change to any role, policy, grant, function, migration, deployment
+setting or analytics configuration.
+
 ## 19. Printable documents
 
 Printable documents are generated presentations of authoritative records. The source record

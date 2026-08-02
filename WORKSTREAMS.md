@@ -2470,6 +2470,104 @@ obligation semantics all remain **outside** this correction and each requires it
 `DEPLOYED_WITH_MATERIAL_GAPS` until an authenticated hosted check confirms Internal Cost Claims,
 Fund Requests and Approvals & Decisions load correctly. Deployment requires its own authority.
 
+### 2 August 2026 — BD-REPORTS-01A hosted verification complete: ACTIVE_VERIFIED
+
+**Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026.** The EAT offset correction
+recorded immediately above has been deployed and verified on the hosted production system under two
+separate authenticated browser sessions. BD-REPORTS-01A is now classified **`ACTIVE_VERIFIED`**.
+**This entry supersedes the `DEPLOYED_WITH_MATERIAL_GAPS` classification recorded immediately above**,
+whose stated condition — an authenticated hosted check confirming that Internal Cost Claims, Fund
+Requests and Approvals & Decisions load correctly — is satisfied and evidenced below. Earlier entries
+retain their original wording as the historical record and are not restated.
+
+**Production commit and deployment.** Authoritative main is
+`88b56091432ed4766fa61bfe8831595c83448cee`, the merge commit of **PR #61** (reviewed head
+`67ac54a488459b2002125eed55c82c4787775d77`, previous main
+`5b0bdc8cbf08ec5ee12957be82d7cbbc922ddb1d`). Vercel deployment
+`dpl_6UBLRKrrxCFdCBe1uGmALyNa4pQZ` is `READY`, `target: production`, `aliasError: null`, aliased to
+`botaniquedesigners.com` and `www.botaniquedesigners.com`, and supersedes the previous production
+deployment of `5b0bdc8`. The served bundle was independently confirmed to contain the corrected
+construction: the shared helper returns the bare `(and(…))` value, all three readers append it as an
+`or` key/value pair, and the defective `or=(and(` raw query text appears **zero** times. No migration
+was required or applied for PR #61.
+
+**Principal hosted verification — passed.** Route and navigation work; the selector returned the
+Principal's twelve projects including completed and archived ones; no section read is issued before a
+project is chosen; a malformed project id and a well-formed unknown one both fail closed with an
+identical non-disclosing message and **zero** Supabase reads; This week resolved to 27 Jul – 2 Aug
+2026 (Monday–Sunday), This month to 1 – 31 Aug 2026, and Custom range all state "on Kenyan dates"; an
+inverted range is refused with "The end date cannot be before the start date." and issues no request.
+**Internal Cost Claims, Fund Requests and Approvals & Decisions all load.**
+
+**Operations Manager hosted verification — passed.** A genuine authenticated Operations Manager
+browser session, not a database simulation, reached Reports through the ordinary sidebar navigation.
+The selector returned **five** projects against the Principal's twelve, reflecting the manager's
+effective hosted access. A hand-supplied project id for a real project outside that access failed
+closed, as did a malformed id, both with the same message, **zero** requests naming the project id,
+**zero** section reads and no leakage of the project's name or existence. On an authorised
+manager-visible project all three affected sections loaded. Reports offered the manager **no action
+control of any kind** — only the three period buttons — and Recent Activity presented the Principal's
+actions as "Owner or authorised manager" rather than by name, so no Principal-only control or datum
+reached the manager.
+
+**Live request evidence, both roles.** Every affected request carried `%2B03%3A00`, decoded through
+the receiving parser to a literal `+03:00`, contained no `" 03:00"` corruption and no `%252B` double
+encoding, and returned **HTTP 200** — no SQLSTATE `22007` anywhere. Every read remained scoped by
+`project_id=eq.<uuid>` and by the selected period, carried an explicit column list, and stayed bounded
+at 200 rows for lists, 50 for events and 1 for existence probes. No event payload or snapshot column
+was requested: the Reports claim read selects no `daily_site_snapshot`, the approvals read no
+`original_values` or `proposed_values`, and the project-history read no `previous_values` or
+`new_values`. A scan of every hosted request in both sessions found **no access token, refresh token,
+API key or bearer value in any URL**; authentication remained in the `Authorization` header, and no
+token value was inspected, copied or recorded. `daily_site_range_compliance` was called exactly once
+per selected period, never once per day.
+
+**Both empty states verified, and distinguished.** In a single view, Internal Cost Claims rendered
+"No records in the selected period." while Fund Requests rendered "No records exist for this
+project." — the selected-period and lifetime-empty states are correctly separated and neither is
+conflated with the other. The lifetime-empty state was unreachable in production before this
+correction, because the three affected sections always resolved to an error.
+
+**Genuine errors remain errors.** Using a tab-local read-only stub that changed no production data or
+configuration, a rejected reader produced "Data could not be loaded." — never an empty state and never
+a zero — while the other sections continued to render their own correct states alongside it. Where one
+of the three sources behind the Approvals projection fails, the section names the failed source
+rather than silently omitting it.
+
+**Finance terminology.** "Internal costs submitted" (KES 1,000) and "Internal costs approved"
+(KES 6,000) render correctly against live data under both roles. **"Funding requested" and "Funding
+authorised — not released" could not be exercised with live values, and this is recorded as a
+production-data evidence limitation rather than a defect.** Production holds **zero** fund-request
+records across all projects and all statuses. On record instead: the live Fund Requests reader
+returned HTTP 200, the correct lifetime-empty state rendered, and both labels are present in the
+deployed bundle's metric-label map. No production record was created to manufacture this evidence,
+and no implementation defect is implied. The two labels should be confirmed against live figures the
+first time a real fund request exists.
+
+**Daily Site wording holds.** The report states that it reports plans and submissions only and does
+not report work completed, that planned figures are not a record of who attended or what was paid,
+that the planned labour amount is not labour cost incurred, labour paid or payroll, and that recorded
+attendance is not available in the current Operations Hub stage. Recent Activity labels are plain and
+every entry links to its exact record; drill-through opens the precise claim and reconciles with the
+figure shown in the report.
+
+**Mobile.** Verified under both roles at a live viewport of 400 × 725: a single stacked column, the
+project selector and period controls usable with full-height touch targets, all cards inside the
+viewport, no table anywhere in the report, no page-level horizontal overflow and nothing materially
+clipped.
+
+**No hosted data was mutated.** Every hosted interaction was a read or ordinary navigation. Across
+both sessions there was no `INSERT`, `UPDATE` or `DELETE`, no `PATCH`, `PUT` or `DELETE` request and
+no table `POST`; the only `POST` calls were the existing read-only reporting and authorisation
+functions. No role, RLS policy, grant, database function, migration, Vercel setting or analytics
+configuration was changed.
+
+**Left unresolved, deliberately.** Whether company-wide manager SELECT on `approval_requests` and
+`project_activities` should be narrowed to led or assigned projects remains a **separate authority
+decision** and was not touched. Vercel Analytics on admin routes, generic sign-in error wording, CSP,
+rate limiting, form validation, XSS review, `PUBLIC` execute on `daily_site_morning_compliance` and
+historical Daily Site obligation semantics likewise remain outside this record.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`
