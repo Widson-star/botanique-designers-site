@@ -21,8 +21,8 @@
 // mechanics: the page speaks in project names, dates, plain figures and plain
 // state sentences.
 //
-// BD-REPORTS-01B narrowed what the summary contains, not how it is read.
-// Reports is a management summary — figures, one clear statistic per question,
+// BD-REPORTS-01B narrowed what the summary contains, not how it is read. This
+// page is a management summary — figures, one clear statistic per question,
 // and an exact link into the module that owns the records behind them. It is
 // not a second copy of Daily Site Operations, Site Costs, Fund Requests or
 // Approvals, and it never reproduces their records row by row.
