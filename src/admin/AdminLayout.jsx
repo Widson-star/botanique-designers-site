@@ -14,6 +14,7 @@ import { canManageStaff } from "./utils/permissions";
 import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
 import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
+import { canSeeReports } from "./utils/reportCapabilities";
 
 const NAV_ITEMS = [
   {
@@ -55,6 +56,13 @@ const NAV_ITEMS = [
     end: false,
     capability: canSeeApprovals,
     icon: "M5 10.5 8.25 14 15 6.5M3.5 3.5h13v13h-13v-13Z",
+  },
+  {
+    to: "/admin/reports",
+    label: "Reports",
+    end: false,
+    capability: canSeeReports,
+    icon: "M4 16V8m4 8V5m4 11v-6m4 6V9M3 17h14",
   },
   {
     to: "/admin/project-intakes",

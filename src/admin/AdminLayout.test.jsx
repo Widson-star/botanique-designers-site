@@ -43,7 +43,7 @@ describe("AdminLayout visual boundary", () => {
     expect(heading.closest(".admin-shell")).not.toHaveClass("font-sans");
   });
 
-  it("shows only live Dashboard, Projects, Daily site ops, Site Costs, Fund Requests, Approvals and Project intakes navigation", () => {
+  it("shows only live Dashboard, Projects, Daily site ops, Site Costs, Fund Requests, Approvals, Reports and Project intakes navigation", () => {
     renderLayout();
     const desktopNav = screen.getAllByRole("navigation", {
       name: "Admin sections",
@@ -55,6 +55,7 @@ describe("AdminLayout visual boundary", () => {
       "Site Costs",
       "Fund Requests",
       "Approvals",
+      "Reports",
       "Project intakes",
     ]);
     expect(screen.queryByRole("link", { name: /Leads|Site visits|Payments|Expenses/i })).not.toBeInTheDocument();

@@ -2264,6 +2264,78 @@ requires its own authority, branch, review and deployment gate.
 Full product contract is in the Product Requirements §§18.14–18.22; full architecture is in the
 Blueprint §§12.11–12.19. No Apicora project content is affected.
 
+### 2 August 2026 — Stage 4D: BD-REPORTS-01A implemented (repository only)
+
+**Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026. Execution: repository
+implementation only.** This is **stage 4D** — the implementation of **BD-REPORTS-01A — Project
+Summary and Current-Authority Reporting**, under the merged stage 4A and stage 4C authority.
+**No hosted system was accessed or changed**: no migration was applied to the hosted
+`botanique-admin` project, no RLS policy or configuration was altered there, and no production
+verification was performed or is claimed. Stage 3 (Work Inbox and Notifications) remains
+**outstanding**, BD-FIN-01B2 remains **paused** with every settled decision unchanged, and the
+backup and recovery posture remains `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+**Delivered.** One capability-gated `Reports` navigation entry and one route, `/admin/reports`,
+declared before the `/admin/*` catch-all. The route offers a project selector, a
+reporting-period selector (this week, this month, custom range — all inclusive, all on the
+Africa/Nairobi calendar) and a responsive Project Summary of the eight approved sections:
+Project Overview; Needs Attention; Daily Site Activity; Attendance and Planned Labour; Internal
+Cost Claims; Fund Requests; Approvals and Decisions; Recent Activity. The report is live and
+read-only: no figure is editable, nothing is written to any source record, and no snapshot, PDF,
+export or stored artefact is produced.
+
+**One database object was added:** `public.daily_site_range_compliance(date, date, uuid)`, which
+resolves Daily Site obligation and compliance for a whole inclusive period in one call instead
+of one call per day. It is **invoker-rights and explicitly not `SECURITY DEFINER`**, reads every
+table under the caller's own RLS, additionally filters projects through the existing Daily Site
+authority helper, stores nothing and mutates nothing. No cross-domain `SECURITY DEFINER`
+reporting function, materialised reporting table, persistent report row, generic event ledger or
+duplicate finance ledger was created, and no index was added.
+
+**Permissions.** Every section loads under its own source domain's RLS; no application-side role
+check replaces or widens a database policy. Project availability follows the effective projects
+RLS response. Where a reader can see a project but not a source domain — assigned staff being
+the clear case — that section shows the explicit no-access state, never zero and never an
+ordinary empty state, and the inaccessible source is not read at all.
+
+**Manager-visibility wording corrected.** The stage 4C entry above recorded that project and
+project-history reads admit any active manager. Re-inspection before implementation showed this
+is wrong for projects: the effective policy admits the owner, anyone actively assigned, or a
+manager **who leads** the project, so an unassigned, non-lead manager receives no project row
+and Reports cannot offer that project. Product Requirements §18.19 and Blueprint §12.13 now
+record this correctly; the section-level access behaviour for a reader who can read a project
+but not a source domain is retained and is exercised by tests.
+
+**Tested.** The full repository suite passes: 369 tests across 47 files, up from 296 across
+40 before this work. The 73 added tests cover claim and fund-request status
+inclusion and exclusion, Daily Site planned-labour inclusion, supersession and returned-entry
+exclusion, submitted versus approved figures, EAT week/month/custom boundaries, records
+submitted in one period and decided in another, absence of double counting, genuine zero versus
+null, unavailable, inaccessible and failed values, the five states rendering distinctly, safe
+user-facing labels, the absence of any strengthened financial or operational claim, drill-through
+query parameters, mobile stacked output, loading and safe error states, and demo-mode parity. A
+new real-PostgreSQL integration test covers the range source for Principal, assigned manager,
+unassigned manager, Staff and Viewer, proves permitted project rows are returned and prohibited
+ones never are, exercises the Africa/Nairobi calendar and each of submitted, submitted late,
+waived, missing and not due, and proves the source is invoker-rights and not `SECURITY DEFINER`.
+All five existing database integration suites and the production build pass.
+
+**Not delivered, and deliberately so:** Work Inbox and Notifications; fund releases; payments;
+reconciliation; client-commercial integration; materials or procurement authority; actual
+work-completed records; actual attendance; actual labour cost; payroll; document uploads; PDF
+generation; exports; report snapshots; generated-document custody; a generic event ledger; a
+materialised reporting ledger; and any cross-domain `SECURITY DEFINER` report function. No
+Simple Invoice data was duplicated, no Documents & Evidence capability was introduced, and no
+Apicora project content was changed.
+
+**Known limitation carried forward.** The pre-existing money formatters in the Site Costs and
+Fund Requests list routes still coerce an absent amount to zero for display. Those lines predate
+this work and sit outside BD-REPORTS-01A, so they were left unchanged and are recorded here for
+a separate decision. No Reports figure uses that coercion.
+
+**Deployment remains ungated by this entry.** Applying the migration to the hosted project and
+verifying the route in production require their own authority.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`

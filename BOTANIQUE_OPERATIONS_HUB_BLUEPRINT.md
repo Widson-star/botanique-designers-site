@@ -1055,10 +1055,23 @@ The following are **not** authorised for BD-REPORTS-01A:
 ### 12.13 Per-domain permission inheritance
 
 Reports composes sections whose source domains do **not** share one access rule, and the
-composition must not flatten them. Project visibility is broader than Daily Site, Internal Cost
-Claims and Fund Requests visibility: a manager reads projects and project history generally,
-while the operational and finance domains additionally require project authority through
-project lead or an active assignment.
+composition must not flatten them.
+
+**Correction recorded at stage 4D implementation (2 August 2026).** The stage 4C wording above
+previously said that project and project-history reads admit any active manager. Re-inspection
+of the effective policy before implementation showed that this is not the case for projects.
+The delivered `projects_select_owner_manager_assigned` policy — as replaced by the
+20260729000100 material-change migration — admits the owner, anyone actively assigned to the
+project, or a manager **who leads it**. An unassigned, non-lead manager therefore does not
+receive the project row at all, and Reports cannot offer that project in its selector. Project
+availability follows the effective projects RLS response and nothing else.
+
+The asymmetry that does exist, and that the composition must still respect, runs the other way:
+`project_activities` admits any owner or manager plus assigned staff, while Daily Site,
+Internal Cost Claims and Fund Requests additionally require project authority through project
+lead or an active assignment, and grant Staff and Viewer no SELECT policy at all. Assigned
+staff may therefore hold a project row, and its history, while every operational and finance
+section of that project is inaccessible to them.
 
 The architectural consequence is that a section's availability is decided **per source domain,
 per project, per reader**. Where the reader may see the project but not the source, the section
@@ -1137,6 +1150,72 @@ Any new database range source additionally requires a **real PostgreSQL integrat
 the existing database-test pattern, with RLS coverage for Principal, assigned manager,
 unassigned manager, Staff and Viewer; proof that unauthorised project rows are never returned;
 and proof that the source is security-invoker and **not** `SECURITY DEFINER`.
+
+### 12.20 Stage 4D delivery record — as-built architecture (2 August 2026)
+
+**Implemented in the repository; not deployed and not verified on any hosted system.**
+
+**Database.** Exactly one object was added:
+`public.daily_site_range_compliance(range_start date, range_end date, target_project_id uuid)`,
+in `supabase/migrations/20260802000100_reports_daily_site_range_compliance.sql`. It answers
+Daily Site obligation and compliance for an inclusive date range in a single call, replacing
+what would otherwise be one `daily_site_morning_compliance` call per day. It is
+**invoker-rights and carries no `SECURITY DEFINER` clause**, so `projects`,
+`daily_site_entries` and `daily_site_compliance_waivers` are all read under the caller's own
+RLS; it additionally filters the project scan through the existing
+`can_manage_daily_site_project()` authority helper, exactly as the morning function does. It
+stores nothing, mutates nothing, uses the Africa/Nairobi calendar, and raises rather than
+silently clamping on an inverted, incomplete or over-long (>367 day) range. No cross-domain
+`SECURITY DEFINER` reporting function, materialised reporting table, persistent report row,
+generic event ledger or second finance ledger was created. No index was added: the delivered
+`daily_site_entries_project_date_idx` and
+`daily_site_compliance_waivers_project_date_idx` already serve this query shape.
+
+It inherits one documented limitation from the morning function unchanged: the obligation test
+reads the project's **current** status, stage and archive state, so a historical range reports
+obligation against today's project state. Per-date obligation history would require a
+project-state history source that does not exist and is not authorised.
+
+**Read model as built.** `src/admin/lib/reports.js` holds narrow readers that are
+project-filtered, period-filtered where the domain has a reporting date, field-whitelisted,
+bounded (200 rows per list, 50 per event source) and executed under the caller's RLS through the
+ordinary PostgREST endpoints. No existing domain provider is mounted to render a report. No
+`select=*` is issued and no JSON snapshot or payload column is ever selected — not
+`daily_site_snapshot`, `claim_snapshot`, `line_snapshot`, the fund-request `payload`, the
+approval `original_values`/`proposed_values`, nor the project-history `previous_values`/
+`new_values` — so a raw payload cannot reach the interface. Event reads are scoped to the
+project through their parent record with a PostgREST inner embed, so there is no per-project
+loop and no per-day loop.
+
+**Module structure as built.** `utils/reportPeriod.js` (EAT arithmetic and formatting);
+`utils/reportMetrics.js` (the single status, amount, total, supersession and period-inclusion
+authority — presentation components never re-derive a total); `utils/reportFormat.js` (the
+shared money formatter, the five-state vocabulary and every approved label);
+`utils/reportCapabilities.js` (per-domain presentation gates that mirror the delivered policies
+and can never widen them); `utils/reportLoader.js` (pure report assembly, the five-state rules,
+the Approvals projection and the Needs Attention derivation); `utils/listUrlFilters.js` (the
+shared URL-filter contract); `components/reports/*` (the shell, the two controls and the eight
+sections); and `routes/AdminReports.jsx`. No Reports provider was introduced — the route
+composes the loader directly, which was the smaller coupling.
+
+**Approvals and Decisions** is a read-time labelled projection over three source groups: project
+approval requests, Internal Cost Claim decisions and Fund Request decisions. Each item retains
+its source domain, originating record id, state, relevant timestamp and exact source route; one
+record yields at most one current-decision row; the current decision summary is separate from
+the event history in Recent Activity; and where a source group is inaccessible or failed the
+section names it rather than silently omitting it. No finance decision is written into
+`approval_requests`. Project Intakes are excluded.
+
+**URL-addressable drill-through.** `/admin/daily-site-operations`, `/admin/site-costs`,
+`/admin/fund-requests` and `/admin/approvals` now read `project`, `status`, `from` and `to` from
+the URL through `useSearchParams`, show a plain summary of the active filters with a clear
+control, and behave exactly as before when no parameter is present. A URL parameter narrows what
+the caller can already see and grants nothing: every row still arrives through the caller's own
+RLS and each destination re-checks its access as before.
+
+**Mobile as built.** The Project Summary is a single stacked column of cards at every width, with
+no table anywhere in the report, no horizontal scrolling, full-width touch targets, and the
+project name and period held in a sticky header above the sections.
 
 ## 13. People and payee identity separation
 

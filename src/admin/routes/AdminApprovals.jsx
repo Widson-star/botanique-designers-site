@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useAdminApprovals } from "../context/adminApprovals";
 import {
@@ -7,12 +8,47 @@ import {
 } from "../utils/approvalFormatters";
 import { formatDateTime } from "../utils/activityFormat";
 import { profilePresentationName } from "../utils/personName";
-import { canSeeApprovals } from "../utils/approvalCapabilities";
+import { ACTIVE_APPROVAL_STATES, canSeeApprovals } from "../utils/approvalCapabilities";
+import { describeActiveFilters, withinReportedApprovalDates } from "../utils/listUrlFilters";
+
+// Filter state lives in the URL so a Reports drill-through arrives at exactly
+// the project, status and period it referred to. `status=open` means every
+// state that is still awaiting a decision. A parameter narrows what the caller
+// can already see and grants nothing.
+function matchesState(request, stateFilter) {
+  if (stateFilter === "all") return true;
+  if (stateFilter === "open") return ACTIVE_APPROVAL_STATES.includes(request.state);
+  return request.state === stateFilter;
+}
 
 export default function AdminApprovals() {
   const { role, projects, profilesById } = useAdminData();
   const { requests, status, error } = useAdminApprovals();
+  const [searchParams, setSearchParams] = useSearchParams();
   const projectsById = Object.fromEntries(projects.map((project) => [project.id, project]));
+  const projectFilter = searchParams.get("project") || "all";
+  const stateFilter = searchParams.get("status") || "all";
+  const from = searchParams.get("from") || "";
+  const to = searchParams.get("to") || "";
+
+  const visibleRequests = useMemo(
+    () => requests.filter((request) =>
+      (projectFilter === "all" || request.projectId === projectFilter) &&
+      matchesState(request, stateFilter) &&
+      withinReportedApprovalDates(request.requestedAt, request.reviewedAt, request.decidedAt, from, to)),
+    [requests, projectFilter, stateFilter, from, to]
+  );
+
+  const activeFilterSummary = describeActiveFilters({
+    projectName: projectFilter !== "all" ? projectsById[projectFilter]?.projectName || "one project" : "",
+    statusLabel: stateFilter === "open" ? "Awaiting a decision" : stateFilter !== "all" ? APPROVAL_STATE_LABELS[stateFilter] || "" : "",
+    from,
+    to,
+  });
+
+  function clearFilters() {
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }
   if (!canSeeApprovals(role)) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
@@ -40,13 +76,25 @@ export default function AdminApprovals() {
           {error}
         </div>
       )}
-      {status === "ready" && requests.length === 0 && (
-        <div className="rounded-lg border border-stone-200 bg-white p-8">
-          <h2 className="font-semibold">No approval requests</h2>
-          <p className="mt-1 text-sm text-gray-500">Eligible protected changes can be requested from a project record.</p>
+      {activeFilterSummary && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-gray-600">
+          <span>Filtered to {activeFilterSummary}.</span>
+          <button type="button" onClick={clearFilters} className="min-h-11 py-2 font-semibold text-botanique-green hover:underline">
+            Clear filters
+          </button>
         </div>
       )}
-      {requests.length > 0 && (
+      {status === "ready" && visibleRequests.length === 0 && (
+        <div className="rounded-lg border border-stone-200 bg-white p-8">
+          <h2 className="font-semibold">No approval requests</h2>
+          <p className="mt-1 text-sm text-gray-500">
+            {activeFilterSummary
+              ? "Nothing matches these filters."
+              : "Eligible protected changes can be requested from a project record."}
+          </p>
+        </div>
+      )}
+      {visibleRequests.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
           <table className="w-full table-fixed text-left text-sm">
             <thead className="border-b border-stone-200 bg-stone-50 text-xs text-gray-500">
@@ -59,7 +107,7 @@ export default function AdminApprovals() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {requests.map((request) => {
+              {visibleRequests.map((request) => {
                 const project = projectsById[request.projectId];
                 const requester = profilesById[request.requesterId];
                 return (
