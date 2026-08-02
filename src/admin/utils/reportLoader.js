@@ -460,9 +460,9 @@ export async function loadRecentActivity(readers, accessToken, projectId, bounds
 // ledger is created, and nothing is stored: this is a read-time projection.
 // Each projected item keeps its source domain, its originating record id, the
 // decision state, the relevant timestamp and its exact source route. The
-// current decision summary is kept separate from event history, which lives in
-// Recent Activity, and one record produces at most one current-decision row, so
-// a decision is never rendered twice.
+// current decision summary is kept separate from event history, which lives on
+// each record in its own module, and one record produces at most one
+// current-decision row, so a decision is never counted twice.
 //
 // Project Intakes are deliberately excluded from this first project report:
 // they precede a consistently established project identity.
