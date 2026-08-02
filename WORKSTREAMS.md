@@ -2570,7 +2570,31 @@ historical Daily Site obligation semantics likewise remain outside this record.
 
 ### 2 August 2026 — BD-REPORTS-01B: Reports UX rationalisation (repository only)
 
-Status: **Implemented in the repository, pending review, merge and hosted verification.**
+Status: **Merged and deployed; hosted verification outstanding.** Classified
+`DEPLOYED_NOT_HOSTED_VERIFIED` until an authenticated walkthrough is carried out. PR #63 merged
+on 2 August 2026 at merge commit `9aaec502c1bd4795002989ce82bd621d869f3cb9` — a true merge
+commit whose two parents are the previous authoritative main
+`183d6f1801b6428c37d47b086e1ed46df2def929` and the reviewed head
+`76c6c14ae34cf2460b1232e107ca82f4f8f8d9e9`. Authoritative main is now that merge commit. The
+merge was guarded against the reviewed head SHA, PR #63 is closed and no longer open, and no
+competing pull request existed. Vercel production deployment
+`dpl_VkhapDxZH1B1pPURUu8QtPGN1jJa` built that exact commit from `main` and reached `READY`. No
+migration was required and none was applied.
+
+**Hosted verification is NOT claimed and remains outstanding.** The production `/admin` route
+presents the ordinary sign-in gate and no authenticated session was available, so no
+authenticated Principal or Operations Manager walkthrough of the redesigned Reports page was
+performed. Nothing in this entry may be read as hosted confirmation. What still needs
+confirming under both roles, against live records: the seven summary sections and their
+figures; the compliance rate against a period with genuine due days, and the "No entries were
+due" state against a period without any; the approvals counts reconciling with the Approvals
+module; each drill-through link landing on the same project **and** the same period; the
+selected-period and lifetime-empty states remaining distinct; a genuine reader failure still
+reading as an error; and mobile behaviour at a live viewport. BD-REPORTS-01A remains separately
+`ACTIVE_VERIFIED` and is unaffected by this outstanding item.
+
+Status at implementation: **Implemented in the repository, pending review, merge and hosted
+verification.**
 This is a **narrow follow-up workstream** to BD-REPORTS-01A, not a reopening of it.
 BD-REPORTS-01A remains `ACTIVE_VERIFIED`; its access controls, Kenyan date semantics, query
 encoding, project scoping, period scoping, empty states and Principal / Operations Manager
