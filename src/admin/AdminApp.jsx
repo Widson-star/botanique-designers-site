@@ -6,7 +6,6 @@ import AdminLogin from "./components/AdminLogin";
 import AdminLayout from "./AdminLayout";
 import AdminSetupRequired from "./components/AdminSetupRequired";
 import AdminDashboard from "./routes/AdminDashboard";
-import AdminWorkInbox from "./routes/AdminWorkInbox";
 import AdminProjects from "./routes/AdminProjects";
 import AdminProjectDetail from "./routes/AdminProjectDetail";
 import AdminProjectForm from "./routes/AdminProjectForm";
@@ -214,7 +213,10 @@ export default function AdminApp() {
               }
             >
               <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/work-inbox" element={<AdminWorkInbox />} />
+              {/* BD-ALERTS-01: /admin/work-inbox is deliberately NOT routed.
+                  The full-page Work Inbox was rejected on 3 August 2026 and
+                  Alerts now live behind the header bell. Any stale link falls
+                  through to the Dashboard below rather than 404ing. */}
               <Route path="/admin/projects" element={<AdminProjects />} />
               <Route path="/admin/projects/new" element={<AdminProjectForm mode="create" />} />
               <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />

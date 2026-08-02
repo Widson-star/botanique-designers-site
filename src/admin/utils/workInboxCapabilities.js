@@ -42,10 +42,11 @@ export function canSeeActivationItems(role) {
   return role === ROLES.OWNER;
 }
 
-// The navigation capability. The Work Inbox appears only for a role that can
-// receive at least one item category — never as an empty decorative
-// destination, and never as a disabled future link.
-export function canSeeWorkInbox(role) {
+// The shell capability. BD-ALERTS-01: this now gates the header ALERTS BELL,
+// not a navigation destination — the Work Inbox sidebar item was removed on
+// 3 August 2026. The bell appears only for a role that can receive at least one
+// item category, never as an empty decorative control.
+export function canSeeAlerts(role) {
   return (
     canSeeDecisionItems(role) ||
     canSeeSiteEntryItems(role) ||
