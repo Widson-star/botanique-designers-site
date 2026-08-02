@@ -2,8 +2,12 @@
 // top bar with authenticated profile, role badge, and a project search that
 // navigates to the real Projects screen via URL search parameters.
 //
-// Only working destinations are exposed (Dashboard, Projects). No disabled or
-// decorative links, no notifications icon (notifications do not exist yet).
+// Only working destinations are exposed. No disabled or decorative links.
+//
+// BD-INBOX-01 (Stage 3) adds the Work Inbox destination and an unread count on
+// it. There is still NO notification bell, dropdown or notification centre:
+// event-backed notification history is a later, separately authorised
+// capability, and nothing in the shell may imply it exists.
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ROLE_LABELS } from "./constants/roles";
@@ -15,6 +19,9 @@ import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
 import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
 import { canSeeReports } from "./utils/reportCapabilities";
+import { canSeeWorkInbox } from "./utils/workInboxCapabilities";
+import { useWorkInboxUnread } from "./utils/useWorkInboxUnread";
+import { useAdminData } from "./context/adminData";
 
 const NAV_ITEMS = [
   {
@@ -22,6 +29,16 @@ const NAV_ITEMS = [
     label: "Dashboard",
     end: true,
     icon: "M3 10.5 10 4l7 6.5V17a1 1 0 0 1-1 1h-4v-5H8v5H4a1 1 0 0 1-1-1v-6.5Z",
+  },
+  {
+    // BD-INBOX-01 (Stage 3). Placed directly after Dashboard because it is the
+    // authoritative place for what needs attention: a reader who opens the
+    // portal to find out what to do next should reach it first.
+    to: "/admin/work-inbox",
+    label: "Work Inbox",
+    end: false,
+    capability: canSeeWorkInbox,
+    icon: "M3 11.5h4l1.5 2h3l1.5-2h4M3.5 11.5 5 5.5h10l1.5 6v4a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-4Z",
   },
   {
     to: "/admin/projects",
@@ -96,7 +113,7 @@ function navItemClass({ isActive }) {
   }`;
 }
 
-function NavItems({ onNavigate, role }) {
+function NavItems({ onNavigate, role, inboxUnread }) {
   return (
     <nav className="space-y-1" aria-label="Admin sections">
       {NAV_ITEMS.filter((item) => !item.capability || item.capability(role)).map((item) => (
@@ -118,6 +135,14 @@ function NavItems({ onNavigate, role }) {
             <path d={item.icon} strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           {item.label}
+          {item.to === "/admin/work-inbox" && inboxUnread > 0 && (
+            <span
+              className="ml-auto rounded-full bg-botanique-green px-2 py-0.5 text-xs font-semibold text-white"
+              aria-label={`${inboxUnread} new ${inboxUnread === 1 ? "item" : "items"} needing action`}
+            >
+              {inboxUnread}
+            </span>
+          )}
         </NavLink>
       ))}
     </nav>
@@ -166,6 +191,8 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef(null);
   const roleLabel = ROLE_LABELS[role] || role;
+  const { accessToken, currentUserId } = useAdminData();
+  const inboxUnread = useWorkInboxUnread({ accessToken, role, currentUserId, isDemo });
   const visibleProfileLabel = profile
     ? profilePresentationName(profile)
     : profileLabel || "Authenticated admin";
@@ -202,7 +229,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
             </p>
           </div>
           <div className="flex-1 px-3 py-5">
-            <NavItems role={role} />
+            <NavItems role={role} inboxUnread={inboxUnread} />
           </div>
           <div className="border-t border-stone-200 px-5 py-4 text-[11px] leading-relaxed text-gray-400">
             Financial documents remain managed in Simple Invoice Manager.
@@ -290,7 +317,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
                 </svg>
               </button>
             </div>
-            <NavItems role={role} onNavigate={() => setDrawerOpen(false)} />
+            <NavItems role={role} inboxUnread={inboxUnread} onNavigate={() => setDrawerOpen(false)} />
             <p className="mt-auto border-t border-stone-200 pt-4 text-[11px] leading-relaxed text-gray-400">
               Financial documents remain managed in Simple Invoice Manager.
             </p>
