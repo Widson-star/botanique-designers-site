@@ -2336,6 +2336,60 @@ a separate decision. No Reports figure uses that coercion.
 **Deployment remains ungated by this entry.** Applying the migration to the hosted project and
 verifying the route in production require their own authority.
 
+### 2 August 2026 — BD-REPORTS-01A pre-deployment correction: Reports project context (repository only)
+
+**Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026. Execution: repository
+correction only.** A narrow pre-deployment hardening of the merged BD-REPORTS-01A implementation.
+**No hosted system was accessed or changed** — no Supabase, Vercel, Render, Google Workspace or
+DNS access, no migration applied, no production verification performed or claimed. BD-REPORTS-01A
+is **not** `ACTIVE_VERIFIED`. Stage 3 remains outstanding, BD-FIN-01B2 remains paused with every
+settled decision unchanged, and the backup and recovery posture remains
+`PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+**The condition corrected.** The Reports project arrives in the URL. As merged, that parameter
+reached the report loader directly, and each section then relied solely on its own source policy.
+The policies are not equally scoped: `projects` SELECT admits the owner, anyone actively assigned,
+or a manager who **leads** the project, while `approval_requests` and `project_activities` SELECT
+admit **any** manager company-wide. A hand-typed `/admin/reports?project=<uuid>` could therefore
+surface approval and project-history rows for a project the caller's own Projects read never
+returned. The condition was reproduced from repository implementation and effective policies
+before any change was made.
+
+**The rule now enforced.** A Reports project loads only if that exact id is present in the caller's
+ordinary Projects read result under Projects RLS. **A URL project id is input, not an access
+grant.** If it is absent, no report section is read at all — no Daily Site read, no claim read, no
+fund-request read, no approval read, no project-activity read and no Daily Site range-function
+call — and a project-level unavailable state is shown. The gate fails closed while the Projects
+read is outstanding or has failed. An inaccessible project reveals no name, existence, activity,
+approval count or timing; an invalid id and a real inaccessible id behave identically; no raw
+database or RLS message is shown. An unreadable selected project is presented as an access state,
+never as a load failure, an empty project or zero activity.
+
+**Per-domain RLS remains authoritative.** The project-context gate is an additional fail-closed
+prerequisite, never a replacement. Every source policy still governs every read issued after the
+project is validated; nothing here widens what the database returns. Assigned Staff still pass the
+project gate and still receive section-level no-access states; a Viewer still cannot reach the
+route.
+
+**Tested.** The full frontend suite passes — 47 files, 382 tests, up from 369 — with the added
+tests proving: an authorised project loads normally; an unassigned, non-lead manager supplying an
+inaccessible project id receives the unavailable state and triggers **zero** reader calls, proved
+by call-count assertions on every injected reader; an invalid id fails closed identically; a
+direct URL load validates against the Projects result before any section read; a failed Projects
+read loads nothing; assigned Staff pass the gate and still receive source-level no-access; and a
+Viewer remains barred from the route. The real-PostgreSQL Reports suite was extended to prove the
+effective Projects policy for Principal, lead/assigned manager, unassigned non-lead manager,
+assigned Staff and Viewer, and to prove the asymmetry itself — that the same unassigned manager
+who receives no project row can still read that project's history. All six database integration
+suites, the production build and `git diff --check` pass. No migration was added or broadened.
+
+**Left unresolved, deliberately.** Whether company-wide manager SELECT on `approval_requests` and
+`project_activities` should be narrowed to led or assigned projects remains a **separate authority
+decision**. No approval, project-activity or client-commercial policy was rewritten; the Daily Site
+range-function security model is unchanged; no report feature was added.
+
+**Deployment and hosted verification remain outstanding**, and require their own authority.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`

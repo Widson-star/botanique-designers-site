@@ -362,4 +362,98 @@ begin
 end;
 $$;
 
+-- =====================================================================
+-- 6. The effective Projects policy, and the source asymmetry it does not cover
+-- ---------------------------------------------------------------------
+-- Reports treats the caller's ordinary Projects read as the project-context
+-- authority: a report loads only for a project this read returns. This section
+-- proves what that read actually returns per role, and proves the asymmetry
+-- that makes the application-side gate necessary — project_activities is
+-- readable by ANY manager company-wide, while projects is not, so a manager who
+-- cannot see a project through Projects RLS can still read its history rows.
+--
+-- Tightening those broader source policies is a separate authority decision and
+-- is deliberately NOT attempted here.
+-- =====================================================================
+do $$
+declare
+  can_read_permitted boolean;
+  can_read_prohibited boolean;
+  activities_for_prohibited bigint;
+  approvals_policy text;
+begin
+  -- Principal: company-wide.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a1', true);
+  perform pg_temp.assert_true(
+    (select count(*) from public.projects
+      where id in ('20000000-0000-0000-0000-0000000000b1', '20000000-0000-0000-0000-0000000000b2')) = 2,
+    'the Principal Projects read returns every project'
+  );
+
+  -- Assigned manager: the assigned project only.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a2', true);
+  select exists (select 1 from public.projects where id = '20000000-0000-0000-0000-0000000000b1'),
+         exists (select 1 from public.projects where id = '20000000-0000-0000-0000-0000000000b2')
+    into can_read_permitted, can_read_prohibited;
+  perform pg_temp.assert_true(can_read_permitted, 'an assigned manager Projects read returns their project');
+  perform pg_temp.assert_true(
+    not can_read_prohibited,
+    'an assigned manager Projects read never returns a project they neither lead nor are assigned to'
+  );
+
+  -- Unassigned, non-lead manager: NO project row at all…
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a3', true);
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.projects
+      where id in ('20000000-0000-0000-0000-0000000000b1', '20000000-0000-0000-0000-0000000000b2')),
+    'an unassigned, non-lead manager Projects read returns no project'
+  );
+
+  -- …yet project history for that same project IS readable to them. This is the
+  -- exact condition the Reports project-context gate fails closed on: without
+  -- it, a hand-typed project id would surface these rows in a report for a
+  -- project the caller cannot see in Projects.
+  select count(*) into activities_for_prohibited
+  from public.project_activities
+  where project_id = '20000000-0000-0000-0000-0000000000b2';
+  perform pg_temp.assert_true(
+    activities_for_prohibited > 0,
+    'project_activities is readable company-wide by any manager, unlike projects'
+  );
+
+  -- Approval requests carry the same company-wide manager predicate.
+  select pg_get_expr(polqual, polrelid) into approvals_policy
+  from pg_policy
+  where polrelid = 'public.approval_requests'::regclass
+    and polname = 'approval_requests_select_owner_manager';
+  perform pg_temp.assert_true(
+    approvals_policy is not null and approvals_policy not like '%project%',
+    'approval_requests SELECT carries no project predicate'
+  );
+
+  -- Assigned Staff: the project row is readable; source domains are not.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a4', true);
+  perform pg_temp.assert_true(
+    exists (select 1 from public.projects where id = '20000000-0000-0000-0000-0000000000b1'),
+    'assigned Staff Projects read returns their assigned project'
+  );
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.projects where id = '20000000-0000-0000-0000-0000000000b2'),
+    'assigned Staff Projects read returns no unassigned project'
+  );
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.daily_site_entries
+      where project_id = '20000000-0000-0000-0000-0000000000b1'),
+    'assigned Staff still hold no Daily Site access on a project they can read'
+  );
+
+  -- Viewer: no project row at all, so no report can have a project context.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000a5', true);
+  perform pg_temp.assert_true(
+    not exists (select 1 from public.projects),
+    'a viewer Projects read returns nothing'
+  );
+end;
+$$;
+
 rollback;
