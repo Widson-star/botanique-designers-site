@@ -2063,9 +2063,20 @@ of the 1 August 2026 sequence, *expanded management reporting*, rather than stag
 
 **Immediate constraint.** The currently deployed `/admin/reports` route must **not** be expanded.
 No new report section, category, chart or filter may be added to it, because each addition
-deepens a model already rejected. Its minimum temporary treatment, the corrected implementation
-order and the sidebar position are the subject of a Founder decision recorded in `WORKSTREAMS.md`
-and are not settled by this section.
+deepens a model already rejected.
+
+**The provisional page is named for what it is.** The route is retained, so existing links keep
+working, but it is presented as **Project Summary** — in the sidebar, in the page heading and in
+its access-denied state — and its introduction states concisely that it is a provisional live
+summary of one selected project over one period and is **not** the Reports Centre. Nothing in the
+shell or on the page may present the Reports product as delivered until the category-based centre
+exists. The corrected implementation order, the anticipated report groups and the temporary
+sidebar order are recorded in `WORKSTREAMS.md` under the Founder decisions E–H.
+
+**Temporary sidebar order.** Until the grouped presentation is built at its authorised stage, the
+working destinations appear in workflow order: Dashboard; Projects; Project intakes; Daily site
+operations; Site Costs; Fund Requests; Approvals; Project Summary. No placeholder or dead link is
+permitted, and the provisional Project Summary is placed last.
 
 **Unaffected.** §§18.14–18.25 continue to bind every Reports surface: the fact classification,
 the terminology, the five states, the role boundaries, the currency and date rules, the

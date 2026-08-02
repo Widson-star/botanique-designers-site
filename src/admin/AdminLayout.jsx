@@ -30,15 +30,21 @@ const NAV_ITEMS = [
     icon: "M4 5.5h12v11H4v-11Zm3-2h6v2H7v-2Z",
   },
   {
+    to: "/admin/project-intakes",
+    label: "Project intakes",
+    end: false,
+    capability: canManageStaff,
+    icon: "M10 3.5v13M3.5 10h13",
+  },
+  {
     to: "/admin/daily-site-operations",
     // BD-REPORTS-01B navigation review: "Daily site ops" was the only
     // abbreviated label in the sidebar, and it did not match the destination,
-    // which titles itself "Daily site operations". The remaining navigation
-    // findings — mixed sentence and title case, the position of Project
-    // intakes, and the transitional Site Costs / Fund Requests names — are
-    // recorded in WORKSTREAMS.md and deferred to the gated progressive
-    // navigation stage, because each needs authority this workstream does not
-    // hold.
+    // which titles itself "Daily site operations". The remaining naming
+    // findings — mixed sentence and title case, and the transitional Site
+    // Costs / Fund Requests names — are recorded in WORKSTREAMS.md and remain
+    // deferred to the gated progressive navigation stage, because each needs
+    // authority this workstream does not hold.
     label: "Daily site operations",
     end: false,
     capability: canSeeDailySiteOperations,
@@ -67,17 +73,18 @@ const NAV_ITEMS = [
   },
   {
     to: "/admin/reports",
-    label: "Reports",
+    // The route keeps its `/admin/reports` path — removing or moving it would
+    // break every link already in use — but the DESTINATION is no longer
+    // presented as Reports. The Founder rejected the Reports information
+    // architecture on 2 August 2026, and the page that ships today is a
+    // provisional single-project summary, not the Reports Centre. The
+    // category-based Reports Centre is deferred to the expanded management
+    // reporting stage; until it exists, nothing in the shell may claim the
+    // Reports product has been delivered.
+    label: "Project Summary",
     end: false,
     capability: canSeeReports,
     icon: "M4 16V8m4 8V5m4 11v-6m4 6V9M3 17h14",
-  },
-  {
-    to: "/admin/project-intakes",
-    label: "Project intakes",
-    end: false,
-    capability: canManageStaff,
-    icon: "M10 3.5v13M3.5 10h13",
   },
 ];
 

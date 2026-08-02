@@ -43,7 +43,13 @@ describe("AdminLayout visual boundary", () => {
     expect(heading.closest(".admin-shell")).not.toHaveClass("font-sans");
   });
 
-  it("shows only live Dashboard, Projects, Daily site operations, Site Costs, Fund Requests, Approvals, Reports and Project intakes navigation", () => {
+  // The temporary workflow order: Projects and Project intakes sit together,
+  // the operational and finance destinations follow in a natural sequence, and
+  // the provisional Project Summary comes last so it does not read as the
+  // delivered Reports Centre. The final six-group presentation — Dashboard,
+  // Projects, People, Finance, Reports, More — remains deferred to its own
+  // authorised stage.
+  it("shows only live destinations, in the temporary workflow order, ending with Project Summary", () => {
     renderLayout();
     const desktopNav = screen.getAllByRole("navigation", {
       name: "Admin sections",
@@ -51,14 +57,23 @@ describe("AdminLayout visual boundary", () => {
     expect(within(desktopNav).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "Dashboard",
       "Projects",
+      "Project intakes",
       "Daily site operations",
       "Site Costs",
       "Fund Requests",
       "Approvals",
-      "Reports",
-      "Project intakes",
+      "Project Summary",
     ]);
     expect(screen.queryByRole("link", { name: /Leads|Site visits|Payments|Expenses/i })).not.toBeInTheDocument();
+  });
+
+  // The Reports information architecture was rejected, so the shell must not
+  // claim the Reports product exists. The route itself is unchanged.
+  it("no longer presents any destination as Reports, while keeping the route", () => {
+    renderLayout();
+    expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
+    const summary = screen.getAllByRole("link", { name: "Project Summary" })[0];
+    expect(summary).toHaveAttribute("href", "/admin/reports");
   });
 
   // BD-REPORTS-01B navigation review. The sidebar names a destination only

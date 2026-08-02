@@ -83,6 +83,40 @@ beforeEach(() => {
   fetchReportProjects.mockClear();
 });
 
+// The Founder rejected the Reports information architecture, so the route that
+// ships today is named for what it is: a provisional single-project summary.
+// These tests pin the naming, and pin that the rename changed nothing else.
+describe("the provisional Project Summary naming", () => {
+  it("titles the page Project Summary and never Reports", async () => {
+    renderReports({ initial: "/admin/reports?project=p1" });
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Project Summary");
+    expect(screen.queryByRole("heading", { level: 1, name: "Reports" })).not.toBeInTheDocument();
+  });
+
+  it("says plainly that it is provisional, project-and-period scoped, and not the Reports Centre", async () => {
+    renderReports({ initial: "/admin/reports?project=p1" });
+    const intro = await screen.findByText(/A provisional live summary/);
+    expect(intro).toHaveTextContent(/one selected project over one period/i);
+    expect(intro).toHaveTextContent(/not the Reports Centre/i);
+  });
+
+  it("keeps the route itself, so existing links still resolve", async () => {
+    renderReports({ initial: "/admin/reports?project=p1" });
+    await waitFor(() => expect(loadProjectReport).toHaveBeenCalled());
+    expect(screen.getByTestId("location").textContent).toContain("/admin/reports");
+  });
+
+  it("adds no section, category, filter or chart to the rejected page", async () => {
+    renderReports({ initial: "/admin/reports?project=p1" });
+    await waitFor(() => expect(loadProjectReport).toHaveBeenCalled());
+    // The rename is presentation only: no report-category navigation appears,
+    // and the page still issues exactly the reads it issued before.
+    expect(screen.queryByRole("navigation", { name: /report categor/i })).not.toBeInTheDocument();
+    expect(loadProjectReport).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("Reports route", () => {
   it("reads nothing until a project is chosen", async () => {
     renderReports();
@@ -163,7 +197,7 @@ describe("Reports route", () => {
 
   it("denies the route to a role with no reportable section", async () => {
     renderReports({ role: "viewer" });
-    expect(screen.getByRole("heading", { name: "Reports unavailable" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project Summary unavailable" })).toBeInTheDocument();
     expect(fetchReportProjects).not.toHaveBeenCalled();
   });
 
@@ -226,7 +260,7 @@ describe("Reports route", () => {
 
   it("keeps a viewer off the route regardless of the project in the URL", async () => {
     renderReports({ role: "viewer", initial: "/admin/reports?project=p1" });
-    expect(screen.getByRole("heading", { name: "Reports unavailable" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project Summary unavailable" })).toBeInTheDocument();
     expect(fetchReportProjects).not.toHaveBeenCalled();
     expect(loadProjectReport).not.toHaveBeenCalled();
   });
