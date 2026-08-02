@@ -6,6 +6,7 @@ import AdminLogin from "./components/AdminLogin";
 import AdminLayout from "./AdminLayout";
 import AdminSetupRequired from "./components/AdminSetupRequired";
 import AdminDashboard from "./routes/AdminDashboard";
+import AdminWorkInbox from "./routes/AdminWorkInbox";
 import AdminProjects from "./routes/AdminProjects";
 import AdminProjectDetail from "./routes/AdminProjectDetail";
 import AdminProjectForm from "./routes/AdminProjectForm";
@@ -213,6 +214,7 @@ export default function AdminApp() {
               }
             >
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/work-inbox" element={<AdminWorkInbox />} />
               <Route path="/admin/projects" element={<AdminProjects />} />
               <Route path="/admin/projects/new" element={<AdminProjectForm mode="create" />} />
               <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />
