@@ -1,4 +1,19 @@
-// BD-REPORTS-01A / BD-REPORTS-01B — /admin/reports.
+// BD-REPORTS-01A / BD-REPORTS-01B — /admin/reports, the PROVISIONAL Project
+// Summary.
+//
+// The Founder rejected the Reports information architecture on 2 August 2026:
+// a single page carrying every reporting domain at once is the wrong shape,
+// and reducing the records on it was not enough. Reports must become a
+// category-based Reports Centre — its own compact category panel, one selected
+// report in the main panel, report-specific filters — and that centre is
+// deferred until its major source domains are stable.
+//
+// What ships here is therefore named for what it actually is: a provisional
+// summary of ONE selected project over ONE period. The route path is unchanged
+// so existing links keep working, but nothing in the shell or on the page
+// presents it as the delivered Reports product. **No section, category, chart,
+// reader or filter may be added to it** — each addition would deepen a model
+// already rejected.
 //
 // One project, one reporting period, one Project Summary. The reader never
 // needs to know about tables, row level security, remote procedures, event
@@ -6,8 +21,8 @@
 // mechanics: the page speaks in project names, dates, plain figures and plain
 // state sentences.
 //
-// BD-REPORTS-01B narrowed what the summary contains, not how it is read.
-// Reports is a management summary — figures, one clear statistic per question,
+// BD-REPORTS-01B narrowed what the summary contains, not how it is read. This
+// page is a management summary — figures, one clear statistic per question,
 // and an exact link into the module that owns the records behind them. It is
 // not a second copy of Daily Site Operations, Site Costs, Fund Requests or
 // Approvals, and it never reproduces their records row by row.
@@ -225,7 +240,7 @@ export default function AdminReports() {
   if (!permitted) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
-        <h1 className="text-xl font-bold">Reports unavailable</h1>
+        <h1 className="text-xl font-bold">Project Summary unavailable</h1>
         <p className="mt-2 text-sm text-gray-500">
           This role does not have access to project reporting.
         </p>
@@ -238,13 +253,10 @@ export default function AdminReports() {
   return (
     <div className="space-y-5">
       <header className="border-b border-stone-200 pb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-botanique-green">
-          Reporting
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold">Reports</h1>
+        <h1 className="text-2xl font-semibold">Project Summary</h1>
         <p className="mt-1 max-w-2xl text-sm text-gray-600">
-          A live summary of one project over one period. Open a section&rsquo;s module for the
-          records behind its figures.
+          A provisional live summary of one selected project over one period. This is not the
+          Reports Centre, which will arrive later with its own report categories.
         </p>
       </header>
 

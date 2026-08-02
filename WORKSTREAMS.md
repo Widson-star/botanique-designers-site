@@ -2954,6 +2954,127 @@ Reports that are genuinely derivable **today** are confined to the current sourc
 records, Daily Site plan and compliance, internal cost claims, fund requests, and approvals and
 decisions. That is a small set, and it is another reason the reporting centre is premature.
 
+### 2 August 2026 — Provisional Project Summary rename and temporary sidebar order (Founder decisions E–H)
+
+Status: **Founder decisions recorded and the narrow correction implemented.** The Founder ruled
+on the four questions left open by the sequencing review above. This entry records those rulings
+as authority and records the one narrow product correction they authorised. Authoritative base
+`main` was `2817bd853ce4344fbcde35eff61542b7605e19dc`.
+
+**No database change and no scope expansion.** No migration, RLS policy, function, view, grant,
+role or hosted system was touched. No report category, report metric, chart, reader, filter or
+route was added, and no route was removed.
+
+#### E — Implementation sequence: resume the authorised stages, do not reorder around finance
+
+The recommendation to take the finance chain first is **not adopted.** The governing rule is to
+complete the **earliest unfinished authorised stage**, not to invent a finance-first order, and
+**Reports does not get to determine the programme sequence.**
+
+Verified directly against repository authority and implementation state before this was treated
+as final:
+
+1. **Stage 3, Work Inbox and Notifications — unbuilt, and its authority is still outstanding.**
+   This register already records stage 3 as outstanding, and a repository search finds no Work
+   Inbox route, component, table or notification implementation of any kind.
+2. **No prerequisite before stage 5 is complete.** Stage 3 sits before it and is unbuilt.
+3. **Stage 5, People and payee identity — unauthorised and unbuilt.** No people, payee or
+   engagement module exists. Blueprint §7 records its prerequisite: a deliberate external-worker
+   identity model, so that external workers needing engagement and payment records are not forced
+   into an authenticated `profiles` identity.
+4. **Stage 6, progressive navigation and mobile-shell implementation** — gated as every stage is,
+   by "its own authority, branch, review and deployment gate", and further constrained by the
+   standing capability-led rule in Product Requirements §14: a destination appears only when its
+   module is functional and authorised, and disabled future destinations remain prohibited.
+5. **Finance ordering after navigation is already fixed:** (7) BD-FIN-01B2 database authority and
+   concurrency; (8) BD-FIN-01B2 unified Finance interface; (9) BD-FIN-01C payments and claim
+   allocations; (10) BD-FIN-01D reconciliation, returns and reversals.
+
+**The continuation is therefore confirmed against authority, not merely asserted:** Work Inbox;
+People and resourcing; grouped navigation; the finance stages in their authorised order; the
+remaining operational domains; Documents & Evidence once its storage-backup gate passes; and
+expanded management reporting near the end. This matches stages 3, 5, 6, 7–10, 11 and 12 exactly.
+Stage 4 was taken out of order and is now closed as rejected. **The earliest unfinished
+authorised stage is stage 3.**
+
+#### F — The final Reports product
+
+Deferred to the existing **expanded management reporting** stage, after its major source domains
+are stable. Its architecture is settled as a **category-based reporting centre**: a compact
+internal report-category panel; one selected report in the main panel; report-specific filters;
+concise totals; one useful chart or compact table where justified; drill-through into the
+authoritative module; and **no universal page displaying every reporting domain simultaneously.**
+
+Anticipated report groups, **subject to which source domains are eventually implemented** —
+recorded as intent, not as a build list, and **not to be implemented now**: *Project* — project
+summary; project status and progress; project schedule; projects requiring attention.
+*Operations* — site-entry compliance; site activity; tasks and actions; maintenance. *People and
+labour* — team allocation; project engagements; labour plans; labour payments. *Finance* —
+internal project costs; project funding; payments and reconciliation; operational expenditure;
+client commercial position. *Governance and records* — approvals and decisions; documents and
+evidence; compliance completeness.
+
+#### G — Temporary treatment of the deployed route
+
+The Founder does **not** approve leaving the provisional page visibly branded as "Reports". The
+recommendation to leave it untouched is therefore superseded on the naming point, while the
+recommendation not to remove or hide the route is accepted: it works, both roles can use it, and
+withdrawing a working capability would cost the business something real.
+
+**Implemented:** the sidebar destination and the page heading now read **Project Summary**; the
+access-denied heading reads "Project Summary unavailable"; the "Reporting" eyebrow above the
+title was removed, because it re-branded the page as the product it is not; and the introduction
+now states concisely that this is a provisional live summary of one selected project over one
+period and **is not the Reports Centre**.
+
+**Deliberately not touched, and verified unchanged:** the `/admin/reports` route path, so every
+existing link still resolves; project and period selection; Principal and Operations Manager
+access; project RLS behaviour; Kenyan date semantics; query scoping; empty, unavailable,
+no-access and error states; and every BD-REPORTS-01A verified security and correctness control.
+**No section, chart, reader, filter or category was added**, and a test asserts that the page
+still issues exactly the reads it issued before.
+
+#### H — Temporary sidebar order
+
+The final six-group restructure is **not** performed. No placeholder and no dead link was added.
+Only the currently working destinations were reordered, into the temporary workflow order:
+
+1. Dashboard 2. Projects 3. Project intakes 4. Daily site operations 5. Site Costs
+6. Fund Requests 7. Approvals 8. Project Summary
+
+This keeps Projects and Project intakes together, runs the operational and finance destinations
+in a natural sequence, and places the provisional Project Summary last so it does not read as a
+delivered Reports Centre. **Labels other than the Reports rename were not changed**: the mixed
+sentence and title case across "Site Costs", "Fund Requests", "Daily site operations" and
+"Project intakes" remains a stage 6 concern, as recorded in the navigation review above, because
+correcting it means renaming destination screens in other modules.
+
+The eventual grouped presentation — Dashboard, Projects, People, Finance, Reports, More —
+remains deferred to its authorised stage.
+
+#### Validation, and one pre-existing flaky test recorded rather than hidden
+
+Frontend `vitest` full suite **48 files / 415 tests**; `npm run build` prerenders **43** routes,
+unchanged from exact main; changed-file `eslint` clean; repository-wide `eslint` reports the same
+**19** pre-existing errors as exact main — zero new; `git diff --check` clean. The dev preview
+confirmed the sidebar order, the heading, the introductory wording and the absence of console
+errors. No database suite was run because no database object was touched.
+
+**A pre-existing flaky test is recorded here rather than passed over.** During validation,
+`src/admin/AdminApp.test.jsx > "shows profile loading before authenticated content"` failed
+intermittently — roughly one full-suite run in four — and passed on every other run and on every
+isolated run of that file. It was investigated rather than retried until green, and the cause is
+**structural and pre-existing, not introduced by this change**: the test assigns its promise
+resolver inside the `fetchCurrentProfile` mock implementation, so the resolver exists only once
+that mock is called, but it then waits for "Loading admin profile…", which `AdminApp` renders
+from its **initial** `authStatus === "loading"` state, before the effect issuing the fetch has
+run. The wait can therefore succeed while the resolver is still undefined. This change adds six
+tests to the parallel pool and so surfaces the race more often; it touches no authentication,
+hydration or profile-loading code, and nothing in the diff can affect that test's subject. The
+fix belongs to the test, not to `AdminApp`, and is **out of scope for this narrowly authorised
+correction**; it is registered as separate work. **This entry does not claim a uniformly green
+suite.**
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`
