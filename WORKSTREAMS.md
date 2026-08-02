@@ -4745,3 +4745,203 @@ exact main `24154fee` reports 19 pre-existing errors (`server/index.js` Buffer/p
 PG17 material matrix + existing Approvals + existing Daily Site matrices pass; frontend
 `vitest` full suite green (36 files / 272 tests); `npm run build` prerenders 43 routes;
 `git diff --check` clean.
+
+## BD-INBOX-01 — Stage 3: Work Inbox and Notifications
+
+Status: ACTIVE_VERIFIED (Operations Manager hosted-verified; Principal verified at data
+and deployment level only — see *Verification* below)
+
+Date: 2–3 August 2026
+
+### Founder authority
+
+Stage 3 was the earliest unfinished authorised programme stage in the §23 twelve-stage
+sequence. The sequence entry names it "Work Inbox and Notifications **authority and
+implementation planning**", and stage 4 was decomposed 4A/4B/4C/4D with implementation
+separately gated. **Carrying stage 3 through to implementation, merge, deployment and
+hosted verification in one session was the Founder's explicit instruction**, recorded here
+rather than left implied. §23 is otherwise unchanged and no later stage is authorised.
+
+The one genuinely open architectural fork — whether Stage 3 also delivers event-backed
+notifications — was put to the Founder and settled:
+
+1. **Derived inbox plus minimum read state.** The Work Inbox must be derived from current
+   authoritative source records. Business truth must not be duplicated in a general
+   notifications table. Only the minimum stored read state needed for new/unread
+   indication, seen indication and a reconciled unread badge is added.
+2. **Reading must not resolve.** An item stays open until the authoritative source record
+   no longer requires action.
+3. **Not authorised in this stage, recorded as later separately authorised capability:**
+   event-backed notification history, retention, a general notification ledger, email,
+   SMS, WhatsApp and push delivery.
+4. **Recipients are Principal and Operations Manager only**, each strictly within their
+   existing authorised project and source-record access. Future People-domain identities —
+   team members, assignees, external workers — are excluded because Stage 5 People and its
+   external-worker identity model are not built. The recipient model is written so a later
+   authorised role is added without changing the source-of-truth principle.
+
+### Attention-state audit that preceded the decision
+
+Before any change, every existing attention signal was inventoried. All of it was **derived
+in the browser from current source state**; no notification table, inbox table, read-state
+model, recipient model or route existed anywhere in the repository or the hosted database.
+
+* **Dashboard** (`dashboardMetrics.js`) derived, from visible project rows only: pending
+  activation, overdue next actions, blockers, missing accountable lead, missing next
+  action, upcoming starts.
+* **Project Summary** (`reportLoader.deriveNeedsAttention`) derived a **single-project**
+  list: blocker, overdue next action, target completion passed or approaching, approvals
+  awaiting decision, claims awaiting review, claims returned, fund requests submitted, site
+  entries returned, missing site days, late site entries.
+
+That second function was already written to Work Inbox discipline — title, detail, severity
+and an exact route — and its own header stated it was *not* Work Inbox state. The gap was
+that it was project-scoped and had no recipient or read-state concept. Six immutable event
+ledgers already exist (`approval_events`, `project_activities`,
+`internal_cost_claim_events`, `daily_site_entry_events`, `project_intake_events`,
+`fund_request_events`), which is what made an event-backed projection a genuine option
+rather than a hypothetical — and therefore a real decision for the Founder rather than one
+to assume.
+
+### What was delivered
+
+A new `/admin/work-inbox` destination, placed directly after Dashboard because it is the
+authoritative place for what needs attention.
+
+**Item categories**, each confirmed against a real existing source: Decision required;
+Correction required; Site entry missing; Project blocker; Project action overdue; Project
+activation required.
+
+**Two honest tabs.** *Needs my action* and *Awaiting others*. The §14 *Approved* and
+*Completed* tabs were deliberately **not** built: under a derived model a resolved record
+simply leaves the inbox, its record is already listed in the module that owns it, and
+rebuilding each module's record list inside the inbox is precisely the second copy Stage 3
+forbids. This is a narrowing of §14 recorded openly, not an omission.
+
+**One database object**, `work_inbox_read_state` — `user_id`, `item_key`, `read_at`. It
+holds no project, record, amount, status or decision, so it can answer no operational
+question. RLS restricts every operation to the caller's own rows: no role, **including
+owner**, can read, set or clear another user's read state. Deleting every row would change
+no operational state.
+
+**A reconciled unread badge** on the nav item, counting unread items needing action only,
+computed by the same loader the page uses, and recomputed on navigation so it cannot go
+stale. An incomplete read produces **no badge rather than a zero**.
+
+### Why this cannot duplicate truth
+
+Items are computed at read time from the source domains under the caller's own RLS. Three
+properties follow structurally rather than by discipline:
+
+* **Resolution is automatic.** An item exists exactly while its source still requires
+  attention, so a completed item cannot remain falsely actionable.
+* **No duplicates.** An item's identity is its source record plus its state, so one record
+  in one state yields exactly one item, and a state change needing fresh attention returns
+  the item to New rather than inheriting a stale marker.
+* **Reading never resolves.** Read state is a separate personal marker applied as a
+  presentation flag.
+
+### Self-review findings, corrected on the same branch
+
+Reviewing the exact base-to-head diff found three real defects, all introduced by the
+branch, all fixed before merge:
+
+1. **Item keys could overflow the read-state column.** `item_key` is capped at 200
+   characters, a key embeds its source state, and `projects.blocker` is allowed 500. The
+   insert would have been rejected, so the seen-marker would never persist: those items
+   would read as New for ever and "Mark all as seen" would silently fail on them. Keys are
+   now bounded, with source and record id leading so two records can never collide. Three
+   regression tests pin this.
+2. **The read-state read had no ordering.** Truncation at the limit would have been
+   arbitrary and could discard markers for items on screen. Now ordered newest-first.
+3. **The unread badge never refreshed.** The layout persists across route changes, so the
+   count was computed once per session. Now recomputed on navigation.
+
+### Deliberately untouched
+
+Project Summary's *Needs attention* is unchanged — project-scoped, read-only, and
+separately authorised by Stage 4A as a report family. Dashboard, Projects, Daily Site,
+finance and approval screens were not redesigned. No People, Tasks, final grouped
+navigation or Reports Centre work was included. The intermittent `AdminApp` "shows profile
+loading before authenticated content" resolver race remains untouched and recorded for a
+separate narrow test-harness correction.
+
+### Validation
+
+Focused Work Inbox tests 40 passed; full frontend suite **460 passed / 51 files**; Work
+Inbox database suite **7 RLS assertions passed** on a disposable PG17 cluster with every
+migration applied in order; Reports and Daily Site database suites pass with the new
+migration in sequence; `npm run build` prerenders **43 routes** (unchanged baseline);
+changed-file lint clean; repository-wide lint **19 problems before and after — zero new**;
+`git diff --check` clean.
+
+One full-suite run reported a single transient failure whose identity was not captured; it
+did not reproduce across five subsequent full runs or three targeted `AdminApp` runs. It is
+recorded honestly rather than attributed to the known race without evidence.
+
+Tests prove: access separation by role; that no inaccessible-project name can leak through
+another domain's row; exact record links; that reading does not resolve; that source-state
+changes resolve items; no duplicate items; a clear empty state; and that genuine load
+errors stay errors rather than becoming an empty inbox.
+
+### Merge and deployment
+
+PR **#68**, base exactly `624aa1d023e89aa1b80b63f6a5a97c7cff6502ab`, reviewed head
+`14e558978d8b76d77f124b67b1316179a13614e4`, merged guarded against that exact head as a
+true merge commit **`576d90c00e2bc6f4a22abd13900323a90c4c13b2`**, whose two parents are
+precisely the previous authoritative main and the reviewed head. Exactly the 15 reviewed
+files entered main. No competing Work Inbox, notification or attention-state PR existed at
+any point.
+
+Migration `20260802000200_work_inbox_read_state` was applied to the hosted `botanique-admin`
+project (`wcacyfyxjiysfibuuhgf`) **before** the merge, because an unused additive table is
+inert whereas deploying the interface first would have shown a read-state failure banner.
+Post-apply: RLS enabled, 4 policies, **zero** grants to `anon`, zero rows. Supabase security
+advisors report 67 pre-existing WARN and **zero** findings against the new table.
+
+Vercel production deployment `dpl_HfRSPhnuL8JVbASDQXR8kXx7ymQc` built exactly `576d90c` and
+reached READY.
+
+### Verification
+
+**Production bundle**, read directly rather than inferred: `/admin/work-inbox` returns 200;
+the live bundle contains the route, the page strings, both tab labels, all six item
+categories and the read-state table name; and contains **no** notification bell, dropdown
+or notification centre.
+
+**Operations Manager — hosted-verified** in an authenticated production session as Martine
+Lotom:
+
+* Work Inbox present in the sidebar, second after Dashboard; badge "5 new items needing
+  action" reconciling **exactly** with "Needs my action (5)".
+* Items: three *Site entry missing* (2026-08-03), one *Project blocker*, one *Project
+  action overdue*, each linking to its exact record or correctly filtered list.
+* *Awaiting others (2)*: her own cost claims, shown as awaiting the Principal — the
+  requester-versus-decider asymmetry working on live data.
+* **No** *Project activation required* item, correctly, since activation is owner-only.
+* "Mark all as seen" turned all five items to *Seen* while **all five remained in "Needs my
+  action (5)"** — the central Stage 3 claim, that reading does not resolve, demonstrated on
+  production data. The badge then cleared to nothing on navigation.
+* The action count rose from 2 to 5 mid-session as the Kenyan work date rolled to
+  2026-08-03 and three morning obligations became due. This is the derived model behaving
+  correctly: attention followed the source with no stored row and no scheduled job.
+
+**Access boundary confirmed on live data:** production holds **two** projects with a
+recorded blocker; the Operations Manager saw **one**. The second lies outside her authority
+and did not appear.
+
+**Principal — not browser-verified.** The available authenticated session was the Operations
+Manager's, and signing in as the Principal would require entering credentials, which is not
+done. The Principal path was instead verified against production data: 2 cost claims
+awaiting review and 1 project pending activation are present and, by the recipient rules,
+belong to the Principal's *Needs my action* — the same 2 claims the Operations Manager
+correctly sees as *Awaiting others*. **A Principal browser walkthrough remains outstanding**
+and is the one thing the Founder should confirm directly.
+
+### Next authorised programme stage
+
+Stage 4 — **Reports and derived-summary authority**. Stage 4A documentation authority is
+already recorded in §§18.1–18.13. Stage 4 proceeds 4A → **4B read-only repository and
+data-readiness inspection** → 4C technical implementation authority → 4D implementation.
+**Reports execution remains not authorised.** Stages 5–12 are unchanged and unauthorised,
+and BD-FIN-01B2 remains paused with every settled decision unchanged.
