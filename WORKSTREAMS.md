@@ -2570,8 +2570,14 @@ historical Daily Site obligation semantics likewise remain outside this record.
 
 ### 2 August 2026 — BD-REPORTS-01B: Reports UX rationalisation (repository only)
 
-Status: **Merged and deployed; hosted verification outstanding.** Classified
-`DEPLOYED_NOT_HOSTED_VERIFIED` until an authenticated walkthrough is carried out. PR #63 merged
+Status: **Merged, deployed, hosted-reviewed by the Principal, and REJECTED on information
+architecture.** Classified **`DEPLOYED_REQUIRES_PRODUCT_REDESIGN`**. This classification follows
+the existing repository pattern of a deployed-but-unaccepted state — compare
+`DEPLOYED_WITH_MATERIAL_GAPS` — and it is **not** `ACTIVE_VERIFIED`. The earlier
+`DEPLOYED_NOT_HOSTED_VERIFIED` wording is superseded: it is now wrong on two counts, because a
+Founder hosted review **was** performed, and because the outstanding item is a product decision
+rather than a verification task. **No further hosted verification of this design is to be
+sought, and the Operations Manager walkthrough was deliberately not carried out.** PR #63 merged
 on 2 August 2026 at merge commit `9aaec502c1bd4795002989ce82bd621d869f3cb9` — a true merge
 commit whose two parents are the previous authoritative main
 `183d6f1801b6428c37d47b086e1ed46df2def929` and the reviewed head
@@ -2581,17 +2587,50 @@ competing pull request existed. Vercel production deployment
 `dpl_VkhapDxZH1B1pPURUu8QtPGN1jJa` built that exact commit from `main` and reached `READY`. No
 migration was required and none was applied.
 
-**Hosted verification is NOT claimed and remains outstanding.** The production `/admin` route
-presents the ordinary sign-in gate and no authenticated session was available, so no
-authenticated Principal or Operations Manager walkthrough of the redesigned Reports page was
-performed. Nothing in this entry may be read as hosted confirmation. What still needs
-confirming under both roles, against live records: the seven summary sections and their
-figures; the compliance rate against a period with genuine due days, and the "No entries were
-due" state against a period without any; the approvals counts reconciling with the Approvals
-module; each drill-through link landing on the same project **and** the same period; the
-selected-period and lifetime-empty states remaining distinct; a genuine reader failure still
-reading as an error; and mobile behaviour at a live viewport. BD-REPORTS-01A remains separately
-`ACTIVE_VERIFIED` and is unaffected by this outstanding item.
+#### Founder hosted review — information architecture rejected (2 August 2026)
+
+The Principal, Widson Omutelema Ambaisi, carried out the production walkthrough personally and
+**does not approve the Reports information architecture.** The finding is a product decision,
+not a defect: no functional fault, wrong figure, access failure or verification gap was
+reported, and none is implied here.
+
+**The exact finding, recorded as given.**
+
+1. **Reducing individual records was insufficient.** BD-REPORTS-01B removed the record lists but
+   preserved the wrong overall model.
+2. **One long universal report remains the wrong design.** Presenting Project overview, Needs
+   attention, Daily site activity, Attendance and planned labour, Internal cost claims, Fund
+   requests and Approvals and decisions together on a single page is still an "everything on one
+   page" project dossier.
+3. **Reports must become a category-based reporting centre.** The structural principle of the
+   Simple Invoice references — which are structural authority, not visual inspiration — is:
+   Reports carries its own compact report-category navigation; the user selects **one** report
+   category; **only the selected report** occupies the main panel; each report may carry its own
+   filters, totals, chart and compact table; and Reports never displays every report domain
+   simultaneously on one endless page.
+4. **The final Reports architecture must follow completion of the major source domains**, not
+   precede them.
+5. **The current work must not expand into more report sections.** Adding sections to the
+   present page would deepen the rejected model.
+
+**Consequence for this workstream.** BD-REPORTS-01B is closed as delivered-and-rejected. It is
+neither reopened nor extended, and no further Reports UI is designed, implemented or merged
+under it. The deployed `/admin/reports` route is left exactly as it stands pending Founder
+direction on its minimum temporary treatment; no impulsive production change was made on the
+strength of this finding.
+
+**What is NOT affected.** BD-REPORTS-01A remains separately `ACTIVE_VERIFIED`; its access
+controls, Kenyan date semantics, query encoding, project scoping, period scoping and empty-state
+behaviour are untouched by this rejection. The single database object,
+`public.daily_site_range_compliance`, is unaffected. The BD-REPORTS-01B navigation review and
+its one label correction (`Daily site ops` → `Daily site operations`) stand and are not
+withdrawn. No migration, RLS policy, function, grant or hosted system is changed by this record.
+
+**Open and awaiting Founder direction.** A read-only sequencing review was produced alongside
+this record and is summarised in the entry below. It proposes, and does not decide, the
+corrected implementation order, the point at which the category-based Reports centre should be
+built, the minimum temporary treatment of the deployed Reports route, and the sidebar structure
+that should exist now. None of it is authority until the Founder rules on it.
 
 Status at implementation: **Implemented in the repository, pending review, merge and hosted
 verification.**
@@ -2751,6 +2790,169 @@ prerenders **43** routes, unchanged from exact main; changed-file `eslint` clean
 `eslint` reports the same **19** pre-existing errors as exact main — zero new; `git diff --check`
 clean. No database suite was run because no database object, migration, policy, grant or function
 was touched.
+
+### 2 August 2026 — Operations Hub sequencing review after the Reports rejection (read-only, proposal only)
+
+Status: **Read-only review. Proposal, not authority.** Produced immediately after the Founder
+hosted rejection recorded above, so that no further Reports design work begins on an unexamined
+sequence. It changes no application code, no route, no migration, no RLS policy, no function, no
+grant and no hosted system, and it accessed none. Nothing in this entry is approved until the
+Founder rules on it. Where it proposes an order, that order is a **recommendation**.
+
+#### The agreed module set is already recorded, in two reconciled layers
+
+Product Requirements §3 and Blueprint §5 record the **eventual navigation architecture** as the
+**authority** structure, in three groups: *Operations* — Dashboard; Leads; Site Visits; Projects;
+Daily Site Operations; Project Updates & Discussion; Tasks & Assignments; Maintenance; Approvals.
+*People and finance* — Team & Resourcing; Project Engagements; Project Funds & Reconciliation;
+Labour Engagements & Payments; Client Commercial Records; Operational Expenditure. *Knowledge and
+reporting* — Documents & Evidence; Reports & Management Summary; Settings.
+
+Blueprint §5 already states the relationship the Founder restated: those groups "remain the
+**authority** structure. They are superseded as the **presentation** structure by the simplified
+top-level architecture in the Product Requirements §14." Product Requirements §14 defines that
+presentation layer as Dashboard, Projects, People, Finance, Reports and More, with More carrying
+Work Inbox / Approvals, Notifications, Documents, Project Intakes, Settings and Administration.
+**Both statements already stand in the repository and neither is being introduced here.** The
+existing rule is likewise unchanged: a destination appears only when its module is functional and
+authorised, and disabled future destinations remain prohibited.
+
+#### Implementation state of each authority domain, from this register
+
+**Live and `ACTIVE_VERIFIED`:** Dashboard; Projects (Phase 1B-A, with material-change controls);
+Daily Site Operations & Morning Compliance; Approvals foundation; Project Intakes.
+
+**Live in part, and not the whole domain:**
+- *Operational Expenditure* — only BD-FIN-01A Internal Cost Claims, surfaced as `Site Costs`. The
+  1 August authority expressly records that route as transitional, not permanent architecture.
+- *Project Funds & Reconciliation* — only BD-FIN-01B1 Claim-Backed Fund Requests. **BD-FIN-01B2
+  (release authority) is paused**, and reconciliation does not exist.
+- *Reports & Management Summary* — BD-REPORTS-01A shipped and `ACTIVE_VERIFIED`; BD-REPORTS-01B
+  shipped and now `DEPLOYED_REQUIRES_PRODUCT_REDESIGN`.
+- *Leads* — Phase 1A schema and RLS are live in hosted Supabase, but **no admin Leads UI exists**.
+
+**Authorised and wholly unbuilt:** Site Visits; Project Updates & Discussion; Tasks &
+Assignments; Maintenance; Team & Resourcing; Project Engagements; Labour Engagements & Payments
+(BD-FIN-01C); Reconciliation, returns and reversals (BD-FIN-01D); Client Commercial Records
+(Simple Invoice Manager remains the external source of truth); Settings; Work Inbox and
+Notifications.
+
+**Blocked, not merely unbuilt:** *Documents & Evidence* remains blocked until an independent
+Storage backup is approved, implemented and restore-tested. The backup posture is
+`PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`, PITR is off and Storage objects are excluded from
+database backups.
+
+By the authority module set, roughly **five of eighteen** destinations are live, **four** are
+partly live, and the rest are unbuilt or blocked.
+
+#### Why Reports arrived before its sources — the two sequences disagree
+
+This register carries **two** orderings, and the conflict between them explains the rejection
+without anyone having acted wrongly.
+
+The `BD-OPERATIONS-HUB-01` **domain sequence** places delivery in this order: (1) authority
+revision; (2) Approvals foundation; (3) Daily Site Operations; (4) Operational Expenditure;
+(5) Project Funds & Reconciliation; (6) Labour Engagements & Payments; (7) Documents & Evidence;
+(8) Project Updates & Discussion; (9) Tasks & Assignments; (10) Team & Resourcing; (11) Client
+Commercial Records; (12) **Reports & Management Summary**; (13) Leads, Site Visits and
+Maintenance integration. On that ordering Reports is **twelfth of thirteen** — deliberately last
+but one, after every domain it reports on.
+
+The 1 August 2026 information-architecture **stage sequence** places (3) Work Inbox and
+Notifications; (4) **Reports and derived-summary authority**; (5) People and payee identity;
+(6) progressive navigation and mobile-shell implementation; (7)–(8) BD-FIN-01B2; (9) BD-FIN-01C
+payments; (10) BD-FIN-01D reconciliation; (11) printable documents and Documents & Evidence;
+(12) **expanded management reporting**. On that ordering Reports authority is **fourth of
+twelve** — ahead of the finance domains at stages 7–10 and ahead of the navigation restructure
+at stage 6.
+
+**Reports was therefore implemented at domain position 12 under a stage-4 gate.** Stage 4A kept
+that defensible by scoping BD-REPORTS-01A strictly to already-authoritative records and by
+naming, at length, every fact that must not be reported or shown as zero. That scoping worked:
+no figure in the delivered report overstates its source. What stage 4A did **not** do was decide
+the Reports *information architecture*. It listed eight initial sections, and the implementation
+faithfully rendered eight sections on one page. **The one-page dossier was thus settled by an
+implementation slice rather than by a reporting-architecture decision, and it was settled while
+nine of the source domains did not exist.** That is the sequencing fault the Founder has
+identified, and it is a sequencing fault rather than an execution fault.
+
+Two further consequences follow, and both were live risks before this rejection. Stage 6, the
+navigation restructure, sits *after* stage 4, so Reports was designed into a sidebar that is
+itself known to be provisional. And every domain completed later — Updates, Tasks, Team,
+Engagements, Labour, Payments, Reconciliation, Documents, Maintenance — would have had to either
+lengthen the single page or force exactly the redesign now being called for.
+
+#### The repository already anticipates a second reporting stage
+
+Stage 12 of the 1 August sequence is **"expanded management reporting and verified Simple Invoice
+summaries if separately approved."** Stage 4A separately records that later finance, People,
+materials, payments, reconciliation and document reports "may appear in the product taxonomy but
+must remain visibly future." **A category-based Reports centre is a natural fit for stage 12, not
+for stage 4**, and adopting that placement resolves the conflict between the two sequences
+without discarding either.
+
+#### Proposed correction to the order — recommendation only
+
+1. **Freeze Reports.** No new report section, no new report category, no further Reports UI
+   redesign under BD-REPORTS-01B or any successor, until the source domains below are delivered.
+2. **Resume the domain sequence** where it was interrupted, taking the finance chain in its
+   already-approved order: BD-FIN-01B2 release authority; BD-FIN-01C payments and claim
+   allocations; BD-FIN-01D reconciliation, returns and reversals.
+3. **Deliver the operational domains** the Founder named as report sources and which are wholly
+   absent: Project Updates & Discussion; Tasks & Assignments; then Team & Resourcing with the
+   external-worker identity model that Blueprint §7 records as its prerequisite, and Project
+   Engagements.
+4. **Take Work Inbox and Notifications (stage 3) in its own place.** It is still outstanding, it
+   owns attention state, and Reports must not absorb it — the present Needs attention section is
+   explicitly not Work Inbox state.
+5. **Take stage 6 navigation** — the grouped authority structure presented as Dashboard,
+   Projects, People, Finance, Reports and More — once enough destinations exist for grouping to
+   be meaningful rather than decorative.
+6. **Unblock Documents & Evidence only through backup**, never around it.
+7. **Then, and only then, build the category-based Reports centre** at stage 12, as a deliberate
+   reporting-architecture decision with its own authority, category list and per-report
+   definitions.
+
+#### Proposed minimum temporary treatment of the deployed Reports route — recommendation only
+
+The route is live, correct in its figures, and access-controlled. The recommendation is
+therefore the **least** intervention that stops it setting product direction: leave the code as
+deployed; add no section, category, chart or filter; treat it as a provisional single-project
+summary rather than the Reports product; and record in the Product Requirements that its
+architecture is superseded and awaiting the stage-12 reporting centre. Removing or hiding the
+route is **not** recommended — it works, the Principal and Operations Manager can use it, and
+withdrawing a working capability to make a documentation point would cost the business something
+real. Whether even a short in-product note should say the reporting centre is coming is a
+Founder decision, not one to be taken here.
+
+#### Proposed sidebar position — recommendation only
+
+No change now. The current sidebar exposes only working destinations, nothing built is hidden,
+and no placeholder exists. Regrouping into Dashboard / Projects / People / Finance / Reports /
+More is stage 6 work, and with five live destinations the grouping would today contain groups of
+one. The recommendation is to keep the flat capability-gated list until stages 3–10 have
+populated People and Finance, then perform the restructure once, under its own authority.
+
+#### Which reports depend on which missing domain
+
+Recorded so that the future category list is derived from sources rather than invented:
+
+- *Workforce, attendance and labour cost reporting* — needs Team & Resourcing, Project
+  Engagements and Labour Engagements & Payments. Until then attendance and actual labour cost
+  remain unavailable future facts, exactly as Stage 4A states.
+- *Money-out, paid and outstanding reporting* — needs BD-FIN-01B2 releases, BD-FIN-01C payments
+  and BD-FIN-01D reconciliation. Until then no report may present released, paid, settled or
+  reconciled figures.
+- *Project progress and delivery reporting* — needs Project Updates & Discussion and Tasks &
+  Assignments. Daily Site records the plan and its submission, not the day's outcome.
+- *Evidence and document reporting* — needs Documents & Evidence, which is backup-blocked.
+- *Client commercial and revenue reporting* — needs Client Commercial Records or an authorised
+  Simple Invoice Manager integration; manual duplication is not authorised.
+- *Pipeline and maintenance reporting* — needs the Leads admin UI, Site Visits and Maintenance.
+
+Reports that are genuinely derivable **today** are confined to the current sources: project
+records, Daily Site plan and compliance, internal cost claims, fund requests, and approvals and
+decisions. That is a small set, and it is another reason the reporting centre is premature.
 
 ### Phase 1A — Lead Data and RLS Foundation
 
