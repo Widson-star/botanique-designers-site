@@ -1203,6 +1203,16 @@ module is functional and authorised, and disabled future destinations remain pro
 current `/admin/site-costs` and `/admin/fund-requests` routes may remain during transition
 but must not be treated as the permanent top-level architecture.
 
+**Delivery note (3 August 2026).** Stage 3 delivered a first Work Inbox as BD-INBOX-01,
+recorded in `WORKSTREAMS.md`. It is **derived** from current authoritative source records
+with no inbox table, and carries two tabs — *Needs my action* and *Awaiting others*. The
+*Approved* and *Completed* tabs described below were deliberately not built: under a derived
+model a resolved record leaves the inbox rather than accumulating in it, and its record is
+already listed in the module that owns it. The remaining sources named below — material
+requests, release acknowledgments, reconciliation submissions, project intakes, document
+reviews, people and engagement requests — are not yet inbox sources, because their domains do
+not yet exist. The paragraphs below remain the target model.
+
 **Unified Work Inbox.** One role-aware inbox collects everything requiring attention, with
 user-facing tabs *Needs my action*, *Submitted*, *Approved*, *Returned* and *Completed*. It
 may aggregate project changes, material requests, internal cost claims, fund requests,
@@ -1258,6 +1268,16 @@ record, an unambiguous unread state, and no dependence on a horizontal table.
 
 **Not authorised by this section:** external push notifications, email alerts, WhatsApp
 alerts and SMS. Each requires separate review before it is promised to any user.
+
+**Delivery note (3 August 2026). Nothing in this section has been delivered.** Stage 3
+delivered the Work Inbox (§14) only. There is no notifications table, no notification record,
+no event-backed history, no retention policy, no bell, no dropdown and no Notifications page.
+The Founder settled that a general notification ledger would duplicate business truth that the
+six existing domain event ledgers already hold authoritatively, and deferred the capability.
+What Stage 3 does provide, and the only part of this section now live, is a personal
+read/unread marker on derived Work Inbox items and a reconciled unread count on the Work Inbox
+navigation item. Everything else here requires separate authority before it is built or
+promised to any user.
 
 ## 16. People and payees
 
@@ -2261,11 +2281,27 @@ subsections §§18.1–18.13 are documentation and product authority only; they 
 implementation, and **Stage 4 implementation remains unauthorised**. The twelve-stage sequence
 is unchanged.
 
-**Sequence status (2 August 2026).** The order above is unchanged and is not reordered.
+**Sequence status (3 August 2026).** The order above is unchanged and is not reordered.
 Stage 1 (information architecture) and stage 2 (read-only backup and recovery posture
-verification) are recorded in `WORKSTREAMS.md`. Stage 3 (Work Inbox and Notifications
-authority and implementation planning) remains **outstanding** and is not superseded, absorbed
-or reordered by any later entry. Stage 4 is **Reports and derived-summary authority**; its
+verification) are recorded in `WORKSTREAMS.md`.
+
+**Stage 3 (Work Inbox and Notifications) is delivered and merged** as BD-INBOX-01, recorded
+in `WORKSTREAMS.md`. On explicit Founder instruction it was carried past authority and
+implementation planning through to implementation, guarded merge, deployment and hosted
+verification in a single session. The Founder settled its one open architectural fork: the
+Work Inbox is **derived** from current authoritative source records, with the minimum stored
+read state needed for new/seen indication and a reconciled unread badge; reading an item never
+resolves the underlying issue; and recipients are the Principal and the Operations Manager
+only, each within their existing authorised access.
+
+**Stage 3 delivered the Work Inbox, not Notifications.** Event-backed notification history, a
+notification bell or dropdown, retention, a general notification ledger, and email, SMS,
+WhatsApp and push delivery are all **explicitly not delivered and not authorised**, and are
+recorded as a later, separately authorised capability. Nothing in the shell may imply
+otherwise. The §14 *Approved* and *Completed* tabs were also deliberately not built, because a
+resolved record leaves a derived inbox rather than accumulating in it.
+
+Stage 4 is **Reports and derived-summary authority**; its
 documentation authority — stage 4A — is recorded in §§18.1–18.13 and in `WORKSTREAMS.md`.
 Stage 4 itself proceeds as 4A documentation authority, then 4B read-only repository and
 data-readiness inspection, then 4C technical implementation authority, then 4D implementation.
