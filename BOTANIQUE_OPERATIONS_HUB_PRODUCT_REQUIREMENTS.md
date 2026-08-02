@@ -1655,6 +1655,172 @@ A future Reports implementation is acceptable only if, at minimum:
 component, test, PDF, export, snapshot or hosted change. Execution remains unauthorised and
 requires the separately gated stages recorded in `WORKSTREAMS.md`.
 
+### 18.14 Stage 4C — BD-REPORTS-01A technical implementation authority (2 August 2026)
+
+Sections 18.14–18.22 are the **stage 4C** product contract for BD-REPORTS-01A, approved
+2 August 2026 by Widson Omutelema Ambaisi after the stage 4B read-only repository and
+data-readiness inspection. They refine §§18.1–18.13 with the behaviour that the delivered
+schema, routes and access policies can actually support; where a stage 4A statement and the
+delivered records disagree, §§18.14–18.22 govern and the correction is stated expressly.
+
+**Stage 4D — implementation — remains unauthorised.** No route, component, module, query,
+migration, database source, test or navigation entry is created by these sections. Stage 3
+(Work Inbox and Notifications) remains outstanding. BD-FIN-01B2 remains paused. Simple Invoice
+Manager remains external. Documents & Evidence and the backup gates in §18.12 and §22 are
+unchanged, and the recovery posture remains `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+### 18.15 Corrections to stage 4A terminology
+
+**A. There is no approved-amount field on a fund request.** §18.3 lists "approved funding
+amounts" among the supportable BD-FIN-01B1 facts. The delivered record carries a single
+`total_requested_amount`, which is the amount that stands when the request reaches approved
+status; **no separate approved-amount column exists and none may be invented**. Reports must
+therefore read `total_requested_amount` for both the pending and the funding-authorised figure,
+distinguishing them by status and never by a second amount field. The label for the approved
+figure is **"Funding authorised — not released"**, consistent with §18.6.
+
+**B. Operational finance is not universally Principal-only.** §18.9 must not be read as
+confining claim and fund-request figures to the Principal. Visibility follows the **existing
+source permissions of each originating domain**: an Operations Manager with project authority
+over a project — as project lead or through an active assignment — already reads that project's
+internal cost claims and fund requests, and Reports neither grants nor withholds that access.
+What remains Principal-only is unrestricted company-wide finance, banking data, client-
+commercial information and unrelated-project disclosure. Reports must not present operational
+project finance as an owner-only capability, and must not surface it to a manager who lacks
+source access to that project.
+
+### 18.16 Section-level date rules
+
+Reports operate on the **Africa/Nairobi (EAT)** calendar. The reader's browser timezone must
+not determine period inclusion, overdue or approaching status, Daily Site compliance, or event
+ordering. Each section states the single date that controls period membership, per §18.7:
+
+- **Daily Site Activity** and **Attendance and Planned Labour** — period membership is by
+  **work date**. Submission timestamps determine lateness only, never inclusion.
+- **Internal Cost Claims** — submitted figures by **submitted date**; approved figures by
+  **decision date**. An optional service-period view may use the claim's **service date**, and
+  where shown it must be labelled as a separate service-period analysis and never merged into
+  the submitted or approved figures.
+- **Fund Requests** — submitted figures by **submitted date**; funding-authorised figures by
+  **decision date**.
+- **Approvals and Decisions** — submitted items by **requested date**; decisions by **decision
+  date**. An amendment request may use the review timestamp where that is the authoritative
+  event time for the item.
+- **Recent Activity** — by the **event time** of the originating immutable event.
+- **Project Overview** — planned and actual project dates are contextual, not period controls;
+  target completion and next-action dates may drive attention indicators.
+
+**A last-updated timestamp must never control period inclusion for any financial figure.** A
+record submitted in one period and decided in another appears once in each figure under its own
+controlling date, and is never counted twice in one figure.
+
+### 18.17 Status and total rules
+
+The following inclusion rules are binding and are defined **once**, in a single report metrics
+module, rather than restated inside individual report components:
+
+*Internal Cost Claims.* Pending is the awaiting-review lifecycle, valued at the submitted total.
+Approved is the approved lifecycle, valued at the approved total. Draft, amendment-requested,
+rejected, withdrawn and cancelled claims contribute to neither figure. Claims are amended in
+place, so each claim row is already current; Daily Site supersession logic must not be applied
+to them.
+
+*Fund Requests.* Pending is submitted status, valued at `total_requested_amount`. Funding
+authorised is approved status, valued at the same field and labelled per §18.15A. Draft,
+amendment-requested, rejected, withdrawn and cancelled requests contribute to neither figure.
+An approved claim and a fund request that references it are one obligation presented twice, not
+two costs (§18.7).
+
+*Daily Site planned labour.* Only working-disposition entries in a submitted, resubmitted or
+accepted state that are neither superseded nor voided contribute to planned-labour figures.
+Draft, returned-for-correction, voided and superseded entries are excluded. A returned entry
+appears in **Needs Attention**, never in a planned-labour total.
+
+*Project approvals.* Pending project approvals follow the Approvals domain's own active-state
+rules. No single raw status vocabulary is imposed across domains, because the delivered domains
+do not share one.
+
+### 18.18 The five report states
+
+Reports must distinguish five states, and must never collapse them visually or semantically:
+
+1. **No records in the selected period** — the source is readable and the period is empty.
+2. **No records exist** — the source is readable and the project has none at all.
+3. **Not available in the current Operations Hub stage** — the underlying authority or workflow
+   does not yet exist (§18.2).
+4. **You do not have access to this section** — the project is visible, but the reader has no
+   access to that source domain's records.
+5. **Data could not be loaded** — the read failed.
+
+A future unavailable fact must not render as zero. An inaccessible section must not render as
+an empty project record, a zero, or an ordinary empty state, and Reports must not infer from
+inaccessibility that no records exist. A load failure must not render as "no records". Raw
+database or policy error text must never be shown to the reader.
+
+### 18.19 Source access behaviour and the project selector
+
+The Reports project selector lists the projects the reader may **read as projects**. The
+existing authorised-projects helper used by Internal Cost Claims is **not** the Reports
+selector: it is restricted to ongoing projects, excludes two hard-coded fixture identifiers,
+and would silently omit completed, paused and historical projects that hold reportable records.
+
+Because project visibility is broader than the finance and Daily Site domains, a reader may
+legitimately open a project whose source records they cannot read. In that case the project
+remains selectable, the report renders, and each inaccessible section shows state 4 of §18.18.
+Sections are permitted independently, per source domain — a reader may see Project Overview and
+Recent Activity while Internal Cost Claims and Fund Requests are inaccessible.
+
+Projects are identified in reports by **project name**. No project-number scheme is introduced
+by BD-REPORTS-01A.
+
+### 18.20 Currency and numeric presentation
+
+Finance figures use the currency stored on the record, presently constrained to KES; no
+conversion is authorised (§18.7). Daily Site planned labour may be presented in KES under the
+Kenya-only reporting rule, and the documentation records plainly that the Daily Site record
+carries **no currency column** of its own — the presentation is a reporting convention, not a
+stored fact.
+
+Every financial figure derives from the exact stored database value. Form-preview arithmetic
+helpers used for live input feedback are not the authority for a report figure. A null,
+unavailable, inaccessible or failed value must remain distinguishable from zero; coercing an
+absent amount to zero for display is prohibited (§18.2).
+
+### 18.21 Drill-through
+
+Every count and total in the Project Summary resolves either to the exact originating record or
+to a correctly filtered list. Reaching a module index page, or an unfiltered list, where a more
+precise destination exists is a defect, not an acceptable fallback (§18.10).
+
+This requires the Daily Site Operations, Site Costs, Fund Requests and Approvals lists to accept
+**URL-addressable filters** covering, at minimum, the relevant combinations of project, status,
+and date or period. Project context is preserved on both desktop and mobile, and a safe return
+path remains available.
+
+### 18.22 Stage 4D acceptance requirements
+
+In addition to §18.13, a stage 4D implementation is acceptable only if:
+
+- the eight Project Summary sections are present, each carrying the date rule of §18.16 and the
+  inclusion rules of §18.17, with inclusion logic defined once rather than per component;
+- the five states of §18.18 are separately reachable and separately presented, and are covered
+  by tests including inaccessible-versus-empty, unavailable-versus-zero and load failure;
+- a manager with project visibility but without finance or Daily Site source access sees the
+  no-access state and no figures for those sections;
+- period boundaries behave correctly in Africa/Nairobi, including records submitted in one
+  period and decided in another, with no double counting;
+- no section strengthens a source claim — no actual work completed, actual worker count,
+  person-level attendance, actual labour cost, released funds, payment or reconciliation
+  appears, and no planned or expected figure is labelled as an actual one;
+- drill-through parameters resolve to the exact record or the correctly filtered list;
+- the mobile Project Summary stacks without horizontal scrolling;
+- the Reports navigation entry appears only once the route exists and the reader has at least
+  one authorised section;
+- demo-mode behaviour, where demo mode is retained, matches the authorised presentation rather
+  than fabricating unavailable facts;
+- no report figure is editable, no report writes to any source record, and no snapshot, PDF,
+  export or stored artefact is produced.
+
 ## 19. Printable documents
 
 Printable documents are generated presentations of authoritative records. The source record

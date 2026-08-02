@@ -2113,6 +2113,157 @@ here.
 Full founder requirements are in the Product Requirements §§18.1–18.13; full architecture is in
 the Blueprint §§12.1–12.10. No Apicora project content is affected.
 
+### 2 August 2026 — Stage 4C: BD-REPORTS-01A technical implementation authority (documentation only)
+
+**Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026. Execution: not
+authorised.** This is **stage 4C** — the technical implementation authority for
+**BD-REPORTS-01A — Project Summary and Current-Authority Reporting**. Stage 4A is approved and
+merged; **stage 4B, the read-only repository and data-readiness inspection, is complete** and
+its findings are carried into this entry. **Stage 4D — implementation — remains unauthorised.**
+Stage 3 (Work Inbox and Notifications) remains **outstanding**, BD-FIN-01B2 remains **paused**
+with every settled decision unchanged, and the backup and recovery posture remains
+`PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+**Stage 4B findings carried into this authority.**
+
+- *Manager access is asymmetric across domains.* Project and project-history reads admit any
+  active manager; Daily Site entries, Internal Cost Claims and Fund Requests additionally
+  require project authority through project lead or an active assignment. A reader can therefore
+  hold a project and be unable to read its finance or Daily Site records.
+- *The Internal Cost Claims authorised-projects helper is unsuitable as a Reports selector.* It
+  is limited to ongoing projects and excludes two hard-coded fixture identifiers, so it would
+  omit completed, paused and historical projects that hold reportable records.
+- *Daily Site compliance is evaluated one date at a time.* The delivered compliance function
+  resolves a single work date on the Africa/Nairobi calendar and returns per-project obligation
+  and status; a period view built from it would issue one call per day.
+- *Existing list readers are unbounded.* The per-domain access modules fetch a domain's whole
+  authorised history with no project predicate, no date predicate and no result bound, and are
+  unsuitable as a report data path.
+- *Fund requests carry no approved-amount column.* `total_requested_amount` is the single
+  amount field and stands at approved status; the stage 4A phrase "approved funding amounts"
+  described no separate field.
+- *Claims and fund requests carry an explicit KES-constrained currency; the Daily Site record
+  carries no currency column at all.*
+- *Immutable event tables carry JSON snapshot and payload columns*, and their event-time field
+  names differ between domains.
+- *The four list routes derive filter state internally and read nothing from the URL*, so
+  precise drill-through is not achievable without adding URL-addressable filters.
+- *The admin navigation is already capability-gated per module, and the `/admin/*` catch-all is
+  declared last*; a Reports entry fits that existing pattern.
+- *Database integration tests already exist per domain*, executed against a real PostgreSQL
+  instance, so an RLS-tested database source is consistent with established practice.
+
+**Founder decisions recorded.** The implementation shape is a narrow, project-centred report: a
+single Reports route, a capability-gated navigation entry, a project selector, a
+reporting-period selector, a responsive Project Summary of the eight approved sections,
+source-permission-aware sections, drill-through to the exact record or a correctly filtered
+list, explicit empty, unavailable, inaccessible and error states, no editable figures and no
+stored report ledger.
+
+**Read model.** A hybrid: direct project- and date-filtered client reads under existing RLS with
+explicit column whitelists for Projects, Daily Site entries, Internal Cost Claims, Fund
+Requests, project approval requests and the event sources; plus **one narrow security-invoker
+database range source** for Daily Site obligation and compliance over a date range, returning
+only enough to distinguish entry submitted, entry submitted late, waived, missing and not due.
+A broad cross-domain `SECURITY DEFINER` reporting function, a materialised reporting table and
+any second ledger are **not authorised**.
+
+**Permission and state model.** Each section inherits its own source domain's database
+permissions; no single Operations Manager scope is assumed. Where a project is visible but its
+source records are not, the project stays available and the section states that the reader has
+no access to it — never zero, never an ordinary empty state, never an inference that no records
+exist. Five states must remain distinct: no records in the period; no records exist; not
+available in the current stage; no access to this section; and data could not be loaded. Raw
+database or policy errors are never shown. Application-side filtering is not a security
+boundary.
+
+**Date and timezone model.** Africa/Nairobi governs period inclusion, overdue and approaching
+indicators, compliance and event ordering; the browser timezone governs none of them. Daily Site
+sections use work date, with submission time controlling lateness only; claims use submitted
+date for submitted figures and decision date for approved figures, with any service-period view
+labelled separately; fund requests use submitted and decision dates likewise; approvals use
+requested and decision dates, with the review timestamp where it is the authoritative event
+time; Recent Activity uses normalised event time. A last-updated timestamp never controls
+period inclusion for a financial figure.
+
+**Status and total rules**, centralised in one report metrics module rather than repeated per
+component: claims count as pending at awaiting-review on the submitted total and as approved at
+approved lifecycle on the approved total, with draft, amendment-requested, rejected, withdrawn
+and cancelled excluded, and no supersession logic applied because claims amend in place; fund
+requests count as pending at submitted status and as **funding authorised — not released** at
+approved status, both valued at `total_requested_amount`, with the same exclusions; Daily Site
+planned labour includes only working-disposition entries in submitted, resubmitted or accepted
+state that are neither superseded nor voided, with returned entries appearing in Needs
+Attention and never in a planned-labour figure; project approvals follow the Approvals domain's
+own active-state rules, and no universal cross-domain status vocabulary is imposed.
+
+**Approvals and Decisions** is a labelled projection over three source groups — project approval
+requests and events, Internal Cost Claim decisions and events, and Fund Request decisions and
+events — because reading the project approvals table alone would omit every finance decision.
+Finance decisions are not written into the project-approvals presentation, no new generic
+approval ledger is created, and each projected item retains its source domain, originating
+record identifier, project, requester or actor, current decision state, the relevant timestamp
+and its exact source route. Project Intakes are excluded from this first project report, since
+they precede a consistently established project identity.
+
+**Daily Site boundary unchanged.** Reporting remains limited to the plan and its submission —
+work plan, disposition and reason, expected worker count, crew reference, rate or agreed labour
+total, planned labour amount, funds available and any additional amount requested, notes,
+evidence status, submission timing, late and compliance status, and entry lifecycle and event
+history. Actual work completed, actual persons present, actual worker count, person-level
+attendance, actual labour cost, labour paid, payroll and actual site outcome remain unavailable
+future facts and must not be synthesised from a plan, a note, evidence status, a project update
+or an accepted entry.
+
+**Currency and numbers.** Finance figures use the record's stored currency, presently
+constrained to KES, with no conversion authorised. Daily Site planned labour may be presented in
+KES under the Kenya-only reporting rule, and the documentation records plainly that the Daily
+Site record has no currency column. Figures derive from exact stored database values; live-input
+form-preview arithmetic is not the authority for a report figure, and an absent amount is never
+coerced to zero for display.
+
+**Drill-through and performance.** The Daily Site Operations, Site Costs, Fund Requests and
+Approvals lists must accept URL-addressable project, status and period filters so every count
+and total reaches the exact record or a correctly filtered list, with project context preserved
+on desktop and mobile. Readers carry project and date predicates and explicit column lists; no
+whole-row selection from event tables, no per-day compliance loop, no per-project activity loop,
+no mounting of the existing providers to render a report, and bounded or paginated reads where
+history can grow. No index is authorised speculatively; stage 4D may add one only where an
+approved query plan and repository tests show it is necessary.
+
+**Tests required before stage 4D is acceptable** cover status inclusion and exclusion,
+submitted versus approved figures, Daily Site supersession, returned-entry exclusion, EAT period
+boundaries, records submitted in one period and decided in another, absence of double counting,
+project and role isolation including the manager access asymmetry, inaccessible versus empty,
+unavailable versus zero, load failure, exact drill-through parameters, safe event-field
+projection, mobile stacked presentation, no strengthened operational or financial claim, and
+demo-mode parity where demo mode is retained. Any new database range source additionally
+requires a real PostgreSQL integration test, RLS coverage for Principal, assigned manager,
+unassigned manager, Staff and Viewer, proof that unauthorised project rows are never returned,
+and proof that it is security-invoker and not `SECURITY DEFINER`.
+
+**Corrections to stage 4A terminology.** An approved fund request uses `total_requested_amount`
+at approved status; no `approved_amount` field exists or may be invented. BD-FIN operational
+finance is not universally Principal-only: visibility follows each source domain's existing
+permissions, and what remains Principal-only is unrestricted company-wide finance, banking data,
+client-commercial information and unrelated-project disclosure.
+
+**Exclusions restated.** Implementation code; hosted verification; fund releases; payments;
+reconciliation; client-invoice integration; a generic materials or procurement authority; actual
+work-completed records; actual attendance; actual labour cost; payroll; document upload; PDF
+generation; export; report snapshots; generated-document custody; Simple Invoice duplication; a
+generic event ledger; a cross-domain `SECURITY DEFINER` reporting function; and a materialised
+reporting ledger all remain **outside** BD-REPORTS-01A. Documents & Evidence remains blocked
+until an independent Supabase Storage backup is approved, implemented **and** restore-tested.
+
+**No execution authorised.** This entry changes no hosted system, no database, no RLS policy, no
+configuration and no application code. No Reports route, component, module, query, migration,
+database source, test or navigation entry is created. **Stage 4D remains unauthorised** and
+requires its own authority, branch, review and deployment gate.
+
+Full product contract is in the Product Requirements §§18.14–18.22; full architecture is in the
+Blueprint §§12.11–12.19. No Apicora project content is affected.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`

@@ -1015,6 +1015,129 @@ Reports today. Report output must not become an unprotected evidence repository.
   integration exists, none is implied, and no manual duplication is authorised to populate
   Operations Hub reporting.
 
+### 12.11 Read model resolved — stage 4C (2 August 2026)
+
+§12.5 deferred the read-model decision to stage 4B. That inspection is complete, and the
+resolved architecture for BD-REPORTS-01A is a **hybrid**: direct filtered client reads under
+existing RLS for most sections, plus **one narrow database range source** for Daily Site
+obligation and compliance results. Stage 4D implementation remains unauthorised; this section
+records the contract it must follow, not its code.
+
+**A. Direct filtered reads under existing RLS** serve Projects, Daily Site entries, Internal
+Cost Claims, Fund Requests, project approval requests and the immutable event sources. Each read
+is project-filtered, date-filtered where the section has a date rule, and restricted to an
+explicit column whitelist. These reads are **independent of the existing list providers**, which
+load a domain's whole authorised history without project, date or result bounds and are
+unsuitable as a report data path.
+
+**B. One narrow security-invoker range source** serves Daily Site obligation and compliance
+across a selected date range. The delivered compliance function evaluates a **single date**;
+composing a period from it would mean one call per day, which is rejected under §12.15. The
+range source returns only the fields needed to distinguish **entry submitted**, **entry
+submitted late**, **waived**, **missing** and **not due**.
+
+It must run with **security-invoker** behaviour so the caller's own policies apply, preserve
+the existing Daily Site project-access rules, return no row for an unauthorised project, create
+no stored report data and no second ledger, mutate nothing, and evaluate its calendar in
+Africa/Nairobi.
+
+### 12.12 Prohibited read-model shapes
+
+The following are **not** authorised for BD-REPORTS-01A:
+
+- a broad cross-domain `SECURITY DEFINER` reporting function — it would move the access decision
+  out of the source policies and into report code, contradicting §12.6;
+- a materialised or otherwise stored reporting table, which would be a second ledger (§12.3);
+- any report-owned mutable event ledger;
+- reuse of a `SECURITY DEFINER` project-scoping helper written for a different domain as the
+  Reports project selector, since its scope rules belong to that domain and not to reporting.
+
+### 12.13 Per-domain permission inheritance
+
+Reports composes sections whose source domains do **not** share one access rule, and the
+composition must not flatten them. Project visibility is broader than Daily Site, Internal Cost
+Claims and Fund Requests visibility: a manager reads projects and project history generally,
+while the operational and finance domains additionally require project authority through
+project lead or an active assignment.
+
+The architectural consequence is that a section's availability is decided **per source domain,
+per project, per reader**. Where the reader may see the project but not the source, the section
+resolves to the explicit no-access state of Product Requirements §18.18 — never zero, never an
+ordinary empty state, and never an inference that no records exist. Application-side filtering
+remains a presentation concern and is never the security boundary (§12.6).
+
+### 12.14 Safe event projection
+
+Recent Activity is a **non-persistent projection** over the existing immutable event sources.
+It selects a fixed, safe tuple only: source domain, event type, actor identifier, normalised
+event time, originating record identifier and project identifier. The event tables' JSON payload
+columns — claim and claim-line snapshots, Daily Site entry snapshots, previous and new project
+values, and free-form event payloads — are **not selected and not exposed**. Labels are explicit
+and derived in the projection; the raw event vocabulary of each domain is not rendered directly.
+
+Event-time fields differ across domains; the projection normalises them to a single report event
+time, including the fund-request event table's creation timestamp. No generic mutable event
+ledger is created (§12.3).
+
+### 12.15 Query and performance boundaries
+
+Every report reader carries project and date predicates and an explicit column list. Selecting
+whole rows from event tables is prohibited. The following access patterns are rejected: one
+compliance call per day across a period; one request per project for activity; and mounting the
+existing domain providers merely to render a report. Where an event or record history can grow
+without bound, the reader is paginated or otherwise bounded. Payloads must remain small enough
+for a mobile connection, per §15.
+
+**No index is authorised speculatively.** Stage 4D may add an index only where the approved
+query plan and repository tests show it is required.
+
+### 12.16 Timezone contract
+
+Report period membership, overdue and approaching indicators, Daily Site obligation evaluation
+and event ordering are computed on the **Africa/Nairobi** calendar, in the database or in a
+single shared report utility — never from the browser's local timezone. The per-section
+controlling dates are in Product Requirements §18.16.
+
+### 12.17 URL-addressable drill-through
+
+Drill-through requires the Daily Site Operations, Site Costs, Fund Requests and Approvals list
+routes to read their filter state from the URL, so a report link expresses project, status and
+period as addressable parameters. Those routes presently derive filter state internally, so
+stage 4D must add URL-addressable filtering before report links can satisfy §12.7. Arrival
+re-applies access checks; a report link is never an access grant.
+
+The Reports route is declared **before** the `/admin/*` catch-all, and the capability-gated
+navigation entry appears only once the route exists and the reader has at least one authorised
+section.
+
+### 12.18 Likely implementation modules
+
+Stage 4D is expected to introduce a Reports route and its test, a report data-access module
+alongside the existing per-domain access modules, a report metrics module holding the §18.17
+inclusion rules once, a report capabilities module mirroring the existing per-domain capability
+utilities, and focused presentation components — with shared project/period controls and shared
+empty, unavailable and no-access state components where they are justified by reuse.
+
+These are the expected shape, not a fixed manifest: stage 4D may adopt a smaller coherent
+structure where repository inspection shows it is better. A dedicated Reports provider is
+optional and is justified only if it reduces coupling rather than wrapping every existing
+provider.
+
+### 12.19 Required tests before stage 4D is acceptable
+
+Repository tests must cover status inclusion and exclusion; submitted versus approved figures;
+Daily Site supersession and returned-entry exclusion; EAT period boundaries; records submitted
+in one period and decided in another; absence of double counting; project scope and role
+isolation including the manager access asymmetry of §12.13; inaccessible versus empty;
+unavailable versus zero; load failure; exact drill-through parameters; safe event-field
+projection; mobile stacked presentation; the absence of any strengthened operational or
+financial claim; and demo-mode parity where demo mode is retained.
+
+Any new database range source additionally requires a **real PostgreSQL integration test**, in
+the existing database-test pattern, with RLS coverage for Principal, assigned manager,
+unassigned manager, Staff and Viewer; proof that unauthorised project rows are never returned;
+and proof that the source is security-invoker and **not** `SECURITY DEFINER`.
+
 ## 13. People and payee identity separation
 
 The existing spine rule in §4.1 — that external workers who need engagement and payment
