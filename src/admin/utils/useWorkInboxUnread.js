@@ -13,6 +13,7 @@
 // reader could act on must never be shown when the sources were not actually
 // read.
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { canSeeWorkInbox } from "./workInboxCapabilities";
 import { unreadActionCount } from "./workInboxItems";
 import { loadWorkInbox } from "./workInboxLoader";
@@ -20,6 +21,11 @@ import { eatToday } from "./reportPeriod";
 
 export function useWorkInboxUnread({ accessToken, role, currentUserId, isDemo }) {
   const [count, setCount] = useState(null);
+  // The layout persists across route changes, so without this the count would
+  // be computed once per session and then go stale — a reader who opened the
+  // inbox and marked items seen would still see the old number. Recomputing on
+  // navigation is what makes the badge genuinely reconcile with the list.
+  const { pathname } = useLocation();
 
   useEffect(() => {
     if (isDemo || !accessToken || !canSeeWorkInbox(role)) return undefined;
@@ -42,7 +48,7 @@ export function useWorkInboxUnread({ accessToken, role, currentUserId, isDemo })
     return () => {
       cancelled = true;
     };
-  }, [accessToken, currentUserId, isDemo, role]);
+  }, [accessToken, currentUserId, isDemo, role, pathname]);
 
   return count;
 }

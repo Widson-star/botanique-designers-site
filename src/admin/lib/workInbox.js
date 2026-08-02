@@ -154,8 +154,13 @@ export async function fetchInboxProjects(accessToken) {
 // Personal seen-markers. RLS restricts every operation below to the caller's
 // own rows, so no user can read, set or clear another user's read state.
 export async function fetchInboxReadState(accessToken) {
+  // Ordered newest-first so that if a long-lived account ever exceeds the
+  // limit, the markers that survive are the RECENT ones. Without an explicit
+  // order the truncation point would be arbitrary and could discard markers for
+  // items currently on screen, making seen items read as New again.
   const params = new URLSearchParams({
     select: "item_key",
+    order: "read_at.desc",
     limit: String(INBOX_ROW_LIMIT * 4),
   });
   const rows = await get("work_inbox_read_state", params, accessToken, "your read state");

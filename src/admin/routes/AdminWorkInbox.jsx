@@ -75,14 +75,19 @@ export default function AdminWorkInbox() {
 
   const [items, setItems] = useState([]);
   const [failedSources, setFailedSources] = useState([]);
-  const [status, setStatus] = useState("loading");
+  const [remoteStatus, setRemoteStatus] = useState("loading");
   const [tab, setTab] = useState(INBOX_TAB.ACTION);
 
+  // The dev preview holds no operational records, so it is ready and empty.
+  // Deriving this rather than setting it keeps the preview and the real path
+  // obviously equivalent, and leaves the effect responsible only for the read.
+  const status = isDemo ? "ready" : remoteStatus;
+
   useEffect(() => {
-    if (isDemo || !accessToken || !permitted) {
-      setStatus(isDemo ? "ready" : status === "loading" ? "loading" : status);
-      return undefined;
-    }
+    // No session, or a role that receives nothing: no source is read at all,
+    // and the page stays in its loading state rather than claiming an empty
+    // inbox it never actually checked.
+    if (isDemo || !accessToken || !permitted) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -90,16 +95,14 @@ export default function AdminWorkInbox() {
         if (cancelled) return;
         setItems(result.items);
         setFailedSources(result.failedSources);
-        setStatus("ready");
+        setRemoteStatus("ready");
       } catch {
-        if (!cancelled) setStatus("error");
+        if (!cancelled) setRemoteStatus("error");
       }
     })();
     return () => {
       cancelled = true;
     };
-    // `status` is deliberately excluded: it is set by this effect.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accessToken, currentUserId, isDemo, permitted, role, today]);
 
   const actionItems = useMemo(() => itemsForTab(items, INBOX_TAB.ACTION), [items]);

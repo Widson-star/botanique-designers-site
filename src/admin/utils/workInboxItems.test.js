@@ -250,6 +250,47 @@ describe("no duplicates", () => {
   });
 });
 
+// work_inbox_read_state.item_key is capped at 200 characters. A key that
+// overflowed it would be rejected on insert, so the seen-marker would never
+// persist and the item would read as New for ever — including after "Mark all
+// as seen". A project blocker is allowed 500 characters, so this is reachable
+// with ordinary data, not a contrived edge case.
+describe("keys fit the read-state column", () => {
+  it("bounds a key built from long free text", () => {
+    const key = inboxItemKey("project-blocker", "11111111-1111-1111-1111-111111111111", "b".repeat(500));
+    expect(key.length).toBeLessThanOrEqual(200);
+  });
+
+  it("keeps every derived key within the column limit", () => {
+    const items = deriveWorkInboxItems(
+      base({
+        projects: [
+          {
+            id: "11111111-1111-1111-1111-111111111111",
+            projectName: "Alego Usonga",
+            status: "Ongoing",
+            archived: false,
+            nextAction: "x".repeat(400),
+            nextActionDate: "2026-07-01",
+            blocker: "b".repeat(500),
+          },
+        ],
+      })
+    );
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      expect(item.key.length).toBeLessThanOrEqual(200);
+    }
+  });
+
+  it("still distinguishes two different projects with identically long blockers", () => {
+    const blocker = "b".repeat(500);
+    const a = inboxItemKey("project-blocker", "11111111-1111-1111-1111-111111111111", blocker);
+    const b = inboxItemKey("project-blocker", "22222222-2222-2222-2222-222222222222", blocker);
+    expect(a).not.toBe(b);
+  });
+});
+
 describe("compliance items", () => {
   it("raises an item only for a genuinely missing obligation", () => {
     const rows = [

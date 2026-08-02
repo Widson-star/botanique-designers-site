@@ -59,12 +59,23 @@ export const INBOX_TAB = {
   AWAITING: "awaiting",
 };
 
+// Matches the char_length check on work_inbox_read_state.item_key. A key that
+// overflowed it would be REJECTED on insert, so the seen-marker would never
+// persist and the item would read as New for ever.
+const MAX_ITEM_KEY_LENGTH = 200;
+
 // A key identifies the item AND the source state that produced it. When a
 // record moves to a materially different state needing fresh attention, the key
 // changes, so the item correctly returns to New instead of inheriting a stale
 // "seen" marker from the state before it.
+//
+// The state segment can carry free text — a project blocker is allowed 500
+// characters — so the key is bounded. Source and record id come first and are
+// short, so they always survive intact and two different records can never
+// collide; only trailing state text is clipped.
 export function inboxItemKey(source, recordId, state) {
-  return `${source}:${recordId}:${state}`;
+  const key = `${source}:${recordId}:${state}`;
+  return key.length <= MAX_ITEM_KEY_LENGTH ? key : key.slice(0, MAX_ITEM_KEY_LENGTH);
 }
 
 function projectNameOf(projectsById, projectId) {
