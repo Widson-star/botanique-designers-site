@@ -2390,6 +2390,86 @@ range-function security model is unchanged; no report feature was added.
 
 **Deployment and hosted verification remain outstanding**, and require their own authority.
 
+### 2 August 2026 — BD-REPORTS-01A production correction: EAT offsets in report queries (repository only)
+
+**Founder approval: granted by Widson Omutelema Ambaisi, 2 August 2026. Execution: repository
+correction only.** BD-REPORTS-01A is deployed and remains classified
+**`DEPLOYED_WITH_MATERIAL_GAPS`**. It is **not** `ACTIVE_VERIFIED`, and this entry does not claim
+it. **No hosted system was accessed or changed** by this correction — no Supabase, Vercel, Render,
+Google Workspace or DNS access, no migration applied, no deployment performed. Stage 3 remains
+outstanding, BD-FIN-01B2 remains paused with every settled decision unchanged, and the backup and
+recovery posture remains `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+**The authenticated production failure.** Authenticated hosted verification of the deployed report
+found that three of the eight sections failed to load while every other section rendered normally:
+**Internal Cost Claims**, **Fund Requests** and **Approvals & Decisions**. The three failing
+sections are exactly the three whose period predicate is a nested PostgREST `or=(and(…))`
+expression over timestamp columns.
+
+**The precise cause.** Africa/Nairobi is the authoritative reporting calendar, so every period
+bound carries a literal `+03:00` offset — `2026-08-01T00:00:00.000+03:00`. Those three readers
+built the predicate as raw query **text** and then passed the assembled string back through
+`new URLSearchParams(text)`. A query string is `application/x-www-form-urlencoded` data, in which
+a literal `+` denotes a **space**. Re-parsing therefore decoded the offset to a space, and
+re-serialising sent PostgREST `2026-08-01T00:00:00.000 03:00`, which PostgreSQL rejected as an
+invalid `timestamptz` — SQLSTATE **`22007`**. The reader normalises every failure to one safe
+message, so the interface showed a load error rather than the database text. Sections whose date
+predicates are ordinary key/value parameters were never affected, because `URLSearchParams` encodes
+`+` as `%2B` when the value is appended rather than parsed.
+
+**The correction implemented.** The predicate is now appended as a **key/value pair** — the helper
+returns the bare `or` value, never `or=…` query text — so `URLSearchParams` encodes the offset as
+`%2B03%3A00` exactly once and it survives server-side decoding intact. Both affected call paths are
+corrected: the shared submitted-or-decided helper used by claims and fund requests, and the
+project-approval requested/reviewed/decided query. Nothing else changed. The PostgREST `or`/`and`
+syntax, the project predicate, the period predicate, the column whitelists and the row limits are
+byte-for-byte as before; no value is double-encoded and no `+` is rewritten after construction.
+
+**Report semantics are unchanged.** Claims still take submitted totals from `submitted_at` and
+approved totals from `decided_at`, with `awaiting_review` and `approved` as the pending and
+approved lifecycles. Fund requests still take requested totals from `submitted_at` and authorised
+totals from `decided_at`, both from `total_requested_amount` — there is still no approved-amount
+column — and the figure is still labelled "Funding authorised — not released". Approvals still use
+`requested_at` for submitted items, the authoritative review timestamp for amendments and
+`decided_at` for decisions. No amount logic, access logic, label or section state rule was touched,
+and no RLS, policy, grant, database function, migration, project-context guard or access-token
+behaviour was changed.
+
+**Local regression coverage.** The previous test decoded generated queries with
+`decodeURIComponent`, which leaves `+` unchanged and therefore **could not observe this defect at
+all**. Decoding now models the real request path: a standards-equivalent form-urlencoded decode for
+the general shape assertions, and `new URLSearchParams(serializedQuery)` — the server's own parser
+— for the encoding assertions. The added tests prove, for both affected call paths, that the
+serialized query contains `%2B03%3A00`, that it decodes back to `+03:00` and never to ` 03:00`,
+that the complete nested expression is preserved byte-for-byte, that every delivered timestamp
+parses and the period edges still denote the intended UTC instants, that the project, column, order
+and limit predicates all survive alongside a single `or` predicate, and that no value is
+double-encoded. A negative test pins the former raw-string construction and shows it producing the
+corrupted `2026-08-01T00:00:00.000 03:00` that production saw. Each new assertion was confirmed to
+**fail** against the uncorrected call sites before the fix was restored, so none is vacuous.
+
+**The lifetime-empty state is now reachable.** While those three period reads were rejected, the
+sections resolved to the error state, so `empty_ever` was unreachable for them regardless of the
+project's contents. An end-to-end test now drives the **real** readers against a stub that decodes
+as form-urlencoded and rejects a malformed `timestamptz` exactly as PostgreSQL did, and proves that
+"No records exist for this project." is produced through the corrected readers while remaining
+distinct from "No records in the selected period." A companion test proves a genuine rejection is
+still surfaced as an error — **no request failure is swallowed** to manufacture an empty state.
+
+**Tested.** The full frontend suite passes — 47 files, 391 tests, up from 382. All six database
+integration suites, the production build and `git diff --check` pass. Lint on the changed files is
+clean and the repository-wide count is unchanged from `main` at 19 pre-existing errors in
+unrelated files.
+
+**Recorded for separate authority, not addressed here.** Vercel Analytics on admin routes, generic
+sign-in error wording, CSP, rate limiting, broad form validation, XSS review, `PUBLIC` execute on
+`daily_site_morning_compliance`, the company-wide manager RLS asymmetry and historical Daily Site
+obligation semantics all remain **outside** this correction and each requires its own decision.
+
+**Production re-verification remains outstanding.** BD-REPORTS-01A stays
+`DEPLOYED_WITH_MATERIAL_GAPS` until an authenticated hosted check confirms Internal Cost Claims,
+Fund Requests and Approvals & Decisions load correctly. Deployment requires its own authority.
+
 ### Phase 1A — Lead Data and RLS Foundation
 
 Status: **Phase 1A applied and runtime-verified on the hosted `botanique-admin`
