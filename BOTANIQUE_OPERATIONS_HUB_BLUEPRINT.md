@@ -1217,6 +1217,55 @@ RLS and each destination re-checks its access as before.
 no table anywhere in the report, no horizontal scrolling, full-width touch targets, and the
 project name and period held in a sticky header above the sections.
 
+### 12.21 Architecture confirmed in production — `ACTIVE_VERIFIED` (2 August 2026)
+
+The stage 4D architecture recorded in §12.20 has been verified against the hosted production system
+under two separate authenticated browser sessions, Principal and Operations Manager. BD-REPORTS-01A is
+classified **`ACTIVE_VERIFIED`**. Production runs `88b56091432ed4766fa61bfe8831595c83448cee` — the
+merge commit of PR #61, reviewed head `67ac54a488459b2002125eed55c82c4787775d77` — served by Vercel
+deployment `dpl_6UBLRKrrxCFdCBe1uGmALyNa4pQZ`. No migration accompanied the change, so the read model
+of §12.11 and the security posture of §12.12 are unchanged.
+
+**The hybrid read model holds in production.** Direct filtered client reads execute under the caller's
+own RLS, and the single security-invoker Daily Site range source is called **once per selected
+period** — confirmed live, with no per-day call loop and no domain provider mounted to render a report
+(§12.15). Every observed reader carried project and date predicates and an explicit column list; no
+whole event row was selected; lists were bounded at 200, events at 50 and existence probes at 1. No
+index was added.
+
+**Per-domain permission inheritance holds** (§12.6, §12.13). The Operations Manager's selector
+returned five projects where the Principal's returned twelve, following the effective `projects` RLS
+response and nothing else. A hand-supplied project id for a project outside that response was refused
+with **zero** section reads and no disclosure of the project's name or existence — the project-context
+gate operating as an additional prerequisite, never as a replacement for source policy. The asymmetry
+noted in §12.13 remains unresolved and out of scope: narrowing company-wide manager SELECT on
+`approval_requests` and `project_activities` is still a separate authority decision.
+
+**The timezone contract holds** (§12.16). Africa/Nairobi period bounds survive the wire intact: live
+requests carried `%2B03%3A00`, decoded to a literal `+03:00`, showed no `" 03:00"` corruption and no
+`%252B` double encoding, and returned HTTP 200 with no SQLSTATE `22007`. This was the defect that made
+three sections unreachable before the correction; the reporting calendar is now demonstrably
+end-to-end correct in production.
+
+**Drill-through holds** (§12.17). Recent Activity entries link to their exact record; opening one
+resolves to the precise claim and reconciles with the figure the report showed.
+
+**Section-state and safety boundaries hold.** The selected-period and lifetime-empty states rendered
+distinctly in one view; a rejected reader produced the error state rather than an empty or zero
+figure; an inaccessible or failed source within the Approvals projection is named rather than silently
+omitted. No stored report data, no second ledger and no report-owned event ledger exists. No event
+payload or snapshot column was requested, and no access token appeared in any URL.
+
+**Mobile composition holds** (§12.8), confirmed at a live 400 × 725 viewport under both roles: a
+single stacked column, no table, no horizontal overflow, usable full-height touch targets, nothing
+materially clipped.
+
+**Verification was read-only.** No hosted data was inserted, updated or deleted, and no role, policy,
+grant, function, migration or platform setting was changed. One residual evidence limitation is
+recorded: the fund-request metric labels could not be exercised against live values because production
+holds no fund-request records; the reader itself returned HTTP 200 and rendered the correct
+lifetime-empty state.
+
 ## 13. People and payee identity separation
 
 The existing spine rule in §4.1 — that external workers who need engagement and payment
