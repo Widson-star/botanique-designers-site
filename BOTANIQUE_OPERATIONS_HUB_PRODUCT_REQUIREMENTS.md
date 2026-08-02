@@ -1764,11 +1764,19 @@ existing authorised-projects helper used by Internal Cost Claims is **not** the 
 selector: it is restricted to ongoing projects, excludes two hard-coded fixture identifiers,
 and would silently omit completed, paused and historical projects that hold reportable records.
 
-Because project visibility is broader than the finance and Daily Site domains, a reader may
-legitimately open a project whose source records they cannot read. In that case the project
-remains selectable, the report renders, and each inaccessible section shows state 4 of §18.18.
-Sections are permitted independently, per source domain — a reader may see Project Overview and
-Recent Activity while Internal Cost Claims and Fund Requests are inaccessible.
+**Corrected at stage 4D implementation (2 August 2026).** Project availability follows the
+effective projects RLS response, not a role. The delivered projects policy admits the Principal
+company-wide, anyone actively assigned to a project, and a manager **who leads** a project. An
+unassigned, non-lead manager does not receive the project row and is never offered that project
+in Reports; Reports must not present a broader project selector than the projects source
+permits.
+
+A reader may nonetheless legitimately open a project whose source records they cannot read —
+assigned staff are the clear case, holding an assigned project row and its history while having
+no Daily Site, Internal Cost Claim, Fund Request or Approvals access at all. In that case the
+project remains selectable, the report renders, and each inaccessible section shows state 4 of
+§18.18. Sections are permitted independently, per source domain — a reader may see Project
+Overview and Recent Activity while Internal Cost Claims and Fund Requests are inaccessible.
 
 Projects are identified in reports by **project name**. No project-number scheme is introduced
 by BD-REPORTS-01A.
@@ -1820,6 +1828,56 @@ In addition to §18.13, a stage 4D implementation is acceptable only if:
   than fabricating unavailable facts;
 - no report figure is editable, no report writes to any source record, and no snapshot, PDF,
   export or stored artefact is produced.
+
+### 18.23 Stage 4D delivery record — BD-REPORTS-01A implemented (2 August 2026)
+
+**Status: implemented in the repository, reviewed against §§18.14–18.22, and not deployed.** No
+hosted system was accessed or changed; no migration was applied to the hosted `botanique-admin`
+project; production verification has not been performed and is not claimed. The backup and
+recovery posture remains `PARTIALLY_VERIFIED_WITH_MATERIAL_GAPS`.
+
+**Delivered surface.** One capability-gated `Reports` navigation entry and one route,
+`/admin/reports`, declared before the `/admin/*` catch-all. The route presents a project
+selector, a reporting-period selector and a responsive Project Summary of the eight approved
+sections: Project Overview; Needs Attention; Daily Site Activity; Attendance and Planned Labour;
+Internal Cost Claims; Fund Requests; Approvals and Decisions; Recent Activity. No further report
+family was added. No report figure is editable, no report writes to any source record, and no
+snapshot, PDF, export or stored artefact is produced.
+
+**Project selector.** Backed by the ordinary projects read under the caller's own RLS, with an
+explicit column list. `internal_cost_claim_authorised_projects()` is not used, and no project is
+hard-coded in or out, so completed, paused and historical projects appear wherever the caller's
+projects RLS permits them. Projects are identified by name. Until a project is chosen, no report
+source is read at all.
+
+**Reporting period.** This week (Monday–Sunday), this month, or a custom range, all inclusive
+and all resolved on the Africa/Nairobi calendar. An invalid or over-long custom range is refused
+with a plain message rather than silently clamped. The browser timezone controls no boundary:
+not period membership, not overdue or approaching state, not compliance, not ordering. Daily
+Site filters by work date with submission time controlling lateness only; claims and fund
+requests use submission date for submitted figures and decision date for approved or authorised
+figures; approvals use requested, review and decision timestamps; Recent Activity uses a
+normalised event time. `updated_at` controls no financial reporting period.
+
+**Terminology delivered.** Internal costs submitted; internal costs approved; funding requested;
+funding authorised — not released; expected workers; planned labour; submitted late; returned
+for correction; not available in the current Operations Hub stage; you do not have access to
+this section. Recorded attendance is presented as unavailable rather than as a zero. No label
+asserts amount spent, funds released, payment, reconciliation, payroll, labour paid, actual
+labour cost, actual worker count or work completed, and a repository test asserts this over
+every figure label and heading.
+
+**Five states.** No records in the selected period; no records exist; not available in the
+current stage; no access to this section; data could not be loaded. Each is separately reachable
+and separately worded. An inaccessible section is never read, so it cannot be mistaken for an
+empty one; a bounded existence probe distinguishes "none in this period" from "none ever"; and
+every read failure is replaced with one safe message before it can reach the interface. A
+genuine stored zero displays as zero; null, unavailable, inaccessible and failed values never do.
+
+**Known limitation carried forward.** The pre-existing money formatters in the Site Costs and
+Fund Requests list routes still coerce an absent amount to zero for display. Those lines are
+outside BD-REPORTS-01A and were left unchanged; correcting them is a separate authorised change
+to those modules. No Reports figure uses that coercion.
 
 ## 19. Printable documents
 

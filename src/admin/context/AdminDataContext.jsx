@@ -443,6 +443,11 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
       role,
       isDemo,
       currentUserId,
+      // Exposed so a route that issues its own narrow reads (Reports) does not
+      // have to mount a domain provider or reach into session storage. It is
+      // the same caller token every provider already uses; it widens nothing,
+      // because every read it backs still executes under the caller's own RLS.
+      accessToken: accessToken || "",
       projects,
       profiles,
       profilesById,
@@ -459,6 +464,7 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
       role,
       isDemo,
       currentUserId,
+      accessToken,
       projects,
       profiles,
       profilesById,

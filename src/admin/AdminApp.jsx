@@ -28,6 +28,7 @@ import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
 import AdminFundRequests from "./routes/AdminFundRequests";
 import AdminFundRequestForm from "./routes/AdminFundRequestForm";
 import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
+import AdminReports from "./routes/AdminReports";
 import { ROLES } from "./constants/roles";
 import {
   clearStoredSession,
@@ -232,6 +233,8 @@ export default function AdminApp() {
               <Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} />
               <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
               <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
+              {/* Declared before the /admin/* catch-all, per the existing pattern. */}
+              <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Route>
           </Routes>

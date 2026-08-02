@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { todayIso } from "../utils/dailySiteFormatters";
 import { canSeeDailySiteOperations, canRecordDailySiteEntry, summarizeCompliance } from "../utils/dailySiteCapabilities";
 import { ROLES } from "../constants/roles";
+import { describeActiveFilters, withinReportedWorkDates } from "../utils/listUrlFilters";
 import {
   DISPOSITION_LABELS,
   ENTRY_STATE_LABELS,
@@ -41,11 +42,25 @@ function matchesFilter(entry, filter, today) {
   }
 }
 
+// Filter state lives in the URL so a Reports drill-through arrives at exactly
+// the project, status and period it referred to. A parameter narrows what the
+// caller can already see; entry visibility remains database-enforced.
 export default function AdminDailySiteOperations() {
   const { role, projects } = useAdminData();
   const { entries, compliance, authorisedProjects, status, error } = useDailySiteOperations();
-  const [filter, setFilter] = useState("today");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filter = searchParams.get("status") || "today";
+  const projectFilter = searchParams.get("project") || "all";
+  const from = searchParams.get("from") || "";
+  const to = searchParams.get("to") || "";
   const today = todayIso();
+
+  function setStatusFilter(value) {
+    const next = new URLSearchParams(searchParams);
+    if (value && value !== "today") next.set("status", value);
+    else next.delete("status");
+    setSearchParams(next, { replace: true });
+  }
   const projectsById = useMemo(
     () => Object.fromEntries(projects.map((project) => [project.id, project])),
     [projects]
@@ -56,9 +71,18 @@ export default function AdminDailySiteOperations() {
 
   const summary = useMemo(() => summarizeCompliance(compliance), [compliance]);
   const visibleEntries = useMemo(
-    () => entries.filter((entry) => matchesFilter(entry, filter, today)),
-    [entries, filter, today]
+    () => entries.filter((entry) =>
+      matchesFilter(entry, filter, today) &&
+      (projectFilter === "all" || entry.projectId === projectFilter) &&
+      withinReportedWorkDates(entry.workDate, from, to)),
+    [entries, filter, today, projectFilter, from, to]
   );
+  const activeFilterSummary = describeActiveFilters({
+    projectName: projectFilter !== "all" ? projectsById[projectFilter]?.projectName || "one project" : "",
+    statusLabel: "",
+    from,
+    to,
+  });
 
   if (!canSeeDailySiteOperations(role)) {
     return (
@@ -150,7 +174,7 @@ export default function AdminDailySiteOperations() {
             type="button"
             role="tab"
             aria-selected={filter === tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => setStatusFilter(tab.key)}
             className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
               filter === tab.key
                 ? "bg-botanique-green text-white"
@@ -161,6 +185,13 @@ export default function AdminDailySiteOperations() {
           </button>
         ))}
       </div>
+
+      {activeFilterSummary && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-gray-600">
+          <span>Filtered to {activeFilterSummary}.</span>
+          <Link to="/admin/daily-site-operations" className="min-h-11 py-2 font-semibold text-botanique-green hover:underline">Clear filters</Link>
+        </div>
+      )}
 
       {/* Entries */}
       {visibleEntries.length === 0 ? (
