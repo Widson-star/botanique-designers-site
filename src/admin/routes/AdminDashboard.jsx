@@ -177,8 +177,13 @@ export default function AdminDashboard() {
       {/* Two short action panels, side by side from `lg` up. Below that they
           stack, which is the useful mobile order: what must be done today,
           then what is drifting. */}
+      {/* `items-start` matters here. The two panels hold different numbers of
+          rows, and stretching the shorter one to match left a large empty
+          region inside it — measured at 160px on the Principal's portfolio,
+          which is exactly the "giant blank region" the authority pack
+          prohibits. Each panel now ends where its content ends. */}
       <div
-        className={`grid min-w-0 gap-4 ${showDailySite ? "lg:grid-cols-2" : ""}`}
+        className={`grid min-w-0 items-start gap-4 ${showDailySite ? "lg:grid-cols-2" : ""}`}
         data-dashboard-action-panels
       >
         {showDailySite && <MorningComplianceCard role={role} />}

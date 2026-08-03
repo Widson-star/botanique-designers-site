@@ -234,7 +234,31 @@ export function StageColumnChart({ data }) {
 // terms the screen allows: one compact strip that WRAPS, never a wide row that
 // forces the page sideways. It stays because portfolio mix is real, already
 // computed and drillable — but it is subordinate, not a fourth chart card.
+//
+// The management question it answers is "what kind of work is this portfolio
+// made of", and that is answered by the LEADING types. On the Principal's full
+// portfolio the untrimmed list rendered as a compressed legend of every
+// category, which answers nothing at a glance. It now shows the largest few and
+// rolls the tail into one honest "Other" count.
+export const PROJECT_TYPE_LEADERS = 4;
+
+// The tail is summed, never dropped: the strip's numbers must still reconcile
+// with the portfolio total. "Other" is not a link, because no single filter can
+// express "everything except the leading four".
+function leadingProjectTypes(data, limit = PROJECT_TYPE_LEADERS) {
+  const ranked = [...data].sort((a, b) => b.value - a.value);
+  if (ranked.length <= limit + 1) return { leaders: ranked, otherValue: 0, otherCount: 0 };
+  const leaders = ranked.slice(0, limit);
+  const tail = ranked.slice(limit);
+  return {
+    leaders,
+    otherValue: tail.reduce((sum, row) => sum + row.value, 0),
+    otherCount: tail.length,
+  };
+}
+
 export function ProjectTypeSummary({ data }) {
+  const { leaders, otherValue, otherCount } = leadingProjectTypes(data);
   return (
     <section
       className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-stone-200 bg-white px-5 py-3.5"
@@ -247,7 +271,7 @@ export function ProjectTypeSummary({ data }) {
         <p className="text-sm text-gray-500">No data yet</p>
       ) : (
         <ul className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-2">
-          {data.map((row, index) => (
+          {leaders.map((row, index) => (
             <li key={row.label} className="min-w-0">
               <Link
                 to={`/admin/projects?projectType=${encodeURIComponent(row.label)}`}
@@ -263,6 +287,16 @@ export function ProjectTypeSummary({ data }) {
               </Link>
             </li>
           ))}
+          {otherCount > 0 && (
+            <li className="flex items-center gap-2 text-sm text-gray-500">
+              <span className="h-3 w-1 shrink-0 rounded-sm bg-stone-300" aria-hidden="true" />
+              <span>Other</span>
+              <strong className="tabular-nums text-botanique-charcoal">{otherValue}</strong>
+              <span className="sr-only">
+                across {otherCount} further project types
+              </span>
+            </li>
+          )}
         </ul>
       )}
     </section>

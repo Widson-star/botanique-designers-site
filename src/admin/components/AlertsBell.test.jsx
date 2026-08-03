@@ -276,3 +276,153 @@ describe("View all alerts", () => {
     expect(bell()).toHaveFocus();
   });
 });
+
+// BD-DASHBOARD-01 refinement pass — Alerts signalling restraint.
+//
+// The Founder's second review: a single alert should not need a coloured
+// circular icon AND a red unread dot AND a warning colour AND a bold title all
+// at once. Colour is now tied to unread state, exactly as the authority screen
+// shows — an unread row gets the tinted category tile and the dot, a row
+// already seen drops to neutral grey. Previously every row carried its
+// category tint whether read or not, so the tint signalled nothing.
+describe("Alerts row restraint", () => {
+  function rowFor(title) {
+    return screen.getByText(title).closest("a");
+  }
+
+  it("tints the category tile only while the alert is unread", async () => {
+    const user = userEvent.setup();
+    renderBell({
+      items: [
+        item({ id: "u", title: "Unread alert", isNew: true }),
+        item({ id: "r", key: "approval:r:seen", title: "Read alert", isNew: false }),
+      ],
+      unreadCount: 1,
+    });
+    await user.click(bell());
+
+    const unreadTile = rowFor("Unread alert").querySelector("span[aria-hidden]");
+    const readTile = rowFor("Read alert").querySelector("span[aria-hidden]");
+
+    expect(unreadTile.getAttribute("class")).toContain("bg-blue-50");
+    expect(readTile.getAttribute("class")).toContain("bg-stone-100");
+    expect(readTile.getAttribute("class")).not.toMatch(/bg-(red|amber|blue)-/);
+  });
+
+  it("gives a read row no unread dot and no bold title", async () => {
+    const user = userEvent.setup();
+    renderBell({
+      items: [item({ id: "r", key: "approval:r:seen", title: "Read alert", isNew: false })],
+      unreadCount: 0,
+    });
+    await user.click(bell());
+    const row = rowFor("Read alert");
+
+    expect(row.querySelector(".bg-red-500")).toBeNull();
+    expect(screen.getByText("Read alert").getAttribute("class")).toContain("font-normal");
+    expect(within(row).queryByText("Unread")).not.toBeInTheDocument();
+  });
+
+  it("keeps weight and the dot as the unread signal", async () => {
+    const user = userEvent.setup();
+    renderBell({ items: [item({ title: "Unread alert" })], unreadCount: 1 });
+    await user.click(bell());
+
+    expect(screen.getByText("Unread alert").getAttribute("class")).toContain("font-medium");
+    expect(rowFor("Unread alert").querySelector(".bg-red-500")).toBeInTheDocument();
+    expect(within(rowFor("Unread alert")).getByText("Unread")).toBeInTheDocument();
+  });
+
+  it("adds no timestamp the derived model cannot support", async () => {
+    const user = userEvent.setup();
+    renderBell({ items: [item()], unreadCount: 1 });
+    await user.click(bell());
+
+    expect(screen.queryByText(/\d+\s*(m|h|d)\s*ago/i)).not.toBeInTheDocument();
+  });
+});
+
+// The Principal's nine items arrived as one undifferentiated stack. Grouping
+// names the runs the Stage 3 sort ALREADY produces, so priority ordering is
+// preserved exactly and no new data or interaction is introduced.
+describe("All alerts grouping", () => {
+  const nine = [
+    ...Array.from({ length: 2 }, (_, i) =>
+      item({ id: `d${i}`, key: `approval:d${i}:s`, category: INBOX_CATEGORY.DECISION, title: `Decision ${i}` })
+    ),
+    ...Array.from({ length: 3 }, (_, i) =>
+      item({ id: `m${i}`, key: `site:m${i}:s`, category: INBOX_CATEGORY.SITE_ENTRY_MISSING, title: `Missing ${i}` })
+    ),
+    ...Array.from({ length: 2 }, (_, i) =>
+      item({ id: `b${i}`, key: `blk:b${i}:s`, category: INBOX_CATEGORY.PROJECT_BLOCKER, title: `Blocker ${i}` })
+    ),
+    ...Array.from({ length: 2 }, (_, i) =>
+      item({ id: `o${i}`, key: `ovd:o${i}:s`, category: INBOX_CATEGORY.PROJECT_ACTION_OVERDUE, title: `Overdue ${i}` })
+    ),
+  ];
+
+  async function openAll(user) {
+    await user.click(bell());
+    await user.click(screen.getByRole("button", { name: /View all alerts/ }));
+    return screen.getByRole("dialog", { name: "All alerts" });
+  }
+
+  it("groups nine items under their categories with a count each", async () => {
+    const user = userEvent.setup();
+    renderBell({ items: nine, unreadCount: 9 });
+    const dialog = await openAll(user);
+
+    const groups = dialog.querySelectorAll("section[aria-label]");
+    expect(groups).toHaveLength(4);
+    expect(groups[0]).toHaveAttribute("aria-label", INBOX_CATEGORY.DECISION);
+    expect(within(groups[0]).getByText("2")).toBeInTheDocument();
+    expect(within(groups[1]).getAllByRole("listitem")).toHaveLength(3);
+  });
+
+  it("preserves the incoming priority order exactly", async () => {
+    const user = userEvent.setup();
+    renderBell({ items: nine, unreadCount: 9 });
+    const dialog = await openAll(user);
+
+    const titles = [...dialog.querySelectorAll("li a")].map(
+      (row) => row.querySelector("span span:last-child").textContent
+    );
+    expect(titles).toEqual(nine.map((entry) => entry.title));
+  });
+
+  it("keeps the panel contained and scrolling internally", async () => {
+    const user = userEvent.setup();
+    renderBell({ items: nine, unreadCount: 9 });
+    const dialog = await openAll(user);
+
+    expect(dialog.getAttribute("class")).toContain("max-h-[85vh]");
+    expect(dialog.querySelector(".overflow-y-auto")).toBeInTheDocument();
+  });
+
+  // Grouping is a remedy for the Principal's volume. The Operations Manager's
+  // four items must stay exactly as compact as before: they fit the popover, so
+  // the contained panel is never reached and no heading is ever introduced.
+  it("leaves the Operations Manager's four-item popover flat and compact", async () => {
+    const user = userEvent.setup();
+    const four = nine.slice(2, 6);
+    renderBell({ items: four, unreadCount: 4 });
+    await user.click(bell());
+
+    const popover = screen.getByRole("dialog", { name: "Alerts" });
+    expect(within(popover).getAllByRole("listitem")).toHaveLength(4);
+    expect(popover.querySelectorAll("section[aria-label]")).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /View all alerts/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("groups only inside the contained panel, never inside the popover", async () => {
+    const user = userEvent.setup();
+    renderBell({ items: nine, unreadCount: 9 });
+    await user.click(bell());
+
+    const popover = screen.getByRole("dialog", { name: "Alerts" });
+    expect(popover.querySelectorAll("section[aria-label]")).toHaveLength(0);
+    expect(within(popover).getAllByRole("listitem")).toHaveLength(ALERTS_POPOVER_LIMIT);
+  });
+});

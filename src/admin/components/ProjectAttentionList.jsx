@@ -14,21 +14,82 @@ import { compactPersonName } from "../utils/personName";
 // How many projects the panel shows before deferring to the full Projects list.
 export const ATTENTION_PREVIEW_LIMIT = 4;
 
-// Reasons carry weight, and the panel must not shout. Red is reserved for
-// genuinely urgent state; everything else is amber caution.
-const URGENT_REASON = /^(Overdue next action|Blocker:)/;
+// PRESENTATION ONLY. `projectAttentionReasons` decides WHICH conditions are
+// true; nothing here changes that, adds one or hides one. This table decides
+// only how a true condition is shown.
+//
+// The problem it solves: a project can legitimately carry four conditions at
+// once, and rendering them as one joined red sentence turned the row into a
+// paragraph of raw system state — the densest thing on the Dashboard, and
+// louder than the genuinely urgent single-condition rows beside it.
+//
+// So exactly ONE condition — the most severe — is spoken in full and in
+// colour. The rest survive as short neutral tags, which keeps every condition
+// visible and countable without four of them competing for the same emphasis.
+//
+// `severity` orders them. `short` is the tag label. `tone` is used only when a
+// condition is the primary one: red is reserved for a blocker or an overdue
+// action, because those mean delivery has actually stopped or slipped.
+const REASON_PRESENTATION = [
+  { match: /^Blocker:/, severity: 0, short: "Blocker", tone: "red" },
+  { match: /^Overdue next action$/, severity: 1, short: "Overdue action", tone: "red" },
+  { match: /^Accountable lead missing$/, severity: 2, short: "No lead", tone: "amber" },
+  { match: /^Next action missing$/, severity: 3, short: "No next action", tone: "amber" },
+  { match: /^Pending activation$/, severity: 4, short: "Pending activation", tone: "amber" },
+  { match: /^Upcoming start:/, severity: 5, short: "Upcoming start", tone: "neutral" },
+];
 
-function reasonTone(reasons) {
-  return reasons.some((reason) => URGENT_REASON.test(reason))
-    ? "text-red-700"
-    : "text-amber-700";
+const FALLBACK_PRESENTATION = { severity: 9, short: null, tone: "amber" };
+
+function describeReason(reason) {
+  const found = REASON_PRESENTATION.find((entry) => entry.match.test(reason));
+  return {
+    text: reason,
+    severity: found ? found.severity : FALLBACK_PRESENTATION.severity,
+    short: found && found.short ? found.short : reason,
+    tone: found ? found.tone : FALLBACK_PRESENTATION.tone,
+  };
 }
 
-// A restrained status dot, matching the authority screen's leading marker.
-function statusDotClass(reasons) {
-  return reasons.some((reason) => URGENT_REASON.test(reason))
-    ? "bg-red-500"
-    : "bg-amber-500";
+// Beyond this the tags wrap to a third line and the row grows taller than the
+// Due today rows beside it. The overflow becomes a count, which the Founder
+// explicitly allowed and which still tells the reader there is more.
+export const ATTENTION_TAG_LIMIT = 2;
+
+// The most severe condition leads; the remainder keep their own order.
+function splitAttentionReasons(reasons) {
+  const described = reasons.map(describeReason);
+  const ranked = [...described].sort((a, b) => a.severity - b.severity);
+  const primary = ranked[0] || null;
+  const rest = described.filter((entry) => entry !== primary);
+  return {
+    primary,
+    rest: rest.slice(0, ATTENTION_TAG_LIMIT),
+    overflow: Math.max(0, rest.length - ATTENTION_TAG_LIMIT),
+  };
+}
+
+const PRIMARY_TONE_CLASS = {
+  red: "text-red-700",
+  amber: "text-amber-700",
+  neutral: "text-gray-600",
+};
+
+const DOT_TONE_CLASS = {
+  red: "bg-red-500",
+  amber: "bg-amber-500",
+  neutral: "bg-gray-400",
+};
+
+// A blocker's text is free-form and can run to 500 characters. The full text
+// lives on the project; the row states the condition and enough of the text to
+// recognise it, and stops.
+const MAX_PRIMARY_LENGTH = 64;
+
+function clampPrimary(text) {
+  return text.length > MAX_PRIMARY_LENGTH
+    ? `${text.slice(0, MAX_PRIMARY_LENGTH - 1).trimEnd()}…`
+    : text;
 }
 
 export default function ProjectAttentionList({ projects, role }) {
@@ -44,7 +105,7 @@ export default function ProjectAttentionList({ projects, role }) {
       className="flex min-w-0 flex-col rounded-lg border border-stone-200 bg-white"
       aria-labelledby="attention-title"
     >
-      <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-4">
+      <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-5">
         <div className="flex min-w-0 items-center gap-2">
           <h2 id="attention-title" className="text-base font-semibold">
             Projects needing attention
@@ -75,10 +136,13 @@ export default function ProjectAttentionList({ projects, role }) {
           {visible.map(({ project, reasons }) => {
             const pendingActivation =
               showPendingActivation && project.status === "Pending" && !project.archived;
+            const { primary, rest, overflow } = splitAttentionReasons(reasons);
             return (
               <li key={project.id} className="flex min-w-0 items-start gap-3 px-5 py-3">
                 <span
-                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${statusDotClass(reasons)}`}
+                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                    DOT_TONE_CLASS[primary?.tone] || DOT_TONE_CLASS.amber
+                  }`}
                   aria-hidden="true"
                 />
                 <div className="min-w-0 flex-1">
@@ -92,33 +156,51 @@ export default function ProjectAttentionList({ projects, role }) {
                     {project.status} · {project.stage} ·{" "}
                     {compactPersonName(project.leadPersonName) || "Not assigned"}
                   </p>
-                  <p
-                    className={`mt-1 text-xs leading-5 ${reasonTone(reasons)}`}
-                    aria-label="Attention reasons"
-                  >
-                    {reasons.join(" · ")}
-                  </p>
+                  {/* Every condition still reaches assistive technology as one
+                      complete sentence, so nothing is hidden by the visual
+                      split into a primary line and neutral tags. */}
+                  <p className="sr-only">{reasons.join(" · ")}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1" aria-hidden="true">
+                    {primary && (
+                      <span
+                        className={`text-xs leading-5 ${
+                          PRIMARY_TONE_CLASS[primary.tone] || PRIMARY_TONE_CLASS.amber
+                        }`}
+                        data-attention-primary
+                      >
+                        {clampPrimary(primary.text)}
+                      </span>
+                    )}
+                    {rest.map((entry) => (
+                      <span
+                        key={entry.text}
+                        className="rounded border border-stone-200 bg-stone-50 px-1.5 py-0.5 text-[11px] leading-4 text-gray-500"
+                        data-attention-tag
+                      >
+                        {entry.short}
+                      </span>
+                    ))}
+                    {overflow > 0 && (
+                      <span className="text-[11px] leading-4 text-gray-400" data-attention-overflow>
+                        +{overflow}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1.5">
-                  {pendingActivation ? (
-                    <Link
-                      to={`/admin/projects/${project.id}`}
-                      className="rounded-md bg-botanique-green px-3 py-1.5 text-xs font-semibold text-white hover:bg-botanique-dark"
-                    >
-                      Open to activate
-                    </Link>
-                  ) : (
-                    <Link
-                      to={`/admin/projects/${project.id}`}
-                      className="rounded-md border border-stone-200 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-stone-50"
-                    >
-                      Open
-                    </Link>
-                  )}
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  {/* One quiet action. The row is a pointer into the project,
+                      not a place to work, so the button carries no fill: the
+                      authority screen's attention rows show a plain "Open". */}
+                  <Link
+                    to={`/admin/projects/${project.id}`}
+                    className="rounded-md border border-stone-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:bg-stone-50"
+                  >
+                    {pendingActivation ? "Activate" : "Open"}
+                  </Link>
                   {canEdit && (
                     <Link
                       to={`/admin/projects/${project.id}/edit`}
-                      className="text-xs font-medium text-gray-500 hover:text-botanique-green hover:underline"
+                      className="text-[11px] font-medium text-gray-400 hover:text-botanique-green hover:underline"
                     >
                       Edit
                     </Link>

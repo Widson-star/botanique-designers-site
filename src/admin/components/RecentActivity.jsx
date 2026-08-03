@@ -4,13 +4,15 @@ import { formatActivity } from "../utils/activityFormat";
 import { compactPersonName } from "../utils/personName";
 
 // The authority screen shows Recent activity as the third COMPACT card in the
-// bottom row, not a scrolling log. Five events is what fits that card beside
-// the two charts without the row growing taller than they are.
+// bottom row, not a scrolling log — a snapshot of what just happened, not an
+// archive. Three events is what the card holds at its natural height beside the
+// two charts, and each activity row here is TALLER than an authority row
+// because it carries a real field-change line that the mockup does not.
 //
 // There is deliberately no "View all" here: activity is only ever reachable per
 // project (`/admin/projects/:id?tab=activity`), and no cross-project activity
 // destination exists. A screen showing a link is not authority to invent one.
-const MAX_EVENTS = 5;
+const MAX_EVENTS = 3;
 
 function conciseChanges(changes) {
   if (changes.length === 0) return "No field details recorded.";
