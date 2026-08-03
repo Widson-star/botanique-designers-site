@@ -23,17 +23,23 @@ export default function StatCard({
 }) {
   const needsAttention = tone !== "default" && Number(value) > 0;
   const iconTone = needsAttention ? ICON_TONES[tone] : ICON_TONES.default;
-  const valueTone = needsAttention
-    ? tone === "urgent"
-      ? "text-red-700"
-      : "text-amber-700"
-    : "text-botanique-charcoal";
+  // The FIGURE stays charcoal at every tone. The authority screen carries a
+  // metric's urgency in its icon tile alone and leaves the number in ordinary
+  // dark text; colouring the tile, the number and a dot was three signals
+  // saying the same thing, and it made a count of 2 shout louder than a
+  // genuinely blocked project. The tile is now the single marker, and it
+  // carries `data-attention-indicator` so the restrained-emphasis guarantee is
+  // still asserted in exactly one place.
   const body = (
     <div className="flex min-w-0 items-start gap-3">
+      {/* Shown at EVERY width. The tile is now the only visual marker of a
+          metric needing attention, so hiding it below `sm` would conceal
+          status on exactly the device the Founder reviews on. */}
       {icon && (
         <span
-          className={`mt-0.5 hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:flex ${iconTone}`}
+          className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconTone}`}
           aria-hidden="true"
+          {...(needsAttention ? { "data-attention-indicator": true } : {})}
         >
           <svg
             className="h-[18px] w-[18px]"
@@ -49,19 +55,12 @@ export default function StatCard({
         </span>
       )}
       <div className="min-w-0">
-        <p className="text-[13px] font-medium text-gray-600">{label}</p>
-        <p
-          className={`mt-1.5 flex items-center gap-2 text-[28px] font-semibold leading-none tabular-nums ${valueTone}`}
-        >
-          {needsAttention && (
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                tone === "urgent" ? "bg-red-500" : "bg-amber-500"
-              }`}
-              aria-hidden="true"
-              data-attention-indicator
-            />
-          )}
+        <p className="text-[13px] font-medium text-gray-600">
+          {label}
+          {/* Colour alone must never be the carrier of a status. */}
+          {needsAttention && <span className="sr-only"> — needs attention</span>}
+        </p>
+        <p className="mt-1.5 text-[28px] font-semibold leading-none tabular-nums text-botanique-charcoal">
           {value}
         </p>
         {hint && <p className="mt-1.5 text-xs text-gray-400">{hint}</p>}

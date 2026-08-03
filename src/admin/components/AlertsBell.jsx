@@ -49,18 +49,26 @@ const CATEGORY_ICON = {
 // One compact row. Category, short title, project context, unread mark and the
 // exact drill-through — and nothing else. No long description, no record
 // detail, no table.
+//
+// COLOUR IS TIED TO UNREAD STATE, exactly as the authority screen shows. An
+// unread row gets the tinted category tile and the red dot; a row already seen
+// drops to a neutral grey tile with no dot. Previously every row carried its
+// category tint whether or not it had been read, so nine alerts arrived as nine
+// coloured circles and the unread ones did not stand out at all — the tint was
+// decoration rather than signal.
 function AlertRow({ item, onOpen }) {
+  const tileTone = item.isNew
+    ? CATEGORY_TONE[item.category] || "bg-stone-100 text-gray-600"
+    : "bg-stone-100 text-gray-400";
   return (
     <li>
       <Link
         to={item.route}
         onClick={() => onOpen(item)}
-        className="flex min-h-11 items-start gap-3 px-4 py-3 transition hover:bg-stone-50 focus:bg-stone-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-botanique-green/40"
+        className="flex min-h-11 items-start gap-3 px-4 py-2.5 transition hover:bg-stone-50 focus:bg-stone-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-botanique-green/40"
       >
         <span
-          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-            CATEGORY_TONE[item.category] || "bg-stone-100 text-gray-600"
-          }`}
+          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${tileTone}`}
           aria-hidden="true"
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -80,7 +88,14 @@ function AlertRow({ item, onOpen }) {
                 aria-hidden="true"
               />
             )}
-            <span className="min-w-0 break-words text-sm font-medium leading-snug text-botanique-charcoal">
+            {/* Weight, not colour, separates an unread title from a read one. */}
+            <span
+              className={`min-w-0 break-words text-sm leading-snug ${
+                item.isNew
+                  ? "font-medium text-botanique-charcoal"
+                  : "font-normal text-gray-600"
+              }`}
+            >
               {item.title}
             </span>
           </span>
@@ -92,6 +107,19 @@ function AlertRow({ item, onOpen }) {
       </Link>
     </li>
   );
+}
+
+// Consecutive runs of one category, in the order the Stage 3 sort already
+// produced. Deliberately NOT a re-sort or a re-grouping: it only names the runs
+// that exist, so priority ordering is preserved exactly.
+function groupByCategory(items) {
+  const groups = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.category === item.category) last.items.push(item);
+    else groups.push({ category: item.category, items: [item] });
+  }
+  return groups;
 }
 
 function EmptyState({ label }) {
@@ -216,11 +244,28 @@ function AllAlertsDialog({ items, failedSources, onClose, onOpenItem, onMarkAll,
               }
             />
           ) : (
-            <ul className="divide-y divide-stone-100">
-              {visible.map((item) => (
-                <AlertRow key={item.key} item={item} onOpen={onOpenItem} />
-              ))}
-            </ul>
+            /* Grouped by category. Nine items in one flat list read as an
+               undifferentiated stack; the same nine under four short headings
+               are scannable, and the Founder can see at a glance that three of
+               them are the same kind of problem. This adds no new data and no
+               new interaction — the Stage 3 sort ALREADY orders by tab, then
+               category, then project, so the groups are simply the runs that
+               ordering produces, given headings. */
+            groupByCategory(visible).map((group) => (
+              <section key={group.category} aria-label={group.category}>
+                <h3 className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-stone-100 bg-stone-50/95 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
+                  {group.category}
+                  <span className="font-normal tabular-nums text-gray-400">
+                    {group.items.length}
+                  </span>
+                </h3>
+                <ul className="divide-y divide-stone-100">
+                  {group.items.map((item) => (
+                    <AlertRow key={item.key} item={item} onOpen={onOpenItem} />
+                  ))}
+                </ul>
+              </section>
+            ))
           )}
         </div>
       </div>
