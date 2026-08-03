@@ -631,27 +631,35 @@ describe("AdminDashboard Due today restraint", () => {
     { projectId: "p1", projectName: "Lugulu", due: true, complianceStatus: "missing" },
   ];
 
-  it("leaves Record as the single primary action and demotes Waive to a link", () => {
+  it("leaves Record as the single primary action and demotes Mark not required to a link", () => {
     renderDashboard({ role: "owner", projects, compliance: missing });
     const panel = screen.getByRole("region", { name: "Due today" });
 
     const record = within(panel).getByRole("link", { name: "Record" });
-    const waive = within(panel).getByRole("button", { name: "Waive" });
+    const markNotRequired = within(panel).getByRole("button", { name: "Mark not required" });
     expect(record.getAttribute("class")).toContain("border-stone-200");
     // A quiet text control: no border, no fill.
-    expect(waive.getAttribute("class")).not.toMatch(/border|bg-/);
+    expect(markNotRequired.getAttribute("class")).not.toMatch(/border|bg-/);
   });
 
-  // Waive was DEMOTED, never removed. This card is the only waive entry point
-  // in the application, so losing it would remove an owner capability.
-  it("keeps the owner waive route present, and still withholds it from the manager", () => {
+  // Mark not required was DEMOTED, never removed. This card is the only entry
+  // point for it in the application, so losing it would remove an owner
+  // capability. 3 August 2026: the word changed from "Waive"; the capability,
+  // the Principal-only restriction and the underlying mechanism did not.
+  it("keeps the owner mark-not-required route present, and still withholds it from the manager", () => {
     const { unmount } = renderDashboard({ role: "owner", projects, compliance: missing });
-    expect(screen.getByRole("button", { name: "Waive" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mark not required" })).toBeInTheDocument();
     unmount();
 
     renderDashboard({ role: "manager", projects, compliance: missing });
-    expect(screen.queryByRole("button", { name: "Waive" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark not required" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Record" })).toBeInTheDocument();
+  });
+
+  it("shows no 'waive' wording anywhere in the Due today panel", () => {
+    renderDashboard({ role: "owner", projects, compliance: missing });
+    const panel = screen.getByRole("region", { name: "Due today" });
+    expect(within(panel).queryByText(/waive/i)).not.toBeInTheDocument();
   });
 
   it("uses a neutral heading count, leaving red to the rows themselves", () => {

@@ -140,7 +140,7 @@ export default function AdminDailySiteOperations() {
           <SummaryCell label="Due today" value={summary.due} />
           <SummaryCell label="Missing" value={summary.missing} tone={summary.missing > 0 ? "attention" : "default"} />
           <SummaryCell label="Late" value={summary.late} tone={summary.late > 0 ? "attention" : "default"} />
-          <SummaryCell label="Waived" value={summary.waived} />
+          <SummaryCell label="Not required" value={summary.waived} />
         </div>
         {summary.missing > 0 && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
@@ -161,7 +161,7 @@ export default function AdminDailySiteOperations() {
         )}
         {status === "ready" && summary.due > 0 && summary.missing === 0 && (
           <p className="mt-3 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            All active projects have a morning entry or an owner waiver for today.
+            All active projects have a morning entry or were marked not required today.
           </p>
         )}
       </section>

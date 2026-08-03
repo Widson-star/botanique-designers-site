@@ -215,6 +215,17 @@ describe("Project Summary — the concise report", () => {
     expect(figures).toContainEqual(["Awaiting a decision", "1"]);
   });
 
+  // 3 August 2026 terminology correction. fullReport() carries one `waived`
+  // compliance day; the disposition and its computation are unchanged, only
+  // what the report shows for it changed.
+  it("labels a not-required day as 'Not required', never 'Waived'", () => {
+    renderSummary(fullReport());
+    const site = screen.getByLabelText("Daily site activity");
+    // "Not required" appears twice: the report figure and the chart legend.
+    expect(within(site).getAllByText("Not required").length).toBe(2);
+    expect(within(site).queryByText(/waive/i)).not.toBeInTheDocument();
+  });
+
   it("says a period with no obligation has no compliance rate, rather than 0% or 100%", () => {
     renderSummary(baseReport());
     const site = screen.getByLabelText("Daily site activity");

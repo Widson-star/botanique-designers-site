@@ -432,6 +432,15 @@ waiver preserves project, work date, reason, owner identity and timestamp. A wai
 **satisfies** the compliance requirement for that project/date but does **not** create or
 imply workers, labour cost, work performed, expenditure or funds received.
 
+**Presentation decision, 3 August 2026.** The Founder found "waive" confusing for an ordinary
+operator. This section still governs the mechanism unchanged — who may act (the owner alone),
+what is preserved (project, date, reason, identity, timestamp), and what it does and does not
+imply. The interface presents this action to the reader as **"Mark not required"**, the
+resulting state as **"Not required"**, and the confirming dialog in equivalent plain language.
+Nothing here changed: the stored `waived` disposition, the `daily_site_compliance_waivers`
+table, its RPC names, and every compliance calculation, historical record and database value
+are unchanged. Only the words a reader sees changed.
+
 #### 4.5.8c Persistent non-compliance (first slice)
 
 Persistent missing or late entries produce **visible signals only**: Dashboard flags, a

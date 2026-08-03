@@ -140,10 +140,12 @@ export const CLAIM_RECIPIENT_TYPE_LABELS = {
   other: "Other",
 };
 
+// See dailySiteFormatters.js: the `waived` key is the internal disposition,
+// unchanged; only the display label reads "Not required", 3 August 2026.
 export const COMPLIANCE_LABELS = {
   entry_present: "Entry submitted",
   entry_late: "Submitted late",
-  waived: "Waived",
+  waived: "Not required",
   missing: "Missing",
   not_due: "Not due",
 };
