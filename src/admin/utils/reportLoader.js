@@ -712,7 +712,7 @@ export function deriveNeedsAttention({ project, dailySite, claims, fundRequests,
         id: "daily-missing",
         severity: "high",
         title: `${missing} site day${missing === 1 ? "" : "s"} with no entry`,
-        detail: "A morning entry was due and none was submitted or waived.",
+        detail: "A morning entry was due and none was submitted or marked not required.",
         route: `/admin/daily-site-operations?project=${project?.id || ""}&status=all`,
       });
     }

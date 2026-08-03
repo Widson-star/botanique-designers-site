@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
@@ -153,6 +153,19 @@ describe("AdminDailySiteOperations queue and summary", () => {
     expect(screen.getAllByText(longName).length).toBeGreaterThan(0);
     expect(container.textContent).not.toMatch(/[{}]/);
   });
+
+  // 3 August 2026 terminology correction. The disposition and its Principal-
+  // only authority are unchanged; only what the reader sees changed.
+  it("labels a not-required day as 'Not required', never 'Waived'", () => {
+    renderRoute({
+      compliance: [
+        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "waived" },
+      ],
+    });
+    expect(screen.getByText("Not required")).toBeInTheDocument();
+    expect(screen.getByText(/have a morning entry or were marked not required today/)).toBeInTheDocument();
+    expect(screen.queryByText(/waive/i)).not.toBeInTheDocument();
+  });
 });
 
 function renderCard({ role = "owner", compliance = [], createWaiver = vi.fn(() => Promise.resolve({ ok: true })) } = {}) {
@@ -168,10 +181,10 @@ function renderCard({ role = "owner", compliance = [], createWaiver = vi.fn(() =
 describe("MorningComplianceCard (dashboard)", () => {
   it("shows the all-complete state when nothing is missing", () => {
     renderCard({ compliance: [{ due: true, complianceStatus: "entry_present" }] });
-    expect(screen.getByText(/have a morning entry or waiver today/)).toBeInTheDocument();
+    expect(screen.getByText(/have a morning entry or were marked not required today/)).toBeInTheDocument();
   });
 
-  it("shows missing, late and waived counts and a waive control for the owner", () => {
+  it("shows missing, late and not-required counts and a mark-not-required control for the owner", () => {
     renderCard({
       role: "owner",
       compliance: [
@@ -184,16 +197,50 @@ describe("MorningComplianceCard (dashboard)", () => {
     // carries the project and compliance state on one supporting line, per
     // the Dashboard authority screen's "Due today" panel.
     const item = screen.getByText(/Lugulu Estate/).closest("li");
-    expect(within(item).getByRole("button", { name: "Waive" })).toBeInTheDocument();
+    expect(within(item).getByRole("button", { name: "Mark not required" })).toBeInTheDocument();
     expect(within(item).getByRole("link", { name: "Record" })).toBeInTheDocument();
   });
 
-  it("hides the waive control from the manager", () => {
+  it("hides the mark-not-required control from the manager", () => {
     renderCard({
       role: "manager",
       compliance: [{ projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" }],
     });
-    expect(screen.queryByRole("button", { name: "Waive" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mark not required" })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Record" })).toBeInTheDocument();
+  });
+
+  // 3 August 2026: the Founder found "waive" confusing. The mechanism, its
+  // Principal-only authority and its audit fields are unchanged — only the
+  // dialog copy changed. This proves no "waive" wording survives anywhere in
+  // it, including the field label and the confirm button.
+  it("opens the not-required dialog with plain-language copy and no 'waive' wording", () => {
+    renderCard({
+      role: "owner",
+      compliance: [{ projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" }],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Mark not required" }));
+    const dialog = screen.getByRole("alertdialog");
+
+    expect(within(dialog).getByText("Mark morning entry not required — Lugulu Estate")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Marking this not required satisfies the morning entry/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Reason it's not required")).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Mark not required" })).toBeInTheDocument();
+    expect(screen.queryByText(/waive/i)).not.toBeInTheDocument();
+  });
+
+  it("submits the mark-not-required action through the unchanged createWaiver mutation", async () => {
+    const createWaiver = vi.fn(() => Promise.resolve({ ok: true }));
+    renderCard({
+      role: "owner",
+      compliance: [{ projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" }],
+      createWaiver,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Mark not required" }));
+    const dialog = screen.getByRole("alertdialog");
+    fireEvent.change(within(dialog).getByLabelText("Reason it's not required"), { target: { value: "Site closed for a public holiday" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Mark not required" }));
+
+    await waitFor(() => expect(createWaiver).toHaveBeenCalledWith("p2", expect.any(String), "Site closed for a public holiday"));
   });
 });

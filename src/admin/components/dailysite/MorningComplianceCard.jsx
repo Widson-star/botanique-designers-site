@@ -1,6 +1,10 @@
 // Dashboard morning-compliance surface. Soft enforcement only: it shows what is
-// due, missing, late and waived and links to record an entry. It never blocks
-// any other admin area. Owners can waive a missing project/date inline.
+// due, missing, late and marked not required, and links to record an entry. It
+// never blocks any other admin area. Owners can mark a missing project/date not
+// required inline. This is the presentation layer over the compliance-waiver
+// mechanism defined in Product Requirements §4.5.8b: who may act, and what a
+// waiver preserves, is unchanged — only the words shown to the reader changed,
+// 3 August 2026.
 //
 // Presented as "Due today", per
 // `docs/ui-authority/operations-hub/01-dashboard-authority.png`. The underlying
@@ -76,7 +80,7 @@ export default function MorningComplianceCard({ role }) {
         <p className="px-5 pb-4 text-sm text-gray-500">No active projects require a morning entry today.</p>
       ) : summary.missing === 0 ? (
         <p className="mx-5 mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
-          All {summary.due} active project{summary.due === 1 ? "" : "s"} have a morning entry or waiver today.
+          All {summary.due} active project{summary.due === 1 ? "" : "s"} have a morning entry or were marked not required today.
         </p>
       ) : (
         <>
@@ -84,7 +88,7 @@ export default function MorningComplianceCard({ role }) {
             <span>Due <strong className="tabular-nums text-botanique-charcoal">{summary.due}</strong></span>
             <span>Missing <strong className="tabular-nums text-botanique-charcoal">{summary.missing}</strong></span>
             {summary.late > 0 && <span>Late <strong className="tabular-nums text-botanique-charcoal">{summary.late}</strong></span>}
-            {summary.waived > 0 && <span>Waived <strong className="tabular-nums text-botanique-charcoal">{summary.waived}</strong></span>}
+            {summary.waived > 0 && <span>Not required <strong className="tabular-nums text-botanique-charcoal">{summary.waived}</strong></span>}
           </div>
           <ul className="divide-y divide-stone-100 border-t border-stone-100">
             {visibleMissing.map((row) => (
@@ -95,20 +99,20 @@ export default function MorningComplianceCard({ role }) {
                   <p className="mt-0.5 truncate text-xs text-gray-500">
                     {row.projectName} · {COMPLIANCE_STATUS_LABELS[row.complianceStatus]}
                   </p>
-                  {/* Waive is DEMOTED, not removed. This card is the only place
-                      in the application where an owner can waive a morning
-                      entry — Daily site operations reports the waived count but
-                      offers no control — so dropping it would remove an owner
-                      capability, not merely tidy the Dashboard. It steps down
-                      to a quiet secondary link beneath the row instead, leaving
-                      Record as the single primary action. */}
+                  {/* Mark not required is DEMOTED, not removed. This card is the
+                      only place in the application where an owner can mark a
+                      morning entry not required — Daily site operations reports
+                      the count but offers no control — so dropping it would
+                      remove an owner capability, not merely tidy the Dashboard.
+                      It steps down to a quiet secondary link beneath the row
+                      instead, leaving Record as the single primary action. */}
                   {canWaive && (
                     <button
                       type="button"
                       onClick={() => { setWaiveFor(row); setReason(""); }}
                       className="mt-1 text-[11px] font-medium text-gray-400 transition hover:text-botanique-green hover:underline"
                     >
-                      Waive
+                      Mark not required
                     </button>
                   )}
                 </div>
@@ -126,15 +130,15 @@ export default function MorningComplianceCard({ role }) {
 
       <ConfirmDialog
         open={!!waiveFor}
-        title={`Waive morning entry — ${waiveFor?.projectName || ""}`}
-        description="A waiver satisfies compliance for this project and date. No operational data is recorded — it does not imply workers, cost, work or funds."
-        confirmLabel="Waive entry"
+        title={`Mark morning entry not required — ${waiveFor?.projectName || ""}`}
+        description="Marking this not required satisfies the morning entry for this project and date. No operational data is recorded — it does not imply workers, cost, work or funds."
+        confirmLabel="Mark not required"
         confirmDisabled={!reason.trim()}
         busy={busy}
         onCancel={() => setWaiveFor(null)}
         onConfirm={confirmWaiver}
       >
-        <label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-waiver-reason">Reason for the waiver</label>
+        <label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-waiver-reason">Reason it&apos;s not required</label>
         <textarea
           id="dse-waiver-reason"
           rows={3}

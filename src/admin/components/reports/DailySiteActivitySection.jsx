@@ -54,15 +54,15 @@ export default function DailySiteActivitySection({ section, projectId, range }) 
           label="Missing"
           value={formatReportCount(summary.missing)}
           tone={summary.missing ? "attention" : "default"}
-          note="A morning entry was due and none was submitted or waived."
+          note="A morning entry was due and none was submitted or marked not required."
         />
-        <ReportFigure label="Waived" value={formatReportCount(summary.waived)} />
+        <ReportFigure label="Not required" value={formatReportCount(summary.waived)} />
         <ReportFigure
           label="Compliance rate"
           // A period in which nothing was due has no rate. It is stated as
           // such: neither 0% nor 100% would be true.
           value={rate === null ? "No entries were due" : `${rate}%`}
-          note="Of the days an entry was due, the share met by a submitted entry or a waiver."
+          note="Of the days an entry was due, the share met by a submitted entry or one marked not required."
         />
       </ReportFigureGrid>
 
@@ -70,7 +70,7 @@ export default function DailySiteActivitySection({ section, projectId, range }) 
         rows={[
           { key: "submitted", label: "Submitted on time", value: onTime > 0 ? onTime : 0 },
           { key: "late", label: "Submitted late", value: summary.submittedLate || 0 },
-          { key: "waived", label: "Waived", value: summary.waived || 0 },
+          { key: "waived", label: "Not required", value: summary.waived || 0 },
           { key: "missing", label: "Missing", value: summary.missing || 0 },
         ]}
       />

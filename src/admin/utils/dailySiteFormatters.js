@@ -56,10 +56,14 @@ export const ENTRY_EVENT_LABELS = {
   supersession_created: "Correction recorded",
 };
 
+// The `waived` key matches the underlying disposition computed from an active
+// compliance waiver (Product Requirements §4.5.8b); the mechanism, its
+// Principal-only authority and its audit fields are unchanged. Only the label
+// shown to the reader reads "Not required" instead of "Waived", 3 August 2026.
 export const COMPLIANCE_STATUS_LABELS = {
   entry_present: "Entry submitted",
   entry_late: "Entry submitted (late)",
-  waived: "Waived",
+  waived: "Not required",
   missing: "Missing",
   not_due: "Not due",
 };

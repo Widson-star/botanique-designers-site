@@ -271,7 +271,7 @@ export function deriveDailySiteItems({ dailySiteEntries = [], currentUserId, pro
 // Missing morning obligations come from daily_site_morning_compliance(), which
 // is already authority-filtered: owner company-wide, manager only their
 // project-authority set. Only a genuinely missing obligation is an item —
-// waived, present, late and not-due are not attention.
+// marked not required, present, late and not-due are not attention.
 export function deriveComplianceItems({ compliance = [] }) {
   const items = [];
   for (const row of compliance) {
@@ -281,7 +281,7 @@ export function deriveComplianceItems({ compliance = [] }) {
       category: INBOX_CATEGORY.SITE_ENTRY_MISSING,
       tab: INBOX_TAB.ACTION,
       title: "Morning site entry is missing",
-      detail: `A morning entry was due for ${row.work_date} and none was submitted or waived.`,
+      detail: `A morning entry was due for ${row.work_date} and none was submitted or marked not required.`,
       projectId: row.project_id,
       projectName: row.project_name || "Unknown project",
       route: `/admin/daily-site-operations?project=${row.project_id}`,

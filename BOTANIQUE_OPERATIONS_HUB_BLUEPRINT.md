@@ -338,6 +338,9 @@ active projects only** (Pending, Awaiting Approval, Completed, Design-only, Arch
 Paused excluded); the owner may **waive** one project/date with reason, identity and
 timestamp without implying any workers/cost/work/funds; and persistent non-compliance
 produces visible flags and counts only, with no first-slice access or action restriction.
+**Presentation, 3 August 2026:** the mechanism, its owner-only authority and every value it
+preserves are unchanged; the interface presents it as "Mark not required" / "Not required"
+(see Product Requirements §4.5.8b).
 
 This domain is separate from Labour Engagements & Payments, Project Funds & Reconciliation
 and Operational Expenditure: it records the operational plan and site actuals, not agreed
