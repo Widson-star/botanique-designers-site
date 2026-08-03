@@ -4958,10 +4958,12 @@ and BD-FIN-01B2 remains paused with every settled decision unchanged.
 
 ## BD-ALERTS-01 — Operations Hub visual authority, and the Alerts presentation correction
 
-Status: **DEPLOYED_PENDING_FOUNDER_WALKTHROUGH.** Merged, deployed and verified against the
-production bundle and the hosted database. The authenticated Principal and Operations
-Manager browser walkthroughs are **not** claimed — production `/admin` is an invite-only
-email/password gate, no session was available, and entering credentials is not done.
+Status: **PRINCIPAL_VERIFIED_PENDING_OPERATIONS_MANAGER.** Merged, deployed, verified against
+the production bundle and hosted database, and **hosted-verified in an authenticated
+production Principal session on 3 August 2026** — see *Principal walkthrough* below. The
+Operations Manager walkthrough remains outstanding and is the one thing still to confirm.
+One check could not be performed and is not claimed: a genuine 375–400 px mobile viewport
+against production, because the browser window would not resize below screen width.
 
 Date: 3 August 2026
 
@@ -5149,6 +5151,119 @@ directly:
 6. Marking seen does **not** resolve — items stay in "Needs my action" after being marked.
 7. No Work Inbox item anywhere in the sidebar, under either role.
 8. Mobile: header does not overflow, popover and panel stay inside the screen.
+
+### Principal walkthrough — hosted-verified, 3 August 2026
+
+Performed in an authenticated production Principal session (Widson O. Ambaisi) against
+`https://www.botaniquedesigners.com/admin`, deployment `dpl_A1CUFBguh3pX4JVgLaui4rsEAwiU`
+(main `1b551af`), and compared directly against
+`docs/ui-authority/operations-hub/02-alerts-popover-authority.png`.
+
+**The derived state was predicted from the database before the screen was opened**, so the
+walkthrough tested a prediction rather than rationalising what appeared. Predicted: nine
+current action items, all already seen, therefore no badge; and one item —
+`compliance:61bccef0…:2026-08-03`, Karen Residence — legitimately gone because an accepted
+morning entry was recorded that day. **The live screen matched the prediction exactly.**
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Work Inbox absent from sidebar | **Pass.** Sidebar is exactly Dashboard, Projects, Project intakes, Daily site operations, Site Costs, Fund Requests, Approvals, Project Summary |
+| 2 | No Alerts/Notifications item replacing it | **Pass.** No such destination on any page |
+| 3 | Bell top-right beside the profile | **Pass.** 36 px circular control at x 1102–1138, immediately left of "Principal · Widson O. Ambaisi"; persists on ordinary pages |
+| 4 | Badge reconciles with genuinely unread items | **Pass.** With state cleared: badge "9", accessible name "Alerts, 9 unread items", reconciling with "Needs my action (9)" |
+| 5 | Opening the bell does not navigate | **Pass.** URL stayed `/admin`; popover rendered in place |
+| 6 | No more than the authorised initial set | **Pass.** Exactly 5 rows, with "View all alerts" beyond |
+| 7 | Row content restrained and complete | **Pass.** Tinted category mark, short title, "Category · Project", unread dot, exact link |
+| 8 | No long descriptions, forms, wide tables | **Pass.** No `<table>`; no detail text; item `detail` field deliberately not rendered |
+| 9 | Mark all as read changes only seen state | **Pass, proven live.** Wrote exactly 9 personal markers; every operational table unchanged; other users' state 0 |
+| 10 | Marking read does not resolve the source | **Pass, proven twice.** Badge and dots cleared while all items remained |
+| 11 | Item stays actionable until source changes | **Pass.** The nine items marked read on 2 Aug were still fully actionable ~11 hours later; separately, Karen Residence's alert vanished on its own when its entry was accepted |
+| 12 | Links open the exact record | **Pass.** Claims → `/admin/site-costs/<id>`; obligations → `/admin/daily-site-operations?project=<id>`; project items → `/admin/projects/<id>`; all nine matched their database rows |
+| 13 | No inaccessible-project information | **Not a meaningful test for this role.** The Principal has company-wide authority. The real test is the Operations Manager, where two blockers exist and only one is hers |
+| 14 | Dashboard not duplicating the alert list | **Pass.** Dashboard shows compact "Morning site entries due (Missing 2)" and "Projects needing attention (2 flagged)" — project-scoped summaries, not the nine-item personal list |
+| 15 | Project Summary shows no personal unread state | **Pass.** With Lugulu selected, "Needs attention" renders period-aggregated counts and contains no unread/New/Seen/mark-read language |
+| 16 | No token or sensitive data in any URL | **Pass.** No `access_token`, `apikey`, `bearer` or session material in any URL. Project UUIDs do appear in two inherited drill-through query strings; these are the pre-existing Stage 3 and Project Summary routes this workstream was instructed to preserve, they sit behind authentication and RLS, and opening the bell itself changes no URL |
+
+**Live item set (nine), all reconciling with the database:** 2 cost claims awaiting review
+(Alego Usonga, Lugulu); 2 missing morning entries (Alego Usonga, Lugulu); 2 project blockers
+(Lugulu, Zizu); 2 overdue next actions (Lugulu, Zizu); 1 project awaiting activation (Zizu).
+*Awaiting others* correctly reads **(0)** — the Principal is the decider, so nothing is
+waiting on someone else. All nine fit the contained panel without scrolling.
+
+### Visual comparison against the approved mockup
+
+Measured, not eyeballed. Live viewport 1440 px; authority image 1448 px, so the comparison is
+effectively like-for-like.
+
+| Aspect | Authority | Live | Assessment |
+|---|---|---|---|
+| Bell placement | Top-right, left of profile | Same | Follows |
+| Bell diameter | ~40 px | 36 px | −4 px |
+| Badge | Red disc, white numeral, top-right of bell | 16 px, `rgb(239,68,68)`, 10 px numeral, top-right | −2 px, same treatment |
+| Popover right edge | ~28 px from page edge | 24 px from page edge | Follows — flush to page margin |
+| Popover width | ~404 px | 384 px | −20 px (−5%) |
+| Visible items | 5 | 5 | Exact |
+| Row height | ~59 px | 62 px | +3 px |
+| Row padding | ~16 px horizontal | 16 px / 12 px | Follows |
+| Category mark | ~34 px tinted circle | 28 px tinted circle | −6 px (−18%) |
+| Typography hierarchy | Semibold title over muted secondary line | 14 px/600 header, 14 px/500 title, muted 12 px secondary | Follows |
+| Green / red / amber | Green footer and action, red unread dot and badge, amber/red/blue category tints | Same roles, same restraint | Follows |
+| Header balance | "Alerts" left, "Mark all as read" right | Identical when anything is unread; the action is correctly absent when nothing is | Follows |
+| Footer | "View all alerts →" in green | Identical | Follows |
+| Timestamps | Relative time on each row | **Absent** | Deliberate — see below |
+| Curated or generic? | — | **Curated.** Single-line rows, one small category mark, muted secondary line, no tables, no dumped detail, no card stack | Follows |
+
+**Three recorded deviations, none judged material:**
+
+1. **No relative timestamps.** Deliberate and previously recorded: derived items have no
+   arrival time, so any timestamp would be invented. Authority manifest rule 7 forbids this.
+2. **Consistent minor under-scale** — bell −4 px, badge −2 px, category mark −6 px, popover
+   −20 px. All in the same direction, making the live popover read slightly tighter than the
+   mockup. Recorded with exact numbers so the Founder can overrule; a correction is offered
+   but not taken, because the difference is within mockup tolerance and does not alter
+   structure, hierarchy, density or restraint.
+3. **Profile block differs from the authority header** — live shows inline
+   "Principal · Widson O. Ambaisi · Sign out"; the authority shows a stacked name/role with
+   avatar and chevron. This is the wider shell restructure, out of scope for BD-ALERTS-01 and
+   gated by Blueprint §5. Not a drift introduced here.
+
+**Conclusion: the live Alerts presentation genuinely follows the approved mockup.** It is not
+described as pixel-identical, and it has not drifted toward generic machine-generated UI.
+
+### Mobile — not verified against production
+
+Not claimed. The authenticated browser would not resize below screen width, so a genuine
+375–400 px production viewport could not be exercised. Mobile behaviour **was** measured
+earlier in the same session on the identical shipped code in the local environment at 375 px:
+header inner `scrollWidth` equal to `clientWidth` at 375 with no overflow; popover spanning
+16→359 inside the viewport; contained panel spanning 0→375 after the viewport-unit fix. That
+is real evidence for the same build, but it is not production, and a phone check remains for
+the Founder.
+
+### Principal seen-state cleanup
+
+Before: **10 rows**, all at the single instant `2026-08-02 21:12:50.091998+00` — one distinct
+write instant, no Principal read activity since, matching the BD-INBOX-01 Principal
+verification. Confidently verification artefacts. Nine corresponded to items still live; one,
+`compliance:61bccef0…`, had been orphaned when Karen Residence's morning entry was accepted.
+
+Cleared **after** the walkthrough had exercised read behaviour, in three recorded steps:
+
+1. **10 rows deleted**, scoped to that user and that exact instant.
+2. Mark-all was then exercised live to prove the read path, writing **9** markers at
+   `2026-08-03 08:26:59` — every operational table unchanged, other users' state 0.
+3. Those **9 demonstration rows deleted**, leaving the table at **0 rows for every user**.
+
+Proven after each step: no other user's state changed (other users 0 throughout); no
+operational table changed — `projects` 12, `internal_cost_claims` 5, `approval_requests` 5,
+`fund_requests` 0, `daily_site_entries` 10, `project_activities` 26, `profiles` 2, each with
+an unchanged maximum timestamp; and no source record changed. The single movement in
+`daily_site_entries` (9 → 10, latest `2026-08-03 08:08:35`) is the Founder's own Karen
+Residence entry recorded that morning, not an effect of this work — and it is precisely what
+made one alert disappear on its own.
+
+The Principal's production Alerts state is now **natural**: nothing has been read, and the
+badge shows the nine genuinely outstanding items.
 
 ### Programme position
 
