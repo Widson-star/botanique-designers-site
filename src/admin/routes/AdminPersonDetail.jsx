@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { usePeople } from "../context/people";
 import {
-  ENGAGEMENT_ROLES, RELATIONSHIP_TYPES, canLinkPortalAccess, canManageEngagements,
-  canSeePeople, canSetPersonActive, isEngagementOpen, isInternalRelationship,
+  ENGAGEMENT_ROLES, RELATIONSHIP_TYPES, canEditPerson, canLinkPortalAccess,
+  canManageEngagements, canSeePeople, canSetPersonActive, findDuplicatePerson,
+  isEngagementOpen, isInternalRelationship,
 } from "../utils/peopleCapabilities";
 import { profilePresentationName } from "../utils/personName";
 
@@ -45,6 +46,8 @@ export default function AdminPersonDetail() {
   const [engageForm, setEngageForm] = useState({ projectId: "", engagementRole: "team_leader", startDate: today() });
   const [closing, setClosing] = useState(null);
   const [closeForm, setCloseForm] = useState({ endDate: today(), endReason: "" });
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState(null);
 
   const person = people.find((candidate) => candidate.id === personId);
   const mine = useMemo(
@@ -106,6 +109,45 @@ export default function AdminPersonDetail() {
     }
   }
 
+  function startEditing() {
+    setActionError("");
+    setFeedback("");
+    setEditForm({
+      fullName: person.fullName,
+      relationshipType: person.relationshipType,
+      phone: person.phone,
+      note: person.note,
+    });
+    setEditing(true);
+  }
+
+  // Correcting a person is ordinary work, and it has to be possible: duplicates
+  // are refused and nothing can be deleted, so without this a mistyped name
+  // would be permanent and the person could not even be re-created correctly.
+  async function submitEdit(event) {
+    event.preventDefault();
+    const name = editForm.fullName.trim();
+    if (!name) {
+      setActionError("A name is required.");
+      return;
+    }
+    const duplicate = findDuplicatePerson(people, name, person.id);
+    if (duplicate) {
+      setActionError(`${duplicate.fullName} is already on the register under that name.`);
+      return;
+    }
+    const result = await report(
+      editPerson(person.id, person.version, {
+        full_name: name,
+        relationship_type: editForm.relationshipType,
+        phone: editForm.phone.trim() || null,
+        note: editForm.note.trim() || null,
+      }),
+      "Details updated."
+    );
+    if (result.ok) setEditing(false);
+  }
+
   async function submitClose(event) {
     event.preventDefault();
     const result = await report(
@@ -140,7 +182,10 @@ export default function AdminPersonDetail() {
           line sets white-space: nowrap, whose min-content width is the WHOLE
           string, and an auto-sized grid column grows to it. Without both, this
           page scrolls sideways on a 375 px phone. */}
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      {/* lg:items-start keeps each column the height of its own content. Without
+          it the shorter column is stretched to match the taller one, and a panel
+          holding one line of text renders as a large empty card. */}
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="grid min-w-0 grid-cols-1 gap-4">
           <Panel
             title="Current engagements"
@@ -279,7 +324,67 @@ export default function AdminPersonDetail() {
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-4">
-          <Panel title="Details">
+          <Panel
+            title="Details"
+            action={canEditPerson(role) && !editing && (
+              <button
+                type="button"
+                onClick={startEditing}
+                className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline"
+              >
+                Edit
+              </button>
+            )}
+          >
+            {editing ? (
+              <form onSubmit={submitEdit} className="grid gap-3">
+                <label className="text-sm font-medium">Full name
+                  <input
+                    value={editForm.fullName}
+                    onChange={(event) => setEditForm({ ...editForm, fullName: event.target.value })}
+                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
+                    maxLength={160}
+                    required
+                  />
+                </label>
+                <label className="text-sm font-medium">Relationship
+                  <select
+                    value={editForm.relationshipType}
+                    onChange={(event) => setEditForm({ ...editForm, relationshipType: event.target.value })}
+                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
+                  >
+                    {Object.entries(RELATIONSHIP_TYPES).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm font-medium">Phone <span className="font-normal text-gray-500">(optional)</span>
+                  <input
+                    value={editForm.phone}
+                    onChange={(event) => setEditForm({ ...editForm, phone: event.target.value })}
+                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
+                    maxLength={32}
+                  />
+                </label>
+                <label className="text-sm font-medium">Note <span className="font-normal text-gray-500">(optional)</span>
+                  <input
+                    value={editForm.note}
+                    onChange={(event) => setEditForm({ ...editForm, note: event.target.value })}
+                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
+                    maxLength={500}
+                  />
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
+                    Save details
+                  </button>
+                  <button type="button" onClick={() => setEditing(false)} className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
             <dl className="grid gap-2 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-gray-500">Phone</dt>
@@ -304,6 +409,8 @@ export default function AdminPersonDetail() {
               >
                 {person.isActive ? "Mark inactive" : "Mark active"}
               </button>
+            )}
+              </>
             )}
           </Panel>
 
