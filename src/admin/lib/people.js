@@ -108,3 +108,24 @@ export async function endEngagement(accessToken, engagementId, expectedVersion, 
   }));
   return Array.isArray(rows) ? rows[0] : rows;
 }
+
+// Historical correction is deliberately an RPC rather than a broad table
+// PATCH. The database verifies Principal authority, checks the loaded version,
+// writes the immutable before/after event and updates the engagement in one
+// transaction. Reopening changes this row; it never creates a replacement.
+export async function correctEngagement(accessToken, values) {
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/correct_people_engagement`, {
+    method: "POST",
+    headers: headers(accessToken),
+    body: JSON.stringify({
+      target_engagement_id: values.engagementId,
+      expected_version: values.expectedVersion,
+      target_engagement_role: values.engagementRole,
+      target_start_date: values.startDate,
+      target_end_date: values.endDate || null,
+      target_end_reason: values.endReason || null,
+      reopen_engagement: Boolean(values.reopen),
+      correction_reason: values.correctionReason,
+    }),
+  }));
+}

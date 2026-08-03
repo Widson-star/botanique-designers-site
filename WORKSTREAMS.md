@@ -6211,3 +6211,59 @@ More presentation and the destination-naming inconsistencies deferred from BD-RE
 remains gated by its own authority, branch, review and deployment gate, and by the standing
 capability-led rule in Product Requirements §14. BD-FIN-01B2 remains paused with every settled
 decision unchanged. BD-REPORTS-01B remains rejected and frozen.
+
+### People engagement lifecycle correction — 3 August 2026
+
+This is an additive Stage 5 correction, not Stage 6, Labour, Finance or access work. The Founder
+approved an immutable engagement lifecycle history and a controlled Principal-only closed-record
+correction/reopen path while preserving the Operations Manager's existing create, current-manage
+and end authority on accessible projects.
+
+**Production evidence before implementation.** The two Martine/Alego rows were read and frozen as
+the non-mutation guard: closed original `fd0946e7-41e8-44ca-a8db-16267bc4d737` and current
+replacement `0fc9301b-9b2b-4d3d-9fa3-3a34df572918`. They have the same person, project, team-leader
+role and 18 July 2026 start; the original ended 1 August 2026 and the replacement was created after
+that closure. Neither row may be changed during implementation or verification. The separate
+Lincoln/Alego current row is `b8afddee-3545-46e7-aef6-3b8b435d3368`; Martine's Lugulu closed row is
+`5ec5909a-47e4-4347-8e30-61c18feb286c`. The pre-change production control totals were people **4**,
+engagements **5** / current **2**, auth users **2**, profiles **2**, project assignments **0**,
+claims **7**, Daily Site entries **12**, approvals **5**, fund requests **0** and project activities
+**29**.
+
+**Implemented boundary.** Migration `20260803194000_people_engagement_lifecycle_correction.sql`
+adds `people_engagement_events`, automatic same-transaction lifecycle event writing, a direct-update
+guard and the `correct_people_engagement` controlled function. Every event holds complete old/new
+snapshots, actor profile, time, correction explanation where required and resulting version; normal
+application roles cannot insert, edit or delete it. Only the Principal can invoke closed-record
+correction/reopen successfully. Reopening updates the same row, clears its closure, creates no
+replacement or access record, and is blocked with a plain explanation if another current engagement
+exists for that person/project. The interface adds only a restrained Principal-only **Correct
+engagement** action with **Correct details** and **Reopen engagement** paths and a mandatory **Why
+is this record being corrected?** field.
+
+**Acceptance evidence.** The isolated PostgreSQL suite proves Principal correction/reopen,
+reason and optimistic-version enforcement, complete immutable snapshots, direct Operations Manager
+refusal, same-row/no-new-row reopen semantics, duplicate-current conflict refusal, ordinary current
+ending, and unchanged auth users, project assignments, claims, Daily Site, approvals and fund
+requests. The focused People interface and capability suites pass **36/36**, including both-role
+control visibility, request shape, mandatory explanation and conflict presentation. The full
+frontend suite passes **53 files / 551 tests**; changed-file lint, the production build with **43**
+prerendered routes and `git diff --check` are clean. Repository-wide lint retains only the **19**
+unrelated pre-existing findings recorded before this correction.
+
+Migration version `20260803194000` is registered in the hosted production migration history. The
+hosted database confirms row-level security, all three lifecycle/immutability guard triggers, the
+controlled function and zero event rows before a real action. Rollback-only hosted role exercises
+confirmed the Operations Manager's existing create/current-edit/end authority and refusal of both
+direct closed-row mutation and the controlled Principal operation. They also confirmed Principal
+reason/version enforcement, correction, same-row reopen, complete old/new event snapshots and
+active-conflict refusal; every temporary person, engagement and event was rolled back. A separate
+privileged control read confirmed that auth users, project assignments, claims, Daily Site,
+approvals and fund requests retained their frozen totals.
+
+The exact-source role preview at a genuine **400 px** layout viewport showed the compact correction
+form only for the Principal and no correction/reopen action for the Operations Manager. Both role
+views measured `scrollWidth` **400** against `clientWidth` **400**, with no element outside the
+viewport. The two frozen Martine/Alego rows retained their exact IDs, versions, roles and dates;
+production remained at engagements **5** / current **2** and event rows **0**. The real
+Martine/Alego correction remains a separate Founder approval and is not part of this implementation.

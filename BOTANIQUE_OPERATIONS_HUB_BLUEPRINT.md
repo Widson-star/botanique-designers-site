@@ -1353,6 +1353,26 @@ engagements, Lincoln's historical start date was not inferred from a claim, casu
 not promoted into permanent People records, and suppliers, nurseries, transport providers and
 other organisations were not recorded as people.
 
+**Immutable engagement lifecycle and controlled correction.**
+`people_engagement_events` is the append-only evidence for engagement creation, ending,
+correction and reopening. Each event references the engagement and actor profile and stores the
+complete previous row (where one exists), complete resulting row, event time, correction reason
+when applicable and resulting version. Authenticated application roles have no insert, update or
+delete privilege on this ledger; its application read policy is Principal-only.
+
+Closed-row correction is not exposed as a broad table update. The security-definer
+`correct_people_engagement` function independently verifies the Principal role, locks and checks
+the expected row version, validates the permitted role and dates, requires a correction reason,
+checks for an existing current engagement for the same person and project before reopening, and
+then performs the same-row update. The engagement event trigger writes the evidence in that same
+transaction, so validation, update and history insertion succeed or fail together. An independent
+update guard allows Operations Managers to retain authorised current-record management and
+open-to-closed ending on accessible projects, recording both in the lifecycle history, but refuses
+every direct closed-row rewrite or reopen.
+No broad no-overlap constraint is introduced: parallel roles are not ruled out here, while the
+existing one-current-engagement-per-person/project rule and the explicit reopen conflict check
+prevent an unauthorised second current row.
+
 ## 14. Dashboard aggregation architecture
 
 Dashboards are projections under §10 and add three constraints:

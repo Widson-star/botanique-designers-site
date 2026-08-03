@@ -55,6 +55,12 @@ export function canManageEngagements(role) {
   return canSeePeople(role);
 }
 
+// Rewriting or reopening a closed historical record is exceptional authority,
+// not ordinary resourcing. The database independently enforces this boundary.
+export function canCorrectEngagement(role) {
+  return role === ROLES.OWNER;
+}
+
 // Linking a portal account and withdrawing somebody from the register both
 // change what other users can reach, so both stay with the Principal. The
 // database enforces this independently; these two only decide what the

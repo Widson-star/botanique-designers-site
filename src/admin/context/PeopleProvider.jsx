@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAdminData } from "./adminData";
 import { PeopleContext } from "./people";
 import {
-  createEngagement, createPerson, endEngagement, fetchPeople,
+  correctEngagement, createEngagement, createPerson, endEngagement, fetchPeople,
   fetchPeopleEngagementProjects, fetchPeopleEngagements, updatePerson,
 } from "../lib/people";
 
@@ -167,13 +167,39 @@ export default function PeopleProvider({ children, session, role, isDemo }) {
     );
   }, [accessToken, isDemo, run]);
 
+  const correctPastEngagement = useCallback((values) => {
+    if (isDemo) {
+      let changed = null;
+      setEngagements((current) => current.map((engagement) => {
+        if (engagement.id !== values.engagementId) return engagement;
+        changed = {
+          ...engagement,
+          engagementRole: values.engagementRole,
+          startDate: values.startDate,
+          endDate: values.reopen ? "" : values.endDate,
+          endReason: values.reopen ? "" : values.endReason,
+          version: engagement.version + 1,
+          updatedAt: now(),
+        };
+        return changed;
+      }));
+      return Promise.resolve(changed
+        ? { ok: true, record: changed }
+        : { ok: false, error: "Engagement not found." });
+    }
+    return run(
+      () => correctEngagement(accessToken, values),
+      "This engagement was changed elsewhere. Reload and try again."
+    );
+  }, [accessToken, isDemo, run]);
+
   const value = useMemo(() => ({
     people, engagements, engagementProjects, status, error,
-    refresh, addPerson, editPerson, addEngagement, closeEngagement,
+    refresh, addPerson, editPerson, addEngagement, closeEngagement, correctPastEngagement,
     engagementsForPerson: (personId) => engagements.filter((engagement) => engagement.personId === personId),
     peopleById: new Map(people.map((person) => [person.id, person])),
   }), [people, engagements, engagementProjects, status, error, refresh,
-    addPerson, editPerson, addEngagement, closeEngagement]);
+    addPerson, editPerson, addEngagement, closeEngagement, correctPastEngagement]);
 
   return <PeopleContext.Provider value={value}>{children}</PeopleContext.Provider>;
 }

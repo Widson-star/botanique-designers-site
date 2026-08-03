@@ -44,4 +44,6 @@ psql_cmd=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$socket_dir" -p "$port" -d po
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260802000100_reports_daily_site_range_compliance.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260802000200_work_inbox_read_state.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260803000100_people_and_project_engagements.sql" >/dev/null
+"${psql_cmd[@]}" -f "$repo_dir/supabase/migrations/20260803194000_people_engagement_lifecycle_correction.sql" >/dev/null
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/people_and_project_engagements_test.sql"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/people_engagement_lifecycle_correction_test.sql"

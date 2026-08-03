@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { usePeople } from "../context/people";
 import {
-  ENGAGEMENT_ROLES, RELATIONSHIP_TYPES, canEditPerson, canLinkPortalAccess,
+  ENGAGEMENT_ROLES, RELATIONSHIP_TYPES, canCorrectEngagement, canEditPerson, canLinkPortalAccess,
   canManageEngagements, canSeePeople, canSetPersonActive, findDuplicatePerson,
   isEngagementOpen, isInternalRelationship,
 } from "../utils/peopleCapabilities";
@@ -37,7 +37,7 @@ export default function AdminPersonDetail() {
   const { role, profiles } = useAdminData();
   const {
     people, engagements, engagementProjects, status,
-    editPerson, addEngagement, closeEngagement,
+    editPerson, addEngagement, closeEngagement, correctPastEngagement,
   } = usePeople();
 
   const [feedback, setFeedback] = useState("");
@@ -46,6 +46,9 @@ export default function AdminPersonDetail() {
   const [engageForm, setEngageForm] = useState({ projectId: "", engagementRole: "team_leader", startDate: today() });
   const [closing, setClosing] = useState(null);
   const [closeForm, setCloseForm] = useState({ endDate: today(), endReason: "" });
+  const [correcting, setCorrecting] = useState(null);
+  const [correctionMode, setCorrectionMode] = useState("details");
+  const [correctionForm, setCorrectionForm] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState(null);
 
@@ -157,6 +160,48 @@ export default function AdminPersonDetail() {
     if (result.ok) {
       setClosing(null);
       setCloseForm({ endDate: today(), endReason: "" });
+    }
+  }
+
+  function startCorrection(engagement) {
+    setActionError("");
+    setFeedback("");
+    setCorrecting(engagement);
+    setCorrectionMode("details");
+    setCorrectionForm({
+      engagementRole: engagement.engagementRole,
+      startDate: engagement.startDate,
+      endDate: engagement.endDate,
+      endReason: engagement.endReason,
+      correctionReason: "",
+    });
+  }
+
+  async function submitCorrection(event) {
+    event.preventDefault();
+    const reason = correctionForm.correctionReason.trim();
+    if (!reason) {
+      setActionError("Explain why this engagement record is being corrected.");
+      return;
+    }
+    const reopen = correctionMode === "reopen";
+    const result = await report(
+      correctPastEngagement({
+        engagementId: correcting.id,
+        expectedVersion: correcting.version,
+        engagementRole: correctionForm.engagementRole,
+        startDate: correctionForm.startDate,
+        endDate: reopen ? "" : correctionForm.endDate,
+        endReason: reopen ? "" : correctionForm.endReason.trim(),
+        correctionReason: reason,
+        reopen,
+      }),
+      reopen ? "Engagement reopened." : "Engagement correction recorded."
+    );
+    if (result.ok) {
+      setCorrecting(null);
+      setCorrectionForm(null);
+      setCorrectionMode("details");
     }
   }
 
@@ -311,19 +356,126 @@ export default function AdminPersonDetail() {
             {!past.length && <p className="text-sm text-gray-600">No past engagements.</p>}
             <ul className="divide-y divide-stone-100">
               {past.map((engagement) => (
-                <li key={engagement.id} className="py-2.5">
-                  <p className="truncate text-sm font-medium">{projectName(engagement.projectId)}</p>
+                <li key={engagement.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{projectName(engagement.projectId)}</p>
                   {/* This line carries the only free text on the page — an end
                       reason of up to 300 characters — so it WRAPS rather than
                       truncating. Truncated, why an engagement ended was
                       unreadable on a phone every time it was recorded. */}
-                  <p className="text-xs text-gray-500">
-                    {ENGAGEMENT_ROLES[engagement.engagementRole]} · {showDate(engagement.startDate)} – {showDate(engagement.endDate)}
-                    {engagement.endReason ? ` · ${engagement.endReason}` : ""}
-                  </p>
+                    <p className="text-xs text-gray-500">
+                      {ENGAGEMENT_ROLES[engagement.engagementRole]} · {showDate(engagement.startDate)} – {showDate(engagement.endDate)}
+                      {engagement.endReason ? ` · ${engagement.endReason}` : ""}
+                    </p>
+                  </div>
+                  {canCorrectEngagement(role) && (
+                    <button
+                      type="button"
+                      onClick={() => startCorrection(engagement)}
+                      className="min-h-11 shrink-0 py-2 text-xs font-semibold text-botanique-green hover:underline"
+                    >
+                      Correct engagement
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
+
+            {correcting && correctionForm && (
+              <form onSubmit={submitCorrection} className="mt-3 grid min-w-0 grid-cols-1 gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 sm:grid-cols-2">
+                <div className="flex flex-wrap gap-2 sm:col-span-2" aria-label="Correction type">
+                  <button
+                    type="button"
+                    aria-pressed={correctionMode === "details"}
+                    onClick={() => setCorrectionMode("details")}
+                    className={`min-h-11 rounded-md px-3 py-2 text-sm font-semibold ${correctionMode === "details" ? "bg-botanique-green text-white" : "border border-stone-300 bg-white text-botanique-green"}`}
+                  >
+                    Correct details
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={correctionMode === "reopen"}
+                    onClick={() => setCorrectionMode("reopen")}
+                    className={`min-h-11 rounded-md px-3 py-2 text-sm font-semibold ${correctionMode === "reopen" ? "bg-botanique-green text-white" : "border border-stone-300 bg-white text-botanique-green"}`}
+                  >
+                    Reopen engagement
+                  </button>
+                </div>
+
+                <label className="min-w-0 text-sm font-medium">Role on this project
+                  <select
+                    value={correctionForm.engagementRole}
+                    onChange={(event) => setCorrectionForm({ ...correctionForm, engagementRole: event.target.value })}
+                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                  >
+                    {Object.entries(ENGAGEMENT_ROLES).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="min-w-0 text-sm font-medium">Starts
+                  <input
+                    type="date"
+                    value={correctionForm.startDate}
+                    onChange={(event) => setCorrectionForm({ ...correctionForm, startDate: event.target.value })}
+                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                    required
+                  />
+                </label>
+
+                {correctionMode === "details" ? (
+                  <>
+                    <label className="min-w-0 text-sm font-medium">Ends
+                      <input
+                        type="date"
+                        value={correctionForm.endDate}
+                        min={correctionForm.startDate}
+                        onChange={(event) => setCorrectionForm({ ...correctionForm, endDate: event.target.value })}
+                        className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                        required
+                      />
+                    </label>
+                    <label className="min-w-0 text-sm font-medium">End reason <span className="font-normal text-gray-500">(optional)</span>
+                      <input
+                        value={correctionForm.endReason}
+                        onChange={(event) => setCorrectionForm({ ...correctionForm, endReason: event.target.value })}
+                        className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                        maxLength={300}
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-600 sm:col-span-2">
+                    Reopening restores this same engagement as current and clears its end date and end reason. It creates no replacement record and grants no access.
+                  </p>
+                )}
+
+                <label className="min-w-0 text-sm font-medium sm:col-span-2">Why is this record being corrected?
+                  <textarea
+                    value={correctionForm.correctionReason}
+                    onChange={(event) => setCorrectionForm({ ...correctionForm, correctionReason: event.target.value })}
+                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                    rows={3}
+                    minLength={3}
+                    maxLength={1000}
+                    required
+                  />
+                </label>
+
+                <div className="flex flex-wrap gap-2 sm:col-span-2">
+                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
+                    {correctionMode === "reopen" ? "Confirm reopen" : "Save correction"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setCorrecting(null); setCorrectionForm(null); setCorrectionMode("details"); }}
+                    className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
           </Panel>
         </div>
 
