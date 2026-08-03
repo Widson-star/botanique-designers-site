@@ -27,6 +27,7 @@ import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
 import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
 import { canSeeReports } from "./utils/reportCapabilities";
+import { canSeePeople } from "./utils/peopleCapabilities";
 import { useAlerts } from "./utils/useAlerts";
 import { useAdminData } from "./context/adminData";
 
@@ -77,6 +78,18 @@ const NAV_ITEMS = [
     end: false,
     capability: canSeeFundRequests,
     icon: "M10 3v14M6.5 6.5h5a2 2 0 0 1 0 4h-3a2 2 0 0 0 0 4h5",
+  },
+  {
+    // BD-PEOPLE-01 (Stage 5). Placed after the operational and finance
+    // destinations and before Approvals, in the same temporary workflow order
+    // the BD-REPORTS-01B navigation review fixed. The grouped six-item
+    // presentation — Dashboard, Projects, People, Finance, Reports, More —
+    // remains deferred to its own authorised stage.
+    to: "/admin/people",
+    label: "People",
+    end: false,
+    capability: canSeePeople,
+    icon: "M7 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm6.5 1a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM3 16v-1a4 4 0 0 1 8 0v1m2-4.5a3.5 3.5 0 0 1 4 3.46V16",
   },
   {
     to: "/admin/approvals",
