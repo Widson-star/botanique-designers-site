@@ -4948,6 +4948,11 @@ and is the one thing the Founder should confirm directly.
 
 ### Next authorised programme stage
 
+> **Superseded — see BD-PEOPLE-01 (3 August 2026).** This paragraph was drafted before the
+> Founder closed stage 4 as rejected on 2 August at 22:26 (`4765425`) and was not refreshed. It
+> was already inaccurate when written: stages 4A–4D were all complete and merged on 2 August.
+> The stage that actually followed stage 3 was **stage 5, People and resourcing**.
+
 Stage 4 — **Reports and derived-summary authority**. Stage 4A documentation authority is
 already recorded in §§18.1–18.13. Stage 4 proceeds 4A → **4B read-only repository and
 data-readiness inspection** → 4C technical implementation authority → 4D implementation.
@@ -5371,6 +5376,10 @@ for its own change rather than folded into this one.
 
 ### Programme position
 
+> **Superseded — see BD-PEOPLE-01 (3 August 2026).** This restates the stale BD-INBOX-01
+> recital and does not re-decide it. Stage 4 was closed as rejected on 2 August; the stage that
+> followed stage 3 was **stage 5, People and resourcing**.
+
 Unchanged. Stage 4 — Reports and derived-summary authority — remains the next authorised
 stage, proceeding 4A → 4B → 4C → 4D, with Reports execution still **not** authorised. Stages
 5–12 are unchanged and unauthorised. BD-FIN-01B2 remains paused with every settled decision
@@ -5697,6 +5706,239 @@ alert row changed, and the popover remained contained inside a 400 px viewport f
 
 ### Programme position
 
+> **Superseded — see BD-PEOPLE-01 (3 August 2026).** This restates the stale BD-INBOX-01
+> recital and does not re-decide it. Stage 4 was closed as rejected on 2 August; the stage that
+> followed stage 3 was **stage 5, People and resourcing**.
+
 Unchanged by this workstream. Stage 4 — Reports and derived-summary authority — remains the
 next authorised stage. BD-REPORTS-01B remains rejected and frozen. No new Operations Hub stage
 was opened.
+
+---
+
+## BD-PEOPLE-01 — Stage 5: People and resourcing — 3 August 2026
+
+Status: **Merged, deployed and hosted-verified at the database authority level. The two
+authenticated browser walkthroughs remain outstanding** and are the one thing the Founder must
+confirm directly, because signing in is not an action this session can perform.
+
+Authoritative base `main`: `479638d88965b6b9b345353434ba351a4f628c72`.
+New authoritative `main`: `f279fdc091256b8364bb5725ceb7511b3985a431`.
+
+### Programme position, and a correction to three earlier entries
+
+Stage 5 is the earliest unfinished authorised stage in the §23 twelve-stage sequence.
+
+Three entries in this register state that stage 4 is next — the BD-INBOX-01 "Next authorised
+programme stage" section, and the BD-ALERTS-01 and BD-DASHBOARD-01 "Programme position"
+sections. **They are not authoritative, and they are corrected here rather than left to be
+rediscovered.** Each is a recital carried forward, not a ruling:
+
+1. On **2 August 2026 at 22:26**, in commit `4765425` (Founder decisions E–H), the Founder
+   recorded that **"Stage 4 was taken out of order and is now closed as rejected"**, named the
+   continuation as Work Inbox; **People and resourcing**; grouped navigation; the finance
+   stages; the remaining domains; and expanded reporting — stages 3, 5, 6, 7–10, 11 and 12 — and
+   deferred the Reports Centre to stage 12.
+2. The BD-INBOX-01 paragraph was written on **3 August at 00:07**, in commit `ead505a`, about
+   two hours later. It describes stage 4 as still to proceed "4A → 4B → 4C → 4D" with "Reports
+   execution remains not authorised". That was **already untrue when it was written**: stages
+   4A, 4B, 4C and 4D were all complete and merged on 2 August, and BD-REPORTS-01A is
+   ACTIVE_VERIFIED. It was drafted before the rejection and not refreshed.
+3. BD-ALERTS-01 and BD-DASHBOARD-01 then reproduced that paragraph, each explicitly labelled
+   **"Unchanged"**. Restating a stale recital does not re-decide it.
+
+Stage 3 is delivered and verified; stage 4 is closed as rejected. **The earliest unfinished
+authorised stage was therefore stage 5, and this workstream is it.**
+
+### What was actually wrong, in production data
+
+Before this workstream, every human the Operations Hub could NAME had to be an authenticated
+user: `profiles.id`, `projects.lead_person_id` and `project_assignments.user_id` all reference
+`auth.users`. Blueprint §4.1 and §13 require the opposite — an external worker must not be
+forced into an authenticated `profiles` identity to be engaged or recorded.
+
+The hosted database showed the cost precisely. Only **2 profiles** exist, and
+**`project_assignments` holds 0 rows** — the table is enforced by RLS but entirely unused; 6 of
+12 projects carry an accountable lead, drawn from those same 2 people. Everyone else survived
+only as free text, across 4 claim recipient labels and 5 crew references:
+
+- `Lincoln Waweru (Team leader)` **and** `Lincoln Waweru (Team leader) Ksh.1000 (10 Casuals
+  Ksh.500 each)` — one person, two strings, one carrying a rate and a headcount inside the
+  identity field;
+- `3 (Casuals)` and `4 casuals` — headcount used as identity, inconsistently;
+- `Road Kerb Installation` — a task description sitting in the crew field.
+
+`crew_reference` was doing four jobs at once: naming a person, counting casuals, recording a
+rate and describing the work.
+
+### Founder decisions, 3 August 2026
+
+Three questions had materially different consequences and were settled before any database work:
+
+1. **People only.** Organisations and non-person payees are deferred to their own stage.
+   Blueprint §13 holds that a supplier is not a person record with unused workforce fields, so a
+   later organisations table costs nothing now. Existing claim `recipient_type` /
+   `recipient_label` and the frozen fund-request allocation snapshots **remain the authoritative
+   finance recipient reference**, exactly as Blueprint §13 requires; nothing here rewrites them.
+2. **Casual labour stays a headcount.** Daily Site records no individual casual names anywhere
+   today, so there is no register to carry forward, and creating one would require daily data
+   entry no screen collects. Casual workers remain `expected_worker_count` plus `crew_reference`
+   until the Labour domain is authorised. Named **crew representatives** do get records, because
+   they are already named on claims.
+3. **The Operations Manager runs day-to-day resourcing** — creating people and managing
+   engagements on projects they reach — but **cannot link a portal account and cannot deactivate
+   a person**. Both change what other users can reach and stay with the Principal.
+
+### The canonical model
+
+Two tables, **purely additive**. No existing column, constraint, policy, trigger, function,
+grant or row was altered, so no current record, access rule or history could break.
+
+- **`public.people`** — the canonical person: `full_name`, `relationship_type`, optional
+  `phone`, short `note`, `is_active`, optional `profile_id`, `version` and audit columns.
+- **`public.people_engagements`** — one person's involvement in one project: `person_id`,
+  `project_id`, `engagement_role`, `start_date`, `end_date`, `end_reason`, `version`, audit.
+
+**Portal users are separated from people by construction.** `profile_id` is nullable, unique and
+refused outright on INSERT — creating a person cannot attach access even for the Principal.
+Linking or unlinking, and activating or deactivating, are Principal-only and enforced in
+`tg_people_access_guard`, where OLD and NEW are both visible; RLS compares no OLD row on UPDATE
+and structurally cannot express this rule.
+
+**An engagement grants no access.** `project_assignments` remains the sole access-control table
+and is untouched. An engagement is a resourcing fact, consulted by no access decision anywhere.
+
+**Historical truth holds.** Nothing may be deleted: no DELETE policy and no DELETE grant on
+either table, and `on delete restrict` on both foreign keys. People are deactivated, engagements
+are closed. A closed engagement keeps its start date and stays readable; a deactivated person's
+entire history stays readable; and an inactive person simply cannot pick up new work.
+
+**Duplicates are prevented** by a unique index on
+`lower(regexp_replace(trim(full_name), '\s+', ' ', 'g'))`, so "Lincoln Waweru", "lincoln waweru"
+and "Lincoln  Waweru" are one person. The audit trigger normalises the stored name identically,
+so what is written and what is compared cannot drift. The interface checks first and offers the
+existing record rather than surfacing a constraint error.
+
+**Role and RLS behaviour.** The register is company-wide for both operational roles, because an
+Operations Manager must be able to find a team leader before engaging them; a person record
+holds no project, no money and no operational state. Engagements are project-scoped through
+`can_access_people_engagement_project`, which reuses the established shape already used by Daily
+Site and Internal Cost Claims — Principal reaches every project, an Operations Manager reaches a
+project they lead or are actively assigned to. Staff and viewer callers match no policy and see
+nothing at all in Stage 5.
+
+### Deliberately not collected
+
+No national ID or ID number, no identification document or photograph, no bank details, no home
+address, no date of birth, no next of kin, no personal financial history. No rate, amount,
+payment, attendance record or labour plan — this is not a payroll system and holds no money. No
+password, token, recovery detail or secret; authentication data lives only in Supabase auth and
+never surfaces in People. Document evidence of any kind remains behind the Documents & Evidence
+authority and its unmet Storage-backup gate. **A catalogue assertion in the test suite fails the
+build if a later migration adds any such column**, so this is enforced rather than promised.
+
+### Interface
+
+Two destinations, composed from `01-dashboard-authority.png` and
+`04-project-summary-authority.png`: `/admin/people` — a four-figure totals strip, search,
+relationship and status filters, and a compact list — and `/admin/people/:personId` — a
+contained grid of small panels covering current engagements, past engagements, details and
+portal access. No wide table, no long dossier, no payment ledger and no activity archive. People
+was added to the sidebar in the temporary workflow order, after Fund Requests and before
+Approvals; the grouped six-item presentation remains deferred to stage 6.
+
+### Two defects found reviewing the base-to-head diff
+
+Both were about telling the reader something untrue, and both were corrected on the same branch
+in `da4ad07`.
+
+1. **`profiles` is itself row-level secured to "self or owner"**, so an Operations Manager
+   receives only their own row. The person detail resolved a linked profile by name and fell
+   back to "No portal account" when it could not — the exact opposite of the truth for a person
+   who *is* linked. It now distinguishes "not linked" from "linked to an account you cannot
+   view". The test fixture had been handing every role the full profile list, which production
+   never does; it now mirrors the real policy.
+2. **`people_engagement_projects()` excluded archived projects**, so the moment a project was
+   archived every engagement on it degraded to "a project you cannot access" — directly
+   defeating the requirement that historical engagements stay readable. The helper now returns
+   archived projects too, and the interface keeps them out of the "engage on a project" picker
+   instead.
+
+### One mobile defect found and fixed before merge
+
+At a genuine 375 px viewport the person detail scrolled sideways: `document.scrollWidth` 409
+against `clientWidth` 375. `truncate` sets `white-space: nowrap`, whose min-content width is the
+**whole string**, and an auto-sized grid column grows to it. Fixed with explicit `grid-cols-1`
+and `min-w-0` on the grid and its children. Re-measured at 375 px and 400 px: `scrollWidth`
+equals `clientWidth`, no overflow. This is the same failure mode recorded under BD-DASHBOARD-01,
+and it is recorded again because it recurs wherever a truncated line sits inside a grid.
+
+### Validation
+
+People database suite **passes** on an isolated PostgreSQL 17 cluster after every migration is
+applied in order (`scripts/test-people-db.sh`), covering all seventeen required proofs. Frontend
+`vitest` **53 files / 536 tests**, all passing. `npm run build` prerenders **43** routes,
+unchanged from exact main. Changed-file `eslint` clean; repository-wide `eslint` reports the
+same **19** pre-existing errors as exact main — zero new. `git diff --check` clean.
+
+**One intermittent whole-suite failure is recorded rather than hidden.** A single run reported
+1 failure; two further full runs reported 536/536, the two historically flaky files passed three
+times in isolation, and the new People and layout files passed four times in isolation. This is
+the pre-existing whole-suite race already recorded in this register, and it is left outside this
+stage as instructed.
+
+### Merge and deployment
+
+PR **#82**, base `479638d88965b6b9b345353434ba351a4f628c72`, exact reviewed head
+`da4ad071f6489fea39567809443daf146fd21cf1`, merged with a true merge commit
+`f279fdc091256b8364bb5725ceb7511b3985a431` guarded with `--match-head-commit`. Parents verified
+as `479638d8` and `da4ad071`. Fifteen files changed, all Stage 5. Both PR checks passed; the
+only comment was Vercel's automated deployment notice and there were no review threads. No
+competing People, Team, Resourcing, Staff or identity PR existed at any point.
+
+The migration was applied to the hosted `botanique-admin` project (`wcacyfyxjiysfibuuhgf`)
+**before** the merge, deliberately, so that the deployed frontend never pointed at missing
+tables. Production deployment `dpl_3qyPRF5HtMhSygB3LiokJqk7HMp9`, target production, state
+READY, from commit `f279fdc0`.
+
+### Hosted verification — database authority, both roles
+
+Performed directly against the hosted database in transactions that were **rolled back**, so
+production still holds zero People rows.
+
+- **Structure.** Both tables created, RLS enabled, 6 policies, no DELETE privilege for
+  `authenticated` on either table, no `anon` SELECT.
+- **Nothing existing moved.** `projects` 12, `internal_cost_claims` 5, `daily_site_entries` 10,
+  `project_assignments` 0 — identical before and after.
+- **Principal session** (`1fda7148…`): reaches all **12** projects for engagement.
+- **Operations Manager session** (`a7bc64bd…`): reaches exactly the **5** projects they lead,
+  not 12 — the scope asymmetry is real and enforced by the database, not the interface. Created
+  a person, which came back with `profile_id` null, and engaged them on a led project.
+- **All three manager refusals held**: linking a portal account, deactivating a person, and
+  engaging somebody on a project outside their authority were each refused with
+  `insufficient_privilege`.
+- **Production route.** `https://www.botaniquedesigners.com/admin/people` returns 200 and
+  renders the sign-in gate rather than a 404 or a dead destination.
+
+### Outstanding
+
+**The authenticated Principal and Operations Manager browser walkthroughs.** Signing in is not
+an action this session may perform, so the Founder must open the two production sessions; the
+walkthroughs will then be recorded against this entry, as in BD-ALERTS-01 and BD-DASHBOARD-01.
+
+### Deferred to later stages
+
+Rates, attendance, labour plans and payments (Labour and Payments); tasks and assignments;
+client commercial records and contacts; organisations and non-person payees; documents and
+identity evidence (behind the Storage-backup gate); the grouped six-item sidebar (stage 6);
+People reports (stage 12).
+
+### Programme position
+
+Stage 5 is delivered, merged and deployed, pending the two browser walkthroughs above. **The
+next authorised programme stage is stage 6 — progressive navigation and mobile-shell
+implementation**, which governs the grouped Dashboard / Projects / People / Finance / Reports /
+More presentation and the destination-naming inconsistencies deferred from BD-REPORTS-01B. It
+remains gated by its own authority, branch, review and deployment gate, and by the standing
+capability-led rule in Product Requirements §14. BD-FIN-01B2 remains paused with every settled
+decision unchanged. BD-REPORTS-01B remains rejected and frozen.
