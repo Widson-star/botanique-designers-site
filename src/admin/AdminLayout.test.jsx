@@ -156,6 +156,21 @@ describe("AdminLayout visual boundary", () => {
     expect(screen.queryByRole("link", { name: "Daily site ops" })).not.toBeInTheDocument();
   });
 
+  // Found in the 3 August 2026 Operations Manager mobile walkthrough. The name
+  // is hidden below `md`, so if the role is also hidden below `sm` the header
+  // carries NO account identity on a phone. The two roles see materially
+  // different data, so that is an operational defect, not a cosmetic one.
+  it("keeps the role visible at every width, so a phone header always says which account it is", () => {
+    renderLayout({ role: "manager", isDemo: false, profileLabel: undefined, profile: {
+      role: "manager", email: "martine@botaniquedesigners.com", full_name: "Martine Lotom",
+    } });
+    const badge = screen.getByText("Operations Manager");
+    // No responsive-visibility class may gate it.
+    expect(badge.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+    expect(badge.className).not.toMatch(/sm:inline|md:inline|lg:inline/);
+    expect(badge.closest("header")).toBeInTheDocument();
+  });
+
   it("shows the compact founder name, Principal badge and restrained finance boundary note", () => {
     renderLayout();
     expect(screen.getByText("Widson O. Ambaisi")).toBeInTheDocument();

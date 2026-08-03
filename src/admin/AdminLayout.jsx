@@ -259,7 +259,15 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
                     markSeen={alerts.markSeen}
                   />
                 )}
-                <span className="hidden border-l-2 border-botanique-green pl-2 text-xs font-medium text-botanique-green sm:inline">
+                {/* The role stays visible at EVERY width. Hiding it on small
+                    screens was a mistake: the signed-in name is already hidden
+                    below `md`, so on a phone the header carried no account
+                    identity at all — and the two roles see materially different
+                    data, so "which account am I in" is an operational question,
+                    not decoration. Measured at 375px the header needs 331px with
+                    the longest role label, leaving 44px spare, so nothing
+                    overflows by keeping it. */}
+                <span className="border-l-2 border-botanique-green pl-2 text-xs font-medium text-botanique-green">
                   {roleLabel}
                 </span>
                 <span className="hidden whitespace-nowrap text-xs font-medium text-gray-600 md:inline">
