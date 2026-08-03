@@ -1339,9 +1339,19 @@ define it.
 Nothing here authorises identity-document storage, full bank details or personal financial
 history. Existing recipient identity in BD-FIN-01A claims (`recipient_type`,
 `recipient_label`) and its frozen snapshots in BD-FIN-01B1 allocations remain the
-authoritative recipient reference for finance until a People domain is separately
-authorised; a later People domain must reconcile with those snapshots rather than
-retroactively rewriting them.
+authoritative recipient reference for finance. The Stage 5 People slice is now delivered, but
+it does not reconcile, replace or retroactively rewrite those finance snapshots: it contains
+people and project engagements only, while organisation identity and all payment, rate,
+attendance and labour-plan records remain outside its authority.
+
+**Initial production register, 3 August 2026.** The real active register contains only Widson
+Omutelema Ambaisi (Principal, linked to the existing Principal profile), Martine Lotom
+(Operations Manager, linked to the existing Operations Manager profile) and Lincoln Waweru
+(regular staff, unlinked). No auth user, profile, project assignment or engagement was created
+to operationalise those records. Existing project lead fields were not duplicated as
+engagements, Lincoln's historical start date was not inferred from a claim, casual labour was
+not promoted into permanent People records, and suppliers, nurseries, transport providers and
+other organisations were not recorded as people.
 
 ## 14. Dashboard aggregation architecture
 

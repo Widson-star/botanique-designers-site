@@ -6115,6 +6115,86 @@ project-engagement model and the role/RLS behaviour all hold in production, and
 the two defects the walkthroughs found were corrected and redeployed inside the
 same session.
 
+### People operationalisation and Daily Site presentation closure — 3 August 2026
+
+This is a continuation of Stage 5, not stage 6 and not a Finance change. Recovery began from
+authoritative main `7bafd1cba276fee523de2934834c0db7313c7e5c`; no completed production action
+was repeated and no duplicate record was created.
+
+**Initial real register.** The post-link production snapshot is people **4** total / **3**
+active / **2** linked, auth users **2**, profiles **2**, project assignments **0** and
+engagements **1**. The one engagement belongs only to the inactive Stage 5 verification record.
+The three real people each have zero engagements:
+
+| Person | People id | Relationship | Active | Portal profile | Version | Created by | Updated by |
+|---|---|---|---:|---|---:|---|---|
+| Widson Omutelema Ambaisi | `1ab35efc-888d-49bf-852c-0438ab63464a` | Principal | yes | Principal `1fda7148-e072-45ad-9a59-a694532f5d05` | 2 | `1fda7148-e072-45ad-9a59-a694532f5d05` | `1fda7148-e072-45ad-9a59-a694532f5d05` |
+| Martine Lotom | `d5c5ac14-b4cf-44b8-a2ec-19edb61868b3` | Operations Manager | yes | Operations Manager `a7bc64bd-1af5-41e9-b141-7d809c2482de` | 2 | `1fda7148-e072-45ad-9a59-a694532f5d05` | `1fda7148-e072-45ad-9a59-a694532f5d05` |
+| Lincoln Waweru | `4db2ae47-45df-4b0e-8db7-01dd1da4456f` | Regular staff | yes | none | 1 | `1fda7148-e072-45ad-9a59-a694532f5d05` | `1fda7148-e072-45ad-9a59-a694532f5d05` |
+
+The retained historical row is `cd1801fd-53f7-40fd-8adb-f48d3390a5a3`, **ZZ Verification
+Record — Stage 5**, crew representative, inactive, unlinked, version 7, created by the Principal
+and last updated by the Operations Manager, with its one closed verification engagement.
+
+Martine's People record was linked through the authenticated Principal interface only after the
+exact person id and the existing profile id were confirmed. The interface reported **"Portal
+account linked. This granted no new access."** The link moved only her People row from version 1
+to version 2. Auth users, profiles, project assignments and engagements did not change. Widson's
+canonical People name remains **Widson Omutelema Ambaisi** independently of the shorter portal
+header display; Lincoln remains unlinked and has no portal account. No new engagement was
+created, no claim date was treated as an employment start date, and no existing project lead
+field was duplicated. Casual workers and organisations remain excluded.
+
+**Daily Site language.** PR #88 changed presentation only: action **"Mark not required"**,
+status **"Not required"**, summary **"Not required today"**, and explanations using **"marked
+not required"**. The Principal-only mechanism is unchanged: project, date and reason are still
+required; actor identity and timestamp are still audited; stored `waived` values,
+`daily_site_compliance_waivers`, RPC names, internal functions, compliance calculations and
+historical data are untouched. Product Requirements §4.5.8b and the matching Blueprint passage
+record this distinction; dated evidence that accurately quotes the former interface is preserved.
+
+PR #88 reviewed base `7bafd1cba276fee523de2934834c0db7313c7e5c`, head
+`8038a170cd99277fc8b78897a3afa8b006d29904`, and merged with true merge commit
+`07d3c83d6c7aad7cfb5fe02f7e508a963c3bf9d6`, whose parents are exactly that base and head.
+Twelve files entered main: ten presentation/test files plus Product Requirements and Blueprint;
+no migration, RLS, project-access, engagement or Finance file changed. PR #88 had no review,
+comment or unresolved review thread beyond Vercel's automated READY notice, and no competing PR.
+Production deployment `dpl_Cg8HCeGpyn3vfTmFpwBgrgbHMmh6` is READY from that exact merge SHA.
+
+**Independent verification.** A repository-wide audit found no user-facing "Waive", "Waived",
+"Waiver" or "Owner waiver" in application source; remaining matches are internal identifiers,
+stored status keys, database objects/RPCs or explanatory comments. Focused People, Daily Site,
+Dashboard, Project Summary, Alerts and access tests exercised 228 assertions: 227 passed together
+and the repository's already-recorded intermittent `AdminApp` hydration race failed once, then
+passed **9/9** in isolation. All four applicable isolated PostgreSQL suites passed (People,
+Daily Site, Reports and Work Inbox). The full frontend suite passed **53 files / 545 tests**.
+The production build succeeded and prerendered **43** routes; `git diff --check` was clean.
+
+Principal production verification confirmed the three exact real records, both intended links,
+Lincoln unlinked, zero engagements for all three, the no-new-access confirmation, and the
+approved Daily Site wording on Dashboard, Daily Site Operations and Project Summary.
+
+The final post-deployment Operations Manager walkthrough then passed in Martine Lotom's
+authenticated production session at a genuine **400 px** layout viewport. The People overview
+showed exactly three active people and two portal-linked records; Martine's and Lincoln's detail
+pages both showed zero current and zero past engagements. Martine could edit a person and open
+the engagement form, whose selector exposed only the four currently eligible projects within
+her scope; the form was cancelled without submission. She could not link/unlink a portal account
+or activate/deactivate a person: those controls were absent and both detail pages stated that
+only the Principal can change portal access. Martine's record truthfully read **"Signs in as
+Martine Lotom"**; Lincoln's truthfully read **"No portal account"**. No record was created or
+mutated.
+
+People overview, People detail and Daily Site Operations each measured `scrollWidth` **400**
+against `clientWidth` **400**, with zero elements outside the viewport. Daily Site Operations
+showed **"Not required"** and **"marked not required today"**, with no user-facing waive-family
+term; the Operations Manager Dashboard showed the same approved summary and no Principal-only
+action. This closes the role, access-boundary, terminology and 375–400 px merge gate.
+
+Labour still owns casual-worker identity, attendance, rates, labour plans and payments. Finance
+still owns obligation, approval, funding, release, payment and reconciliation, and this closure
+does not alter Site Costs, Fund Requests, Approvals, finance metrics, tables or routes.
+
 ### Deferred to later stages
 
 Rates, attendance, labour plans and payments (Labour and Payments); tasks and assignments;
