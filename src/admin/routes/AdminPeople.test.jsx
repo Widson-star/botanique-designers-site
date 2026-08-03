@@ -207,6 +207,18 @@ describe("Person detail", () => {
     expect(options).not.toContain("Muthithi Gardens Estate");
   });
 
+  // The end reason is the only free text on this page and runs to 300
+  // characters. Truncated, it was unreadable on a phone every single time.
+  it("lets a long end reason wrap instead of clipping it", () => {
+    const reason = "Site works completed and the client asked us to hand the area back early";
+    wrap(contexts({
+      engagements: [{ id: "eng-8", personId: "person-1", projectId: "p1", engagementRole: "supervisor", startDate: "2026-03-01", endDate: "2026-05-31", endReason: reason, version: 1 }],
+    }), "/admin/people/person-1");
+    const line = screen.getByText(new RegExp(reason));
+    expect(line).toBeInTheDocument();
+    expect(line.className).not.toMatch(/truncate/);
+  });
+
   it("names an engagement on an unreachable project without inventing its detail", () => {
     wrap(contexts({
       engagements: [{ id: "eng-9", personId: "person-1", projectId: "hidden", engagementRole: "consultant", startDate: "2026-05-01", endDate: "", endReason: "", version: 1 }],
