@@ -399,7 +399,9 @@ No monetary thresholds are invented in this authority.
 
 The first slice uses **soft enforcement only**:
 
-- the Dashboard shows a "Morning site entries due" state;
+- the Dashboard shows a morning-entries-due state, presented as the **"Due today"** panel per
+  `01-dashboard-authority.png` (BD-DASHBOARD-01, 3 August 2026). The state is unchanged; the
+  screen governs only its label and composition;
 - each in-scope project (see §4.5.8a) without today's entry remains flagged;
 - the manager can still fully view and use the system — **no destructive lock**;
 - the owner can see late or missing entries;

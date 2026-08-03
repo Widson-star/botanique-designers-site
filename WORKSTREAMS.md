@@ -5377,3 +5377,143 @@ stage, proceeding 4A → 4B → 4C → 4D, with Reports execution still **not** 
 unchanged. BD-REPORTS-01B remains rejected and frozen; the category-based Reports Centre that
 `03-reports-centre-authority.png` governs is still deferred to its own stage and is **not**
 authorised by the adoption of that screen.
+
+---
+
+## BD-DASHBOARD-01 — Dashboard visual-authority alignment — 3 August 2026
+
+**Status: MERGED AND DEPLOYED. Authenticated hosted walkthrough OUTSTANDING.**
+
+Governing visual authority: **`docs/ui-authority/operations-hub/01-dashboard-authority.png`**.
+It governs Dashboard hierarchy, desktop density, card rhythm, spacing, the restrained colour
+system, KPI composition, the Due Today and Projects Needing Attention treatments, chart-card
+proportions, Recent Activity composition and mobile stacking. It does **not** authorise
+invented metrics or records, unbuilt modules, the final grouped sidebar, or unsupported user
+actions.
+
+### Authoritative main resolved before any work began
+
+The prior report named two different final SHAs. They reconcile as one chain, not a conflict:
+`98ec66e` is PR #74's merge, superseded by `e4726b8` (PR #75) and then by
+**`60546b6a2de0f97073cb3f116f7561a0d1e6db89`** (PR #76), which was the true `origin/main` at
+the start of this workstream. No open PRs, clean worktree.
+
+### The mobile defect, and the correction to its diagnosis
+
+The finding recorded above under BD-ALERTS-01 was accurate in what it observed and accurate
+about the file, but it named the symptom rather than the cause. Both facts are now recorded.
+
+Project Status *did* render ~620 px inside a 400 px viewport. It was the **victim**.
+`StageColumnChart` hard-coded `Math.max(620, …)` and `min-w-[620px]`. Its `overflow-x-auto`
+wrapper could not contain that floor, because a grid item defaults to `min-width: auto` and
+therefore refuses to shrink below its content. The 620 px escaped into the shared
+visualisation grid, which collapses to a single column on mobile — dragging Project Status,
+its legend and the whole page to `scrollWidth` 657 against a 400 px client width. Correcting
+Project Status alone, or hiding the overflow, would have left the cause in place.
+
+The stage chart is now resolution-independent: it scales to its card via `viewBox` +
+`preserveAspectRatio`, with the viewBox matched to the card's aspect ratio so labels are not
+letterboxed down to unreadable, and long stage names wrap to a second line. Every visual card
+carries `min-w-0`, so no card can force a sibling — or the page — past the viewport.
+
+### Structural changes, all from existing authorised data
+
+| Section | Change |
+|---|---|
+| Header | Generated paragraph removed; it restated the KPI strip beneath it in prose. One short supporting line replaces it. |
+| KPI strip | Four KPIs given icon tiles; **portfolio totals moved inside the same card** instead of floating loose below it. |
+| Due today | Renamed from "Morning site entries due" per the screen. Same compliance state. Capped at 4 rows with a real "View all". |
+| Projects needing attention | Paired beside Due today. Status dot, one action per row, capped at 4 with "View all". |
+| Visual cards | Project status, Project stage and Recent activity now three compact cards in one row. |
+| Project types | Retained as a compact wrapping strip, not a wide row. |
+| **Portfolio notes** | **Removed.** It only explained that filters filter. Not on the screen, no user value. |
+
+**No new metric was introduced.** Every figure is still computed by `dashboardMetrics` from
+the records the role can already see. Product Requirements §11's "Morning site entries due"
+state is unchanged; only its panel label is now governed by the screen, which is presentation
+and therefore the screen's to decide under interpretation rule 3.
+
+### Deliberately not taken from the screen
+
+- **The grouped sidebar.** Blueprint §5 still gates it; navigation is unchanged.
+- **"View full report" / "View stage report".** The Reports Centre they imply is not built.
+  Interpretation rule 7: an image is never a licence to show what the system cannot deliver.
+  A test asserts every Dashboard link resolves to a route that exists today.
+- **A greeting.** The brief permitted "a clear greeting *or* Operations overview"; the
+  existing title was kept rather than adding a name-resolution dependency to the page.
+
+### Measured result
+
+Measured in a real browser against the running application, not inferred.
+
+| | Authority | Before | After |
+|---|---|---|---|
+| Desktop page length @1440×1000 | ~1 viewport | 1457 px (scrolls) | **1000 px, no scroll** |
+| Mobile `scrollWidth` @400 px | = clientWidth | **657 vs 400** | **400 = 400** |
+| Mobile `scrollWidth` @375 px | = clientWidth | 657 vs 375 | **375 = 375** |
+| Mobile page length | contained | 2431 px | **2010 px** |
+| Elements exceeding the viewport | 0 | 620 px chart + legend | **0** |
+| Action panels | 2 equal | 2 stacked full-width | **2 × 576 px** |
+| Visual cards | 3 equal | 2-in-1 + separate row | **3 × 379 px** |
+
+Verified with **all five delivery stages present**, so worst-case label density is covered,
+not merely the current data. Labels wrap ("Concept Design", "Awaiting Approval"); none is
+truncated or overprinted.
+
+### Validation
+
+Full frontend suite **51 files / 483 tests, all passing** (from 470). Thirteen new or updated
+Dashboard tests. jsdom does not lay out, so the overflow tests assert the **cause** — that no
+fixed pixel width, and no horizontal scroll container, may re-enter the visual row — rather
+than a measured width; the measured proof is the table above. Changed-file `eslint` clean;
+repository-wide `eslint` **19 errors before and after**, no new findings. `npm run build`
+prerenders **43 routes**, the unchanged baseline. `git diff --check` clean. The intermittent
+`AdminReports.test.jsx` harness correction was **not** mixed into this PR.
+
+### Merge and deployment
+
+**PR #77**, base `60546b6a2de0f97073cb3f116f7561a0d1e6db89`, reviewed head
+`e8b713916907b3315b37d9dc4cb520b664448936`, merged with `--match-head-commit` against that
+exact head as true merge commit
+**`3a3128807800d8e3432a71fc497994bd5a3f251f`** — two parents, `60546b6` and `e8b7139`. Eight
+files entered main, all under `src/admin/`. PR closed as MERGED. New authoritative main is
+`3a31288`.
+
+Vercel production deployment **`dpl_BvBHoHr63zZqYvpFC3HUNsb6ipZS`** built exactly `3a31288`,
+target production, state READY.
+
+**Production bundle evidence.** Fetched from `botaniquedesigners.com` after deployment: the
+served admin bundle **contains** "Due today" and the new supporting line, and **no longer
+contains** `min-w-[620px]`, "Portfolio notes", or the generated portfolio paragraph. The
+620 px floor is provably absent from production.
+
+### Outstanding — authenticated hosted walkthrough
+
+**Not performed, and not claimed.** The production admin requires Supabase Auth, and no
+authenticated session existed in either available browser. Signing in is outside what may be
+done on the Founder's behalf. The following remain to be confirmed in live Principal and
+Operations Manager sessions against `01-dashboard-authority.png`:
+
+- Dashboard loads for both roles, with role-specific counts unchanged;
+- no inaccessible-project information appears to the Operations Manager;
+- the Alerts bell and account identity remain correct;
+- composition and density match the authority screen;
+- Project Status and Project Stage remain contained;
+- Due Today and Projects Needing Attention remain concise;
+- `documentElement.scrollWidth` equals `clientWidth` at 400 px;
+- no production record is mutated.
+
+The BD-ALERTS-01 record above notes that the automated browser rendered at 1440 px regardless
+of window size, so the 400 px check must again be taken at a genuinely resized window.
+
+### Known follow-up, deliberately out of scope
+
+Removing the header paragraph leaves `operationalSummary` in
+`src/admin/utils/dashboardMetrics.js` exported but unused by any route. Its unit tests still
+pass. Left in place rather than widening the diff; flagged for its own change.
+
+### Programme position
+
+Unchanged by this workstream. BD-ALERTS-01 remains ACTIVE_VERIFIED and is not reopened — no
+Alerts regression was introduced, and the shell was not modified. Stage 4 remains the next
+authorised stage.
