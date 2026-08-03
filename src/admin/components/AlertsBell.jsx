@@ -251,8 +251,11 @@ function AllAlertsDialog({ items, failedSources, onClose, onOpenItem, onMarkAll,
                new interaction — the Stage 3 sort ALREADY orders by tab, then
                category, then project, so the groups are simply the runs that
                ordering produces, given headings. */
-            groupByCategory(visible).map((group) => (
-              <section key={group.category} aria-label={group.category}>
+            /* Keyed by position as well as name: the current sort clusters a
+               category into one run, but a future sort change that split one
+               into two runs would otherwise produce duplicate React keys. */
+            groupByCategory(visible).map((group, index) => (
+              <section key={`${group.category}-${index}`} aria-label={group.category}>
                 <h3 className="sticky top-0 z-10 flex items-baseline gap-2 border-b border-stone-100 bg-stone-50/95 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 backdrop-blur">
                   {group.category}
                   <span className="font-normal tabular-nums text-gray-400">
