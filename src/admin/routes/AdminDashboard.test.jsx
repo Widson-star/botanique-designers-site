@@ -3,6 +3,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
+import { ATTENTION_PREVIEW_LIMIT } from "../components/ProjectAttentionList";
+import { DUE_TODAY_PREVIEW_LIMIT } from "../components/dailysite/MorningComplianceCard";
 import AdminDashboard from "./AdminDashboard";
 
 function renderDashboard({
@@ -75,12 +77,27 @@ describe("AdminDashboard composition", () => {
     expect(screen.getAllByText("No data yet").length).toBeGreaterThan(0);
   });
 
-  it("generates the operational summary from visible projects", () => {
+  // BD-DASHBOARD-01: the header used to carry a generated paragraph that
+  // restated, in prose, the KPI strip printed directly beneath it. The
+  // authority screen allows the page one SHORT supporting line, so the
+  // paragraph is gone and the KPI card is the single place a count is stated.
+  it("keeps the header to one short line instead of restating the KPI counts in prose", () => {
     renderDashboard({ role: "owner", projects });
-    const summary = screen.getByText(/1 project in the portfolio/);
-    expect(summary).toHaveTextContent("1 is pending activation");
-    expect(summary).toHaveTextContent("1 is awaiting activation");
-    expect(summary).not.toHaveTextContent(/0 active|0 completed|0 upcoming/i);
+    expect(
+      screen.getByText("Here's what's happening across the projects you can see.")
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/project in the portfolio/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/is awaiting activation/i)).not.toBeInTheDocument();
+  });
+
+  // The explanatory card that only said "filters filter" is not on the
+  // authority screen and carried no user value. It must not come back.
+  it("does not render the Portfolio notes explainer card", () => {
+    renderDashboard({ role: "owner", projects });
+    expect(screen.queryByRole("heading", { name: "Portfolio notes" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Metrics and charts use only the project records/i)
+    ).not.toBeInTheDocument();
   });
 
   it("uses ordinary Pending-project language for the manager summary", () => {
@@ -105,15 +122,24 @@ describe("AdminDashboard composition", () => {
     );
   });
 
-  it("fully exposes a Concept Design chart label", () => {
-    renderDashboard({
+  // A two-word stage label now WRAPS onto a second line rather than being
+  // truncated or overprinting its neighbour. The whole label must still be
+  // present — wrapping is a layout change, never a loss of text.
+  it("fully exposes a Concept Design chart label across its wrapped lines", () => {
+    const { container } = renderDashboard({
       role: "owner",
       projects: [{ ...projects[0], stage: "Concept Design" }],
     });
     expect(
       screen.getByRole("link", { name: /Concept Design: 1 projects/i })
     ).toHaveAttribute("href", "/admin/projects?stage=Concept%20Design");
-    expect(screen.getByText("Concept Design")).toBeInTheDocument();
+
+    const stageSvg = container.querySelector("#stage-column-title").closest("svg");
+    const labelText = [...stageSvg.querySelectorAll("text")]
+      .map((node) => node.textContent)
+      .join(" ");
+    expect(labelText).toContain("Concept Design");
+    expect(labelText).not.toMatch(/…|\.\.\./);
   });
 
   it("renders one integrated management metrics rail without card ribbons", () => {
@@ -163,7 +189,7 @@ describe("AdminDashboard composition", () => {
         },
       ],
     });
-    expect(screen.getByText("No projects need attention.")).toHaveClass("py-3");
+    expect(screen.getByText("No projects need attention.")).toHaveClass("pb-4");
   });
 
   it("links each derived KPI to its exact named project view", () => {
@@ -266,6 +292,174 @@ describe("AdminDashboard composition", () => {
         </AdminDataContext.Provider>
       </MemoryRouter>
     );
+    expect(screen.queryByRole("link", { name: "New project" })).not.toBeInTheDocument();
+  });
+});
+
+// BD-DASHBOARD-01 — alignment with
+// `docs/ui-authority/operations-hub/01-dashboard-authority.png`.
+//
+// The production defect these guard against: `StageColumnChart` carried a hard
+// 620px floor that its `overflow-x-auto` wrapper could not contain, because a
+// grid item defaults to `min-width: auto`. The floor escaped into the shared
+// grid and pushed the whole page to 657px inside a 400px viewport — dragging
+// the Project status card out with it. jsdom does not lay out, so these tests
+// assert the CAUSE (no fixed width may re-enter the markup) rather than a
+// measured width; the measured proof is recorded in the authority record.
+describe("AdminDashboard authority composition", () => {
+  const denseProjects = [
+    "Inquiry",
+    "Concept Design",
+    "Awaiting Approval",
+    "Implementation",
+    "Completed",
+  ].map((stage, index) => ({
+    ...projects[0],
+    id: `dense-${index}`,
+    projectName: `Dense project ${index}`,
+    stage,
+  }));
+
+  function stageSvg(container) {
+    return container.querySelector("#stage-column-title").closest("svg");
+  }
+
+  it("gives the stage chart no fixed pixel width, so it resizes instead of clipping", () => {
+    const { container } = renderDashboard({ role: "owner", projects: denseProjects });
+    const svg = stageSvg(container);
+
+    expect(svg.getAttribute("class")).not.toMatch(/min-w-\[|w-\[\d/);
+    expect(svg.getAttribute("width")).toBeNull();
+    expect(svg.getAttribute("viewBox")).toBe("0 0 360 196");
+    expect(svg.getAttribute("preserveAspectRatio")).toBe("xMidYMid meet");
+    expect(svg.getAttribute("class")).toContain("w-full");
+  });
+
+  it("leaves no horizontal scroll container or fixed-width element in the visual row", () => {
+    const { container } = renderDashboard({ role: "owner", projects: denseProjects });
+    const visualRow = container.querySelector("[data-dashboard-visual-cards]");
+
+    expect(visualRow.querySelector(".overflow-x-auto")).toBeNull();
+    visualRow.querySelectorAll("*").forEach((node) => {
+      const className = node.getAttribute("class") || "";
+      expect(className).not.toMatch(/(^|\s)(min-)?w-\[\d+px\]/);
+    });
+  });
+
+  it("lets every visual card shrink below its content width", () => {
+    const { container } = renderDashboard({ role: "owner", projects: denseProjects });
+    const cards = container.querySelectorAll("[data-dashboard-visual-cards] > *");
+
+    expect(cards).toHaveLength(3);
+    cards.forEach((card) => expect(card.getAttribute("class")).toContain("min-w-0"));
+  });
+
+  it("wraps a long stage label onto its own lines rather than clipping it", () => {
+    const { container } = renderDashboard({ role: "owner", projects: denseProjects });
+    const lines = [...stageSvg(container).querySelectorAll("text")].map(
+      (node) => node.textContent
+    );
+
+    expect(lines).toEqual(expect.arrayContaining(["Awaiting", "Approval"]));
+    expect(lines).toEqual(expect.arrayContaining(["Concept", "Design"]));
+    lines.forEach((line) => expect(line).not.toMatch(/…/));
+  });
+
+  it("keeps every status legend row on one line with its count reachable", () => {
+    const { container } = renderDashboard({ role: "owner", projects: denseProjects });
+    const legend = container.querySelector("#status-chart-title").closest("section");
+
+    legend.querySelectorAll("li a").forEach((link) => {
+      expect(link.getAttribute("class")).toContain("min-w-0");
+      expect(link.querySelector("strong").getAttribute("class")).toContain("shrink-0");
+    });
+  });
+
+  it("keeps the project types strip wrapping rather than forcing one wide row", () => {
+    const { container } = renderDashboard({ role: "owner", projects: denseProjects });
+    const strip = container.querySelector("#type-summary-title").closest("section");
+
+    expect(strip.getAttribute("class")).toContain("flex-wrap");
+    expect(strip.querySelector("ul").getAttribute("class")).toContain("flex-wrap");
+  });
+
+  it("pairs the two action panels in one row and keeps each concise", () => {
+    const many = Array.from({ length: 9 }, (_, index) => ({
+      ...projects[0],
+      id: `attention-${index}`,
+      projectName: `Attention project ${index}`,
+    }));
+    const { container } = renderDashboard({
+      role: "owner",
+      projects: many,
+      compliance: [{ due: true, complianceStatus: "entry_present" }],
+    });
+
+    const panels = container.querySelector("[data-dashboard-action-panels]");
+    expect(panels.getAttribute("class")).toContain("lg:grid-cols-2");
+    expect(panels.children).toHaveLength(2);
+
+    // Nine flagged projects, but the panel stays a short queue with a way out.
+    const attention = screen.getByRole("region", { name: "Projects needing attention" });
+    expect(within(attention).getAllByRole("listitem")).toHaveLength(
+      ATTENTION_PREVIEW_LIMIT
+    );
+    expect(within(attention).getByRole("link", { name: "View all" })).toHaveAttribute(
+      "href",
+      "/admin/projects"
+    );
+    expect(within(attention).getByText("9")).toBeInTheDocument();
+  });
+
+  it("keeps Due today short and pointing at the real Daily site destination", () => {
+    const compliance = Array.from({ length: 7 }, (_, index) => ({
+      projectId: `p${index}`,
+      projectName: `Missing project ${index}`,
+      due: true,
+      complianceStatus: "missing",
+    }));
+    renderDashboard({ role: "owner", projects, compliance });
+
+    const dueToday = screen.getByRole("region", { name: "Due today" });
+    expect(within(dueToday).getAllByRole("listitem")).toHaveLength(DUE_TODAY_PREVIEW_LIMIT);
+    expect(within(dueToday).getByRole("link", { name: "View all" })).toHaveAttribute(
+      "href",
+      "/admin/daily-site-operations"
+    );
+  });
+
+  it("keeps the portfolio totals inside the metrics card", () => {
+    const { container } = renderDashboard({ role: "owner", projects });
+    const indicators = screen.getByRole("region", { name: "Primary project indicators" });
+
+    expect(within(indicators).getByLabelText("Portfolio totals")).toBeInTheDocument();
+    // One continuous surface: the rail's bottom corners meet the totals strip.
+    expect(
+      container.querySelector('[role="group"][aria-label="Management metrics"]')
+        .getAttribute("class")
+    ).toContain("rounded-t-lg");
+  });
+
+  it("introduces no metric or destination the system cannot deliver", () => {
+    const { container } = renderDashboard({ role: "owner", projects });
+
+    // Every link resolves to a route that exists today. In particular the
+    // authority screen's "View full report" links are NOT reproduced, because
+    // the Reports Centre they imply is not built.
+    expect(screen.queryByText(/View full report|View stage report/i)).not.toBeInTheDocument();
+    container.querySelectorAll("a[href]").forEach((link) => {
+      expect(link.getAttribute("href")).toMatch(
+        /^\/admin\/(projects|daily-site-operations)/
+      );
+    });
+  });
+
+  it("shows only zero-safe counts when the role can see nothing", () => {
+    renderDashboard({ role: "viewer", projects: [] });
+
+    expect(screen.getByText("No project data is available yet.")).toBeInTheDocument();
+    const indicators = screen.getByRole("region", { name: "Primary project indicators" });
+    expect(within(indicators).getAllByText("0").length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: "New project" })).not.toBeInTheDocument();
   });
 });

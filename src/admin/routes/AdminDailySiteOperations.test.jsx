@@ -180,7 +180,10 @@ describe("MorningComplianceCard (dashboard)", () => {
         { due: true, complianceStatus: "waived" },
       ],
     });
-    const item = screen.getByText("Lugulu Estate").closest("li");
+    // The row now leads with the action ("Morning site entry missing") and
+    // carries the project and compliance state on one supporting line, per
+    // the Dashboard authority screen's "Due today" panel.
+    const item = screen.getByText(/Lugulu Estate/).closest("li");
     expect(within(item).getByRole("button", { name: "Waive" })).toBeInTheDocument();
     expect(within(item).getByRole("link", { name: "Record" })).toBeInTheDocument();
   });
