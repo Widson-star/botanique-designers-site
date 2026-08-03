@@ -710,7 +710,7 @@ describe("AdminDashboard snapshot limits", () => {
 
     // Four leading types plus one Other.
     expect(entries).toHaveLength(5);
-    expect(entries.at(-1).textContent).toContain("Other");
+    expect(entries.at(-1).textContent).toContain("Remaining");
     const total = entries.reduce(
       (sum, li) => sum + Number(li.querySelector("strong").textContent),
       0
@@ -718,10 +718,48 @@ describe("AdminDashboard snapshot limits", () => {
     expect(total).toBe(many.length);
   });
 
+  // Found in the hosted Principal walkthrough. "Other" is a REAL entry in
+  // PROJECT_TYPES, so labelling the tail rollup "Other" put two entries called
+  // "Other" side by side, both showing 3. This reproduces the exact production
+  // shape: seven types, one of them genuinely named "Other".
+  it("does not collide the tail rollup with the real Other project type", () => {
+    const production = [
+      ...Array(4).fill("Residential"),
+      ...Array(3).fill("Other"),
+      "Estate",
+      "Hospitality",
+      "Institutional",
+      "Commercial",
+      "Public Realm",
+    ].map((projectType, index) => ({
+      ...projects[0],
+      id: `prod-${index}`,
+      projectName: `Production project ${index}`,
+      projectType,
+    }));
+    const { container } = renderDashboard({ role: "owner", projects: production });
+    const entries = [...container
+      .querySelector("#type-summary-title")
+      .closest("section")
+      .querySelectorAll("li")];
+    const labels = entries.map((li) => li.textContent.replace(/[0-9]+.*/, "").trim());
+
+    // The real category keeps its name; the rollup has a distinct one.
+    expect(labels).toContain("Other");
+    expect(labels).toContain("Remaining");
+    expect(new Set(labels).size).toBe(labels.length);
+    // And the strip still reconciles with the portfolio.
+    const total = entries.reduce(
+      (sum, li) => sum + Number(li.querySelector("strong").textContent),
+      0
+    );
+    expect(total).toBe(production.length);
+  });
+
   it("leaves a short project-type list untouched", () => {
     const { container } = renderDashboard({ role: "owner", projects });
     const strip = container.querySelector("#type-summary-title").closest("section");
 
-    expect(strip.textContent).not.toContain("Other");
+    expect(strip.textContent).not.toContain("Remaining");
   });
 });
