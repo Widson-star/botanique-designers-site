@@ -242,9 +242,16 @@ export function StageColumnChart({ data }) {
 // rolls the tail into one honest "Other" count.
 export const PROJECT_TYPE_LEADERS = 4;
 
+// The rollup is called "Remaining", NOT "Other" — because "Other" is a real
+// project type in `PROJECT_TYPES`. Calling the tail "Other" put two entries
+// labelled "Other" side by side on the Principal's live Dashboard, both showing
+// 3, which reads as a duplicate or a bug. Found in the hosted walkthrough; it
+// could not surface locally, because the demo seed has no project of that type.
+export const PROJECT_TYPE_ROLLUP_LABEL = "Remaining";
+
 // The tail is summed, never dropped: the strip's numbers must still reconcile
-// with the portfolio total. "Other" is not a link, because no single filter can
-// express "everything except the leading four".
+// with the portfolio total. The rollup is not a link, because no single filter
+// can express "everything except the leading four".
 function leadingProjectTypes(data, limit = PROJECT_TYPE_LEADERS) {
   const ranked = [...data].sort((a, b) => b.value - a.value);
   if (ranked.length <= limit + 1) return { leaders: ranked, otherValue: 0, otherCount: 0 };
@@ -290,7 +297,7 @@ export function ProjectTypeSummary({ data }) {
           {otherCount > 0 && (
             <li className="flex items-center gap-2 text-sm text-gray-500">
               <span className="h-3 w-1 shrink-0 rounded-sm bg-stone-300" aria-hidden="true" />
-              <span>Other</span>
+              <span>{PROJECT_TYPE_ROLLUP_LABEL}</span>
               <strong className="tabular-nums text-botanique-charcoal">{otherValue}</strong>
               <span className="sr-only">
                 across {otherCount} further project types
