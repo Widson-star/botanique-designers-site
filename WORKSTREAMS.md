@@ -5718,12 +5718,15 @@ was opened.
 
 ## BD-PEOPLE-01 — Stage 5: People and resourcing — 3 August 2026
 
-Status: **Merged, deployed, and hosted-verified under the Principal in an authenticated
-production session. The Operations Manager walkthrough remains outstanding** and are the one thing the Founder must
-confirm directly, because signing in is not an action this session can perform.
+Status: **ACTIVE_VERIFIED.** Merged, deployed and hosted-verified under both the Principal
+and the Operations Manager in authenticated production sessions, including a genuine 400 px
+mobile viewport. Two defects found during those walkthroughs were corrected and redeployed in
+the same session.
 
 Authoritative base `main`: `479638d88965b6b9b345353434ba351a4f628c72`.
-New authoritative `main`: `f279fdc091256b8364bb5725ceb7511b3985a431`.
+New authoritative `main` after the implementation merge:
+`f279fdc091256b8364bb5725ceb7511b3985a431`. Subsequent merges in this stage: `d980bcf` (edit
+correction), `f4079af` (mobile wrap correction), `cd306ea` and `4870b08` (authority records).
 
 ### Programme position, and a correction to three earlier entries
 
@@ -6047,11 +6050,70 @@ carrying a task description, two workers, headcounts, four rates and two totals
 also shows that the money half of that record belongs to the Labour and Payments
 domain, which remains unauthorised.
 
-### Outstanding
+### Operations Manager walkthrough — hosted-verified, 3 August 2026
 
-**The Operations Manager walkthrough.** It is the one that can actually test the
-access boundary, because the Principal's company-wide authority means nothing
-could have been withheld from this session.
+Performed in an authenticated production session as Martine Lotom, against
+authoritative main `4870b08d42ab65f954ca0b8d5b8f7fd86abbacd2`. This is the
+walkthrough that can actually test the access boundary: the Principal's
+company-wide authority means nothing could have been withheld from that session.
+
+**Scope, measured rather than asserted.** She reaches **5** projects for
+engagement against the Principal's 12 — exactly the five she leads, since
+`project_assignments` is empty in production. She sees **1** engagement, on
+Alego Usonga, which is one of her five. The `projects` table itself returns 5 to
+her, so the People scope and the existing project RLS agree.
+
+**The register is company-wide, deliberately.** She sees the one person on the
+register. This is the approved design and is not a leak: a person record holds
+no project, no money and no operational state, and an Operations Manager must be
+able to find a team leader before engaging them.
+
+**Nothing inaccessible leaks.** Both People screens were scanned for the names,
+UUIDs and link targets of all six named projects outside her authority. **Zero
+hits** in the rendered text, the full page HTML, or any `href` — on the overview
+and on the person detail.
+
+**The Principal-only controls are absent, and refusing them does not depend on
+that.** Her person detail offers **Edit** but no "Mark inactive", and the portal
+panel reads "Only the Principal can change portal access" in place of the
+account selector. The interface hiding those controls is not what protects
+them: with the interface bypassed entirely and her own session token used
+directly against the REST API, all three forbidden writes were refused with
+**403**:
+
+| Attempt | Result |
+|---|---|
+| Link a portal account | `42501` — "Only the Principal may link or unlink a portal account" |
+| Reactivate the person | `42501` — "Only the Principal may activate or deactivate a person" |
+| Delete the person | `42501` — permission denied; no DELETE is granted to any caller |
+
+**Her authorised writes work.** She edited the person's ordinary details through
+the interface and the change was accepted — note updated, version 7,
+`updated_by` recorded as her — while `is_active` stayed false and `profile_id`
+stayed null, because the edit path cannot reach either.
+
+**Empty state.** With the verification record now inactive and the default
+filter set to Active, the overview correctly showed its empty state rather than
+a stale row.
+
+**Mobile and errors.** At the same genuine 400 px viewport her session measured
+`scrollWidth` 400 against `clientWidth` 400 — no overflow — and no console
+errors were recorded.
+
+**No rows were created by this walkthrough.** Final production state, unchanged
+from the end of the Principal walkthrough except the one edited note: people
+**1** (0 active, 0 linked), engagements **1** (0 open), project_assignments
+**0**, auth users **2**, profiles **2**, projects **12**, claims **7**, fund
+requests **0**, approvals **5**, project activities **29**, daily site **12**.
+
+### Stage 5 result
+
+**ACTIVE_VERIFIED.** People and Resourcing is merged, deployed and hosted-verified
+under both roles. The canonical person record, the portal-user separation, the
+regular-staff and external-person treatment, the casual-labour decision, the
+project-engagement model and the role/RLS behaviour all hold in production, and
+the two defects the walkthroughs found were corrected and redeployed inside the
+same session.
 
 ### Deferred to later stages
 
@@ -6062,7 +6124,7 @@ People reports (stage 12).
 
 ### Programme position
 
-Stage 5 is delivered, merged and deployed, pending the two browser walkthroughs above. **The
+Stage 5 is delivered, merged, deployed and hosted-verified under both roles. **The
 next authorised programme stage is stage 6 — progressive navigation and mobile-shell
 implementation**, which governs the grouped Dashboard / Projects / People / Finance / Reports /
 More presentation and the destination-naming inconsistencies deferred from BD-REPORTS-01B. It
