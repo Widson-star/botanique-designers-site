@@ -1322,8 +1322,28 @@ promised to any user.
 One coherent People area must eventually serve both workforce and non-person payees, using
 categories that stay consistent across Projects, Daily Site, claims, payments and reports.
 
-Workforce and person categories: Principal; Operations Manager; regular staff; casual
-worker; crew; crew representative; subcontractor; consultant.
+**Delivered People slice, 3 August 2026.** Stage 5 delivered the person register and project
+engagement boundary only. `public.people` is the canonical person record; an optional
+`profile_id` links an already-existing portal user without creating a login or granting project
+access, and `public.people_engagements` records a resourcing fact without consulting or changing
+`project_assignments`. The delivered relationship vocabulary is Principal, Operations Manager,
+regular staff, crew representative, subcontractor, consultant, external professional and site
+representative. Casual labour remains headcount plus crew reference in its source operational
+record until the Labour domain; casual workers must not be given permanent People records in
+this slice. Suppliers, nurseries, transport providers and every other organisation remain
+outside `people` and await their separately authorised organisation identity model.
+
+The initial live register is deliberately limited to three real active records: **Widson
+Omutelema Ambaisi** (Principal, linked to the existing Principal profile), **Martine Lotom**
+(Operations Manager, linked to the existing Operations Manager profile) and **Lincoln Waweru**
+(regular staff, unlinked). Operationalising that register created no auth user, no profile, no
+project assignment and no engagement. No engagement was inferred from a claim date or from an
+existing project lead field. The inactive Stage 5 verification record and its closed verification
+engagement remain historical evidence and are not a fourth real worker record.
+
+Future cross-domain Labour vocabulary may still distinguish casual worker and crew, but those
+are not delivered People relationship types and do not authorise permanent person records in
+this slice. The delivered People vocabulary is the Stage 5 list above.
 
 Organisations and non-person payees, defined separately: supplier; nursery; service
 provider; transport provider; equipment provider; other authorised organisation.
