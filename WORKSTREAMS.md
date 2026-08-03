@@ -4958,12 +4958,12 @@ and BD-FIN-01B2 remains paused with every settled decision unchanged.
 
 ## BD-ALERTS-01 — Operations Hub visual authority, and the Alerts presentation correction
 
-Status: **PRINCIPAL_VERIFIED_PENDING_OPERATIONS_MANAGER.** Merged, deployed, verified against
-the production bundle and hosted database, and **hosted-verified in an authenticated
-production Principal session on 3 August 2026** — see *Principal walkthrough* below. The
-Operations Manager walkthrough remains outstanding and is the one thing still to confirm.
-One check could not be performed and is not claimed: a genuine 375–400 px mobile viewport
-against production, because the browser window would not resize below screen width.
+Status: **ACTIVE_VERIFIED.** Merged, deployed, verified against the production bundle and
+hosted database, and **hosted-verified in authenticated production sessions under both roles
+on 3 August 2026** — Principal and Operations Manager, see the two walkthrough sections below.
+One check is explicitly **not** claimed: a genuine 375–400 px mobile viewport against
+production. The automated browser would not render below 1440 px regardless of window size,
+so mobile on a real phone remains for the Founder.
 
 Date: 3 August 2026
 
@@ -5135,22 +5135,11 @@ than inferred from the repository:
 **Database:** role scoping and RLS unchanged and re-proven by the Stage 3 suite; read state
 now personal to the Principal only.
 
-**Not claimed — the authenticated walkthroughs.** Production `/admin` presents the ordinary
-invite-only email/password gate and no authenticated session was available. Signing in would
-require entering credentials, which is not done. The **Principal** and **Operations Manager**
-browser walkthroughs therefore remain outstanding and are what the Founder should confirm
-directly:
-
-1. Bell visible top-right beside the profile, on ordinary portal pages.
-2. Unread count reconciles — the badge number equals the "Needs my action (N)" count. Because
-   Martine's seen rows were cleared, her badge should now equal her full action-item count.
-3. Compact dropdown opens, shows at most five items, closes on Escape and on outside click.
-4. Only authorised alerts appear; the Operations Manager sees no Principal-only item, in
-   particular no *Project activation required*.
-5. Each item links to its exact record.
-6. Marking seen does **not** resolve — items stay in "Needs my action" after being marked.
-7. No Work Inbox item anywhere in the sidebar, under either role.
-8. Mobile: header does not overflow, popover and panel stay inside the screen.
+**At the time of merge the authenticated walkthroughs were not claimed**, because production
+`/admin` is an invite-only credential gate and no session was available. The Founder
+subsequently established both sessions on 3 August 2026 and **both walkthroughs were
+completed** — see *Principal walkthrough* and *Operations Manager walkthrough* below. The
+only check that could not be performed is a genuine mobile viewport against production.
 
 ### Principal walkthrough — hosted-verified, 3 August 2026
 
@@ -5264,6 +5253,66 @@ made one alert disappear on its own.
 
 The Principal's production Alerts state is now **natural**: nothing has been read, and the
 badge shows the nine genuinely outstanding items.
+
+### Operations Manager walkthrough — hosted-verified, 3 August 2026
+
+Performed in an authenticated production session as Martine Lotom against the same deployment.
+This is the walkthrough that can actually test the access boundary, which the Principal
+session structurally cannot: the Principal has company-wide authority, so nothing could have
+been withheld from him.
+
+**Scope was derived from the database and predicted before the screen was opened.** The
+`projects` SELECT policy is
+`is_owner() OR is_assigned_to_project(id) OR (is_manager() AND lead_person_id = auth.uid())`,
+and `project_assignments` is **empty**. Martine is lead on Alego Usonga, Karen Residence and
+Lugulu; **Zizu investments Ltd is led by the Principal and is therefore invisible to her** —
+and Zizu is precisely the project carrying a blocker, an overdue action and pending
+activation. Predicted: *Needs my action* **4**, *Awaiting others* **2**, badge **4**.
+
+**The live screen matched the prediction exactly.**
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Same interaction as the Principal | **Pass.** Same bell, popover, contained panel, tabs and footer |
+| 2 | Manager-scoped alerts only | **Pass.** *Needs my action (4)*: missing morning entries for Alego and Lugulu; Lugulu blocker; Lugulu overdue action |
+| 3 | No Principal-only alerts | **Pass.** No *Project is awaiting activation* anywhere — the category is owner-only and was withheld even though the underlying project is one she cannot see anyway |
+| 4 | Badge reconciliation | **Pass.** Badge "4", accessible name "Alerts, 4 unread items", equal to *Needs my action (4)*. The two *Awaiting others* items are unread but correctly excluded, because the badge counts work to do, not work to wait for |
+| 5 | Exact links | **Pass.** Obligations → `/admin/daily-site-operations?project=<id>`; project items → `/admin/projects/<id>`; claims → `/admin/site-costs/<id>`. All six matched their database rows |
+| 6 | No Work Inbox item in the sidebar | **Pass.** Same eight destinations; no Work Inbox, no Alerts destination; the string "work inbox" appears nowhere in the rendered page |
+| 7 | Escape closes and returns focus | **Pass.** Both popover and contained panel close; focus returns to the bell; badge unchanged |
+| 8 | No token in any URL | **Pass.** No `access_token`, `apikey` or `bearer` anywhere |
+
+**Access boundary — the decisive evidence.** Asserted directly against the rendered page and
+every link `href`, across both tabs:
+
+* Zizu's UUID `a2a8dfd7…` — **absent**.
+* The string "Zizu" — **absent from the entire page**, including the Dashboard.
+* Zizu's blocker text "Scheduled meeting on 31st July 2026" — **absent**.
+* Any *awaiting activation* item — **absent**.
+* Karen Residence's morning-entry item — **absent**, because its source resolved that morning.
+
+The Dashboard corroborates independently: Martine sees **5 projects, 1 flagged, Pending 0,
+Overdue actions 1**, where the Principal sees **12 projects, 2 flagged, Pending 1, Overdue
+actions 2**.
+
+**Requester-versus-decider asymmetry, proven on live data.** The same two cost claims appear
+to the two roles differently and with different wording:
+
+| Item | Principal | Operations Manager |
+|---|---|---|
+| Alego / Lugulu missing morning entries | Needs my action | Needs my action |
+| Lugulu blocker, Lugulu overdue action | Needs my action | Needs my action |
+| Zizu blocker, Zizu overdue action, Zizu activation | Needs my action | **Not visible** |
+| Alego cost claim, Lugulu cost claim | Needs my action — "Cost claim awaiting your review" | **Awaiting others** — "Your cost claim is awaiting review" |
+| **Totals** | **9 action, 0 awaiting, badge 9** | **4 action, 2 awaiting, badge 4** |
+
+**This walkthrough mutated nothing.** It was read-only: `work_inbox_read_state` remained at
+**0 rows** throughout, and every operational table was unchanged afterwards — `projects` 12,
+`internal_cost_claims` 5, `approval_requests` 5, `fund_requests` 0, `daily_site_entries` 10,
+`project_activities` 26, each with an unchanged maximum timestamp. Mark-read was deliberately
+**not** exercised here: it was already proven live in the Principal session with full database
+evidence, the code path is identical, and re-proving it would have dirtied Martine's freshly
+restored natural state for no additional assurance.
 
 ### Programme position
 
