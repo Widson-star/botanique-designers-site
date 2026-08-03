@@ -40,6 +40,7 @@ function contexts(overrides = {}) {
       editPerson: vi.fn(() => Promise.resolve({ ok: true })),
       addEngagement: vi.fn(() => Promise.resolve({ ok: true })),
       closeEngagement: vi.fn(() => Promise.resolve({ ok: true })),
+      correctPastEngagement: vi.fn(() => Promise.resolve({ ok: true })),
       engagementsForPerson: (id) => engagements.filter((engagement) => engagement.personId === id),
       peopleById: new Map(people.map((person) => [person.id, person])),
       ...rest,
@@ -174,6 +175,89 @@ describe("Person detail", () => {
     fireEvent.change(screen.getByLabelText(/^Ends$/), { target: { value: "2026-08-31" } });
     fireEvent.click(screen.getByRole("button", { name: "End engagement" }));
     await waitFor(() => expect(values.people.closeEngagement).toHaveBeenCalledWith("eng-1", 1, "2026-08-31", ""));
+  });
+
+  it("offers a restrained closed-engagement correction to the Principal", async () => {
+    const values = contexts();
+    wrap(values, "/admin/people/person-1");
+
+    fireEvent.click(screen.getByRole("button", { name: "Correct engagement" }));
+    expect(screen.getByRole("button", { name: "Correct details" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Reopen engagement" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Why is this record being corrected?")).toBeRequired();
+
+    fireEvent.change(screen.getByLabelText("Role on this project"), { target: { value: "consultant" } });
+    fireEvent.change(screen.getByLabelText(/^Starts$/), { target: { value: "2026-03-02" } });
+    fireEvent.change(screen.getByLabelText(/^Ends$/), { target: { value: "2026-06-01" } });
+    fireEvent.change(screen.getByLabelText(/End reason/), { target: { value: "Corrected completion date" } });
+    fireEvent.change(screen.getByLabelText("Why is this record being corrected?"), { target: { value: "The original dates were entered incorrectly" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
+
+    await waitFor(() => expect(values.people.correctPastEngagement).toHaveBeenCalledWith({
+      engagementId: "eng-2",
+      expectedVersion: 2,
+      engagementRole: "consultant",
+      startDate: "2026-03-02",
+      endDate: "2026-06-01",
+      endReason: "Corrected completion date",
+      correctionReason: "The original dates were entered incorrectly",
+      reopen: false,
+    }));
+  });
+
+  it("requires the correction explanation before calling the controlled action", () => {
+    const values = contexts();
+    wrap(values, "/admin/people/person-1");
+    fireEvent.click(screen.getByRole("button", { name: "Correct engagement" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Save correction" }).closest("form"));
+    expect(screen.getByText("Explain why this engagement record is being corrected.")).toBeInTheDocument();
+    expect(values.people.correctPastEngagement).not.toHaveBeenCalled();
+  });
+
+  it("reopens the loaded engagement row and clears closure fields in the request", async () => {
+    const values = contexts();
+    wrap(values, "/admin/people/person-1");
+    fireEvent.click(screen.getByRole("button", { name: "Correct engagement" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reopen engagement" }));
+    expect(screen.getByText(/restores this same engagement as current/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Why is this record being corrected?"), { target: { value: "The engagement was closed by mistake" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm reopen" }));
+
+    await waitFor(() => expect(values.people.correctPastEngagement).toHaveBeenCalledWith({
+      engagementId: "eng-2",
+      expectedVersion: 2,
+      engagementRole: "supervisor",
+      startDate: "2026-03-01",
+      endDate: "",
+      endReason: "",
+      correctionReason: "The engagement was closed by mistake",
+      reopen: true,
+    }));
+  });
+
+  it("does not expose closed-record correction or reopening to an Operations Manager", () => {
+    wrap(contexts({ role: "manager" }), "/admin/people/person-1");
+    expect(screen.queryByRole("button", { name: "Correct engagement" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reopen engagement" })).not.toBeInTheDocument();
+    // Ordinary resourcing authority remains present.
+    expect(screen.getByRole("button", { name: "Engage on a project" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "End" })).toBeInTheDocument();
+  });
+
+  it("shows the database conflict explanation without pretending a reopen succeeded", async () => {
+    const values = contexts({
+      correctPastEngagement: vi.fn(() => Promise.resolve({
+        ok: false,
+        error: "This engagement cannot be reopened because an active engagement already exists for this person and project.",
+      })),
+    });
+    wrap(values, "/admin/people/person-1");
+    fireEvent.click(screen.getByRole("button", { name: "Correct engagement" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reopen engagement" }));
+    fireEvent.change(screen.getByLabelText("Why is this record being corrected?"), { target: { value: "The closure was accidental" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm reopen" }));
+    expect(await screen.findByText(/active engagement already exists/)).toBeInTheDocument();
+    expect(screen.queryByText("Engagement reopened.")).not.toBeInTheDocument();
   });
 
   // profiles is itself row-level secured, so an Operations Manager reads only

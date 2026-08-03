@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ENGAGEMENT_ROLES, RELATIONSHIP_TYPES, canCreatePerson, canLinkPortalAccess,
-  canManageEngagements, canSeePeople, canSetPersonActive, canonicalName,
+  canCorrectEngagement, canManageEngagements, canSeePeople, canSetPersonActive, canonicalName,
   findDuplicatePerson, isEngagementOpen, isInternalRelationship, summarisePeople,
 } from "./peopleCapabilities";
 
@@ -27,6 +27,13 @@ describe("people capabilities", () => {
     expect(canLinkPortalAccess("manager")).toBe(false);
     expect(canSetPersonActive("owner")).toBe(true);
     expect(canSetPersonActive("manager")).toBe(false);
+  });
+
+  it("keeps closed-engagement correction and reopening with the Principal alone", () => {
+    expect(canCorrectEngagement("owner")).toBe(true);
+    expect(canCorrectEngagement("manager")).toBe(false);
+    expect(canCorrectEngagement("staff")).toBe(false);
+    expect(canCorrectEngagement("viewer")).toBe(false);
   });
 
   it("offers no casual-worker or crew relationship, per the Founder decision", () => {

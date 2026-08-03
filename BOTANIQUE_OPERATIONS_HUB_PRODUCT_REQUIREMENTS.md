@@ -1341,6 +1341,18 @@ project assignment and no engagement. No engagement was inferred from a claim da
 existing project lead field. The inactive Stage 5 verification record and its closed verification
 engagement remain historical evidence and are not a fourth real worker record.
 
+**Engagement-history correction, approved 3 August 2026.** Engagement creation, current-record
+management and ordinary ending remain authorised day-to-day Operations Manager work on projects
+that role can access. A closed engagement is different: only the Principal may correct its role,
+dates or end reason, or reopen it. That boundary is enforced in the database as well as the
+interface. Correction and reopening require the version the Principal loaded and a written
+explanation; they update the same engagement row and atomically append complete before-and-after
+states, actor, time, explanation and resulting version to a non-editable lifecycle history.
+Reopening clears the closure, creates no replacement engagement, user or project assignment, and
+grants no access. It is refused when another current engagement already exists for the same person
+and project. This focused rule deliberately does not prohibit every overlapping or parallel role,
+which would require a separate workforce decision.
+
 Future cross-domain Labour vocabulary may still distinguish casual worker and crew, but those
 are not delivered People relationship types and do not authorise permanent person records in
 this slice. The delivered People vocabulary is the Stage 5 list above.
