@@ -221,6 +221,51 @@ describe("Person detail", () => {
     expect(screen.getByRole("button", { name: "Mark active" })).toBeInTheDocument();
   });
 
+  // Duplicates are refused and nothing can be deleted, so without an edit path a
+  // mistyped name would be permanent and the person could not be re-created.
+  it("lets an operational role correct a person's ordinary details", async () => {
+    const values = contexts({ role: "manager" });
+    wrap(values, "/admin/people/person-1");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Full name/), { target: { value: "Lincoln WawerU " } });
+    fireEvent.change(screen.getByLabelText(/Phone/), { target: { value: "0700 000 111" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+    await waitFor(() => expect(values.people.editPerson).toHaveBeenCalled());
+    const [id, version, patch] = values.people.editPerson.mock.calls[0];
+    expect(id).toBe("person-1");
+    expect(version).toBe(3);
+    expect(patch).toEqual({
+      full_name: "Lincoln WawerU",
+      relationship_type: "crew_representative",
+      phone: "0700 000 111",
+      note: "Leads the Karen crew.",
+    });
+    // Editing never touches access or lifecycle.
+    expect(patch).not.toHaveProperty("profile_id");
+    expect(patch).not.toHaveProperty("is_active");
+  });
+
+  it("refuses an edit that renames a person onto another person's name", async () => {
+    const values = contexts();
+    wrap(values, "/admin/people/person-1");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Full name/), { target: { value: "  martine   lotom " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+    await waitFor(() => {
+      expect(screen.getByText(/already on the register under that name/)).toBeInTheDocument();
+    });
+    expect(values.people.editPerson).not.toHaveBeenCalled();
+  });
+
+  it("does not treat a person's own unchanged name as a duplicate", async () => {
+    const values = contexts();
+    wrap(values, "/admin/people/person-1");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Note/), { target: { value: "Updated note" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+    await waitFor(() => expect(values.people.editPerson).toHaveBeenCalled());
+  });
+
   it("reports a person who is not on the register", () => {
     wrap(contexts(), "/admin/people/missing");
     expect(screen.getByRole("heading", { name: "Person not found" })).toBeInTheDocument();
