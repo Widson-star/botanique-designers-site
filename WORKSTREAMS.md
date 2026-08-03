@@ -4961,9 +4961,9 @@ and BD-FIN-01B2 remains paused with every settled decision unchanged.
 Status: **ACTIVE_VERIFIED.** Merged, deployed, verified against the production bundle and
 hosted database, and **hosted-verified in authenticated production sessions under both roles
 on 3 August 2026** — Principal and Operations Manager, see the two walkthrough sections below.
-One check is explicitly **not** claimed: a genuine 375–400 px mobile viewport against
-production. The automated browser would not render below 1440 px regardless of window size,
-so mobile on a real phone remains for the Founder.
+**Mobile is now verified too**, at a genuine 400 px viewport after the Founder resized the
+browser manually; it found and led to the fix of one real defect (PR #75). Nothing about this
+workstream remains unverified.
 
 Date: 3 August 2026
 
@@ -5313,6 +5313,61 @@ to the two roles differently and with different wording:
 **not** exercised here: it was already proven live in the Principal session with full database
 evidence, the code path is identical, and re-proving it would have dirtied Martine's freshly
 restored natural state for no additional assurance.
+
+### Mobile walkthrough — hosted-verified at 400 px, 3 August 2026
+
+Earlier attempts to test mobile were abandoned rather than faked: the automated browser kept
+rendering at 1440 px whatever the window size. The Founder then resized the browser manually,
+giving a genuine 400 px layout viewport in the live Operations Manager production session.
+
+**It immediately found a real defect, which is the reason the check was worth insisting on.**
+
+**Defect — no account identity on a phone.** BD-ALERTS-01 had added `hidden sm:inline` to the
+role badge, a precaution against the mobile header overflowing once the bell was added. But
+the signed-in *name* was already hidden below `md`. Combined, the phone header carried **no
+account identity at all** — bell, badge, "Sign out", nothing else — and the mobile navigation
+drawer carries none either. Measured before the fix: `headerMentionsRole` false,
+`headerMentionsMartine` false, `drawerMentionsIdentity` false.
+
+This is operational, not cosmetic. The two roles see materially different data — 9 action
+items against 4, 12 projects against 5, Zizu invisible to the manager — so "which account am
+I in" is a question a phone user must answer *before* acting on what they see.
+
+The precaution was also unnecessary. With the role restored, measured live at 400 px: header
+`scrollWidth` 400 equals `clientWidth` 400, no overflow; the content needs **331 px**, leaving
+**44 px spare at a 375 px viewport**. "Operations Manager" is the longer of the two role
+labels, so that is the worst case.
+
+Fixed in **PR #75**, base `98ec66e`, reviewed head `cdb42c8`, merged as true merge commit
+**`e4726b8d45501819cd23ab0dea8febb102a9f233`**. A test now asserts no responsive-visibility
+class gates the role badge, so this cannot regress silently. Full suite 471 passed across 51
+files; build 43 routes, unchanged. Vercel production deployment
+**`dpl_3wkSmEzjJoNwJTHr3nkgtdFDuJTp`** built exactly that commit, reached READY and holds the
+`www.botaniquedesigners.com` alias.
+
+**Re-verified on production at 400 px after the fix:**
+
+| Check | Result |
+|---|---|
+| Bell remains visible | **Pass.** Present with badge "4", label "Alerts, 4 unread items" |
+| Header does not overflow | **Pass.** `scrollWidth` 400 = `clientWidth` 400 |
+| Account identity legible | **Pass.** Header reads "4 · Operations Manager · Sign out" |
+| Popover inside the viewport | **Pass.** Spans 16→384 within 400 |
+| Text not clipped | **Pass.** No row overflows its box; five rows, all readable |
+| Items easy to scan | **Pass.** One line of title over one muted context line, unread dot leading |
+| Contained panel fits the screen | **Pass.** Bottom sheet spanning 0→400 wide and 172→560 tall, inside a 560 px viewport, no internal scrolling needed |
+| Tabs still honest | **Pass.** "Needs my action (4)" / "Awaiting others (2)" |
+
+### Separate pre-existing finding — Dashboard chart overflows on mobile
+
+Observed during the same 400 px pass and **deliberately not fixed here**. The Dashboard
+"Project status" card renders about **620 px wide inside a 400 px viewport**, making the whole
+page scroll sideways on a phone (`document.scrollWidth` 657 against a 400 px client width).
+The Alerts surfaces are not the cause — the popover and panel both measure inside the
+viewport, and the offending element is the chart `section` in
+`src/admin/components/DashboardVisualizations.jsx`, last touched **28 July 2026**, before this
+workstream and absent from the BD-ALERTS-01 diff. Recorded here so it is not lost, and left
+for its own change rather than folded into this one.
 
 ### Programme position
 
