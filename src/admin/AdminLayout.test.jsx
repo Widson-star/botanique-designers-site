@@ -64,6 +64,8 @@ describe("AdminLayout visual boundary", () => {
       "Daily site operations",
       "Site Costs",
       "Fund Requests",
+      // BD-PEOPLE-01 (Stage 5) added People as a working destination.
+      "People",
       "Approvals",
       "Project Summary",
     ]);
@@ -80,9 +82,14 @@ describe("AdminLayout visual boundary", () => {
   });
 
   // BD-REPORTS-01B navigation review. The sidebar names a destination only
-  // where a working route already exists, so no unbuilt module — People,
-  // Finance, Team, Tasks, Assignments, Documents or a summary area — may
-  // appear, and no entry may be disabled, decorative or a placeholder.
+  // where a working route already exists, so no unbuilt module — Finance,
+  // Team, Tasks, Assignments, Documents or a summary area — may appear, and no
+  // entry may be disabled, decorative or a placeholder.
+  //
+  // People left this prohibited list at Stage 5, when it became a working
+  // destination with a real route, register and engagement records. The rule
+  // itself is unchanged: a destination appears only when its module is
+  // functional and authorised.
   //
   // BD-ALERTS-01 returned Work Inbox to that prohibited list: it is no longer a
   // destination at all, and no Alerts destination replaced it.
@@ -97,8 +104,28 @@ describe("AdminLayout visual boundary", () => {
       expect(link.textContent).not.toMatch(/soon|coming|todo|placeholder/i);
     }
     expect(
-      screen.queryByRole("link", { name: /People|Finance|Team|Tasks|Assignments|Documents/i })
+      screen.queryByRole("link", { name: /Finance|Team|Tasks|Assignments|Documents/i })
     ).not.toBeInTheDocument();
+  });
+
+  // BD-PEOPLE-01 (Stage 5). People is capability-led like every other
+  // destination: it is a real route for the two operational roles, and it is
+  // absent — not disabled, not greyed — for anyone else.
+  it("shows People to the operational roles and to nobody else", () => {
+    for (const role of ["owner", "manager"]) {
+      const view = renderLayout({ role });
+      const people = within(
+        screen.getAllByRole("navigation", { name: "Admin sections" })[0]
+      ).getByRole("link", { name: "People" });
+      expect(people).toHaveAttribute("href", "/admin/people");
+      view.unmount();
+    }
+
+    for (const role of ["staff", "viewer"]) {
+      const view = renderLayout({ role });
+      expect(screen.queryByRole("link", { name: "People" })).not.toBeInTheDocument();
+      view.unmount();
+    }
   });
 
   // BD-ALERTS-01. The Founder rejected the Work Inbox presentation on

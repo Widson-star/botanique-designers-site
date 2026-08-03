@@ -22,6 +22,7 @@ import AdminIntakeProvider from "./context/AdminIntakeProvider";
 import DailySiteOperationsProvider from "./context/DailySiteOperationsProvider";
 import SiteCostsProvider from "./context/SiteCostsProvider";
 import FundRequestsProvider from "./context/FundRequestsProvider";
+import PeopleProvider from "./context/PeopleProvider";
 import AdminSiteCosts from "./routes/AdminSiteCosts";
 import AdminSiteCostForm from "./routes/AdminSiteCostForm";
 import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
@@ -29,6 +30,8 @@ import AdminFundRequests from "./routes/AdminFundRequests";
 import AdminFundRequestForm from "./routes/AdminFundRequestForm";
 import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
 import AdminReports from "./routes/AdminReports";
+import AdminPeople from "./routes/AdminPeople";
+import AdminPersonDetail from "./routes/AdminPersonDetail";
 import { ROLES } from "./constants/roles";
 import {
   clearStoredSession,
@@ -200,6 +203,7 @@ export default function AdminApp() {
         <DailySiteOperationsProvider session={session} role={role} isDemo={isDemo}>
         <SiteCostsProvider session={session} role={role} isDemo={isDemo}>
         <FundRequestsProvider session={session} role={role} isDemo={isDemo}>
+        <PeopleProvider session={session} role={role} isDemo={isDemo}>
           <Routes>
             <Route
               element={
@@ -237,11 +241,14 @@ export default function AdminApp() {
               <Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} />
               <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
               <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
+              <Route path="/admin/people" element={<AdminPeople />} />
+              <Route path="/admin/people/:personId" element={<AdminPersonDetail />} />
               {/* Declared before the /admin/* catch-all, per the existing pattern. */}
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Route>
           </Routes>
+        </PeopleProvider>
         </FundRequestsProvider>
         </SiteCostsProvider>
         </DailySiteOperationsProvider>
