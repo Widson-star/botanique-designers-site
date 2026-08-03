@@ -313,7 +313,11 @@ export default function AdminPersonDetail() {
               {past.map((engagement) => (
                 <li key={engagement.id} className="py-2.5">
                   <p className="truncate text-sm font-medium">{projectName(engagement.projectId)}</p>
-                  <p className="truncate text-xs text-gray-500">
+                  {/* This line carries the only free text on the page — an end
+                      reason of up to 300 characters — so it WRAPS rather than
+                      truncating. Truncated, why an engagement ended was
+                      unreadable on a phone every time it was recorded. */}
+                  <p className="text-xs text-gray-500">
                     {ENGAGEMENT_ROLES[engagement.engagementRole]} · {showDate(engagement.startDate)} – {showDate(engagement.endDate)}
                     {engagement.endReason ? ` · ${engagement.endReason}` : ""}
                   </p>
