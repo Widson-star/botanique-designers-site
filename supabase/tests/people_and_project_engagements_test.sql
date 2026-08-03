@@ -38,7 +38,8 @@ insert into public.profiles (id, email, full_name, role, is_active) values
 insert into public.projects (id, project_name, project_type, status, stage, archived, lead_person_id, portfolio_eligible, portfolio_permission_status) values
   ('10000000-0000-0000-0000-0000000000a1', 'Led Site', 'Residential', 'Ongoing', 'Implementation', false, '00000000-0000-0000-0000-0000000000f2', false, 'Not Reviewed'),
   ('10000000-0000-0000-0000-0000000000a2', 'Unreachable Site', 'Residential', 'Ongoing', 'Implementation', false, '00000000-0000-0000-0000-0000000000f3', false, 'Not Reviewed'),
-  ('10000000-0000-0000-0000-0000000000a4', 'Second Led Site', 'Residential', 'Ongoing', 'Implementation', false, '00000000-0000-0000-0000-0000000000f2', false, 'Not Reviewed');
+  ('10000000-0000-0000-0000-0000000000a4', 'Second Led Site', 'Residential', 'Ongoing', 'Implementation', false, '00000000-0000-0000-0000-0000000000f2', false, 'Not Reviewed'),
+  ('10000000-0000-0000-0000-0000000000a3', 'Archived Led Site', 'Residential', 'Ongoing', 'Archived', true, '00000000-0000-0000-0000-0000000000f2', false, 'Not Reviewed');
 
 -- =====================================================================
 -- 0. Structural guarantees, checked before any row exists
@@ -331,6 +332,24 @@ begin
   select count(*) into leaked from public.people_engagements
   where project_id = '10000000-0000-0000-0000-0000000000a2';
   perform pg_temp.assert_true(leaked = 0, 'no engagement leaks from an unreachable project');
+end;
+$$;
+
+-- The project helper stays inside the caller's authority, and deliberately
+-- INCLUDES archived projects so a person's history keeps naming them. Keeping
+-- archived projects out of the "engage" picker is the interface's job.
+do $$
+declare reachable integer; archived_named integer; unreachable integer;
+begin
+  select count(*) into reachable from public.people_engagement_projects();
+  select count(*) into archived_named from public.people_engagement_projects()
+  where id = '10000000-0000-0000-0000-0000000000a3';
+  select count(*) into unreachable from public.people_engagement_projects()
+  where id = '10000000-0000-0000-0000-0000000000a2';
+
+  perform pg_temp.assert_true(reachable = 3, 'the manager reaches exactly their three projects');
+  perform pg_temp.assert_true(archived_named = 1, 'an archived project stays nameable, so history does not degrade');
+  perform pg_temp.assert_true(unreachable = 0, 'a project outside the caller''s authority is never returned');
 end;
 $$;
 

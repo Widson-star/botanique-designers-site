@@ -163,7 +163,9 @@ export default function AdminPersonDetail() {
                     className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
                   >
                     <option value="">Choose a project</option>
-                    {engagementProjects.map((project) => (
+                    {/* Archived projects stay readable in the history above, but
+                        nobody may be newly engaged on one. */}
+                    {engagementProjects.filter((project) => !project.archived).map((project) => (
                       <option key={project.id} value={project.id}>{project.projectName}</option>
                     ))}
                   </select>
@@ -306,9 +308,15 @@ export default function AdminPersonDetail() {
           </Panel>
 
           <Panel title="Portal access">
+            {/* `profiles` is itself row-level secured: an Operations Manager
+                reads only their own. So an unresolved profile means the NAME is
+                unavailable, never that the link is absent — reporting "no
+                portal account" there would state the opposite of the truth. */}
             <p className="text-sm text-gray-600">
-              {linkedProfile
-                ? `Signs in as ${profilePresentationName(linkedProfile)}.`
+              {person.profileId
+                ? (linkedProfile
+                  ? `Signs in as ${profilePresentationName(linkedProfile)}.`
+                  : "Linked to a portal account you cannot view.")
                 : "No portal account. This person is recorded and can be engaged without signing in."}
             </p>
             {canLinkPortalAccess(role) ? (

@@ -24,10 +24,15 @@ const engagements = [
 
 const engagementProjects = [{ id: "p1", projectName: "Lugulu Residential Home", status: "Ongoing", archived: false }];
 
+// `profiles` is row-level secured to "self or owner", so an Operations Manager
+// genuinely receives only their own row. The fixture mirrors that rather than
+// handing every role the full list.
 function contexts(overrides = {}) {
-  const { role = "owner", ...rest } = overrides;
+  const { role = "owner", visibleProfiles, ...rest } = overrides;
+  const adminProfiles = visibleProfiles
+    || (role === "owner" ? profiles : profiles.filter((profile) => profile.id === "m1"));
   return {
-    admin: { role, currentUserId: role === "owner" ? "o1" : "m1", projects: engagementProjects, profiles },
+    admin: { role, currentUserId: role === "owner" ? "o1" : "m1", projects: engagementProjects, profiles: adminProfiles },
     people: {
       people, engagements, engagementProjects, status: "ready", error: "",
       refresh: vi.fn(() => Promise.resolve({ ok: true })),
@@ -169,6 +174,37 @@ describe("Person detail", () => {
     fireEvent.change(screen.getByLabelText(/^Ends$/), { target: { value: "2026-08-31" } });
     fireEvent.click(screen.getByRole("button", { name: "End engagement" }));
     await waitFor(() => expect(values.people.closeEngagement).toHaveBeenCalledWith("eng-1", 1, "2026-08-31", ""));
+  });
+
+  // profiles is itself row-level secured, so an Operations Manager reads only
+  // their own. An unresolved profile must never be reported as "no portal
+  // account", which would state the opposite of the truth.
+  it("does not claim a linked person has no portal account when the name is unreadable", () => {
+    // person-4 is linked to the Principal's profile, which a manager cannot read.
+    wrap(contexts({
+      role: "manager",
+      people: [...people, { id: "person-4", fullName: "Linked Elsewhere", relationshipType: "regular_staff", phone: "", note: "", isActive: true, profileId: "o1", version: 1 }],
+    }), "/admin/people/person-4");
+    expect(screen.getByText(/Linked to a portal account you cannot view/)).toBeInTheDocument();
+    expect(screen.queryByText(/No portal account/)).not.toBeInTheDocument();
+  });
+
+  // An engagement outlives its project. Archiving a project must not turn a
+  // person's history into "a project you cannot access".
+  it("keeps an archived project readable in history but out of the engage picker", () => {
+    const archived = { id: "p2", projectName: "Muthithi Gardens Estate", status: "Completed", archived: true };
+    wrap(contexts({
+      engagementProjects: [...engagementProjects, archived],
+      engagements: [
+        { id: "eng-3", personId: "person-1", projectId: "p2", engagementRole: "supervisor", startDate: "2026-01-01", endDate: "2026-02-01", endReason: "", version: 1 },
+      ],
+    }), "/admin/people/person-1");
+
+    expect(screen.getByText("Muthithi Gardens Estate")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Engage on a project" }));
+    const options = [...screen.getByLabelText(/^Project$/).options].map((option) => option.textContent);
+    expect(options).toContain("Lugulu Residential Home");
+    expect(options).not.toContain("Muthithi Gardens Estate");
   });
 
   it("names an engagement on an unreachable project without inventing its detail", () => {

@@ -228,8 +228,12 @@ as $$
   )
 $$;
 
--- Projects a caller may record an engagement against. Archived projects are
--- excluded, because engaging somebody on a closed project is not a real action.
+-- Projects a caller may reach for People purposes. Archived projects ARE
+-- included: an engagement outlives its project, and a person's history must
+-- stay readable by name rather than degrading to "a project you cannot access"
+-- the moment the project is archived. The interface, not this function, keeps
+-- archived projects out of the "engage on a project" picker — engaging somebody
+-- on a closed project is not a real action, but reading who was there is.
 create or replace function public.people_engagement_projects()
 returns setof public.projects
 language sql
@@ -239,8 +243,7 @@ set search_path = pg_catalog, public
 as $$
   select project.*
   from public.projects project
-  where not project.archived
-    and public.can_access_people_engagement_project(project.id)
+  where public.can_access_people_engagement_project(project.id)
   order by project.project_name
 $$;
 
