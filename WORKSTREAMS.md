@@ -5718,8 +5718,8 @@ was opened.
 
 ## BD-PEOPLE-01 — Stage 5: People and resourcing — 3 August 2026
 
-Status: **Merged, deployed and hosted-verified at the database authority level. The two
-authenticated browser walkthroughs remain outstanding** and are the one thing the Founder must
+Status: **Merged, deployed, and hosted-verified under the Principal in an authenticated
+production session. The Operations Manager walkthrough remains outstanding** and are the one thing the Founder must
 confirm directly, because signing in is not an action this session can perform.
 
 Authoritative base `main`: `479638d88965b6b9b345353434ba351a4f628c72`.
@@ -5925,6 +5925,133 @@ production still holds zero People rows.
 **The authenticated Principal and Operations Manager browser walkthroughs.** Signing in is not
 an action this session may perform, so the Founder must open the two production sessions; the
 walkthroughs will then be recorded against this entry, as in BD-ALERTS-01 and BD-DASHBOARD-01.
+
+### Principal walkthrough — hosted-verified, 3 August 2026
+
+Performed in an authenticated production session as the Principal, against the
+Stage 5 production deployments, ending on
+`f4079af222337e5607c2bc0a349afb588bd6d504` for the mobile pass. Baseline before anything was created: people 0,
+engagements 0, project_assignments 0, projects 12, claims 5, fund requests 0,
+daily site 10, approvals 5, project activities 29.
+
+**Navigation and load.** People appears as a working destination. Every request
+returned 200, including the three People reads, and there were no console
+errors. No credential or token appears in any URL; authentication travels in
+headers, and the query strings carry only column selections and ordering.
+
+**Overview.** The empty state read "No one is on the register yet." Search,
+relationship and status filters are self-explanatory. After one record the four
+figures reconciled exactly: Active 1, Internal 0, External 1, With portal access
+0. The page is a compact list, not a wide table.
+
+**Create.** The form requests exactly four fields — full name, relationship,
+optional phone, optional note. No password, no identity document, no bank
+detail and no portal-account field is offered. Creating
+`ZZ Verification Record — Stage 5` produced **no auth user**: `auth.users`
+stayed at 2 and `profiles` stayed at 2, and the person id is not an auth user
+id.
+
+**Duplicate protection.** Submitting `"  zz   verification   record — stage 5  "`
+was refused before any write, naming the existing record and directing the
+reader to open it. Case and internal spacing were both normalised, exactly as
+the canonical index defines.
+
+**Person detail.** Identity and relationship are one line. Portal status is
+truthful. No payroll, payment ledger, casual register or activity archive
+appears anywhere.
+
+**Engagements.** An engagement on Alego Usonga as Team leader from 1 July was
+recorded, then ended on 3 August with a reason. It moved to Past reading
+"1 Jul 2026 – 3 Aug 2026 · Stage 5 verification — engagement closed": the start
+date was not rewritten and the row was not removed. Throughout,
+`project_assignments` stayed at **0**, so no access was granted by any
+engagement. The project picker offered **10 of 12** projects, the two archived
+ones correctly withheld from new engagements while remaining nameable in
+history — both halves of the archived-project correction confirmed in
+production.
+
+**Principal-only controls.** Linking the verification record to the Principal
+profile reported "Portal account linked. This granted no new access", and the
+panel changed to "Signs in as Widson O. Ambaisi" — plainly distinct from "No
+portal account". It was unlinked again immediately, returning `profile_id` to
+null. Deactivation is likewise Principal-only. Neither control is offered to the
+Operations Manager, and the database refuses both independently.
+
+**Boundaries.** The interface offers no casual-worker or crew relationship, no
+supplier, nursery or transport provider, and no rate, amount or payment
+anywhere. Nothing invites the reader to treat an engagement as employment or
+payment authority.
+
+### Two defects found in the Principal walkthrough, corrected and redeployed
+
+**1. A person could not be edited.** The detail panel offered only "Mark
+inactive". There was no way to correct a name, relationship, phone or note after
+creation — and because the canonical index refuses duplicates and neither table
+grants DELETE, a mistyped name was **permanent and unfixable**: it could not be
+corrected, and the person could not be re-created properly either. Fixed in
+PR #84, merged as `d980bcfdb1aed8c1c12367ba88ab2e1b322da254`, deployed as
+`dpl_GFPJRyETcki799soUcXN3b7ZDtdb`. The edit cannot touch `profile_id` or
+`is_active`, so portal linking and deactivation remain the separate
+Principal-only security actions, and a rename runs the same canonical duplicate
+check while excluding the person from their own check. The same PR stopped the
+shorter detail column being stretched to the taller one, which rendered a panel
+holding one line of text as a large empty card.
+
+**2. A long engagement end reason was clipped on mobile.** The past-engagement
+meta line was truncated, and it is the only place on the page rendering free
+text — up to 300 characters. In practice "why did this engagement end" was
+unreadable on a phone every time one was recorded. Fixed in PR #85, merged as
+`f4079af222337e5607c2bc0a349afb588bd6d504`. The line now wraps, which is also
+strictly safer for layout than `nowrap` was.
+
+### Mobile — hosted-verified at a real 400 px viewport
+
+The Founder resized the production browser manually, giving a genuine 400 px
+layout viewport rather than a reported one.
+
+Person detail: `document.scrollWidth` 400, `clientWidth` 400, **no overflow**,
+and a direct scan found **zero** elements extending beyond the viewport. Page
+height 1066 px. People overview: identical, page height 844 px. The totals strip
+reflows to 2×2, the filters stack, list rows stay readable, all four detail
+panels stack in order, the role identity and the Alerts bell remain visible in
+the header, and every control keeps its 44 px target. After the wrap fix the end
+reason reads in full across two lines. The page is contained, not a long chain
+of low-value cards.
+
+### Temporary verification data, and the final state
+
+One person and one engagement were created, both clearly identified. **People
+records cannot be deleted by design**, so the person was closed through the
+authorised lifecycle instead: its engagement was ended, its note was set to
+"Stage 5 verification record. Not a real person. Retained inactive because
+People records cannot be deleted", and it was marked inactive. The screen
+confirmed "This person is now inactive. Their engagement history is unchanged."
+
+Final production state: people **1** (0 active, 0 linked), engagements **1** (0
+open), project_assignments **0**, auth users **2**, profiles **2**, projects
+**12**, fund requests **0**, approvals **5**, project activities **29** — every
+one of these identical to the baseline except the two People rows.
+
+**Two unrelated increases are recorded so they are not mistaken for side
+effects.** Daily site entries moved 10 → 12 and internal cost claims 5 → 7.
+Neither was caused by this workstream: the two daily site entries were created
+by the Operations Manager account at 14:13 and 14:15 UTC, and the two claims by
+the Principal account at 14:45 and 14:46 UTC, in their own live sessions. No
+People action writes to either table.
+
+**One of those claims is live evidence for this stage.** Its recipient label
+reads "Road Kerb Installation (Mason 1200 and 3 casuals @500) Total Ksh 2700,
+Waweru (1000) and 3 casuals @ 500 Total Ksh 2500." A single identity field is
+carrying a task description, two workers, headcounts, four rates and two totals
+— created today, and exactly the free-text weakness Stage 5 exists to end. It
+also shows that the money half of that record belongs to the Labour and Payments
+domain, which remains unauthorised.
+
+### Outstanding
+
+**The Operations Manager walkthrough.** It is the one that can actually test the
+access boundary, because the Principal's company-wide authority means nothing
+could have been withheld from this session.
 
 ### Deferred to later stages
 
