@@ -5382,7 +5382,8 @@ authorised by the adoption of that screen.
 
 ## BD-DASHBOARD-01 — Dashboard visual-authority alignment — 3 August 2026
 
-**Status: MERGED AND DEPLOYED. Authenticated hosted walkthrough OUTSTANDING.**
+**Status: ACTIVE_VERIFIED. Merged, deployed, and hosted-verified under both roles on
+3 August 2026.**
 
 Governing visual authority: **`docs/ui-authority/operations-hub/01-dashboard-authority.png`**.
 It governs Dashboard hierarchy, desktop density, card rhythm, spacing, the restrained colour
@@ -5470,50 +5471,232 @@ repository-wide `eslint` **19 errors before and after**, no new findings. `npm r
 prerenders **43 routes**, the unchanged baseline. `git diff --check` clean. The intermittent
 `AdminReports.test.jsx` harness correction was **not** mixed into this PR.
 
-### Merge and deployment
+### The refinement pass — Founder second review, 3 August 2026
 
-**PR #77**, base `60546b6a2de0f97073cb3f116f7561a0d1e6db89`, reviewed head
-`e8b713916907b3315b37d9dc4cb520b664448936`, merged with `--match-head-commit` against that
-exact head as true merge commit
-**`3a3128807800d8e3432a71fc497994bd5a3f251f`** — two parents, `60546b6` and `e8b7139`. Eight
-files entered main, all under `src/admin/`. PR closed as MERGED. New authoritative main is
-`3a31288`.
+The structure above was accepted. The **presentation** was not: the live screens were still
+too text-heavy, too uniformly card-based, and too aggressive with red. A narrow refinement
+followed. The grid, the metrics, the scoping and the data boundaries were not reopened.
 
-Vercel production deployment **`dpl_BvBHoHr63zZqYvpFC3HUNsb6ipZS`** built exactly `3a31288`,
-target production, state READY.
+| Area | Before | After |
+|---|---|---|
+| Attention row | Up to four conditions joined into one long red sentence | One severest condition in colour, ≤2 neutral tags, `+N` count |
+| Blocker text | Full free text, allowed 500 characters | Clamped to 64 characters |
+| Row action | Filled green "Open to activate" | Quiet outlined "Activate" |
+| KPI emphasis | Coloured tile **and** coloured figure **and** dot | Coloured tile only; the figure stays charcoal |
+| KPI tile below `sm` | Hidden | Shown, because it is now the only marker |
+| Due today badge | Red | Neutral |
+| Alert row | Category tint on every row, read or not | Tint and dot only while unread; read rows go neutral grey |
+| All alerts | One flat stack | Grouped under category headings with counts |
+| Recent activity | 5 events | 3 |
+| Project types | Every category as a compressed legend | Leading four plus one reconciling rollup |
+| Action panels | Stretched to equal height | `items-start`, removing a measured 160 px dead region |
 
-**Production bundle evidence.** Fetched from `botaniquedesigners.com` after deployment: the
-served admin bundle **contains** "Due today" and the new supporting line, and **no longer
-contains** `min-w-[620px]`, "Portfolio notes", or the generated portfolio paragraph. The
-620 px floor is provably absent from production.
+Severity order for the primary condition: blocker, then overdue action, then missing lead,
+then missing next action, then pending activation, then upcoming start. Red is reserved for
+the first two, because those mean delivery has actually stopped or slipped.
 
-### Outstanding — authenticated hosted walkthrough
+**Nothing is concealed by the simplification.** The complete condition list is still read out
+as one sentence through an `sr-only` node while the visual split is `aria-hidden`; a flagged
+metric carries "— needs attention" in text, so colour is never the sole carrier of a state.
 
-**Not performed, and not claimed.** The production admin requires Supabase Auth, and no
-authenticated session existed in either available browser. Signing in is outside what may be
-done on the Founder's behalf. The following remain to be confirmed in live Principal and
-Operations Manager sessions against `01-dashboard-authority.png`:
+### The Waive capability finding
 
-- Dashboard loads for both roles, with role-specific counts unchanged;
-- no inaccessible-project information appears to the Operations Manager;
-- the Alerts bell and account identity remain correct;
-- composition and density match the authority screen;
-- Project Status and Project Stage remain contained;
-- Due Today and Projects Needing Attention remain concise;
-- `documentElement.scrollWidth` equals `clientWidth` at 400 px;
-- no production record is mutated.
+The instruction was to review whether Due today needs both "Record" and "Waive" on every row.
+Reviewing it produced the opposite of the expected answer, and it is recorded here because it
+constrains any future tidy-up of this card.
 
-The BD-ALERTS-01 record above notes that the automated browser rendered at 1440 px regardless
-of window size, so the 400 px check must again be taken at a genuinely resized window.
+**`createWaiver` has exactly one caller in the entire application: this Dashboard card.**
+Daily site operations reports a waived count but offers no control. Removing Waive from the
+Dashboard would therefore have removed an owner capability outright, not reduced density.
+
+It was **demoted, not removed**: "Record" is the single primary action and "Waive" is a quiet
+secondary text link. Owner-only gating is unchanged and asserted by test in both directions.
+
+### The `Other` / `Remaining` production defect
+
+Found in the authenticated Principal walkthrough, minutes after the refinement deployed.
+
+`Other` is a **genuine entry in `PROJECT_TYPES`**, and the Principal's portfolio carries three
+projects of that type. Labelling the tail rollup "Other" printed two entries with the same
+name and the same number, side by side:
+
+```
+Residential 4 | Other 3 | Estate 1 | Hospitality 1 | Other 3
+```
+
+The figures were correct and still reconciled to 12, but a strip that cannot be read at a
+glance fails at the only thing it exists to do. The rollup is now **"Remaining"**.
+
+**This could not have been caught locally.** The demo seed contains no project of type
+"Other", so every local run — including the deliberately dense 12-project, 7-type stress case
+— produced distinct labels. Only real data had the collision. It is the second time in this
+programme that the hosted walkthrough caught what automated validation structurally could
+not; the first was the missing mobile account identity under BD-ALERTS-01.
+
+### Merge and deployment — the complete chain
+
+Four pull requests, each merged with `--match-head-commit` against its exact reviewed head,
+each producing a true merge commit with two parents.
+
+| PR | Base | Reviewed head | Merge commit | Contents |
+|---|---|---|---|---|
+| **#77** | `60546b6` | `e8b7139` | **`3a3128807800d8e3432a71fc497994bd5a3f251f`** | Structural alignment; 8 files under `src/admin/` |
+| **#78** | `3a31288` | `5bbd02b` | **`1781faa4932361ea46bd5992e473f88c969bf39b`** | First authority record; 2 documents |
+| **#79** | `1781faa` | `4e52cbd` | **`07a47b019bc25368d5bf0da83e72149bd697a324`** | Refinement pass; 9 files under `src/admin/` |
+| **#80** | `07a47b0` | `e625d5d` | **`dcd8df8d9e7a05d673a6a5471619c87d8dd80b51`** | `Other` → `Remaining`; 2 files |
+
+PR #79 carries a second commit, `4e52cbd`, from self-review of its own base-to-head diff:
+alert groups were keyed by category name alone, which is unique only because the current sort
+clusters each category into one run. Keying by name and position removes the dependency.
+
+All four PRs closed as MERGED. **Authoritative main after this workstream is
+`dcd8df8d9e7a05d673a6a5471619c87d8dd80b51`.**
+
+Vercel production deployment **`dpl_BvBHoHr63zZqYvpFC3HUNsb6ipZS`** built `3a31288`; later
+production deployments built `07a47b0` and `dcd8df8`, each reaching READY.
+
+**Production bundle evidence**, fetched from `botaniquedesigners.com` after each deployment:
+the served admin bundle contains "Due today", the new supporting line, "Activate", the
+"— needs attention" text state and "Remaining"; and no longer contains `min-w-[620px]`,
+"Portfolio notes", the generated portfolio paragraph or "Open to activate".
+
+### Hosted verification — Principal, genuine 400 × 560 viewport
+
+Performed in an authenticated production Principal session at a **manually resized** window.
+The automated resize does not produce a real layout viewport, which is the trap recorded under
+BD-ALERTS-01.
+
+| Check | Result |
+|---|---|
+| No horizontal overflow | **Pass.** `scrollWidth` 400 = `clientWidth` 400 |
+| Account identity and bell | **Pass.** "Principal" visible; "Alerts, 9 unread items" |
+| KPI figures restrained | **Pass.** All four `rgb(31, 41, 51)` charcoal; emphasis on the tile alone |
+| Attention row not a red paragraph | **Pass.** `Blocker: Sourcing of murram for parking area` leads in red; `Overdue action`, `Pending activation` as neutral tags; `+1` count |
+| Blocker path works on real data | **Pass.** This path is unreachable locally — the demo adapter hard-codes `blocker: ""` |
+| Alerts popover contained | **Pass.** Five rows, spanning 16→384 inside 400 |
+| Nine items grouped | **Pass.** Decision required 2, Site entry missing 2, Project blocker 2, Project action overdue 2, Project activation required 1 |
+| Panel contained and scrolling internally | **Pass.** 0→400 wide, internal scroll, not a page |
+| No production mutation | **Pass.** Nothing opened, nothing marked; badge still 9 on close |
+| Project types | **Defect — two "Other 3" entries.** Corrected in PR #80 |
+
+### Hosted verification — Operations Manager, genuine 400 × 725 viewport
+
+Performed as **Martine Lotom** in an authenticated production session at a manually resized
+window, against `dcd8df8`. This is the walkthrough that can actually test the access
+boundary; the Principal session structurally cannot, because company-wide authority means
+nothing could have been withheld.
+
+| Check | Result |
+|---|---|
+| No horizontal overflow | **Pass.** `scrollWidth` 400 = `clientWidth` 400; **zero** elements beyond the right edge |
+| Header fits without clipping | **Pass.** Bell, badge "4", "Operations Manager", "Sign out" all present |
+| No Zizu leak, anywhere | **Pass.** Name, blocker text, identifier and activation language all absent from the Dashboard, popover, panel, every link href and all visible text |
+| Scoped visibility is real, not blanket | **Pass.** Lugulu's murram blocker **is** visible — she leads that project — so the boundary is scoped rather than suppressing everything |
+| KPI figures restrained | **Pass.** All four charcoal; only "Overdue actions" tile flagged |
+| Owner-only language withheld | **Pass.** KPI reads "Pending projects", not "Pending activation" |
+| Due today concise | **Pass.** Two rows; Due 3, Missing 2, Late 1; neutral heading badge |
+| Record primary, Waive secondary | **Pass.** Record is the bordered control; Waive is a quiet link |
+| Attention row | **Pass.** One row: red blocker line, one neutral `Overdue action` tag, no overflow count needed |
+| Project Status contained | **Pass.** 128 px doughnut inside a 326 px card |
+| Project Stage contained | **Pass.** 326 px SVG; labels "Implementation" and "Completed" both legible |
+| Recent activity | **Pass.** Exactly three rows |
+| Project types | **Pass.** `Residential 4`, `Other 1`. Only two categories, so **no rollup is required and "Remaining" correctly does not appear** — and the genuine "Other" type appears exactly once |
+| Alerts badge reconciles | **Pass.** Badge 4 = "Needs my action (4)"; the fifth popover row is her own cost claim, which sits under "Awaiting others (2)" |
+| Popover compact and flat | **Pass.** Contained 16→384; **zero** group headings — it does not imitate the Principal panel |
+| Panel stays compact for four items | **Pass.** Three short groups, four rows, no internal scrolling needed |
+| Alert emphasis restrained | **Pass.** One small tinted tile plus one dot per unread row; no tinted row backgrounds |
+| No timestamps invented | **Pass.** No relative time anywhere |
+| No production or read-state mutation | **Pass.** No row opened, "Mark all as read" never pressed; badge still "Alerts, 4 unread items" and both panel badges unchanged after closing |
+
+### Access-boundary evidence
+
+| | Principal | Operations Manager | Why the difference is correct |
+|---|---|---|---|
+| Total projects | 12 | **5** | The projects RLS policy grants a manager only projects they lead, and `project_assignments` is empty. Martine leads 5 |
+| Active | 3 | 3 | All three active sites are hers, so this figure legitimately matches |
+| Completed | 5 | 1 | Four completed projects belong to other leads |
+| Design-only | 1 | 0 | Not hers |
+| Pending | 1 "Pending activation" | 0 "Pending projects" | Zizu is the only pending project and is not hers. The **label** also differs: activation language is owner-only |
+| Overdue actions | 2 | **1** | The second was Zizu's |
+| Upcoming starts | 1 | **0** | Zizu was the upcoming start |
+| Due today | Due 3 / Missing 2 / Late 1 | Due 3 / Missing 2 / Late 1 | Identical, and correctly so: the three active projects requiring a morning entry are all hers |
+| Projects needing attention | 2 | **1** | Lugulu is hers; Zizu is not |
+| Alerts badge | 9 | **4** | Company-wide authority receives every decision item; hers are scoped |
+| Actionable categories | Decision 2, Site entry 2, Blocker 2, Overdue 2, Activation 1 | Site entry 2, Blocker 1, Overdue 1 | She receives no decision item and no activation item — both are Principal authority |
+| Awaiting others | 0 | **2** | Her own submitted cost claims, awaiting the Principal. The Principal waits on no one |
+
+Every difference traces to one of two causes: project-scoped RLS, or owner-only authority.
+None is a presentation accident.
+
+### Visual authority comparison
+
+Compared directly against `01-dashboard-authority.png` and `02-alerts-popover-authority.png`.
+
+- **Hierarchy** — page title, one short line, one primary action; then the metrics card; then
+  the two action panels; then the three visual cards. Matches the screen's order exactly.
+- **Card density** — panel headings now sit at the same 20 px offset as the chart-card
+  headings, so the five card headings align across the page.
+- **Whitespace** — the 160 px dead region inside the shorter action panel is gone. No card
+  carries an empty lower half at either role.
+- **Colour restraint** — on the whole Operations Manager Dashboard there are now **four red
+  elements** (two Due-today dots, one attention dot, one blocker line) and **one amber** (the
+  attention count). Before the refinement a single attention row alone could carry four red
+  conditions in one sentence.
+- **Alert treatment** — one small tinted tile and one dot per unread row; read rows drop to
+  neutral. Tint now means "unread" rather than decorating every row equally.
+- **Action-button hierarchy** — exactly one bordered control per row, no filled buttons in
+  either panel, secondary routes as quiet links. The screen's "Open" treatment.
+- **Chart proportions** — Project Status 128 px doughnut with a wrapping legend; Project Stage
+  scales to its card with labels wrapping to two lines rather than clipping.
+- **Desktop and mobile balance** — one viewport on desktop at ordinary density; at 400 px the
+  same content stacks in a useful order with no horizontal scroll.
+- **Curated rather than generated** — the remaining honest gap is that the authority screen is
+  a mockup of a lighter portfolio; at twelve projects the real page is longer than the image.
+  Composition, density, rhythm and restraint match. The page no longer reads as a stack of
+  generated rectangles.
+
+### Deliberately not built, and still not authorised
+
+- **The grouped sidebar.** `01-dashboard-authority.png` illustrates it; Blueprint §5 still
+  gates it. Navigation is unchanged.
+- **"View full report" / "View stage report".** Shown on the screen, but the Reports Centre
+  they imply is not built. Interpretation rule 7. A test asserts every Dashboard link resolves
+  to a route that exists.
+- **A greeting.** The brief permitted a greeting *or* "Operations overview"; the existing
+  title was kept rather than adding a name-resolution dependency.
+- **Timestamps on alerts.** The derived model has no arrival time to state honestly.
 
 ### Known follow-up, deliberately out of scope
 
 Removing the header paragraph leaves `operationalSummary` in
 `src/admin/utils/dashboardMetrics.js` exported but unused by any route. Its unit tests still
-pass. Left in place rather than widening the diff; flagged for its own change.
+pass. Left in place rather than widening the diff; flagged for its own change. The
+intermittent `AdminReports.test.jsx` harness correction likewise remains separate; that suite
+passed in every run of this workstream.
+
+### Validation across the workstream
+
+Full frontend suite **509 passed across 51 files**, from 470 at the start. Changed-file
+`eslint` clean at every merge; repository-wide `eslint` **19 errors before and after**, the
+unchanged baseline — three helper exports were reverted to module-private after they tripped
+`react-refresh/only-export-components`, rather than allowing the baseline to rise.
+`npm run build` prerenders **43 routes** at every merge, the unchanged baseline.
+`git diff --check` clean.
+
+jsdom does not lay out, so the overflow tests assert the **cause** — that no fixed pixel
+width and no horizontal scroll container may re-enter the visual row — rather than a measured
+width. The measured proof is the two hosted walkthroughs above.
+
+### Alerts regression result
+
+**No regression.** BD-ALERTS-01 remains ACTIVE_VERIFIED and is not reopened. The bell stayed
+in the header beside the profile, no sidebar destination was reintroduced under any name, the
+derived attention model and the `work_inbox_read_state` table were untouched, and both roles'
+badges reconciled with their genuine actionable unread items. Only the **presentation** of an
+alert row changed, and the popover remained contained inside a 400 px viewport for both roles.
 
 ### Programme position
 
-Unchanged by this workstream. BD-ALERTS-01 remains ACTIVE_VERIFIED and is not reopened — no
-Alerts regression was introduced, and the shell was not modified. Stage 4 remains the next
-authorised stage.
+Unchanged by this workstream. Stage 4 — Reports and derived-summary authority — remains the
+next authorised stage. BD-REPORTS-01B remains rejected and frozen. No new Operations Hub stage
+was opened.
