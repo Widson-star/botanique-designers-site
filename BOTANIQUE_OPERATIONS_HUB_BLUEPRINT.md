@@ -1373,6 +1373,21 @@ No broad no-overlap constraint is introduced: parallel roles are not ruled out h
 existing one-current-engagement-per-person/project rule and the explicit reopen conflict check
 prevent an unauthorised second current row.
 
+**First production use, 4 August 2026.** The mechanism above was exercised on the real
+Martine/Alego rows it was built for. A rolled-back rehearsal in one transaction proved the full
+sequence — closing `0fc9301b-9b2b-4d3d-9fa3-3a34df572918`, then reopening
+`fd0946e7-41e8-44ca-a8db-16267bc4d737` — produced exactly the expected rows and events with no
+side effects, before the same two calls were executed for real and committed. `correct_people_engagement`
+was invoked as the Principal by setting `request.jwt.claim.sub` to Widson's profile id, since
+`is_owner()` and the event trigger's `actor_profile_id` both resolve from `auth.uid()` rather than
+from database role membership; the same technique, set to Martine's profile id, proved that both
+the controlled function and a direct `UPDATE` on the now-closed row are refused with `42501`
+regardless of caller. Reopening advanced the original engagement from version 2 to version 3, one
+past its expected-version check, because that check reads the *pre-update* row; this is the
+documented version semantics, not a discrepancy. Total engagement and open-engagement counts were
+unchanged before and after (a swap of which of two existing rows is current, not a new row), and
+`people_engagement_events` grew from 0 to exactly 2.
+
 ## 14. Dashboard aggregation architecture
 
 Dashboards are projections under §10 and add three constraints:

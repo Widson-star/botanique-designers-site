@@ -6267,3 +6267,61 @@ views measured `scrollWidth` **400** against `clientWidth` **400**, with no elem
 viewport. The two frozen Martine/Alego rows retained their exact IDs, versions, roles and dates;
 production remained at engagements **5** / current **2** and event rows **0**. The real
 Martine/Alego correction remains a separate Founder approval and is not part of this implementation.
+
+### Martine/Alego engagement correction — 4 August 2026
+
+PR #90 (merge `56f9d2e72a8025bf0b97618674d5011894734bfb`) delivered the immutable engagement
+ledger and Principal-only correction/reopen path, deployed as production release
+`dpl_BbEYiFo4XQoPoQxi5fQ2juXdjrYu`. It deliberately left the real Martine/Alego rows untouched. The
+Founder then approved the controlled production correction of those two rows, recorded here.
+
+**Production defect history.** Widson created an engagement for Martine Lotom on Alego Usonga,
+then accidentally ended it. With no correction or reopen workflow available at the time, Widson
+was forced to create a replacement engagement to keep the project resourced. The two resulting rows
+— original `fd0946e7-41e8-44ca-a8db-16267bc4d737` (closed 1 August 2026, version 2) and replacement
+`0fc9301b-9b2b-4d3d-9fa3-3a34df572918` (open, version 1) — were read and frozen before PR #90's own
+implementation and left unchanged through it.
+
+**Recovery before the write.** This session re-read both rows directly from production rather than
+trusting the prior record: state matched exactly, no third active Martine/Alego engagement existed,
+and PR #90's migration, functions and ledger were confirmed live and unaltered by any later change.
+A rolled-back rehearsal of the full correction, in one transaction, produced the expected final
+rows and two events with zero side effects on unrelated tables, then rolled back cleanly.
+
+**Approved correction, executed.** Using `correct_people_engagement` as the Principal: (1) the
+replacement was closed effective its own start date, 18 July 2026, with reason "Duplicate
+replacement created after the original engagement was closed in error; superseded by restoration
+of engagement fd0946e7-41e8-44ca-a8db-16267bc4d737"; (2) the original was reopened at its expected
+version 2 with reason "Engagement was closed in error. The duplicate replacement record
+0fc9301b-9b2b-4d3d-9fa3-3a34df572918 has been closed, and the original engagement is being
+restored." Both calls executed consecutively inside one committed transaction. Neither row was
+deleted; both remain readable. The original advanced from version 2 to version 3 (reopening reads
+the pre-update row for its version check); the replacement advanced from version 1 to version 2.
+`people_engagement_events` grew from 0 to exactly 2 rows — one `corrected` event on the replacement,
+one `reopened` event on the original — each carrying Widson's Principal actor profile, timestamp,
+exact reason, complete before/after snapshot and resulting version. Total engagements stayed at
+**5** and open engagements stayed at **2** throughout: this swapped which of two existing rows is
+current rather than creating a new row. Martine's separate Lugulu Residential Home history
+(`5ec5909a-47e4-4347-8e30-61c18feb286c`) and Lincoln Waweru's Alego engagement
+(`b8afddee-3545-46e7-aef6-3b8b435d3368`) were not touched. People, active people, linked people,
+auth users, profiles, project assignments, projects, internal cost claims, Daily Site entries,
+approvals, fund requests and project activities all retained their pre-correction totals.
+
+**Hosted verification, both roles.** As Principal: Martine's People detail page showed the
+restored engagement under Current engagements ("Alego Usonga · Team leader · since 18 Jul 2026")
+and the closed replacement under Past engagements with its full correction reason wrapped and
+readable; exactly one current Alego Usonga engagement was visible; "Correct engagement" appeared
+only on the two past rows. At a genuine 400 px viewport, `scrollWidth` equalled `clientWidth` at
+400 with no element outside the viewport. As Martine (Operations Manager): the same restored
+current engagement and truthful past history were visible, the ordinary **End** control remained
+on the current engagement, and no "Correct engagement" control appeared anywhere on the page; 400
+px measured the same 400/400 with no overflow. A direct database-level attempt to call
+`correct_people_engagement` or to `UPDATE` the closed replacement row while impersonating Martine's
+profile was refused with `42501` ("Only the Principal may correct or reopen an engagement" /
+"...a closed engagement") in both cases — no real record was mutated to prove this; the attempts
+were made and rejected inside a rolled-back transaction.
+
+Martine's authority is unchanged by this correction: he retains ordinary create, current-manage and
+end authority on his accessible engagements, and continues to have no ability to correct or reopen
+a closed engagement. An engagement continues to grant no portal or project access. This closure
+does not begin stage 6; the programme position recorded above is unchanged.

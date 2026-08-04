@@ -1353,6 +1353,23 @@ grants no access. It is refused when another current engagement already exists f
 and project. This focused rule deliberately does not prohibit every overlapping or parallel role,
 which would require a separate workforce decision.
 
+**Martine/Alego engagement correction, approved and executed 4 August 2026.** Widson had
+accidentally ended Martine Lotom's original Alego Usonga engagement
+(`fd0946e7-41e8-44ca-a8db-16267bc4d737`) before the correction path above existed, and was
+forced to create a replacement engagement (`0fc9301b-9b2b-4d3d-9fa3-3a34df572918`) to keep the
+project resourced. Both rows were deliberately left unchanged through the PR #90 implementation
+and verification, pending this separate Founder approval. Widson, as Principal, then used
+`correct_people_engagement` to close the replacement effective its own start date (18 July 2026)
+with a written duplicate-correction reason, and to reopen the original at its expected version,
+restoring it as the authoritative current engagement. Neither row was deleted; both remain
+readable, and the append-only `people_engagement_events` ledger recorded one `corrected` event
+on the replacement and one `reopened` event on the original, each with Widson's actor profile,
+timestamp, exact reason and resulting version. Martine's separate Lugulu Residential Home history
+and Lincoln Waweru's Alego engagement were not touched. Martine retains his ordinary
+current-engagement create/manage/end authority on projects he can access; he cannot correct or
+reopen a closed engagement, and a direct attempt to do so — through the controlled function or a
+raw update on the closed row — is refused by the database regardless of interface.
+
 Future cross-domain Labour vocabulary may still distinguish casual worker and crew, but those
 are not delivered People relationship types and do not authorise permanent person records in
 this slice. The delivered People vocabulary is the Stage 5 list above.
