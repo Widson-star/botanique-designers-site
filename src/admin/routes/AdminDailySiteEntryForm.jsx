@@ -73,7 +73,7 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
     return (
       <div className="mx-auto max-w-2xl">
         <Link to="/admin/daily-site-operations" className="text-sm text-gray-500 hover:text-botanique-green">
-          ← Daily site operations
+          ← Daily Site Operations
         </Link>
         <div className="mt-4 rounded-lg border border-stone-200 bg-white p-8">
           <h1 className="text-xl font-bold">No projects assigned to you yet</h1>
@@ -119,7 +119,7 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
     <div className="mx-auto max-w-2xl space-y-5">
       <div>
         <Link to="/admin/daily-site-operations" className="text-sm text-gray-500 hover:text-botanique-green">
-          ← Daily site operations
+          ← Daily Site Operations
         </Link>
         <h1 className="mt-2 text-2xl font-semibold">{editing ? "Edit site entry" : "New site entry"}</h1>
       </div>

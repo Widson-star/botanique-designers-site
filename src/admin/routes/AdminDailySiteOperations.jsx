@@ -87,7 +87,7 @@ export default function AdminDailySiteOperations() {
   if (!canSeeDailySiteOperations(role)) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
-        <h1 className="text-xl font-bold">Daily site operations unavailable</h1>
+        <h1 className="text-xl font-bold">Daily Site Operations unavailable</h1>
         <p className="mt-2 text-sm text-gray-500">This role does not have access to daily site operations.</p>
       </div>
     );
@@ -97,7 +97,7 @@ export default function AdminDailySiteOperations() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 border-b border-stone-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Daily site operations</h1>
+          <h1 className="text-2xl font-semibold">Daily Site Operations</h1>
           <p className="mt-1 text-sm text-gray-500">
             Morning site entries and compliance for active projects.
           </p>

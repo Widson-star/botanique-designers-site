@@ -36,12 +36,12 @@ function renderRoute({ role = "manager", entries = [], compliance = [], authoris
 describe("AdminDailySiteOperations route access", () => {
   it("is available to the owner and manager", () => {
     renderRoute({ role: "owner" });
-    expect(screen.getByRole("heading", { name: "Daily site operations" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Daily Site Operations" })).toBeInTheDocument();
   });
 
   it.each(["staff", "viewer"])("is unavailable to %s", (role) => {
     renderRoute({ role });
-    expect(screen.getByText("Daily site operations unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Daily Site Operations unavailable")).toBeInTheDocument();
   });
 
   it("shows a clear no-authorised-projects state for a manager with no authority", () => {

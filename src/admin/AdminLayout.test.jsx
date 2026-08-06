@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "./context/adminData";
 import AdminLayout from "./AdminLayout";
@@ -9,12 +10,11 @@ function renderLayout({
   profileLabel = "Widson O. Ambaisi",
   profile = null,
   isDemo = true,
+  path = "/admin",
 } = {}) {
   return render(
-    <MemoryRouter initialEntries={["/admin"]}>
-      <AdminDataContext.Provider
-        value={{ saveFeedback: null, clearSaveFeedback: vi.fn() }}
-      >
+    <MemoryRouter initialEntries={[path]}>
+      <AdminDataContext.Provider value={{ saveFeedback: null, clearSaveFeedback: vi.fn() }}>
         <Routes>
           <Route
             element={
@@ -28,12 +28,26 @@ function renderLayout({
             }
           >
             <Route path="/admin" element={<h1>Dashboard heading</h1>} />
+            <Route path="/admin/*" element={<h1>Destination heading</h1>} />
           </Route>
         </Routes>
       </AdminDataContext.Provider>
     </MemoryRouter>
   );
 }
+
+// The desktop sidebar and the mobile drawer render the same tree, so tests that
+// do not care which one they inspect take the first.
+function desktopNav() {
+  return screen.getAllByRole("navigation", { name: "Admin sections" })[0];
+}
+function domainButton(name) {
+  return within(desktopNav()).getByRole("button", { name });
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
 
 describe("AdminLayout visual boundary", () => {
   it("keeps admin headings inside the native-system-font admin shell", () => {
@@ -42,189 +56,324 @@ describe("AdminLayout visual boundary", () => {
     expect(heading.closest(".admin-shell")).toBeInTheDocument();
     expect(heading.closest(".admin-shell")).not.toHaveClass("font-sans");
   });
+});
 
-  // The temporary workflow order: Projects and Project intakes sit together,
-  // the operational and finance destinations follow in a natural sequence, and
-  // the provisional Project Summary comes last so it does not read as the
-  // delivered Reports Centre. The final six-group presentation — Dashboard,
-  // Projects, People, Finance, Reports, More — remains deferred to its own
-  // authorised stage.
-  it("shows only live destinations, in the temporary workflow order, ending with Project Summary", () => {
+// Stage 6, approved 6 August 2026. Authority:
+// docs/ui-authority/operations-hub/stage-6-navigation-authority/
+describe("Stage 6 six-domain navigation", () => {
+  it("presents exactly the six approved domains, in the approved order", () => {
     renderLayout();
-    const desktopNav = screen.getAllByRole("navigation", {
-      name: "Admin sections",
-    })[0];
-    expect(within(desktopNav).getAllByRole("link").map((link) => link.textContent)).toEqual([
-      "Dashboard",
-      // BD-ALERTS-01 removed the Work Inbox destination. Attention items are
-      // not a navigation destination under any name — they reach the reader
-      // through the header bell, per 02-alerts-popover-authority.png.
+    const rows = within(desktopNav()).getAllByRole("button");
+    expect(rows.map((row) => row.textContent)).toEqual([
       "Projects",
-      "Project intakes",
-      "Daily site operations",
-      "Site Costs",
-      "Fund Requests",
-      // BD-PEOPLE-01 (Stage 5) added People as a working destination.
-      "People",
-      "Approvals",
-      "Project Summary",
+      "Operations",
+      "Finance",
+      "Reports",
+      "More",
     ]);
-    expect(screen.queryByRole("link", { name: /Leads|Site visits|Payments|Expenses/i })).not.toBeInTheDocument();
+    // Dashboard is a direct destination, not a disclosure.
+    expect(within(desktopNav()).getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+      "href",
+      "/admin"
+    );
   });
 
-  // The Reports information architecture was rejected, so the shell must not
-  // claim the Reports product exists. The route itself is unchanged.
-  it("no longer presents any destination as Reports, while keeping the route", () => {
+  it.each([
+    ["Projects", ["Projects", "Project Intakes"], ["/admin/projects", "/admin/project-intakes"]],
+    [
+      "Operations",
+      ["Daily Site Operations", "Site Costs", "Approvals"],
+      ["/admin/daily-site-operations", "/admin/site-costs", "/admin/approvals"],
+    ],
+    ["Finance", ["Fund Requests"], ["/admin/fund-requests"]],
+    ["Reports", ["Project Summary"], ["/admin/reports"]],
+    ["More", ["People"], ["/admin/people"]],
+  ])("maps %s to exactly its approved children, on their existing routes", async (domain, labels, hrefs) => {
+    const user = userEvent.setup();
     renderLayout();
-    expect(screen.queryByRole("link", { name: "Reports" })).not.toBeInTheDocument();
-    const summary = screen.getAllByRole("link", { name: "Project Summary" })[0];
-    expect(summary).toHaveAttribute("href", "/admin/reports");
+    await user.click(domainButton(domain));
+    const panel = screen.getByRole("navigation", { name: "Admin sections" });
+    const links = within(panel)
+      .getAllByRole("link")
+      .filter((link) => labels.includes(link.textContent));
+    expect(links.map((link) => link.textContent)).toEqual(labels);
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(hrefs);
   });
 
-  // BD-REPORTS-01B navigation review. The sidebar names a destination only
-  // where a working route already exists, so no unbuilt module — Finance,
-  // Team, Tasks, Assignments, Documents or a summary area — may appear, and no
-  // entry may be disabled, decorative or a placeholder.
-  //
-  // People left this prohibited list at Stage 5, when it became a working
-  // destination with a real route, register and engagement records. The rule
-  // itself is unchanged: a destination appears only when its module is
-  // functional and authorised.
-  //
-  // BD-ALERTS-01 returned Work Inbox to that prohibited list: it is no longer a
-  // destination at all, and no Alerts destination replaced it.
+  // Grouping is presentation. It must not widen or narrow what a role reaches.
+  it("shows the Principal every domain and every destination", async () => {
+    const user = userEvent.setup();
+    renderLayout({ role: "owner" });
+    // One group opens at a time, so each is inspected while it is the open one.
+    const expected = {
+      Projects: ["Projects", "Project Intakes"],
+      Operations: ["Daily Site Operations", "Site Costs", "Approvals"],
+      Finance: ["Fund Requests"],
+      Reports: ["Project Summary"],
+      More: ["People"],
+    };
+    for (const [domain, labels] of Object.entries(expected)) {
+      await user.click(domainButton(domain));
+      for (const label of labels) {
+        expect(within(desktopNav()).getByRole("link", { name: label })).toBeInTheDocument();
+      }
+    }
+  });
+
+  it("shows the Operations Manager the same six domains and destinations", async () => {
+    const user = userEvent.setup();
+    renderLayout({ role: "manager", profileLabel: "Martine Lotom" });
+    expect(within(desktopNav()).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Projects",
+      "Operations",
+      "Finance",
+      "Reports",
+      "More",
+    ]);
+    await user.click(domainButton("More"));
+    expect(within(desktopNav()).getByRole("link", { name: "People" })).toHaveAttribute(
+      "href",
+      "/admin/people"
+    );
+  });
+
+  // A domain whose every child is unauthorised must not render at all — not
+  // empty, not disabled, not greyed.
+  it.each(["staff", "viewer"])("omits domains with no authorised children for %s", (role) => {
+    renderLayout({ role, profileLabel: "Team member" });
+    const rows = within(desktopNav()).queryAllByRole("button");
+    // Operations, Finance, Reports and More are entirely capability-gated.
+    expect(rows.map((row) => row.textContent)).not.toContain("Operations");
+    expect(rows.map((row) => row.textContent)).not.toContain("Finance");
+    expect(rows.map((row) => row.textContent)).not.toContain("More");
+    expect(screen.queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Site Costs" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Fund Requests" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "People" })).not.toBeInTheDocument();
+  });
+
   it("introduces no dead, disabled or placeholder navigation item", () => {
     renderLayout();
-    const desktopNav = screen.getAllByRole("navigation", { name: "Admin sections" })[0];
-    const links = within(desktopNav).getAllByRole("link");
-    for (const link of links) {
-      const href = link.getAttribute("href");
-      expect(href).toMatch(/^\/admin(\/[a-z-]+)?$/);
+    for (const link of within(desktopNav()).getAllByRole("link")) {
+      expect(link.getAttribute("href")).toMatch(/^\/admin(\/[a-z-]+)?$/);
       expect(link).not.toHaveAttribute("aria-disabled");
       expect(link.textContent).not.toMatch(/soon|coming|todo|placeholder/i);
     }
+    // Named but unbuilt areas stay absent.
     expect(
-      screen.queryByRole("link", { name: /Finance|Team|Tasks|Assignments|Documents/i })
+      screen.queryByRole("link", { name: /Work Overview|Labour|Payments|Suppliers|Documents/i })
     ).not.toBeInTheDocument();
   });
+});
 
-  // BD-PEOPLE-01 (Stage 5). People is capability-led like every other
-  // destination: it is a real route for the two operational roles, and it is
-  // absent — not disabled, not greyed — for anyone else.
-  it("shows People to the operational roles and to nobody else", () => {
-    for (const role of ["owner", "manager"]) {
-      const view = renderLayout({ role });
-      const people = within(
-        screen.getAllByRole("navigation", { name: "Admin sections" })[0]
-      ).getByRole("link", { name: "People" });
-      expect(people).toHaveAttribute("href", "/admin/people");
-      view.unmount();
-    }
-
-    for (const role of ["staff", "viewer"]) {
-      const view = renderLayout({ role });
-      expect(screen.queryByRole("link", { name: "People" })).not.toBeInTheDocument();
-      view.unmount();
-    }
+describe("Stage 6 active and expanded state", () => {
+  it.each([
+    ["/admin/projects", "Projects", "Projects"],
+    ["/admin/projects/abc-123", "Projects", "Projects"],
+    ["/admin/projects/abc-123/edit", "Projects", "Projects"],
+    ["/admin/project-intakes", "Projects", "Project Intakes"],
+    ["/admin/project-intakes/xyz", "Projects", "Project Intakes"],
+    ["/admin/daily-site-operations", "Operations", "Daily Site Operations"],
+    ["/admin/daily-site-operations/e1/edit", "Operations", "Daily Site Operations"],
+    ["/admin/site-costs/c1", "Operations", "Site Costs"],
+    ["/admin/site-costs/c1/edit", "Operations", "Site Costs"],
+    ["/admin/approvals/a1", "Operations", "Approvals"],
+    ["/admin/fund-requests/r1/edit", "Finance", "Fund Requests"],
+    ["/admin/reports", "Reports", "Project Summary"],
+    ["/admin/people/p1", "More", "People"],
+  ])("opens the owning domain and marks the right child on %s", (path, domain, child) => {
+    renderLayout({ path });
+    const nav = desktopNav();
+    expect(within(nav).getByRole("button", { name: domain })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    expect(within(nav).getByRole("link", { name: child }).className).toMatch(/bg-\[#ecefe9\]/);
   });
 
-  // BD-ALERTS-01. The Founder rejected the Work Inbox presentation on
-  // 3 August 2026: the name, the permanent sidebar destination and the
-  // full-page list are all gone. Nothing may reintroduce them, and no Alerts
-  // destination may take their place.
-  it("renders no Work Inbox destination, and no Alerts destination in its place", () => {
+  // The authority proves these are independent: Dashboard is active while
+  // Operations is expanded, and no child of the expanded group is active.
+  it("keeps active and expanded independent", async () => {
+    const user = userEvent.setup();
+    renderLayout({ path: "/admin" });
+    await user.click(domainButton("More"));
+
+    const nav = desktopNav();
+    expect(within(nav).getByRole("button", { name: "More" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    // Dashboard keeps the active treatment.
+    expect(within(nav).getByRole("link", { name: "Dashboard" }).className).toMatch(/bg-\[#ecefe9\]/);
+    // People is visible but NOT active.
+    expect(within(nav).getByRole("link", { name: "People" }).className).not.toMatch(/bg-\[#ecefe9\]/);
+  });
+
+  it("opens one domain at a time and collapses on a second press", async () => {
+    const user = userEvent.setup();
+    renderLayout({ path: "/admin" });
+
+    await user.click(domainButton("Projects"));
+    expect(domainButton("Projects")).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(domainButton("Finance"));
+    expect(domainButton("Projects")).toHaveAttribute("aria-expanded", "false");
+    expect(domainButton("Finance")).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(domainButton("Finance"));
+    expect(domainButton("Finance")).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // Disclosure is local shell state. It must not touch the URL, because that
+  // would push history entries and break back/forward.
+  it("changes no URL and pushes no history entry when a group is toggled", async () => {
+    const user = userEvent.setup();
+    renderLayout({ path: "/admin/site-costs" });
+    const before = window.location.href;
+
+    await user.click(domainButton("Projects"));
+    await user.click(domainButton("Reports"));
+
+    expect(window.location.href).toBe(before);
+    // The route did not move: Site Costs is still the active destination.
+    expect(screen.getByRole("heading", { name: "Destination heading" })).toBeInTheDocument();
+  });
+});
+
+describe("Stage 6 desktop collapse", () => {
+  it("starts expanded on first use and shows the collapse control", () => {
     renderLayout();
-    expect(screen.queryByText(/work inbox/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Work Inbox|Alerts|Inbox/i })).not.toBeInTheDocument();
-    for (const link of screen.getAllByRole("link")) {
-      expect(link.getAttribute("href")).not.toBe("/admin/work-inbox");
-    }
+    expect(screen.getByRole("button", { name: "Collapse sidebar" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
   });
 
-  // Alerts live behind a bell in the top-right header beside the profile, per
-  // 02-alerts-popover-authority.png. It is a control, not a destination.
-  it("renders the Alerts bell in the header for an authorised role", () => {
+  it("collapses, restores, and remembers the preference in this browser", async () => {
+    const user = userEvent.setup();
+    const view = renderLayout();
+
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(window.localStorage.getItem("botanique.admin.sidebarCollapsed")).toBe("1");
+
+    view.unmount();
+    renderLayout();
+    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+  });
+
+  // Collapsed rows carry no visible text, so the accessible name must carry it.
+  it("gives every collapsed rail control an accessible name", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+
+    const nav = desktopNav();
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
+    for (const domain of ["Projects", "Operations", "Finance", "Reports", "More"]) {
+      expect(within(nav).getByRole("button", { name: domain })).toBeInTheDocument();
+    }
+  });
+});
+
+describe("Stage 6 mobile drawer", () => {
+  function openDrawer(user) {
+    return user.click(screen.getByRole("button", { name: "Open navigation menu" }));
+  }
+
+  it("opens and closes with the trigger and the close control", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
+
+    await openDrawer(user);
+    expect(screen.getByRole("dialog", { name: "Admin navigation" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Close navigation menu" }));
+    expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
+  });
+
+  it("closes on Escape", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await openDrawer(user);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
+  });
+
+  it("closes after a destination is selected", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await openDrawer(user);
+
+    const drawer = screen.getByRole("dialog", { name: "Admin navigation" });
+    await user.click(within(drawer).getByRole("button", { name: "Finance" }));
+    await user.click(within(drawer).getByRole("link", { name: "Fund Requests" }));
+
+    expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
+  });
+
+  it("expands and collapses a group in place without closing the drawer", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await openDrawer(user);
+    const drawer = screen.getByRole("dialog", { name: "Admin navigation" });
+
+    const operations = within(drawer).getByRole("button", { name: "Operations" });
+    await user.click(operations);
+    expect(operations).toHaveAttribute("aria-expanded", "true");
+    expect(within(drawer).getByRole("link", { name: "Site Costs" })).toBeInTheDocument();
+
+    await user.click(operations);
+    expect(operations).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("dialog", { name: "Admin navigation" })).toBeInTheDocument();
+  });
+
+  it("contains Tab focus inside the open drawer", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await openDrawer(user);
+    const drawer = screen.getByRole("dialog", { name: "Admin navigation" });
+
+    for (let i = 0; i < 12; i += 1) {
+      await user.tab();
+      expect(drawer.contains(document.activeElement)).toBe(true);
+    }
+  });
+});
+
+describe("Stage 6 preserved shell", () => {
+  it("keeps the project search at every width", () => {
+    renderLayout();
+    expect(screen.getAllByRole("search").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("Search projects").length).toBeGreaterThan(0);
+  });
+
+  it("keeps Alerts in the header as a control, never a destination", () => {
     renderLayout();
     const bell = screen.getByRole("button", { name: /^Alerts/ });
     expect(bell).toHaveAttribute("aria-haspopup", "dialog");
-    expect(bell).toHaveAttribute("aria-expanded", "false");
     expect(bell.closest("header")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Work Inbox|Alerts|Inbox/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/work inbox/i)).not.toBeInTheDocument();
   });
 
-  // This is still not a notification centre. No notification record exists, so
-  // nothing may offer notification settings, history or delivery.
   it("still offers no notification record, history or delivery surface", () => {
     renderLayout();
-    expect(
-      screen.queryByRole("link", { name: /Notification/i })
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /Notification/i })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Notification/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Notification/i })).not.toBeInTheDocument();
   });
 
-  // The badge counts NEW items needing action. With no session nothing was
-  // read, so there is no count — a confident "0" is never shown for a read that
-  // did not happen.
-  it("shows no unread badge when no alerts read has happened", () => {
-    renderLayout();
-    const bell = screen.getByRole("button", { name: /^Alerts/ });
-    expect(bell).toHaveAccessibleName("Alerts");
-    expect(bell.textContent).toBe("");
-  });
-
-  // Every sidebar label matches the title its destination gives itself, so a
-  // reader never has to translate an abbreviation into a screen name.
-  it("names Daily site operations exactly as its destination titles itself", () => {
-    renderLayout();
-    expect(
-      screen.getAllByRole("link", { name: "Daily site operations" }).length
-    ).toBeGreaterThan(0);
-    expect(screen.queryByRole("link", { name: "Daily site ops" })).not.toBeInTheDocument();
-  });
-
-  // Found in the 3 August 2026 Operations Manager mobile walkthrough. The name
-  // is hidden below `md`, so if the role is also hidden below `sm` the header
-  // carries NO account identity on a phone. The two roles see materially
-  // different data, so that is an operational defect, not a cosmetic one.
-  it("keeps the role visible at every width, so a phone header always says which account it is", () => {
-    renderLayout({ role: "manager", isDemo: false, profileLabel: undefined, profile: {
-      role: "manager", email: "martine@botaniquedesigners.com", full_name: "Martine Lotom",
-    } });
-    const badge = screen.getByText("Operations Manager");
-    // No responsive-visibility class may gate it.
-    expect(badge.className).not.toMatch(/(^|\s)hidden(\s|$)/);
-    expect(badge.className).not.toMatch(/sm:inline|md:inline|lg:inline/);
-    expect(badge.closest("header")).toBeInTheDocument();
-  });
-
-  it("shows the compact founder name, Principal badge and restrained finance boundary note", () => {
-    renderLayout();
-    expect(screen.getByText("Widson O. Ambaisi")).toBeInTheDocument();
-    expect(screen.getByText("Principal")).toBeInTheDocument();
-    expect(screen.queryByText("Owner")).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Financial documents remain managed in Simple Invoice Manager.")
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/PDFs|document numbers|payments/i)).not.toBeInTheDocument();
-  });
-
-  it("normalises the shortened authenticated founder profile in the top navigation", () => {
-    renderLayout({
-      isDemo: false,
-      profileLabel: undefined,
-      profile: {
-        role: "owner",
-        email: "widson@botaniquedesigners.com",
-        full_name: "Widson Ambaisi",
-      },
-    });
-    expect(screen.getByText("Widson O. Ambaisi")).toBeInTheDocument();
-    expect(screen.getByText("Principal")).toBeInTheDocument();
-    expect(screen.queryByText("Widson Ambaisi")).not.toBeInTheDocument();
-  });
-
-  it("does not alter Martine Lotom in authenticated navigation", () => {
+  // Identity follows the approved hierarchy: name primary, role subordinate.
+  // Below `md` the text collapses into the avatar, so the header still answers
+  // "which account is this?" at phone width — the initials are always visible
+  // and the full name and role are one press away in the profile menu. This
+  // supersedes the August treatment that kept a role badge in the header row.
+  it("always identifies the signed-in account, and reveals name and role in the profile menu", async () => {
+    const user = userEvent.setup();
     renderLayout({
       role: "manager",
       isDemo: false,
@@ -235,8 +384,40 @@ describe("AdminLayout visual boundary", () => {
         full_name: "Martine Lotom",
       },
     });
-    expect(screen.getByText("Martine Lotom")).toBeInTheDocument();
-    expect(screen.getByText("Operations Manager")).toBeInTheDocument();
+
+    const trigger = screen.getByRole("button", { name: "Martine Lotom, Operations Manager" });
+    expect(trigger.closest("header")).toBeInTheDocument();
+    // The initials avatar carries identity at every width — nothing hides it.
+    expect(within(trigger).getByText("ML").className).not.toMatch(/(^|\s)hidden(\s|$)/);
+
+    await user.click(trigger);
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByText("Martine Lotom")).toBeInTheDocument();
+    expect(within(menu).getByText("Operations Manager")).toBeInTheDocument();
+  });
+
+  it("keeps sign-out reachable from the profile menu", async () => {
+    const user = userEvent.setup();
+    renderLayout({ isDemo: false });
+    await user.click(screen.getByRole("button", { name: /Widson O\. Ambaisi/ }));
+    expect(screen.getByRole("menuitem", { name: "Sign out" })).toBeInTheDocument();
+  });
+
+  it("offers the preview switch instead of sign-out in the dev preview", async () => {
+    const user = userEvent.setup();
+    renderLayout({ isDemo: true });
+    await user.click(screen.getByRole("button", { name: /Widson O\. Ambaisi/ }));
+    expect(screen.getByRole("menuitem", { name: "Switch preview" })).toBeInTheDocument();
+  });
+
+  it("normalises the shortened authenticated founder profile", () => {
+    renderLayout({
+      isDemo: false,
+      profileLabel: undefined,
+      profile: { role: "owner", email: "widson@botaniquedesigners.com", full_name: "Widson Ambaisi" },
+    });
+    expect(screen.getByRole("button", { name: /Widson O\. Ambaisi/ })).toBeInTheDocument();
+    expect(screen.queryByText("Widson Ambaisi")).not.toBeInTheDocument();
   });
 
   it.each([
@@ -245,13 +426,39 @@ describe("AdminLayout visual boundary", () => {
     ["viewer", "Read-only"],
   ])("presents the %s role as %s", (role, label) => {
     renderLayout({ role, profileLabel: "Team member" });
-    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Team member, ${label}` })).toBeInTheDocument();
   });
 
-  it.each(["staff", "viewer"])("does not expose finance or Approvals to %s", (role) => {
-    renderLayout({ role, profileLabel: "Team member" });
-    expect(screen.queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Site Costs" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Fund Requests" })).not.toBeInTheDocument();
+  it("uses the Botanique Designers wordmark, not an invented Operations brand", () => {
+    renderLayout();
+    expect(screen.getAllByText("BOTANIQUE").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("DESIGNERS").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Botanique Operations/i)).not.toBeInTheDocument();
+  });
+
+  it("uses the approved help footer and drops the finance-boundary note", () => {
+    renderLayout();
+    expect(screen.getAllByText("Need help?").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Contact your system admin").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByText("Financial documents remain managed in Simple Invoice Manager.")
+    ).not.toBeInTheDocument();
+  });
+
+  // Settled terminology authority: visible waive-family wording is prohibited.
+  it("shows no visible waive-family wording anywhere in the shell", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    for (const domain of ["Projects", "Operations", "Finance", "Reports", "More"]) {
+      await user.click(domainButton(domain));
+    }
+    expect(document.body.textContent).not.toMatch(/waive|waived|waiver/i);
+  });
+
+  it("uses Title Case for every navigation label", () => {
+    renderLayout();
+    for (const label of ["Project Intakes", "Daily Site Operations", "Site Costs", "Fund Requests"]) {
+      expect(document.body.textContent).not.toContain(label.toLowerCase());
+    }
   });
 });

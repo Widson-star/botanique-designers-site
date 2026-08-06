@@ -79,7 +79,7 @@ export default function AdminIntakeProvider({ children, session, isDemo, role })
 
   const runMutation = useCallback(async (operation, { refetchProject = false } = {}) => {
     if (isDemo) {
-      return { ok: false, error: "Project intakes are unavailable in the dev preview." };
+      return { ok: false, error: "Project Intakes are unavailable in the dev preview." };
     }
     try {
       const result = await operation();
