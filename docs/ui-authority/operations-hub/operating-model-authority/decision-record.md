@@ -62,9 +62,11 @@ authorised summaries. No duplicate ledgers.
 
 Mobile area selection: wrapped chips (all five areas visible, no horizontal scroll, no clipped
 labels, one selected at a time — wraps to three short rows at 375–400px given these label
-lengths). The compact dropdown/sheet alternative was considered and is documented in
-`stage-7-operating-model-draft/decision-package-revision2-addendum2.md` §2 but is not the
-approved treatment.
+lengths). A compact dropdown/sheet alternative — a single-row trigger that opens a full-width
+list of the five areas on tap — was considered and rejected in favour of the chips, because the
+chips show the full hierarchy with zero interaction while the sheet still costs one tap to see
+every area. The horizontally-scrolling selector tried earlier is withdrawn outright: it clipped
+labels and required discovering the scroll.
 
 Finance-to-inventory handoff: Finance records the commercial purchase once (supplier, quantity,
 cost, currency, evidence, approval, payment); Operations/Tools and Equipment receives the
