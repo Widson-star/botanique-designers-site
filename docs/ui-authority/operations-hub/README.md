@@ -61,6 +61,16 @@ the screens were approved.
 - No machine-generated card dumps.
 - No reintroduction of a permanent Alerts or Work Inbox sidebar item.
 
+## Related authority
+
+`stage-6-navigation-authority/` — Founder-approved six-domain sidebar grouping, implemented via
+PR #92. Committed authority; **NOT ACTIVE_VERIFIED** (see `operating-model-authority/README.md`
+for why).
+
+`operating-model-authority/` — the Founder-approved operating-model architecture that supersedes
+parts of Stage 6's navigation (Finance, Approvals, People, the collapsed rail, and product-wide
+presentation discipline). Visual/architectural authority; not implementation authority.
+
 ## Relationship to the delivered Alerts capability
 
 The Stage 3 attention model — items derived from authoritative source records, no duplicated
