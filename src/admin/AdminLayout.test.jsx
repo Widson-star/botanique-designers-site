@@ -58,36 +58,38 @@ describe("AdminLayout visual boundary", () => {
   });
 });
 
-// Stage 6, approved 6 August 2026. Authority:
-// docs/ui-authority/operations-hub/stage-6-navigation-authority/
-describe("Stage 6 six-domain navigation", () => {
-  it("presents exactly the six approved domains, in the approved order", () => {
+// Operating-model authority, merged PR #93. Authority:
+// docs/ui-authority/operations-hub/operating-model-authority/
+describe("Operating-model navigation domains", () => {
+  it("presents exactly the approved domains, in the approved order, with no More", () => {
     renderLayout();
-    const rows = within(desktopNav()).getAllByRole("button");
-    expect(rows.map((row) => row.textContent)).toEqual([
+    const nav = desktopNav();
+    expect(Array.from(nav.children).map((row) => row.textContent)).toEqual([
+      "Dashboard",
       "Projects",
       "Operations",
       "Finance",
+      "Approvals",
       "Reports",
-      "More",
     ]);
-    // Dashboard is a direct destination, not a disclosure.
-    expect(within(desktopNav()).getByRole("link", { name: "Dashboard" })).toHaveAttribute(
+    // Dashboard, Finance and Approvals are direct destinations, not disclosures.
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/admin");
+    expect(within(nav).getByRole("link", { name: "Finance" })).toHaveAttribute(
       "href",
-      "/admin"
+      "/admin/finance"
     );
+    expect(within(nav).getByRole("link", { name: "Approvals" })).toHaveAttribute(
+      "href",
+      "/admin/approvals"
+    );
+    expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "More" })).not.toBeInTheDocument();
   });
 
   it.each([
-    ["Projects", ["Projects", "Project Intakes"], ["/admin/projects", "/admin/project-intakes"]],
-    [
-      "Operations",
-      ["Daily Site Operations", "Site Costs", "Approvals"],
-      ["/admin/daily-site-operations", "/admin/site-costs", "/admin/approvals"],
-    ],
-    ["Finance", ["Fund Requests"], ["/admin/fund-requests"]],
+    ["Projects", ["Project Register", "Project Proposals"], ["/admin/projects", "/admin/project-intakes"]],
+    ["Operations", ["Daily Site Record", "People"], ["/admin/daily-site-operations", "/admin/people"]],
     ["Reports", ["Project Summary"], ["/admin/reports"]],
-    ["More", ["People"], ["/admin/people"]],
   ])("maps %s to exactly its approved children, on their existing routes", async (domain, labels, hrefs) => {
     const user = userEvent.setup();
     renderLayout();
@@ -104,52 +106,53 @@ describe("Stage 6 six-domain navigation", () => {
   it("shows the Principal every domain and every destination", async () => {
     const user = userEvent.setup();
     renderLayout({ role: "owner" });
+    const nav = desktopNav();
+    expect(within(nav).getByRole("link", { name: "Finance" })).toBeInTheDocument();
+    expect(within(nav).getByRole("link", { name: "Approvals" })).toBeInTheDocument();
     // One group opens at a time, so each is inspected while it is the open one.
     const expected = {
-      Projects: ["Projects", "Project Intakes"],
-      Operations: ["Daily Site Operations", "Site Costs", "Approvals"],
-      Finance: ["Fund Requests"],
+      Projects: ["Project Register", "Project Proposals"],
+      Operations: ["Daily Site Record", "People"],
       Reports: ["Project Summary"],
-      More: ["People"],
     };
     for (const [domain, labels] of Object.entries(expected)) {
       await user.click(domainButton(domain));
       for (const label of labels) {
-        expect(within(desktopNav()).getByRole("link", { name: label })).toBeInTheDocument();
+        expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
       }
     }
   });
 
-  it("shows the Operations Manager the same six domains and destinations", async () => {
+  it("shows the Operations Manager the same domains and destinations", async () => {
     const user = userEvent.setup();
     renderLayout({ role: "manager", profileLabel: "Martine Lotom" });
-    expect(within(desktopNav()).getAllByRole("button").map((b) => b.textContent)).toEqual([
+    const nav = desktopNav();
+    expect(Array.from(nav.children).map((row) => row.textContent)).toEqual([
+      "Dashboard",
       "Projects",
       "Operations",
       "Finance",
+      "Approvals",
       "Reports",
-      "More",
     ]);
-    await user.click(domainButton("More"));
-    expect(within(desktopNav()).getByRole("link", { name: "People" })).toHaveAttribute(
+    await user.click(domainButton("Operations"));
+    expect(within(nav).getByRole("link", { name: "People" })).toHaveAttribute(
       "href",
       "/admin/people"
     );
   });
 
-  // A domain whose every child is unauthorised must not render at all — not
-  // empty, not disabled, not greyed.
-  it.each(["staff", "viewer"])("omits domains with no authorised children for %s", (role) => {
+  // A domain whose every child (or, for a direct domain, itself) is
+  // unauthorised must not render at all — not empty, not disabled, not greyed.
+  it.each(["staff", "viewer"])("omits domains with no authorised destination for %s", (role) => {
     renderLayout({ role, profileLabel: "Team member" });
-    const rows = within(desktopNav()).queryAllByRole("button");
-    // Operations, Finance, Reports and More are entirely capability-gated.
-    expect(rows.map((row) => row.textContent)).not.toContain("Operations");
-    expect(rows.map((row) => row.textContent)).not.toContain("Finance");
-    expect(rows.map((row) => row.textContent)).not.toContain("More");
-    expect(screen.queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Site Costs" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Fund Requests" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "People" })).not.toBeInTheDocument();
+    const nav = desktopNav();
+    const buttonLabels = within(nav).queryAllByRole("button").map((row) => row.textContent);
+    expect(buttonLabels).not.toContain("Operations");
+    expect(within(nav).queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "People" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Daily Site Record" })).not.toBeInTheDocument();
   });
 
   it("introduces no dead, disabled or placeholder navigation item", () => {
@@ -161,26 +164,22 @@ describe("Stage 6 six-domain navigation", () => {
     }
     // Named but unbuilt areas stay absent.
     expect(
-      screen.queryByRole("link", { name: /Work Overview|Labour|Payments|Suppliers|Documents/i })
+      screen.queryByRole("link", { name: /Work Overview|Labour|Suppliers|Documents|Maintenance|Tools and Equipment/i })
     ).not.toBeInTheDocument();
   });
 });
 
-describe("Stage 6 active and expanded state", () => {
+describe("Operating-model active and expanded state", () => {
   it.each([
-    ["/admin/projects", "Projects", "Projects"],
-    ["/admin/projects/abc-123", "Projects", "Projects"],
-    ["/admin/projects/abc-123/edit", "Projects", "Projects"],
-    ["/admin/project-intakes", "Projects", "Project Intakes"],
-    ["/admin/project-intakes/xyz", "Projects", "Project Intakes"],
-    ["/admin/daily-site-operations", "Operations", "Daily Site Operations"],
-    ["/admin/daily-site-operations/e1/edit", "Operations", "Daily Site Operations"],
-    ["/admin/site-costs/c1", "Operations", "Site Costs"],
-    ["/admin/site-costs/c1/edit", "Operations", "Site Costs"],
-    ["/admin/approvals/a1", "Operations", "Approvals"],
-    ["/admin/fund-requests/r1/edit", "Finance", "Fund Requests"],
+    ["/admin/projects", "Projects", "Project Register"],
+    ["/admin/projects/abc-123", "Projects", "Project Register"],
+    ["/admin/projects/abc-123/edit", "Projects", "Project Register"],
+    ["/admin/project-intakes", "Projects", "Project Proposals"],
+    ["/admin/project-intakes/xyz", "Projects", "Project Proposals"],
+    ["/admin/daily-site-operations", "Operations", "Daily Site Record"],
+    ["/admin/daily-site-operations/e1/edit", "Operations", "Daily Site Record"],
+    ["/admin/people/p1", "Operations", "People"],
     ["/admin/reports", "Reports", "Project Summary"],
-    ["/admin/people/p1", "More", "People"],
   ])("opens the owning domain and marks the right child on %s", (path, domain, child) => {
     renderLayout({ path });
     const nav = desktopNav();
@@ -191,15 +190,31 @@ describe("Stage 6 active and expanded state", () => {
     expect(within(nav).getByRole("link", { name: child }).className).toMatch(/bg-\[#ecefe9\]/);
   });
 
+  // Finance is one shell destination: a Site Costs or Fund Requests URL still
+  // marks Finance current, because both remain part of the record it fronts.
+  it.each([
+    ["/admin/finance", "Finance"],
+    ["/admin/site-costs/c1", "Finance"],
+    ["/admin/site-costs/c1/edit", "Finance"],
+    ["/admin/fund-requests/r1/edit", "Finance"],
+    ["/admin/approvals", "Approvals"],
+    ["/admin/approvals/a1", "Approvals"],
+  ])("marks %s active on %s", (path, domain) => {
+    renderLayout({ path });
+    const link = within(desktopNav()).getByRole("link", { name: domain });
+    expect(link.className).toMatch(/bg-\[#ecefe9\]/);
+    expect(link).toHaveAttribute("aria-current", "page");
+  });
+
   // The authority proves these are independent: Dashboard is active while
   // Operations is expanded, and no child of the expanded group is active.
   it("keeps active and expanded independent", async () => {
     const user = userEvent.setup();
     renderLayout({ path: "/admin" });
-    await user.click(domainButton("More"));
+    await user.click(domainButton("Operations"));
 
     const nav = desktopNav();
-    expect(within(nav).getByRole("button", { name: "More" })).toHaveAttribute(
+    expect(within(nav).getByRole("button", { name: "Operations" })).toHaveAttribute(
       "aria-expanded",
       "true"
     );
@@ -216,12 +231,12 @@ describe("Stage 6 active and expanded state", () => {
     await user.click(domainButton("Projects"));
     expect(domainButton("Projects")).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(domainButton("Finance"));
+    await user.click(domainButton("Reports"));
     expect(domainButton("Projects")).toHaveAttribute("aria-expanded", "false");
-    expect(domainButton("Finance")).toHaveAttribute("aria-expanded", "true");
+    expect(domainButton("Reports")).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(domainButton("Finance"));
-    expect(domainButton("Finance")).toHaveAttribute("aria-expanded", "false");
+    await user.click(domainButton("Reports"));
+    expect(domainButton("Reports")).toHaveAttribute("aria-expanded", "false");
   });
 
   // Disclosure is local shell state. It must not touch the URL, because that
@@ -235,12 +250,12 @@ describe("Stage 6 active and expanded state", () => {
     await user.click(domainButton("Reports"));
 
     expect(window.location.href).toBe(before);
-    // The route did not move: Site Costs is still the active destination.
+    // The route did not move: the Finance-family destination is still active.
     expect(screen.getByRole("heading", { name: "Destination heading" })).toBeInTheDocument();
   });
 });
 
-describe("Stage 6 desktop collapse", () => {
+describe("Operating-model desktop collapse (104px)", () => {
   it("starts expanded on first use and shows the collapse control", () => {
     renderLayout();
     expect(screen.getByRole("button", { name: "Collapse sidebar" })).toHaveAttribute(
@@ -249,7 +264,7 @@ describe("Stage 6 desktop collapse", () => {
     );
   });
 
-  it("collapses, restores, and remembers the preference in this browser", async () => {
+  it("collapses to 104px, superseding the old 64px rail, restores, and remembers the preference in this browser", async () => {
     const user = userEvent.setup();
     const view = renderLayout();
 
@@ -259,10 +274,14 @@ describe("Stage 6 desktop collapse", () => {
       "true"
     );
     expect(window.localStorage.getItem("botanique.admin.sidebarCollapsed")).toBe("1");
+    const aside = view.container.querySelector("aside");
+    expect(aside.className).toMatch(/lg:w-\[104px\]/);
+    expect(aside.className).not.toMatch(/lg:w-16\b/);
 
     view.unmount();
-    renderLayout();
+    const restored = renderLayout();
     expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeInTheDocument();
+    expect(restored.container.querySelector("aside").className).toMatch(/lg:w-\[104px\]/);
   });
 
   // Collapsed rows carry no visible text, so the accessible name must carry it.
@@ -272,14 +291,23 @@ describe("Stage 6 desktop collapse", () => {
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
 
     const nav = desktopNav();
-    expect(within(nav).getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
-    for (const domain of ["Projects", "Operations", "Finance", "Reports", "More"]) {
-      expect(within(nav).getByRole("button", { name: domain })).toBeInTheDocument();
+    for (const label of ["Dashboard", "Finance", "Approvals"]) {
+      expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
     }
+    for (const label of ["Projects", "Operations", "Reports"]) {
+      expect(within(nav).getByRole("button", { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it("keeps the official Botanique badge recognisably visible when collapsed", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(screen.getAllByAltText("Botanique Designers").length).toBeGreaterThan(0);
   });
 });
 
-describe("Stage 6 mobile drawer", () => {
+describe("Operating-model mobile drawer", () => {
   function openDrawer(user) {
     return user.click(screen.getByRole("button", { name: "Open navigation menu" }));
   }
@@ -304,14 +332,25 @@ describe("Stage 6 mobile drawer", () => {
     expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
   });
 
-  it("closes after a destination is selected", async () => {
+  it("closes after a direct destination is selected", async () => {
     const user = userEvent.setup();
     renderLayout();
     await openDrawer(user);
 
     const drawer = screen.getByRole("dialog", { name: "Admin navigation" });
-    await user.click(within(drawer).getByRole("button", { name: "Finance" }));
-    await user.click(within(drawer).getByRole("link", { name: "Fund Requests" }));
+    await user.click(within(drawer).getByRole("link", { name: "Finance" }));
+
+    expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
+  });
+
+  it("closes after a grouped destination is selected", async () => {
+    const user = userEvent.setup();
+    renderLayout();
+    await openDrawer(user);
+
+    const drawer = screen.getByRole("dialog", { name: "Admin navigation" });
+    await user.click(within(drawer).getByRole("button", { name: "Operations" }));
+    await user.click(within(drawer).getByRole("link", { name: "People" }));
 
     expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
   });
@@ -325,7 +364,7 @@ describe("Stage 6 mobile drawer", () => {
     const operations = within(drawer).getByRole("button", { name: "Operations" });
     await user.click(operations);
     expect(operations).toHaveAttribute("aria-expanded", "true");
-    expect(within(drawer).getByRole("link", { name: "Site Costs" })).toBeInTheDocument();
+    expect(within(drawer).getByRole("link", { name: "People" })).toBeInTheDocument();
 
     await user.click(operations);
     expect(operations).toHaveAttribute("aria-expanded", "false");
@@ -345,7 +384,7 @@ describe("Stage 6 mobile drawer", () => {
   });
 });
 
-describe("Stage 6 preserved shell", () => {
+describe("Operating-model preserved shell", () => {
   it("keeps the project search at every width", () => {
     renderLayout();
     expect(screen.getAllByRole("search").length).toBeGreaterThan(0);
@@ -370,8 +409,7 @@ describe("Stage 6 preserved shell", () => {
   // Identity follows the approved hierarchy: name primary, role subordinate.
   // Below `md` the text collapses into the avatar, so the header still answers
   // "which account is this?" at phone width — the initials are always visible
-  // and the full name and role are one press away in the profile menu. This
-  // supersedes the August treatment that kept a role badge in the header row.
+  // and the full name and role are one press away in the profile menu.
   it("always identifies the signed-in account, and reveals name and role in the profile menu", async () => {
     const user = userEvent.setup();
     renderLayout({
@@ -429,10 +467,18 @@ describe("Stage 6 preserved shell", () => {
     expect(screen.getByRole("button", { name: `Team member, ${label}` })).toBeInTheDocument();
   });
 
-  it("uses the Botanique Designers wordmark, not an invented Operations brand", () => {
+  // Identity: the official public/botanique.png asset, never a retyped
+  // wordmark or an invented mark. Operations Hub sits visibly subordinate.
+  it("uses the official Botanique badge, not a retyped wordmark or invented mark", () => {
     renderLayout();
-    expect(screen.getAllByText("BOTANIQUE").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("DESIGNERS").length).toBeGreaterThan(0);
+    const badges = screen.getAllByAltText("Botanique Designers");
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      expect(badge).toHaveAttribute("src", "/botanique.png");
+    }
+    expect(screen.queryByText("BOTANIQUE")).not.toBeInTheDocument();
+    expect(screen.queryByText("DESIGNERS")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Operations Hub").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Botanique Operations/i)).not.toBeInTheDocument();
   });
 
@@ -449,7 +495,7 @@ describe("Stage 6 preserved shell", () => {
   it("shows no visible waive-family wording anywhere in the shell", async () => {
     const user = userEvent.setup();
     renderLayout();
-    for (const domain of ["Projects", "Operations", "Finance", "Reports", "More"]) {
+    for (const domain of ["Projects", "Operations", "Reports"]) {
       await user.click(domainButton(domain));
     }
     expect(document.body.textContent).not.toMatch(/waive|waived|waiver/i);
@@ -457,7 +503,7 @@ describe("Stage 6 preserved shell", () => {
 
   it("uses Title Case for every navigation label", () => {
     renderLayout();
-    for (const label of ["Project Intakes", "Daily Site Operations", "Site Costs", "Fund Requests"]) {
+    for (const label of ["Project Register", "Project Proposals", "Daily Site Record", "Finance", "Approvals"]) {
       expect(document.body.textContent).not.toContain(label.toLowerCase());
     }
   });

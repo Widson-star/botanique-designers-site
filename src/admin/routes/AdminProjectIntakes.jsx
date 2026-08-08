@@ -16,7 +16,7 @@ export default function AdminProjectIntakes() {
   if (!canSee) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
-        <h1 className="text-xl font-bold">Project Intakes unavailable</h1>
+        <h1 className="text-xl font-bold">Project Proposals unavailable</h1>
         <p className="mt-2 text-sm text-gray-500">Your role does not have access to project intakes.</p>
       </div>
     );
@@ -26,7 +26,7 @@ export default function AdminProjectIntakes() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Project Intakes</h1>
+          <h1 className="text-2xl font-bold">Project Proposals</h1>
           <p className="mt-1 text-sm text-gray-500">
             {canPropose
               ? "Proposed projects awaiting Principal approval. A live project is created only on approval."

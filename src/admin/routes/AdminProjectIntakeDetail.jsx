@@ -129,7 +129,7 @@ export default function AdminProjectIntakeDetail() {
   if (!canManageStaff(role)) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
-        <h1 className="text-xl font-bold">Project Intakes unavailable</h1>
+        <h1 className="text-xl font-bold">Project Proposals unavailable</h1>
         <p className="mt-2 text-sm text-gray-500">Your role does not have access to project intakes.</p>
       </div>
     );

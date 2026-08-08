@@ -15,6 +15,8 @@ function renderDashboard({
   projects = [],
   fetchActivities = vi.fn(() => new Promise(() => {})),
   compliance = [],
+  profile = null,
+  profileLabel,
 }) {
   const value = {
     role,
@@ -23,6 +25,8 @@ function renderDashboard({
     dataStatus: "ready",
     dataError: "",
     fetchActivities,
+    profile,
+    profileLabel,
   };
   const dailySite = {
     compliance,
@@ -90,7 +94,7 @@ describe("AdminDashboard composition", () => {
   it("keeps the header to one short line instead of restating the KPI counts in prose", () => {
     renderDashboard({ role: "owner", projects });
     expect(
-      screen.getByText("Here's what's happening across the projects you can see.")
+      screen.getByText("Operations overview — here's what's happening across the projects you can see.")
     ).toBeInTheDocument();
     expect(screen.queryByText(/project in the portfolio/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/is awaiting activation/i)).not.toBeInTheDocument();
@@ -769,5 +773,38 @@ describe("AdminDashboard snapshot limits", () => {
     const strip = container.querySelector("#type-summary-title").closest("section");
 
     expect(strip.textContent).not.toContain("Remaining");
+  });
+});
+
+// Operating-model authority: a live, Africa/Nairobi-local greeting replaces
+// the static "Operations overview" heading.
+describe("AdminDashboard greeting", () => {
+  it("greets the authenticated profile by first name", () => {
+    renderDashboard({
+      role: "owner",
+      projects,
+      profile: { role: "owner", email: "widson@botaniquedesigners.com", full_name: "Widson Omutelema Ambaisi" },
+    });
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toMatch(/^Good (morning|afternoon|evening), Widson$/);
+  });
+
+  it("greets the demo-preview label by first name when there is no real profile", () => {
+    renderDashboard({ role: "manager", projects, profileLabel: "Martine Lotom" });
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toMatch(/^Good (morning|afternoon|evening), Martine$/);
+  });
+
+  it("falls back to a plain time-of-day greeting when no name can be resolved", () => {
+    renderDashboard({ role: "owner", projects });
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading.textContent).toMatch(/^Good (morning|afternoon|evening)$/);
+  });
+
+  it("keeps the operations-overview line as supporting copy beneath the greeting", () => {
+    renderDashboard({ role: "owner", projects });
+    expect(
+      screen.getByText("Operations overview — here's what's happening across the projects you can see.")
+    ).toBeInTheDocument();
   });
 });

@@ -111,7 +111,7 @@ export default function AdminDailySiteEntryDetail() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
         <Link to="/admin/daily-site-operations" className="text-sm text-gray-500 hover:text-botanique-green">
-          ← Daily Site Operations
+          ← Daily Site Record
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold">{project?.projectName || "Authorised project"}</h1>
