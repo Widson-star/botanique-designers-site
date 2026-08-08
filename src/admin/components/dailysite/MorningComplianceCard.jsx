@@ -101,7 +101,7 @@ export default function MorningComplianceCard({ role }) {
                   </p>
                   {/* Mark not required is DEMOTED, not removed. This card is the
                       only place in the application where an owner can mark a
-                      morning entry not required — Daily Site Operations reports
+                      morning entry not required — Daily Site Record reports
                       the count but offers no control — so dropping it would
                       remove an owner capability, not merely tidy the Dashboard.
                       It steps down to a quiet secondary link beneath the row

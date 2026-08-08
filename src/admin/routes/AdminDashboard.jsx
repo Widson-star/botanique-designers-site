@@ -14,6 +14,8 @@
 import { Link } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { canCreateProjects, canSeePendingActivation } from "../utils/projectCapabilities";
+import { greetingFirstName } from "../utils/personName";
+import { dashboardGreeting } from "../utils/greeting";
 import {
   calculateDashboardMetrics,
   projectsByStage,
@@ -48,17 +50,23 @@ export default function AdminDashboard() {
     dataStatus,
     dataError,
     fetchActivities,
+    profile,
+    profileLabel,
   } = useAdminData();
   const showPendingActivation = canSeePendingActivation(role);
   const metrics = calculateDashboardMetrics(projects);
   const showNewProject = canCreateProjects(role);
   const showDailySite = canSeeDailySiteOperations(role);
+  // Operating-model authority: a live, Africa/Nairobi-local greeting using the
+  // authenticated profile's first name, degrading gracefully to a plain
+  // time-of-day phrase when no usable given name can be resolved.
+  const greeting = dashboardGreeting(greetingFirstName(profile, profileLabel));
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">Operations overview</h1>
+          <h1 className="text-2xl font-semibold">{greeting}</h1>
           {/* One short supporting line. The long generated paragraph that used
               to sit here restated the KPI strip immediately below it, and the
               separate "Portfolio notes" card only explained that filters
@@ -68,7 +76,7 @@ export default function AdminDashboard() {
           <p className="mt-1.5 text-sm text-gray-500">
             {projects.length === 0
               ? "No project data is available yet."
-              : "Here's what's happening across the projects you can see."}
+              : "Operations overview — here's what's happening across the projects you can see."}
           </p>
         </div>
         {showNewProject && (

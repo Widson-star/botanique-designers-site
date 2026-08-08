@@ -1,13 +1,16 @@
-// Stage 6 admin shell: six-domain progressive navigation, a collapsible desktop
-// sidebar and a mobile drawer using the same in-place disclosures.
+// Operating-model admin shell: the corrected navigation domains, a 104px
+// collapsible desktop rail and a mobile drawer using the same in-place
+// disclosures.
 //
-// Visual authority: docs/ui-authority/operations-hub/stage-6-navigation-authority/
-// (Founder-approved Revision 2, 6 August 2026), supplementing the four original
-// screens in docs/ui-authority/operations-hub/.
+// Visual authority: docs/ui-authority/operations-hub/operating-model-authority/
+// (Founder-approved, merged PR #93), which supersedes the collapsed rail,
+// Finance, Approvals and People placement Stage 6 shipped
+// (docs/ui-authority/operations-hub/stage-6-navigation-authority/, PR #92).
 //
-// Grouping is presentation only. Every destination keeps its existing route, and
-// every child is gated by the SAME capability function the flat sidebar used, so
-// no role gains or loses a destination here. Row level security remains the real
+// Grouping is presentation only. Every destination keeps its existing route
+// (Finance is the one new shell destination — see ./navigation.js), and every
+// child is gated by the SAME capability function the flat sidebar used, so no
+// role gains or loses a destination here. Row level security remains the real
 // boundary. See ./navigation.js.
 //
 // Two things deliberately do NOT live in the URL: which group is open, and
@@ -23,7 +26,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-do
 import { ROLE_LABELS } from "./constants/roles";
 import SaveFeedback from "./components/SaveFeedback";
 import AlertsBell from "./components/AlertsBell";
-import { profilePresentationName } from "./utils/personName";
+import { resolveDisplayName } from "./utils/personName";
 import { useAlerts } from "./utils/useAlerts";
 import { useAdminData } from "./context/adminData";
 import { resolveActive, visibleDomains } from "./navigation";
@@ -53,23 +56,29 @@ function Icon({ path, className = "h-[17px] w-[17px] shrink-0" }) {
   );
 }
 
-function Wordmark() {
+// Company identity: the official, unaltered public/botanique.png asset — the
+// same file already used on the public site (Header.jsx, Footer.jsx). Product
+// identity ("Operations Hub") sits subordinate beside it. Operating-model
+// authority: no reconstructed/retyped "BOTANIQUE DESIGNERS" text, no invented
+// compact logo or monogram, at any size.
+function BrandMark({ collapsed }) {
+  if (collapsed) {
+    // 60x74px (height x width), the asset's 1440:1163 ratio, never stretched
+    // or cropped. No product label at this width — there is no room for it,
+    // and the badge alone stays recognisable.
+    return (
+      <img
+        src="/botanique.png"
+        alt="Botanique Designers"
+        className="h-[60px] w-[74px] shrink-0 object-contain"
+      />
+    );
+  }
   return (
-    <span className="flex items-center gap-2">
-      <svg className="h-[30px] w-[26px] shrink-0" viewBox="0 0 26 30" fill="none" aria-hidden="true">
-        <path d="M13 29.2V9.4" stroke="#4a6a5e" strokeWidth="1.25" strokeLinecap="round" />
-        <path d="M13.2 12.2c.2-3.9 3-6.9 7.9-7.6-.4 4.6-3.2 7.5-7.9 7.6Z" fill="#6f9280" />
-        <path d="M12.8 17.4c-.3-3.4-2.7-6-6.9-6.6.3 4 2.7 6.5 6.9 6.6Z" fill="#8fae9c" />
-        <path d="M13.2 20.6c.2-3.5 2.5-6.1 6.7-6.7-.3 4.1-2.6 6.6-6.7 6.7Z" fill="#3f5f58" />
-        <path d="M12.8 8.6C12.5 5.3 10.2 2.9 6.2 2.3c.3 3.9 2.6 6.3 6.6 6.3Z" fill="#557a6b" />
-      </svg>
-      <span className="leading-none">
-        <span className="block font-display text-[17px] font-medium tracking-[0.115em] text-botanique-charcoal">
-          BOTANIQUE
-        </span>
-        <span className="mt-1 block text-[7.5px] font-semibold tracking-[0.34em] text-gray-500">
-          DESIGNERS
-        </span>
+    <span className="flex items-center gap-2.5">
+      <img src="/botanique.png" alt="Botanique Designers" className="h-10 w-auto shrink-0" />
+      <span className="text-[13px] font-semibold tracking-[0.02em] text-gray-500">
+        Operations Hub
       </span>
     </span>
   );
@@ -99,7 +108,7 @@ function RailLabel({ children }) {
 // `touch` is set for the mobile drawer, where every row must stay at or above
 // the 44px minimum tap size. The desktop sidebar keeps the authority's tighter
 // 41px/36px rhythm, which is pointer-driven.
-function NavTree({ role, collapsed, openDomain, onToggleDomain, onNavigate, idPrefix, touch }) {
+function NavTree({ role, collapsed, activeDomainId, openDomain, onToggleDomain, onNavigate, idPrefix, touch }) {
   const domains = useMemo(() => visibleDomains(role), [role]);
   const domainRow = touch ? "h-[46px]" : "h-[41px]";
   const childRow = touch ? "h-11" : "h-9";
@@ -109,26 +118,34 @@ function NavTree({ role, collapsed, openDomain, onToggleDomain, onNavigate, idPr
     <nav className="space-y-3" aria-label="Admin sections">
       {domains.map((domain) => {
         if (!domain.children) {
+          // A plain Link, not NavLink: active is driven entirely by
+          // resolveActive()/activeDomainId, because a direct domain like
+          // Finance stays "current" while viewing a drill-through page under
+          // a different base path (/admin/site-costs, /admin/fund-requests —
+          // see navigation.js's `matches`), which NavLink's own path-based
+          // active check cannot express. NavLink also treats a caller-supplied
+          // `aria-current` as the value to use only when ITS OWN check is
+          // true, silently dropping it otherwise, so Link is the only way to
+          // set aria-current unconditionally here.
+          const isActive = domain.id === activeDomainId;
           return (
-            <NavLink
+            <Link
               key={domain.id}
               to={domain.to}
-              end={domain.end}
               onClick={onNavigate}
               aria-label={collapsed ? domain.label : undefined}
-              className={({ isActive }) =>
-                [
-                  ROW_BASE,
-                  domainRow,
-                  FOCUS_RING,
-                  isActive ? ROW_ACTIVE : ROW_IDLE,
-                  collapsed ? "justify-center px-0" : "",
-                ].join(" ")
-              }
+              aria-current={isActive ? "page" : undefined}
+              className={[
+                ROW_BASE,
+                domainRow,
+                FOCUS_RING,
+                isActive ? ROW_ACTIVE : ROW_IDLE,
+                collapsed ? "justify-center px-0" : "",
+              ].join(" ")}
             >
               <Icon path={domain.icon} />
               {collapsed ? <RailLabel>{domain.label}</RailLabel> : <span className="flex-1">{domain.label}</span>}
-            </NavLink>
+            </Link>
           );
         }
 
@@ -347,9 +364,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
   const roleLabel = ROLE_LABELS[role] || role;
   const { accessToken, currentUserId } = useAdminData();
   const alerts = useAlerts({ accessToken, role, currentUserId, isDemo });
-  const visibleProfileLabel = profile
-    ? profilePresentationName(profile)
-    : profileLabel || "Authenticated admin";
+  const visibleProfileLabel = resolveDisplayName(profile, profileLabel);
   const initials = useMemo(() => initialsOf(visibleProfileLabel), [visibleProfileLabel]);
 
   const active = useMemo(() => resolveActive(location.pathname), [location.pathname]);
@@ -430,22 +445,16 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
       <div className="lg:flex">
         <aside
           className={`hidden border-r border-stone-200 bg-[#faf9f8] lg:fixed lg:inset-y-0 lg:flex lg:flex-col ${
-            collapsed ? "lg:w-16" : "lg:w-[235px]"
+            collapsed ? "lg:w-[104px]" : "lg:w-[235px]"
           }`}
         >
-          <div className={`flex h-[81px] shrink-0 items-center ${collapsed ? "justify-center" : "px-[22px]"}`}>
+          <div
+            className={`flex shrink-0 items-center ${
+              collapsed ? "h-24 justify-center" : "h-[81px] px-[22px]"
+            }`}
+          >
             <Link to="/admin" aria-label="Botanique Designers Operations Hub" className={FOCUS_RING}>
-              {collapsed ? (
-                <svg className="h-[30px] w-[26px]" viewBox="0 0 26 30" fill="none" aria-hidden="true">
-                  <path d="M13 29.2V9.4" stroke="#4a6a5e" strokeWidth="1.25" strokeLinecap="round" />
-                  <path d="M13.2 12.2c.2-3.9 3-6.9 7.9-7.6-.4 4.6-3.2 7.5-7.9 7.6Z" fill="#6f9280" />
-                  <path d="M12.8 17.4c-.3-3.4-2.7-6-6.9-6.6.3 4 2.7 6.5 6.9 6.6Z" fill="#8fae9c" />
-                  <path d="M13.2 20.6c.2-3.5 2.5-6.1 6.7-6.7-.3 4.1-2.6 6.6-6.7 6.7Z" fill="#3f5f58" />
-                  <path d="M12.8 8.6C12.5 5.3 10.2 2.9 6.2 2.3c.3 3.9 2.6 6.3 6.6 6.3Z" fill="#557a6b" />
-                </svg>
-              ) : (
-                <Wordmark />
-              )}
+              <BrandMark collapsed={collapsed} />
             </Link>
           </div>
 
@@ -453,6 +462,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
             <NavTree
               role={role}
               collapsed={collapsed}
+              activeDomainId={activeDomainId}
               openDomain={openDomain}
               onToggleDomain={toggleDomain}
               idPrefix="desktop"
@@ -474,7 +484,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
           </button>
         </aside>
 
-        <div className={`min-w-0 flex-1 ${collapsed ? "lg:pl-16" : "lg:pl-[235px]"}`}>
+        <div className={`min-w-0 flex-1 ${collapsed ? "lg:pl-[104px]" : "lg:pl-[235px]"}`}>
           <header className="sticky top-0 z-30 border-b border-stone-200 bg-white/95 backdrop-blur">
             <div className="flex min-h-[81px] items-center gap-3 px-4 md:px-7">
               <button
@@ -549,7 +559,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
             className="absolute inset-y-0 left-0 flex w-[290px] max-w-[84%] flex-col bg-[#faf9f8] shadow-xl focus:outline-none"
           >
             <div className="flex h-[81px] shrink-0 items-center gap-2 px-4">
-              <Wordmark />
+              <BrandMark collapsed={false} />
               <button
                 type="button"
                 onClick={closeDrawer}
@@ -570,6 +580,7 @@ export default function AdminLayout({ role, profile, profileLabel, isDemo, onSig
               <NavTree
                 role={role}
                 collapsed={false}
+                activeDomainId={activeDomainId}
                 openDomain={openDomain}
                 onToggleDomain={toggleDomain}
                 onNavigate={closeDrawer}

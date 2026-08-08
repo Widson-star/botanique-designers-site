@@ -157,7 +157,7 @@ async function loadAdminBundle(accessToken) {
   return { profiles: mappedProfiles, projects };
 }
 
-export function AdminDataProvider({ session, role, profile, isDemo, children }) {
+export function AdminDataProvider({ session, role, profile, profileLabel, isDemo, children }) {
   const accessToken = session?.access_token;
   const currentUserId = isDemo
     ? role === ROLES.OWNER
@@ -443,6 +443,12 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
       role,
       isDemo,
       currentUserId,
+      // The authenticated Supabase profile (null in demo mode) and the
+      // demo-preview label, exposed so any route can resolve the signed-in
+      // person's display name — the Dashboard greeting is the first
+      // consumer — without re-deriving it from session storage.
+      profile: profile || null,
+      profileLabel,
       // Exposed so a route that issues its own narrow reads (Reports) does not
       // have to mount a domain provider or reach into session storage. It is
       // the same caller token every provider already uses; it widens nothing,
@@ -464,6 +470,8 @@ export function AdminDataProvider({ session, role, profile, isDemo, children }) 
       role,
       isDemo,
       currentUserId,
+      profile,
+      profileLabel,
       accessToken,
       projects,
       profiles,

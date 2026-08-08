@@ -35,7 +35,7 @@ export default function ProjectDailySiteSection({ project, role }) {
   return (
     <section className="rounded-lg border border-stone-200 bg-white p-5" aria-labelledby="project-daily-site-title">
       <div className="flex items-center justify-between">
-        <h2 id="project-daily-site-title" className="text-base font-semibold">Daily Site Operations</h2>
+        <h2 id="project-daily-site-title" className="text-base font-semibold">Daily Site Record</h2>
         {canRecordDailySiteEntry(role) && !todaysEntry && (
           <Link
             to={`/admin/daily-site-operations/new?project=${project.id}`}

@@ -29,6 +29,7 @@ import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
 import AdminFundRequests from "./routes/AdminFundRequests";
 import AdminFundRequestForm from "./routes/AdminFundRequestForm";
 import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
+import AdminFinance from "./routes/AdminFinance";
 import AdminReports from "./routes/AdminReports";
 import AdminPeople from "./routes/AdminPeople";
 import AdminPersonDetail from "./routes/AdminPersonDetail";
@@ -197,7 +198,13 @@ export default function AdminApp() {
   }
 
   return (
-    <AdminDataProvider session={session} role={role} profile={profile} isDemo={isDemo}>
+    <AdminDataProvider
+      session={session}
+      role={role}
+      profile={profile}
+      profileLabel={profileLabel}
+      isDemo={isDemo}
+    >
       <AdminApprovalsProvider session={session} role={role} isDemo={isDemo}>
         <AdminIntakeProvider session={session} role={role} isDemo={isDemo}>
         <DailySiteOperationsProvider session={session} role={role} isDemo={isDemo}>
@@ -241,6 +248,7 @@ export default function AdminApp() {
               <Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} />
               <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
               <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
+              <Route path="/admin/finance" element={<AdminFinance />} />
               <Route path="/admin/people" element={<AdminPeople />} />
               <Route path="/admin/people/:personId" element={<AdminPersonDetail />} />
               {/* Declared before the /admin/* catch-all, per the existing pattern. */}
