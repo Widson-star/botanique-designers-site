@@ -6456,3 +6456,98 @@ The safest next unit is (1) alone, or (1) paired with (2) as a documentation dec
 fixture projects, fixture proposals, fixture approvals, `ZZ Verification Record — Stage 5`, the
 Martine name-order inconsistency and the unresolved `LEM` identity all remain deferred exactly as
 recorded earlier; none was read for change or modified here.
+
+### BD-FIN-01C — payment and reconciliation authority, and three settled image rulings — 9 August 2026
+
+Step 2 of the sequence recommended in the entry above: the Founder-facing authority that unblocks
+Finance, Project Summary and the daily close-out. **Documentation only.** No migration, no schema,
+no RLS, no application code, no production row, and no change to any of the fourteen authority
+PNGs. Branched from `main` at `8066b8cb5a32b705b909a87805f302471d9c33fd`, confirmed by a fresh
+fetch with a clean worktree and no open pull requests.
+
+**Three image-vs-model tensions are now settled, and are recorded in three places.** Image `06`'s
+"Project Templates" is **not** approved product architecture — Projects remains Project Register +
+Project Proposals, and no Templates module, route or model may be implemented on the strength of
+that image. Image `13`'s persistent Finance sidebar children do **not** reopen Option A — the five
+Finance areas stay authoritative, but Finance remains one shell destination with the in-page area
+selector shipped in PR #94. Image `11` does **not** merge Maintenance and Tools & Equipment; they
+remain two distinct Operations capabilities. All fourteen PNGs stay frozen and byte-for-byte
+unaltered; the rulings govern how they are *read*, not what they contain.
+
+**Where the model actually terminates, proved from the migrations.** `public.decide_fund_request`
+sets `fund_requests.status = 'approved'`, stamps the decider, appends an event, and returns. The
+only transition after that is `cancel_fund_request`. No table, column, enum value, view, function
+or trigger anywhere in the repository represents a payment, release, disbursement, reimbursement,
+receipt of funds, actual expenditure, return of unspent money, reconciliation, variance or any
+balance. An exhaustive search of the migration set for that vocabulary returns exactly three kinds
+of hit: prose comments stating the object is deliberately *not* modelled;
+`project_financial_references.payment_status` / `.receipt_reference`, which are free-text
+**client-income** pointers into Simple Invoice Manager with no amount column; and
+`intended_custody_type = 'operations_manager_accountable_advance'`, the word "advance" naming an
+intent that its own comment calls "never evidence of a release". **There is no payment truth today
+and no reconciliation truth today.**
+
+**What the proposal adds, and what it deliberately refuses to touch.** Two new record families —
+a **fund release** (child of an approved fund request; zero, one or many per approval; each
+partial or full; `recorded`/`reversed` only) and a **fund acquittal** with lines (child of one
+release; where actual expenditure lives; carries returned amount, additional-required amount and a
+derived variance) — plus one **derived position** read by Daily Site Record, Finance, Approvals and
+Project Summary and stored by none of them. No existing lifecycle changes. Adding `paid_amount` to
+`fund_requests` was considered and rejected because it makes multiple and partial releases
+unrepresentable and puts payment truth in the row whose stated purpose is that it is not evidence
+of payment; adding `paid` to `internal_cost_claims.lifecycle` was rejected because it collapses
+decision and payment. Release and reconciliation state are **derived, never stored as a status
+column**, which is what lets `APPROVED + UNPAID` and `APPROVED + PAID + UNRECONCILED` both be true
+without contradiction.
+
+**Two scenarios turned out to need no change at all.** A second cost arising after mobilisation but
+before the 4pm claim already works — `internal_cost_claims` has no uniqueness on project and day
+and `daily_site_entry_id` may repeat. A cost surfacing after the day's decision already works too,
+because a claim carries its own `service_date` independent of `created_at`. The second of those is
+the decisive argument for the close model below. A third finding: **partial approval is already
+supported today**, at the funding level, because an allocation may be less than
+`claim_approved_total_snapshot` — claim-level partial approval is impossible only because
+`decide_internal_cost_claim` forces `approved_total = submitted_total`.
+
+**Recommended close model: two closes, not one.** Operational close stays at ~5:00 pm on
+`daily_site_entries.state = 'accepted'` and requires nothing financial. Financial settlement is a
+separate derived, dateless condition that completes when it genuinely completes. Receipts
+legitimately arrive after 5:00 pm and a cost can surface after the decision, so a single close
+would force either a fabricated reconciliation or a permanently open day. The trade-off is stated
+plainly in the authority: a day can read "operationally closed" while money is outstanding, which
+is exactly why the Daily Site Record must *display* the financial position without owning it. The
+historical safeguard is untouched — the morning record still creates no liability, payment,
+release, reimbursement, approval, invoice or expenditure transaction, and the handoff needs **no
+new foreign key on `daily_site_entries`**, only traversal of the chain that already exists.
+
+**Five Founder decisions remain genuinely open**, each with options, consequences and a
+recommendation: where partial approval is expressed (recommend the funding level — no migration);
+who may record a release (recommend Principal records, Operations Manager confirms receipt); whether
+every release needs a reconciliation (recommend required for accountable advances, `not_required`
+for direct recipient funding, which the existing `intended_custody_type` already distinguishes); how
+unspent money is recorded and how visible the Principal override is (recommend an amount on the
+reconciliation record, plus a mandatory reason on both principal-direct paths carried forward onto
+descendants); and the two-close model. Everything else was sorted into already-settled or clearly-
+implied so that the Founder's list stays short.
+
+**Dependencies recorded, not designed.** Company Expenses cannot use `internal_cost_claims`, whose
+`project_id` is `not null`; it needs its own record reusing the same release/reconciliation spine.
+**Staff Compensation has nothing behind it at all** — `people_engagements` carries no rate and no
+pay, so Martine's compensation is unrepresentable today, and it must not become another Daily Site
+cost claim. Approvals aggregation is a read-side union across the three decision paths, never a
+table migration and never the payment ledger. Project Summary stays blocked for paid-to-date and
+balance-outstanding. Evidence remains a nullable text reference until the attachment domain is
+authorised, gated on the storage-backup posture. Tools & Equipment receives inventory consequences
+from an acquittal line without duplicating commercial detail.
+
+**WhatsApp support remains unblocked and deferred.** `CONTACT.whatsapp = "254720861592"` in
+`src/utils/backend.js` and `waLink()` in `src/utils/whatsapp.js` are unchanged by this entry. The
+admin `HelpCard` still links nowhere. Pointing it at the existing helper is a small, separate
+shell/support unit; it was not made the main task merely because it is small.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`**, unchanged by this entry. The next implementation unit is
+**the Daily Site Record → cost claim hand-off** (step 3), which is presentation work on models that
+already exist and needs none of the five decisions above; the payment/reconciliation implementation
+(step 4) unblocks only once the Founder rules.
+
+Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/`.

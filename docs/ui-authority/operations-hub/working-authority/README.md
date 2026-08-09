@@ -82,27 +82,32 @@ Where an image in this directory and the operating-model `decision-record.md` di
 **decision record wins** and the disagreement must be reported to the Founder rather than resolved
 in either direction. Three such disagreements are already known and are recorded below.
 
-## Known image-vs-settled-model tensions (unresolved — Founder decision required)
+## Known image-vs-settled-model tensions — ALL THREE SETTLED, 9 August 2026
 
-These were found by reading the images against the merged authority. None has been resolved, and
-none may be implemented until the Founder rules.
+These were found by reading the images against the merged authority and were recorded as open in
+PR #95. **The Founder has now ruled on all three.** The images themselves remain frozen and
+byte-for-byte unaltered; the rulings govern how they are read. Full text of each ruling is in
+`../payment-reconciliation-authority/README.md`.
 
-1. **`06` sidebar shows "Project Templates".** The settled model has Projects → Project Register +
-   **Project Proposals**. "Project Templates" appears in no decision record and has no capability,
-   route or table. The page body of `06` is Project Register and `07` is titled Project Proposals,
-   so this is most likely an illustrative slip in the mock's sidebar. **Do not implement a Project
-   Templates destination on the strength of this image.**
+1. **`06` sidebar shows "Project Templates" — SETTLED: not approved product architecture.** The
+   authoritative Projects structure remains Project Register + **Project Proposals**. There is no
+   approved Project Templates module, route or model, and **none may be implemented on the
+   strength of this image**. This illustrative element does not override the operating-model
+   authority. `src/admin/navigation.js` is already correct.
 
-2. **`13` sidebar shows Finance expanded with four persistent children.** The operating-model
-   `decision-record.md` explicitly adopted Option B — Finance as *one* shell destination with an
-   in-page area selector — and explicitly rejected Option A, five persistent sidebar children.
-   Image `12` is consistent with Option B; image `13` is not. **Option B remains binding** until the
-   Founder says otherwise.
+2. **`13` sidebar shows Finance expanded with persistent children — SETTLED: Option B stands.** The
+   five Finance capabilities (Overview, Project Costs, Company Expenses, Staff Compensation,
+   Funding Payments and Reconciliation) remain authoritative, but they are **not** required to
+   become persistent expanded sidebar children. The navigation implemented by PR #94 stands:
+   Finance is a top-level domain whose internal departmental navigation is handled through the
+   Finance surface / in-page treatment. **Do not revert to the deep-sidebar treatment merely
+   because it appears in this image.** Image `13`'s approved → paid → reconciled truth model is a
+   separate matter and is correct as direction — see "Capability gap warning" below.
 
-3. **`11` renders Maintenance and Tools & Equipment as one combined page**, while the settled model
-   lists them as two separate Operations children. The image is a composite presentation board, so
-   this is probably a board convention rather than a merge instruction, but the split has not been
-   re-confirmed.
+3. **`11` combines Maintenance and Tools & Equipment — SETTLED: they remain two distinct Operations
+   capabilities.** Operations is Daily Site Record, People, Maintenance, Tools & Equipment. Image
+   `11` may provide composition guidance and must **not** be interpreted as merging their domain
+   models or eliminating either destination.
 
 ## Capability gap warning
 
@@ -112,3 +117,9 @@ and reconciled states, and `14` shows attendance splits, retention and certified
 repository has **no** table, column or workflow for any of those. `../operating-model-authority/remediation-inventory.md`
 and the reconciliation recorded in `WORKSTREAMS.md` (9 August 2026) carry the full analysis. Nothing
 here licenses inventing them.
+
+The **paid and reconciled** states shown in `13` are the subject of a dedicated authority settled on
+9 August 2026: `../payment-reconciliation-authority/`. That directory proves from the migrations that
+no payment or reconciliation truth exists today, proposes the smallest model that would create it,
+and lists the five Founder decisions still required. It is authority, **not implementation** — the
+states in `13` remain unrenderable until that model is separately authorised and built.
