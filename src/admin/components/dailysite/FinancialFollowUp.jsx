@@ -1,17 +1,20 @@
 import { Link } from "react-router-dom";
 import { SITE_COST_LIFECYCLES } from "../../utils/siteCostCapabilities";
 import { formatKes } from "../../utils/dailySiteFormatters";
+import FundingPositionPanel from "../finance/FundingPositionPanel";
 
 // The financial follow-up area of the Daily Site Record.
 //
 // It is deliberately compact: a position, a next action and a drill-through.
 // The cost-claim module stays authoritative for the claim record, its lines and
-// its decision history, so none of that is duplicated here. Nothing in this
-// component creates a claim, a payment, a release or a reconciliation — the
-// only write path offered is a link the reader must choose to follow.
+// its decision history, and the fund request stays authoritative for every
+// release, reconciliation and expenditure line, so none of that is duplicated
+// here — a summary and a way through, never a second ledger. Nothing in this
+// component creates a claim, a payment, a release or a reconciliation; the only
+// write path offered is a link the reader must choose to follow.
 export default function FinancialFollowUp({ position, entryId }) {
   if (!position) return null;
-  const { label, detail, needsAttention, canCreate, claims } = position;
+  const { label, detail, needsAttention, canCreate, claims, funding } = position;
 
   return (
     <section
@@ -54,6 +57,12 @@ export default function FinancialFollowUp({ position, entryId }) {
         </ul>
       )}
 
+      {funding && (
+        <div className="mt-3">
+          <FundingPositionPanel funding={funding} headingId="dse-funding-position" />
+        </div>
+      )}
+
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-stone-100 pt-3">
         {canCreate && (
           <Link
@@ -73,9 +82,9 @@ export default function FinancialFollowUp({ position, entryId }) {
 
       <p className="mt-3 text-xs text-gray-400">
         Project costs normally move into a claim by 4:00 pm and the Principal decides in Project
-        Costs. The day can close operationally while a claim is still outstanding. Payment,
-        release and reconciliation belong to the fund request the claim is allocated to, and are
-        shown there rather than on this record.
+        Costs. The day can close operationally while the financial follow-up is still outstanding.
+        Releases and reconciliations are recorded on the fund request the claim is allocated to
+        and only summarised here.
       </p>
     </section>
   );

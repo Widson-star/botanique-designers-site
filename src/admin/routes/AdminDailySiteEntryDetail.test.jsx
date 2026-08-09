@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import { SiteCostsContext } from "../context/siteCosts";
+import { FundRequestsContext } from "../context/fundRequests";
 import AdminDailySiteEntryDetail from "./AdminDailySiteEntryDetail";
 
 const baseEntry = {
@@ -24,7 +25,7 @@ const baseClaim = {
   createdAt: "2026-07-28T13:00:00Z",
 };
 
-function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "o1", claims = [] } = {}) {
+function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "o1", claims = [], finance = {} } = {}) {
   const adminValue = { role, projects, profilesById: {}, currentUserId };
   const dailyValue = {
     entries,
@@ -41,9 +42,13 @@ function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "
       <AdminDataContext.Provider value={adminValue}>
         <DailySiteOperationsContext.Provider value={dailyValue}>
           <SiteCostsContext.Provider value={{ claims, status: "ready", error: "" }}>
+            <FundRequestsContext.Provider value={{
+              requests: [], allocations: [], releases: [], acquittals: [], ...finance,
+            }}>
             <Routes>
               <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
             </Routes>
+            </FundRequestsContext.Provider>
           </SiteCostsContext.Provider>
         </DailySiteOperationsContext.Provider>
       </AdminDataContext.Provider>
@@ -61,9 +66,11 @@ describe("AdminDailySiteEntryDetail", () => {
         <AdminDataContext.Provider value={{ role: "manager", projects, profilesById: {}, currentUserId: "m1" }}>
           <DailySiteOperationsContext.Provider value={{ entries: [], loadEvents: vi.fn(() => Promise.resolve([])) }}>
             <SiteCostsContext.Provider value={{ claims: [], status: "ready", error: "" }}>
-              <Routes>
-                <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
-              </Routes>
+              <FundRequestsContext.Provider value={{ requests: [], allocations: [], releases: [], acquittals: [] }}>
+                <Routes>
+                  <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+                </Routes>
+              </FundRequestsContext.Provider>
             </SiteCostsContext.Provider>
           </DailySiteOperationsContext.Provider>
         </AdminDataContext.Provider>
@@ -119,9 +126,11 @@ describe("AdminDailySiteEntryDetail", () => {
         <AdminDataContext.Provider value={{ role: "owner", projects, profilesById: {}, currentUserId: "o1" }}>
           <DailySiteOperationsContext.Provider value={{ entries: [superseded, replacement], loadEvents: vi.fn(() => Promise.resolve([])) }}>
             <SiteCostsContext.Provider value={{ claims: [], status: "ready", error: "" }}>
-              <Routes>
-                <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
-              </Routes>
+              <FundRequestsContext.Provider value={{ requests: [], allocations: [], releases: [], acquittals: [] }}>
+                <Routes>
+                  <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+                </Routes>
+              </FundRequestsContext.Provider>
             </SiteCostsContext.Provider>
           </DailySiteOperationsContext.Provider>
         </AdminDataContext.Provider>
@@ -206,5 +215,90 @@ describe("AdminDailySiteEntryDetail financial follow-up", () => {
   it("shows no financial area to a role without site-cost authority", () => {
     renderDetail({ role: "staff", currentUserId: "s1" });
     expect(screen.queryByRole("region", { name: "Financial follow-up" })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BD-FIN-01C read integration. The record reports the downstream financial
+// position and offers a way through to Finance — and no way to change it here.
+// ---------------------------------------------------------------------------
+
+describe("AdminDailySiteEntryDetail funding and reconciliation", () => {
+  const ADVANCE = "operations_manager_accountable_advance";
+  const DIRECT = "direct_recipient_funding";
+  const approvedClaim = { ...baseClaim, lifecycle: "approved", approvedTotal: 20000 };
+
+  const finance = ({ releases = [], acquittals = [], total = 20000 } = {}) => ({
+    requests: [{
+      id: "r1", requestNumber: "BDFR-2026-0001", projectId: "p1", status: "approved",
+      intendedCustodyType: ADVANCE, totalRequestedAmount: total, version: 1,
+    }],
+    allocations: [{ id: "a1", fundRequestId: "r1", claimId: "c1", allocationOrder: 1, requestedAmount: total }],
+    releases, acquittals,
+  });
+
+  const advance = (overrides = {}) => ({
+    id: "rel1", fundRequestId: "r1", status: "recorded", custodyDisposition: ADVANCE,
+    releasedAmount: 10000, releasedAt: "2026-08-05T09:00:00Z", version: 1, ...overrides,
+  });
+
+  it("shows nothing financial where no cost claim exists", () => {
+    renderDetail({ claims: [], finance: finance({ releases: [advance()] }) });
+    expect(screen.queryByText("Funding and reconciliation")).not.toBeInTheDocument();
+  });
+
+  it("states approved authority that has not been released", () => {
+    renderDetail({ claims: [approvedClaim], finance: finance() });
+    expect(screen.getByText("Funding and reconciliation")).toBeInTheDocument();
+    expect(screen.getByText("Approved — not yet funded")).toBeInTheDocument();
+    expect(screen.getAllByText("KES 20,000").length).toBeGreaterThan(0);
+  });
+
+  it("shows both dimensions of the mixed partly-funded, unreconciled position", () => {
+    renderDetail({ claims: [approvedClaim], finance: finance({ releases: [advance()] }) });
+    // Neither label conceals the other.
+    expect(screen.getByText("Partly funded")).toBeInTheDocument();
+    expect(screen.getByText("Reconciliation outstanding")).toBeInTheDocument();
+    expect(screen.getByText(/waiting to be accounted for/i)).toBeInTheDocument();
+  });
+
+  it("never shows a reconciliation debt for a direct settled payment", () => {
+    renderDetail({ claims: [approvedClaim], finance: finance({
+      releases: [advance({ custodyDisposition: DIRECT, releasedAmount: 20000, recipientLabel: "Kisumu Hardware" })],
+    }) });
+    expect(screen.getByText("Fully funded")).toBeInTheDocument();
+    expect(screen.queryByText("Reconciliation outstanding")).not.toBeInTheDocument();
+    expect(screen.getByText(/financial workflow for this cost is complete/i)).toBeInTheDocument();
+  });
+
+  it("drills through to the fund request rather than editing it here", () => {
+    renderDetail({ claims: [approvedClaim], finance: finance({ releases: [advance()] }) });
+    const link = screen.getByRole("link", { name: /BDFR-2026-0001/ });
+    expect(link).toHaveAttribute("href", "/admin/fund-requests/r1");
+    // The Daily Site Record is not the ledger: no money action is offered here.
+    expect(screen.queryByRole("button", { name: /record .*release/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reconcil/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /revers/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the same financial position for an Operations Manager", () => {
+    renderDetail({
+      role: "manager", currentUserId: "m1", claims: [approvedClaim],
+      finance: finance({ releases: [advance()] }),
+    });
+    expect(screen.getByText("Partly funded")).toBeInTheDocument();
+    expect(screen.getByText("Reconciliation outstanding")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /BDFR-2026-0001/ })).toBeInTheDocument();
+  });
+
+  it("leaves the operational record independent of financial settlement", () => {
+    const accepted = { ...baseEntry, state: "accepted", reviewedBy: "o1", reviewedAt: "2026-07-28T16:00:00Z" };
+    renderDetail({
+      entries: [accepted], claims: [approvedClaim],
+      finance: finance({ releases: [advance()] }),
+    });
+    // The day is operationally closed and Finance is still outstanding. Both are true.
+    expect(screen.getByText("Reconciliation outstanding")).toBeInTheDocument();
+    expect(screen.getByText(/day can close operationally/i)).toBeInTheDocument();
   });
 });

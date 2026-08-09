@@ -11,12 +11,20 @@
 // correction claim are both legitimate, so no one-claim-per-day rule is
 // imposed.
 //
-// Payment, release and reconciliation are NOT implemented anywhere in the
-// repository, so no "paid", "released", "settled" or "reconciled" position is
-// derived or displayed. Those belong to the payment/reconciliation model
-// authorised by BD-FIN-01C and not yet built.
+// The payment, release and reconciliation model now EXISTS (BD-FIN-01C), so the
+// downstream position is surfaced here rather than withheld. It is still read
+// only: this module reaches claim → allocation → fund request → release →
+// acquittal and reports what it finds, and the Daily Site Record offers no way
+// to record a release, reconcile an advance, edit an expenditure line, reverse a
+// payment or decide a reconciliation. Those belong to Finance, and the only
+// route to them is a link.
+//
+// Nothing is invented where no record exists: a day with no claim has no
+// financial position, and a claim with no fund request is not "unpaid" — it is
+// simply not yet requested.
 
 import { canCopyDailySiteToCost, canSeeSiteCosts, SITE_COST_LIFECYCLES } from "./siteCostCapabilities";
+import { fundingForClaims, fundingSummaryPhrase } from "./claimFunding";
 
 // Order of attention: what a reader has to deal with first.
 const ATTENTION_ORDER = [
@@ -76,7 +84,10 @@ function unavailableReason(entry) {
 // The truthful financial-follow-up position for one Daily Site Record.
 // Returns null for a role with no site-cost authority, so the interface simply
 // does not show a financial area rather than showing an empty one.
-export function summariseFinancialFollowUp(entry, claims, role) {
+// `finance` is the read-only fund-request context — { requests, allocations,
+// releases, acquittals }. It is optional: without it the claim position is still
+// truthful, it simply says nothing about money movement rather than guessing.
+export function summariseFinancialFollowUp(entry, claims, role, finance = null) {
   if (!entry || !canSeeSiteCosts(role)) return null;
   const related = relatedCostClaims(claims, entry);
   const canCreate = canCopyDailySiteToCost(entry, role);
@@ -91,6 +102,9 @@ export function summariseFinancialFollowUp(entry, claims, role) {
       needsAttention: false,
       canCreate,
       claims: [],
+      // No claim means no authority, no release and no reconciliation. Nothing
+      // downstream is asserted rather than an empty financial position shown.
+      funding: null,
     };
   }
 
@@ -98,22 +112,35 @@ export function summariseFinancialFollowUp(entry, claims, role) {
     (left, right) => attentionRank(left.lifecycle) - attentionRank(right.lifecycle)
   )[0];
 
+  const funding = finance
+    ? fundingForClaims(related.map((claim) => claim.id), finance)
+    : null;
+  // Money that has actually moved, or is owed an account, outranks a claim still
+  // waiting for a decision — but neither replaces the other.
+  const showsFunding = Boolean(funding) && funding.fundingPosition !== "not_requested";
+
   return {
     code: headline.lifecycle,
     label: related.length > 1
       ? `${related.length} related cost claims`
       : SITE_COST_LIFECYCLES[headline.lifecycle] || "Cost claim",
     detail: CLAIM_POSITION_DETAIL[headline.lifecycle] || "A related cost claim exists.",
-    needsAttention: ["draft", "awaiting_review", "amendment_requested"].includes(headline.lifecycle),
+    needsAttention: ["draft", "awaiting_review", "amendment_requested"].includes(headline.lifecycle)
+      || (showsFunding && funding.needsAttention),
     canCreate,
     claims: related,
+    funding: showsFunding ? funding : null,
   };
 }
 
-// A single short phrase for the list, where only one line of space exists.
-export function financialFollowUpSummary(entry, claims, role) {
-  const position = summariseFinancialFollowUp(entry, claims, role);
+// A single short phrase for the list, where only one line of space exists. Once
+// money is involved the financial position is the more useful half, so it is
+// what the one line spends itself on.
+export function financialFollowUpSummary(entry, claims, role, finance = null) {
+  const position = summariseFinancialFollowUp(entry, claims, role, finance);
   if (!position) return "";
+  const fundingPhrase = fundingSummaryPhrase(position.funding);
+  if (fundingPhrase) return fundingPhrase;
   if (position.claims.length > 1) return `${position.claims.length} cost claims`;
   if (position.claims.length === 1) {
     return `Cost claim: ${SITE_COST_LIFECYCLES[position.claims[0].lifecycle] || "raised"}`;
