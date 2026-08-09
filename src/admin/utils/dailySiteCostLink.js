@@ -25,6 +25,7 @@
 
 import { canCopyDailySiteToCost, canSeeSiteCosts, SITE_COST_LIFECYCLES } from "./siteCostCapabilities";
 import { fundingForClaims, fundingSummaryPhrase } from "./claimFunding";
+import { duplicateRiskForEntry } from "./duplicateCostClaim";
 
 // Order of attention: what a reader has to deal with first.
 const ATTENTION_ORDER = [
@@ -87,7 +88,7 @@ function unavailableReason(entry) {
 // `finance` is the read-only fund-request context — { requests, allocations,
 // releases, acquittals }. It is optional: without it the claim position is still
 // truthful, it simply says nothing about money movement rather than guessing.
-export function summariseFinancialFollowUp(entry, claims, role, finance = null) {
+export function summariseFinancialFollowUp(entry, claims, role, finance = null, linesForClaim = null) {
   if (!entry || !canSeeSiteCosts(role)) return null;
   const related = relatedCostClaims(claims, entry);
   const canCreate = canCopyDailySiteToCost(entry, role);
@@ -105,6 +106,7 @@ export function summariseFinancialFollowUp(entry, claims, role, finance = null) 
       // No claim means no authority, no release and no reconciliation. Nothing
       // downstream is asserted rather than an empty financial position shown.
       funding: null,
+      duplicateRisk: null,
     };
   }
 
@@ -130,6 +132,12 @@ export function summariseFinancialFollowUp(entry, claims, role, finance = null) 
     canCreate,
     claims: related,
     funding: showsFunding ? funding : null,
+    // Whether this record's OWN planning cost has already been claimed. Derived
+    // only when the caller supplies the claim lines, because the match is a
+    // structural line comparison and never a guess from headline totals.
+    duplicateRisk: linesForClaim
+      ? duplicateRiskForEntry(entry, claims, linesForClaim)
+      : null,
   };
 }
 

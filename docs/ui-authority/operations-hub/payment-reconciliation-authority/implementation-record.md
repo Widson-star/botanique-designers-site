@@ -448,3 +448,132 @@ no export.
 
 **Stage 6 remains NOT ACTIVE_VERIFIED. Hosted authenticated verification is still outstanding**
 and requires the Founder to sign in as Principal and as Operations Manager.
+
+---
+
+# PRODUCTION REMEDIATION — hosted walkthrough of 9 August 2026
+
+The first real authenticated walkthrough on https://www.botaniquedesigners.com/admin, as both
+Martine Lotom (Operations Manager) and Widson O. Ambaisi (Principal), found two production
+blockers. Both are closed here. **No financial model was redesigned and no new authority was
+introduced.**
+
+## 19. Blocker A — the payment/reconciliation schema was never applied to production
+
+**Symptom.** The hosted Funding, Payments and Reconciliation surface returned
+`Could not find the table 'public.fund_acquittals' in the schema cache`.
+
+**Diagnosis, before any change was made.** All five candidate causes were tested and four were
+ruled out:
+
+| Candidate cause | Finding |
+| --- | --- |
+| Applied to the wrong Supabase project | **Ruled out.** The production bundle at `/assets/index-*.js` resolves to `https://wcacyfyxjiysfibuuhgf.supabase.co` — `botanique-admin`, the documented project. The other two projects (`ask-botanique-db`, `ask-botanique-staging`) contain **no** `fund_*` object at all. |
+| Applied partially | **Ruled out.** Not one PR #98 object existed: no `fund_releases`, `fund_release_events`, `fund_acquittals`, `fund_acquittal_lines`, `fund_acquittal_events`, no `fund_release_number_seq`, and none of the six RPCs. The BD-FIN-01B1 objects were all present and intact. |
+| Stale PostgREST schema cache | **Ruled out.** The table genuinely did not exist; `PGRST205` is simply how a missing table surfaces through the API. No cache reload could have helped. |
+| Deployment/config mismatch | **Ruled out.** Production was serving commit `247bb70` — merged main after PR #99 — so the frontend correctly expected the PR #98 model. |
+| **Migration never applied** | **CONFIRMED.** Hosted migration history held 13 rows; the repository holds 14. Reconciled by name (hosted versions differ from repository filenames), the missing one was exactly `fund_release_and_reconciliation`. |
+
+**Root cause.** There is **no automated migration deployment**. `.github/workflows/` does not
+exist and `package.json` has no migration script. Vercel deploys the frontend on every merge to
+main; nothing applies Supabase migrations. Every migration to date was applied by hand, which is
+why hosted versions differ from repository filenames. PR #98's migration was simply never run.
+**The frontend shipped ahead of its database, and nothing in the pipeline could notice.**
+
+**Remediation.** The already-authorised migration was applied unchanged. No second migration
+file was created, and no production schema was hand-edited.
+
+- Repository file verified byte-identical to merged main (SHA-256
+  `7aa66344d9c2f01bb497e99edef249c6ea3ff6014c821f2a9a26cd6adc0ca15c`).
+- No later migration conflicts with it; it is the newest in the repository.
+- Verified additive-only: every `alter table` targets a table the migration itself creates, and
+  every `insert`/`update`/`delete` sits inside a new function body. No DDL against an existing
+  table and no data backfill.
+- Safe against current rows: production held **zero** `fund_requests`, so nothing could be
+  affected.
+- Applied to `botanique-admin` and recorded as `20260809191358 fund_release_and_reconciliation`.
+
+**Proof the applied DDL is correct, not merely present.** A scratch PostgreSQL 17 was built from
+the migration **files**, and a 191-row catalog fingerprint — every column type, nullability,
+default and generated expression, every constraint definition, index, trigger, policy, grant and
+RLS flag, plus an md5 of every function body — was computed identically on both sides:
+
+```
+local build-from-files   191 rows   e29ea4166f9d3cc665eafbad68644b1a
+production               191 rows   e29ea4166f9d3cc665eafbad68644b1a
+```
+
+**Post-remediation verification against the live backend.**
+
+- All five tables and the RPC now resolve through PostgREST. Anonymous callers receive
+  `42501 permission denied`, not `PGRST205` — the schema-cache error is gone, and the security
+  posture is correct because the migration grants only to `authenticated`.
+- Both real profiles read the new tables through RLS and execute
+  `fund_request_financial_position()`.
+- `authenticated` holds **SELECT only** on all five tables; `anon` holds nothing; no INSERT,
+  UPDATE or DELETE grant exists for any client role.
+- `private_active_fund_release_role()` is correctly **not** executable by `authenticated`.
+- **No backfill.** All five tables hold zero rows; the release sequence is unused; the 26 cost
+  claims, 26 Daily Site Records and 0 fund requests are exactly as they were.
+- The PR #98 database suite passes on PostgreSQL 17 against the real migration files.
+
+**Honest boundary.** "Historical approved fund requests still read approved/unpaid" is
+**vacuously true in production**: no fund request has ever been created there. The behaviour is
+proven by the SQL matrix, not by production rows.
+
+## 20. Blocker B — accidental duplicate cost claims
+
+**What was found.** Worse than reported. The Daily Site Record hand-off offered "Create cost
+claim" with equal prominence however many claims existed, and the form pre-filled the record's
+own planning line. Revisiting a record therefore produced a claim that was a strict subset of one
+already approved. In production, on Alego Usonga:
+
+| Daily Site Record | Claims | Total | Planned labour |
+| --- | --- | --- | --- |
+| 2026-08-09 (10 × KES 500) | KES 5,350 + KES 5,000 + KES 5,000 | **KES 15,350** | KES 5,000 |
+| 2026-08-08 (10 × KES 500) | KES 6,150 + KES 5,000 | **KES 11,150** | KES 5,000 |
+
+Every KES 5,000 claim contains exactly one line — `Planned site labour`, daily, 10 worker,
+KES 500 — identical to a line already inside the earlier, richer claim. All are approved.
+**Nothing has been paid**: production holds no fund request, so no money has moved.
+
+**The control.** Deterministic and structural; no fuzzy matching, no scoring, no text similarity.
+A claim is treated as covering the day's cost only when **all three** hold:
+
+1. the same `daily_site_entry_id`;
+2. the same category;
+3. a cost line equal to the record's own planning line in description, rate type, quantity and
+   unit rate — the exact shape `AdminSiteCostForm.sourcePrefill()` generates.
+
+**Behaviour.**
+
+- **Case A — nothing claimed:** "Create cost claim", unchanged.
+- **Case B — the day's cost is already claimed:** "Open existing claim" becomes the primary
+  action, with a compact amber line naming the amount. The ordinary duplicate call-to-action is
+  removed.
+- **Case C — a genuinely additional cost:** "Raise additional cost" remains available as a
+  secondary action. It opens the form with the planning line and purpose **deliberately blank**,
+  so the duplicate cannot be produced by pre-fill, and the existing required `purpose` field
+  captures why another claim is needed.
+- **Principal review:** a claim structurally overlapping another from the same record shows
+  "Possible duplicate" with drill-through. It is a warning; every decision stays available and
+  nothing is auto-rejected.
+
+**No schema change was required for the additional-claim reason.** `internal_cost_claims.purpose`
+already exists, is already mandatory, and already means "what this claim is for". Clearing the
+pre-fill makes the person state it. No speculative column was added and no RPC changed.
+
+**Nothing is falsely blocked.** A different category, a different record, a genuinely different
+line, and any rejected, withdrawn or cancelled prior claim all leave the ordinary path intact.
+Multiple claims per day remain fully legitimate.
+
+**Production data was not touched.** No claim was deleted, cancelled, rejected, merged or edited;
+no payment, release or reconciliation was created; Martine's naming, the ZZ Verification Record
+and LEM are all untouched. **The duplicate Alego claims remain exactly as the Founder left them,
+for the Founder to resolve through the normal workflow.**
+
+## 21. Status after this remediation
+
+Stage 6 remains **NOT `ACTIVE_VERIFIED`**. The broad visual-authority implementation tranche
+(images 08, 09, 12, 13 plus the settled WhatsApp support refinement) has **not** been started and
+remains the next unit once this remediation is stable in production.

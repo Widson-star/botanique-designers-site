@@ -207,3 +207,75 @@ describe("Project Costs financial position", () => {
     expect(screen.queryByRole("button", { name: /revers/i })).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Principal review: a possible duplicate is surfaced, never auto-decided.
+// ---------------------------------------------------------------------------
+
+describe("Project Costs possible-duplicate warning", () => {
+  const planningLine = {
+    id: "pl1", claimId: "c1", lineNumber: 1, description: "Planned site labour",
+    rateType: "daily", quantity: 10, unit: "worker", unitRate: 500, lineTotal: 5000,
+  };
+  const earlier = {
+    ...claim, id: "c1", lifecycle: "approved", approvedTotal: 5350, submittedTotal: 5350,
+    dailySiteEntryId: "d1", category: "labour", createdAt: "2026-08-09T06:01:00Z",
+  };
+  const later = {
+    ...claim, id: "c2", lifecycle: "awaiting_review", approvedTotal: null, submittedTotal: 5000,
+    dailySiteEntryId: "d1", category: "labour", createdAt: "2026-08-09T18:42:00Z", version: 1,
+  };
+
+  function detail(values, initial = "/admin/site-costs/c2") {
+    return wrap(
+      <Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>,
+      values, initial
+    );
+  }
+
+  const withLines = (map, claims) => {
+    const values = contexts({ claims });
+    values.costs.linesForClaim = (id) => map[id] || [];
+    values.costs.eventsByClaim = { c1: [], c2: [] };
+    return values;
+  };
+
+  it("warns the Principal when another claim from the same record has an identical line", () => {
+    detail(withLines(
+      { c1: [planningLine], c2: [{ ...planningLine, claimId: "c2" }] },
+      [earlier, later]
+    ));
+    expect(screen.getByText("Possible duplicate")).toBeInTheDocument();
+    expect(screen.getByText(/identical cost line/i)).toBeInTheDocument();
+    // Drill-through to the claim it overlaps.
+    expect(screen.getByRole("link", { name: /Alego turf crew/ }))
+      .toHaveAttribute("href", "/admin/site-costs/c1");
+  });
+
+  it("leaves the Principal's decision entirely intact", () => {
+    detail(withLines(
+      { c1: [planningLine], c2: [{ ...planningLine, claimId: "c2" }] },
+      [earlier, later]
+    ));
+    // Warned, not blocked: every decision remains available.
+    expect(screen.getByRole("button", { name: "Approve whole claim" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Request amendment" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject claim" })).toBeInTheDocument();
+  });
+
+  it("stays silent when the lines are genuinely different", () => {
+    detail(withLines(
+      { c1: [planningLine], c2: [{ ...planningLine, claimId: "c2", description: "Cart transport", unitRate: 800 }] },
+      [earlier, later]
+    ));
+    expect(screen.queryByText("Possible duplicate")).not.toBeInTheDocument();
+  });
+
+  it("stays silent when the earlier claim was rejected", () => {
+    detail(withLines(
+      { c1: [planningLine], c2: [{ ...planningLine, claimId: "c2" }] },
+      [{ ...earlier, lifecycle: "rejected" }, later]
+    ));
+    expect(screen.queryByText("Possible duplicate")).not.toBeInTheDocument();
+  });
+});

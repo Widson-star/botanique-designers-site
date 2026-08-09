@@ -8,8 +8,22 @@ import { calculateSiteCostTotal } from "../utils/siteCostCapabilities";
 const emptyLine = () => ({ description: "", rateType: "lump_sum", quantity: "1", unit: "item", unitRate: "" });
 const money = (amount) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", currencyDisplay: "code" }).format(amount || 0);
 
-function sourcePrefill(entry) {
+// An ADDITIONAL claim against a record whose planning cost has already been claimed must not
+// arrive pre-filled with that same cost — pre-filling it is precisely how the accidental
+// duplicate was produced. The record's identity and project are still carried (they are facts
+// about the day), but the cost itself and its purpose are left blank so the person has to
+// state what the additional cost actually is. `purpose` is already required, so the reason is
+// captured and preserved in the existing model with no schema change.
+function sourcePrefill(entry, additional = false) {
   if (!entry) return {};
+  if (additional) {
+    return {
+      projectId: entry.projectId, serviceDate: entry.workDate, dailySiteEntryId: entry.id,
+      recipientType: entry.crewReference ? "crew" : "other",
+      recipientLabel: entry.crewReference || "Site crew",
+      category: "labour", purpose: "", lines: [emptyLine()],
+    };
+  }
   const agreed = entry.agreedLabourTotal;
   return {
     projectId: entry.projectId, serviceDate: entry.workDate, dailySiteEntryId: entry.id,
@@ -27,6 +41,7 @@ export default function AdminSiteCostForm() {
   const { claimId } = useParams();
   const [searchParams] = useSearchParams();
   const sourceId = searchParams.get("dailySiteEntryId") || "";
+  const additional = searchParams.get("additional") === "1";
   const { role } = useAdminData();
   const { entries } = useDailySiteOperations();
   const { claims, linesForClaim, authorisedProjects, createDraft, authoriseDirect, updateClaim, submitClaim } = useSiteCosts();
@@ -38,7 +53,7 @@ export default function AdminSiteCostForm() {
     category: existing.category, purpose: existing.purpose,
     lines: linesForClaim(existing.id).map((line) => ({ ...line, quantity: String(line.quantity), unitRate: String(line.unitRate) })),
   } : { projectId: "", serviceDate: new Date().toISOString().slice(0, 10), dailySiteEntryId: sourceId,
-    recipientType: "crew", recipientLabel: "", category: "labour", purpose: "", lines: [emptyLine()], ...sourcePrefill(source) }, [existing, linesForClaim, source, sourceId]);
+    recipientType: "crew", recipientLabel: "", category: "labour", purpose: "", lines: [emptyLine()], ...sourcePrefill(source, additional) }, [additional, existing, linesForClaim, source, sourceId]);
   const [draftValues, setDraftValues] = useState(null);
   const values = draftValues ?? initial;
   const setValues = (next) => setDraftValues((current) =>
@@ -69,7 +84,12 @@ export default function AdminSiteCostForm() {
     <Link to={existing ? `/admin/site-costs/${existing.id}` : "/admin/site-costs"} className="text-sm font-medium text-botanique-green hover:underline">← Back to Project Costs</Link>
     <h1 className="mt-3 text-2xl font-semibold">{role === "owner" ? "Authorise project cost" : existing ? "Amend cost claim" : "New cost claim"}</h1>
     <p className="mt-1 text-sm text-gray-600">One recipient or crew and one category per claim. Amounts below are claims, not payments.</p>
-    {source && <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+    {source && additional && <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+      <p className="font-semibold">Additional cost for a day that has already been claimed</p>
+      <p className="mt-1">This day&rsquo;s site labour is already on another claim, so nothing has been pre-filled here. Enter only the new or later cost, and say what it is for.</p>
+      <p className="mt-1 text-xs">If you meant the cost that was already claimed, go back and open that claim instead of raising this one.</p>
+    </div>}
+    {source && !additional && <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
       <p className="font-semibold">Copied planning context — no liability was created automatically</p>
       <p className="mt-1">Work date {source.workDate} · source version {source.version} · {source.expectedWorkerCount || 0} planned workers · planned labour {money(source.plannedLabourCost)}</p>
       <p className="mt-1 text-xs">Review every claim field and line. Later Daily Site changes will not rewrite this claim snapshot.</p>

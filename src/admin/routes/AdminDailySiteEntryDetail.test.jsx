@@ -302,3 +302,91 @@ describe("AdminDailySiteEntryDetail funding and reconciliation", () => {
     expect(screen.getByText(/day can close operationally/i)).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Duplicate cost-claim control. Found in the hosted walkthrough of 9 August 2026:
+// the record's own planning cost could be claimed a second time in one click.
+// ---------------------------------------------------------------------------
+
+describe("AdminDailySiteEntryDetail duplicate cost-claim control", () => {
+  const workingEntry = {
+    ...baseEntry, state: "accepted", disposition: "working",
+    expectedWorkerCount: 10, ratePerWorker: 500, agreedLabourTotal: null,
+  };
+  const planningLine = {
+    id: "l1", claimId: "c1", lineNumber: 1, description: "Planned site labour",
+    rateType: "daily", quantity: 10, unit: "worker", unitRate: 500, lineTotal: 5000,
+  };
+  const otherLine = {
+    id: "l2", claimId: "c2", lineNumber: 1, description: "Cart transport",
+    rateType: "lump_sum", quantity: 1, unit: "item", unitRate: 800, lineTotal: 800,
+  };
+  const covering = {
+    ...baseClaim, id: "c1", lifecycle: "approved", approvedTotal: 5350, submittedTotal: 5350,
+  };
+
+  function renderWithLines({ role = "manager", claims = [], lines = {}, entries = [workingEntry] } = {}) {
+    return render(
+      <MemoryRouter initialEntries={["/admin/daily-site-operations/e1"]}>
+        <AdminDataContext.Provider value={{ role, projects, profilesById: {}, currentUserId: "m1" }}>
+          <DailySiteOperationsContext.Provider value={{ entries, loadEvents: vi.fn(() => Promise.resolve([])) }}>
+            <SiteCostsContext.Provider value={{
+              claims, status: "ready", error: "",
+              linesForClaim: (id) => lines[id] || [],
+            }}>
+              <FundRequestsContext.Provider value={{ requests: [], allocations: [], releases: [], acquittals: [] }}>
+                <Routes>
+                  <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+                </Routes>
+              </FundRequestsContext.Provider>
+            </SiteCostsContext.Provider>
+          </DailySiteOperationsContext.Provider>
+        </AdminDataContext.Provider>
+      </MemoryRouter>
+    );
+  }
+
+  it("CASE A: offers the ordinary Create cost claim when nothing is claimed", () => {
+    renderWithLines({ claims: [] });
+    expect(screen.getByRole("link", { name: "Create cost claim" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open existing claim" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/already been claimed/i)).not.toBeInTheDocument();
+  });
+
+  it("CASE B: makes Open existing claim primary once the day's labour is claimed", () => {
+    renderWithLines({ claims: [covering], lines: { c1: [planningLine] } });
+    expect(screen.getByRole("link", { name: "Open existing claim" }))
+      .toHaveAttribute("href", "/admin/site-costs/c1");
+    expect(screen.getByText(/already been claimed/i)).toBeInTheDocument();
+    // The ordinary duplicate CTA is gone.
+    expect(screen.queryByRole("link", { name: "Create cost claim" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create another cost claim" })).not.toBeInTheDocument();
+  });
+
+  it("CASE C: keeps an explicit additional-cost path that is marked as additional", () => {
+    renderWithLines({ claims: [covering], lines: { c1: [planningLine] } });
+    expect(screen.getByRole("link", { name: "Raise additional cost" }))
+      .toHaveAttribute("href", "/admin/site-costs/new?dailySiteEntryId=e1&additional=1");
+  });
+
+  it("does not falsely block a different category on the same day", () => {
+    const materials = { ...baseClaim, id: "c2", category: "materials", lifecycle: "approved" };
+    renderWithLines({ claims: [materials], lines: { c2: [otherLine] } });
+    expect(screen.getByRole("link", { name: "Create another cost claim" })).toBeInTheDocument();
+    expect(screen.queryByText(/already been claimed/i)).not.toBeInTheDocument();
+  });
+
+  it("lets a rejected claim be re-raised through the ordinary path", () => {
+    renderWithLines({ claims: [{ ...covering, lifecycle: "rejected" }], lines: { c1: [planningLine] } });
+    expect(screen.queryByText(/already been claimed/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create another cost claim" })).toBeInTheDocument();
+  });
+
+  it("shows the Principal the same protection and mutates nothing", () => {
+    renderWithLines({ role: "owner", claims: [covering], lines: { c1: [planningLine] } });
+    expect(screen.getByRole("link", { name: "Open existing claim" })).toBeInTheDocument();
+    // No claim is cancelled, rejected or altered from the operational record.
+    expect(screen.queryByRole("button", { name: /cancel claim/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /reject/i })).not.toBeInTheDocument();
+  });
+});
