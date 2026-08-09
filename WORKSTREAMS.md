@@ -6743,3 +6743,69 @@ Tools & Equipment, Project Summary, Reports Centre, evidence files, and a portfo
 position on Finance Overview. Finance is **not** complete.
 
 Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/implementation-record.md`.
+
+---
+
+### BD-FIN-01C — production remediation after the first hosted walkthrough — 9 August 2026
+
+The first real authenticated walkthrough on the live site, as both Martine Lotom (Operations
+Manager) and Widson O. Ambaisi (Principal), found two production blockers. Both are closed. No
+Finance redesign, no new financial authority, no Company Expenses, Staff Compensation, unified
+Approvals, Maintenance, Tools & Equipment or Reports work, and no authority image altered.
+
+**Blocker A — the PR #98 schema was never applied to production.** The hosted Funding, Payments
+and Reconciliation surface returned `Could not find the table 'public.fund_acquittals' in the
+schema cache`. Four candidate causes were tested and ruled out before anything was changed: the
+production bundle resolves to the correct `botanique-admin` project (the other two Supabase
+projects hold no `fund_*` object at all); not one PR #98 object existed, so there was no partial
+apply; the table genuinely did not exist, so no cache reload would have helped; and production
+was serving merged main `247bb70`, so the frontend was correct. Hosted migration history held 13
+rows against the repository's 14, and reconciled by name the missing one was exactly
+`fund_release_and_reconciliation`.
+
+**The root cause is structural: there is no automated migration deployment.** No
+`.github/workflows/`, no migration script. Vercel ships the frontend on every merge; nothing ships
+the database. Every migration to date was applied by hand, which is why hosted versions differ
+from repository filenames. **The frontend shipped ahead of its database and nothing could notice.**
+
+The already-authorised migration was applied unchanged — no duplicate migration file, no hand-
+edited schema — after verifying it byte-identical to merged main, additive-only, conflict-free and
+safe against production rows (there were zero fund requests). Correctness was then *proved*, not
+assumed: a scratch PostgreSQL 17 built from the migration files and production both produce the
+identical 191-row catalog fingerprint `e29ea4166f9d3cc665eafbad68644b1a`, covering every column,
+constraint, index, trigger, policy, grant, RLS flag and an md5 of every function body. Live checks
+confirm the tables and RPC now resolve, both real profiles read them through RLS, `authenticated`
+holds SELECT only, `anon` holds nothing, and **all five tables are empty — nothing was backfilled**.
+
+**Blocker B — accidental duplicate cost claims, worse than reported.** The hand-off offered
+"Create cost claim" at equal prominence however many claims existed, and pre-filled the record's
+own planning line, so revisiting a record produced a claim that was a strict subset of one already
+approved. On Alego Usonga this had already happened twice: 2026-08-09 carries KES 5,350 + 5,000 +
+5,000 against a planned KES 5,000, and 2026-08-08 carries KES 6,150 + 5,000 against the same.
+Every KES 5,000 claim is a single `Planned site labour` line identical to one already inside the
+richer claim. All are approved; **nothing has been paid**, because production holds no fund request.
+
+The control is deterministic and structural — same Daily Site Record, same category, and a line
+equal to the record's own planning line in description, rate type, quantity and unit rate. No fuzzy
+matching. When the day's cost is already claimed, "Open existing claim" becomes primary and the
+duplicate call-to-action is removed; "Raise additional cost" stays available but opens with the
+cost and purpose blank, so the duplicate cannot be produced by pre-fill and the already-mandatory
+`purpose` field captures why another claim is needed — **no schema change was required**. The
+Principal sees a "Possible duplicate" warning with drill-through, and keeps every decision;
+nothing is auto-rejected. A different category, a different record, a genuinely different line and
+any rejected/withdrawn/cancelled prior claim all leave the ordinary path untouched.
+
+**No production data was mutated.** No claim deleted, cancelled, rejected, merged or edited; no
+payment, release or reconciliation created. The duplicate Alego claims remain exactly as they were,
+for the Founder to resolve through the normal workflow.
+
+**Verified.** 765 application tests pass (33 new). Production build clean; lint identical to the
+19-error baseline; `git diff --check` clean. The PR #98 database suite passes on PostgreSQL 17.
+Demo-verified at desktop, 375px and 400px with no horizontal overflow and no console errors.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`,** and BD-FIN-01C payment/reconciliation verification is
+not the same thing as Stage 6 completion. The visual-authority implementation tranche (images 08,
+09, 12, 13 and the WhatsApp support refinement) was deliberately **not** started and remains the
+next unit.
+
+Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/implementation-record.md`.

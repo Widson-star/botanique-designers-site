@@ -45,7 +45,7 @@ export default function AdminDailySiteEntryDetail() {
     entries, loadEvents, submitEntry, returnEntry, acceptEntry,
     voidEntry, correctEntry, supersedeEntry,
   } = useDailySiteOperations();
-  const { claims } = useSiteCosts();
+  const { claims, linesForClaim } = useSiteCosts();
   // Read-only fund-request context. The operational record reaches the money
   // records to REPORT them; it never records, reconciles or decides anything.
   const { requests, allocations, releases, acquittals } = useFundRequests();
@@ -86,7 +86,7 @@ export default function AdminDailySiteEntryDetail() {
   // writes one. See src/admin/utils/dailySiteCostLink.js.
   const financialPosition = summariseFinancialFollowUp(entry, claims, role, {
     requests, allocations, releases, acquittals,
-  });
+  }, linesForClaim);
 
   async function run(action) {
     setBusy(true);

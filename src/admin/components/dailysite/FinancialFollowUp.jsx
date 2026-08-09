@@ -14,7 +14,9 @@ import FundingPositionPanel from "../finance/FundingPositionPanel";
 // write path offered is a link the reader must choose to follow.
 export default function FinancialFollowUp({ position, entryId }) {
   if (!position) return null;
-  const { label, detail, needsAttention, canCreate, claims, funding } = position;
+  const { label, detail, needsAttention, canCreate, claims, funding, duplicateRisk } = position;
+  const alreadyClaimed = Boolean(duplicateRisk?.planningCostAlreadyClaimed);
+  const coveringClaim = duplicateRisk?.coveringClaims?.[0] || null;
 
   return (
     <section
@@ -63,13 +65,37 @@ export default function FinancialFollowUp({ position, entryId }) {
         </div>
       )}
 
+      {/* This day's own planning cost has already been claimed. Raising it again is the
+          accidental double-claim found in the hosted walkthrough, so the existing claim
+          becomes the primary action and the additional-cost path stays available but
+          deliberate. Nothing is blocked. */}
+      {alreadyClaimed && (
+        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          This day's site labour has already been claimed
+          {coveringClaim ? ` (${formatKes(coveringClaim.approvedTotal ?? coveringClaim.submittedTotal)})` : ""}.
+          Open that claim rather than raising it a second time.
+        </p>
+      )}
+
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-stone-100 pt-3">
+        {alreadyClaimed && coveringClaim && (
+          <Link
+            to={`/admin/site-costs/${coveringClaim.id}`}
+            className="inline-flex min-h-11 items-center rounded-md bg-botanique-green px-4 text-sm font-semibold text-white hover:bg-botanique-dark"
+          >
+            Open existing claim
+          </Link>
+        )}
         {canCreate && (
           <Link
-            to={`/admin/site-costs/new?dailySiteEntryId=${encodeURIComponent(entryId)}`}
-            className="inline-flex min-h-11 items-center rounded-md border border-botanique-green px-4 text-sm font-semibold text-botanique-green hover:bg-[#edf2ef]"
+            to={`/admin/site-costs/new?dailySiteEntryId=${encodeURIComponent(entryId)}${alreadyClaimed ? "&additional=1" : ""}`}
+            className={alreadyClaimed
+              ? "min-h-11 py-2 text-sm font-medium text-botanique-green hover:underline"
+              : "inline-flex min-h-11 items-center rounded-md border border-botanique-green px-4 text-sm font-semibold text-botanique-green hover:bg-[#edf2ef]"}
           >
-            {claims.length > 0 ? "Create another cost claim" : "Create cost claim"}
+            {alreadyClaimed
+              ? "Raise additional cost"
+              : claims.length > 0 ? "Create another cost claim" : "Create cost claim"}
           </Link>
         )}
         <Link

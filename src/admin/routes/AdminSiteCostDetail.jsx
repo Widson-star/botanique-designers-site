@@ -9,6 +9,7 @@ import {
 } from "../utils/siteCostCapabilities";
 import { profilePresentationName } from "../utils/personName";
 import { fundingForClaims } from "../utils/claimFunding";
+import { possibleDuplicateClaims } from "../utils/duplicateCostClaim";
 import FundingPositionPanel from "../components/finance/FundingPositionPanel";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", currencyDisplay: "code" }).format(amount || 0);
@@ -21,6 +22,12 @@ export default function AdminSiteCostDetail() {
   const { role, currentUserId, projects, profiles } = useAdminData();
   const { claims, linesForClaim, eventsByClaim, loadEvents, submitClaim, withdrawClaim, decideClaim, cancelClaim, refresh, status } = useSiteCosts();
   const { requests, allocations, releases, acquittals } = useFundRequests();
+  // Structural overlap only: same Daily Site Record, same category, at least one identical
+  // cost line. Never a verdict — the Principal keeps the decision and nothing is auto-rejected.
+  const possibleDuplicates = useMemo(
+    () => claimId ? possibleDuplicateClaims(claims.find((item) => item.id === claimId), claims, linesForClaim) : [],
+    [claimId, claims, linesForClaim]
+  );
   const claim = claims.find((item) => item.id === claimId);
   const lines = claim ? linesForClaim(claim.id) : [];
   const events = eventsByClaim[claimId] || [];
@@ -57,6 +64,20 @@ export default function AdminSiteCostDetail() {
     {claim.lifecycle === "approved" && <div className="mt-4"><FundingPositionPanel funding={funding} headingId="claim-funding-position" /></div>}
     {claim.dailySiteSnapshot && <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950"><p className="font-semibold">Daily Site planning source</p><p className="mt-1">Work date {claim.dailySiteSnapshot.work_date} · source version {claim.dailySiteSourceVersion} · planning state {claim.dailySiteSnapshot.state}</p><p className="mt-1 text-xs">This preserved planning snapshot does not change with later Daily Site edits.</p></div>}
     {/* Return leg of the hand-off: the operational record the claim came from. */}
+    {possibleDuplicates.length > 0 && <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+      <p className="font-semibold">Possible duplicate</p>
+      <p className="mt-1">
+        {possibleDuplicates.length === 1 ? "Another claim" : `${possibleDuplicates.length} other claims`} from
+        this Daily Site Record {possibleDuplicates.length === 1 ? "contains" : "contain"} an identical cost line.
+        Check before deciding — this may be a genuinely additional cost, or the same cost claimed twice.
+      </p>
+      <ul className="mt-2 space-y-1">{possibleDuplicates.map((other) => <li key={other.id}>
+        <Link to={`/admin/site-costs/${other.id}`} className="font-semibold text-botanique-green hover:underline">
+          {other.recipientLabel || "Cost claim"} · {money(other.approvedTotal ?? other.submittedTotal)}
+        </Link>
+        <span className="text-xs"> · {SITE_COST_LIFECYCLES[other.lifecycle] || other.lifecycle}</span>
+      </li>)}</ul>
+    </div>}
     {claim.dailySiteEntryId && <Link to={`/admin/daily-site-operations/${claim.dailySiteEntryId}`} className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-botanique-green hover:underline">← Back to the Daily Site Record</Link>}
     {error && <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
     <div className="mt-5 grid gap-5 lg:grid-cols-[2fr_1fr]">
