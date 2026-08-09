@@ -66,8 +66,8 @@ export default function AdminSiteCostForm() {
   }
 
   return <section className="mx-auto max-w-5xl">
-    <Link to={existing ? `/admin/site-costs/${existing.id}` : "/admin/site-costs"} className="text-sm font-medium text-botanique-green hover:underline">← Back to Site Costs</Link>
-    <h1 className="mt-3 text-2xl font-semibold">{role === "owner" ? "Authorise site cost" : existing ? "Amend cost claim" : "New cost claim"}</h1>
+    <Link to={existing ? `/admin/site-costs/${existing.id}` : "/admin/site-costs"} className="text-sm font-medium text-botanique-green hover:underline">← Back to Project Costs</Link>
+    <h1 className="mt-3 text-2xl font-semibold">{role === "owner" ? "Authorise project cost" : existing ? "Amend cost claim" : "New cost claim"}</h1>
     <p className="mt-1 text-sm text-gray-600">One recipient or crew and one category per claim. Amounts below are claims, not payments.</p>
     {source && <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
       <p className="font-semibold">Copied planning context — no liability was created automatically</p>

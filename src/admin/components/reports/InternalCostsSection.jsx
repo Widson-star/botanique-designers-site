@@ -34,7 +34,7 @@ export default function InternalCostsSection({ section, projectId, range }) {
       state={section.state}
       actions={
         <ReportDrillLink to={moduleLink("/admin/site-costs", { projectId, status: "all", range })}>
-          Open site costs
+          Open Project Costs
         </ReportDrillLink>
       }
     >

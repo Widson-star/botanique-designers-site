@@ -46,11 +46,11 @@ export default function AdminSiteCosts() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-botanique-green">People and finance</p>
-          <h1 className="mt-1 text-2xl font-semibold">Site Costs</h1>
+          <h1 className="mt-1 text-2xl font-semibold">Project Costs</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-600">Internal project-cost claims and Principal decisions. Approval does not mean released or paid.</p>
         </div>
         <Link to="/admin/site-costs/new" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-          {role === "owner" ? "Authorise site cost" : "New cost claim"}
+          {role === "owner" ? "Authorise project cost" : "New cost claim"}
         </Link>
       </div>
 
@@ -76,9 +76,9 @@ export default function AdminSiteCosts() {
         </div>
       )}
 
-      {status === "loading" && <p className="mt-6 text-sm text-gray-600">Loading site costs…</p>}
+      {status === "loading" && <p className="mt-6 text-sm text-gray-600">Loading project costs…</p>}
       {error && <p className="mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-      {status !== "loading" && !visible.length && <div className="mt-6 rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-gray-600">No site costs match these filters.</div>}
+      {status !== "loading" && !visible.length && <div className="mt-6 rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-gray-600">No project costs match these filters.</div>}
 
       {visible.length > 0 && <>
         <div className="mt-5 hidden overflow-hidden rounded-lg border border-stone-200 bg-white md:block">

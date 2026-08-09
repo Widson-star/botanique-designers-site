@@ -13,7 +13,7 @@ async function read(response) {
   const text = await response.text();
   const data = text ? JSON.parse(text) : null;
   if (!response.ok) {
-    const error = new Error(data?.message || data?.hint || "Site cost request failed.");
+    const error = new Error(data?.message || data?.hint || "Project cost request failed.");
     error.code = data?.code || "";
     throw error;
   }

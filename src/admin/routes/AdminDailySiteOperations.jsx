@@ -352,7 +352,7 @@ export default function AdminDailySiteOperations() {
             to="/admin/site-costs"
             className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold text-botanique-green hover:bg-stone-50"
           >
-            Go to Site Costs
+            Go to Project Costs
           </Link>
         </div>
       )}

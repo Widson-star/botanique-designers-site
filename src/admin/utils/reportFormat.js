@@ -233,7 +233,7 @@ export const ACTIVITY_EVENT_LABELS = {
 export const SOURCE_DOMAIN_LABELS = {
   project: "Project record",
   daily_site: "Daily site",
-  internal_cost: "Site costs",
+  internal_cost: "Project costs",
   fund_request: "Fund requests",
   approval: "Approvals",
 };
@@ -243,7 +243,7 @@ export const SOURCE_DOMAIN_LABELS = {
 const DOMAIN_FALLBACK_LABELS = {
   project: "Project record activity",
   daily_site: "Daily site activity",
-  internal_cost: "Site cost activity",
+  internal_cost: "Project cost activity",
   fund_request: "Fund request activity",
   approval: "Approval activity",
 };

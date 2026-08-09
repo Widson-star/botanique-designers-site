@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminData } from "./adminData";
 import { SiteCostsContext } from "./siteCosts";
 import {
@@ -49,6 +49,21 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
   const accessToken = session?.access_token || "";
   const [claims, setClaims] = useState([]);
   const [lines, setLines] = useState([]);
+  // In hosted mode the database is the truth and refresh() re-reads it after every action.
+  // In demo mode this provider IS the truth, and AdminSiteCostForm creates a draft and submits
+  // it in the same tick, before React has re-rendered. These mirrors let each demo path read
+  // what the previous demo path just wrote instead of a closure captured before it.
+  const demoClaimsRef = useRef([]);
+  const demoLinesRef = useRef([]);
+
+  const writeDemoClaims = useCallback((next) => {
+    demoClaimsRef.current = next;
+    setClaims(next);
+  }, []);
+  const writeDemoLines = useCallback((next) => {
+    demoLinesRef.current = next;
+    setLines(next);
+  }, []);
   const [eventsByClaim, setEventsByClaim] = useState({});
   const [remoteProjects, setRemoteProjects] = useState([]);
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
@@ -74,7 +89,7 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       setStatus("ready"); setError("");
       return { ok: true };
     } catch (nextError) {
-      setStatus("error"); setError(nextError.message || "Unable to load site costs.");
+      setStatus("error"); setError(nextError.message || "Unable to load project costs.");
       return { ok: false, error: nextError };
     }
   }, [accessToken, isDemo]);
@@ -103,7 +118,7 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       await refresh();
       return { ok: true, claim: result ? mapClaim(result) : null };
     } catch (nextError) {
-      const message = nextError.message || "The site cost action did not complete.";
+      const message = nextError.message || "The project cost action did not complete.";
       return { ok: false, error: message, stale: nextError.code === "40001" || /stale/i.test(message) };
     }
   }, [refresh]);
@@ -117,8 +132,8 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       requesterId: currentUserId, deciderId: "", directAuthorityActorId: direct ? currentUserId : "",
       version: 1, createdAt: now(), updatedAt: now(), decidedAt: direct ? now() : "",
     };
-    setClaims((current) => [claim, ...current]);
-    setLines((current) => [...current, ...values.lines.map((line, index) => ({
+    writeDemoClaims([claim, ...demoClaimsRef.current]);
+    writeDemoLines([...demoLinesRef.current, ...values.lines.map((line, index) => ({
       ...line, id: `${id}-line-${index}`, claimId: id, lineNumber: index + 1,
       quantity: Number(line.quantity), unitRate: Number(line.unitRate),
       lineTotal: Number(line.quantity) * Number(line.unitRate),
@@ -129,7 +144,7 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       nextLifecycle: claim.lifecycle, requestRound: 0, reason: "", occurredAt: now(),
     }] }));
     return { ok: true, claim };
-  }, [currentUserId]);
+  }, [currentUserId, writeDemoClaims, writeDemoLines]);
 
   const createDraft = useCallback((values) => isDemo ? Promise.resolve(demoCreate(values))
     : run(() => createInternalCostClaimDraft(accessToken, values)), [accessToken, demoCreate, isDemo, run]);
@@ -140,23 +155,37 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
     ? Promise.resolve({ ok: false, error: "Demo amendment is not persisted." })
     : run(() => updateInternalCostClaim(accessToken, claimId, expectedVersion, values)), [accessToken, isDemo, run]);
 
-  const submitClaim = useCallback((claimId, expectedVersion) => {
-    if (isDemo) {
-      let changed;
-      setClaims((current) => current.map((claim) => {
-        if (claim.id !== claimId) return claim;
-        const total = lines.filter((line) => line.claimId === claimId).reduce((sum, line) => sum + line.lineTotal, 0);
-        changed = { ...claim, lifecycle: "awaiting_review", requestRound: claim.requestRound + 1,
-          submittedTotal: total, version: claim.version + 1, submittedAt: now(), updatedAt: now() };
-        return changed;
-      }));
-      return Promise.resolve({ ok: true, claim: changed });
+  // submit_internal_cost_claim sets submitted_total from the claim's own lines and refuses a
+  // stale version. The demo path proves the same two things against the mirrored state.
+  const demoSubmit = useCallback((claimId, expectedVersion) => {
+    const currentClaim = demoClaimsRef.current.find((claim) => claim.id === claimId);
+    if (!currentClaim || currentClaim.version !== expectedVersion) {
+      return { ok: false, error: "This claim changed elsewhere.", stale: true };
     }
-    return run(() => submitInternalCostClaim(accessToken, claimId, expectedVersion));
-  }, [accessToken, isDemo, lines, run]);
+    const total = demoLinesRef.current
+      .filter((line) => line.claimId === claimId)
+      .reduce((sum, line) => sum + line.lineTotal, 0);
+    const changed = {
+      ...currentClaim, lifecycle: "awaiting_review", requestRound: currentClaim.requestRound + 1,
+      submittedTotal: total, version: currentClaim.version + 1, submittedAt: now(), updatedAt: now(),
+    };
+    writeDemoClaims(demoClaimsRef.current.map((claim) => claim.id === claimId ? changed : claim));
+    setEventsByClaim((current) => ({ ...current, [claimId]: [...(current[claimId] || []), {
+      id: `${claimId}-submitted-${changed.version}`, claimId, actorId: currentUserId,
+      eventType: currentClaim.requestRound === 0 ? "submitted" : "resubmitted",
+      previousLifecycle: currentClaim.lifecycle, nextLifecycle: "awaiting_review",
+      requestRound: changed.requestRound, reason: "", occurredAt: now(),
+    }] }));
+    return { ok: true, claim: changed };
+  }, [currentUserId, writeDemoClaims]);
+
+  const submitClaim = useCallback((claimId, expectedVersion) => isDemo
+    ? Promise.resolve(demoSubmit(claimId, expectedVersion))
+    : run(() => submitInternalCostClaim(accessToken, claimId, expectedVersion)),
+  [accessToken, demoSubmit, isDemo, run]);
 
   const demoTransition = useCallback((claimId, expectedVersion, nextLifecycle, eventType, reason = "") => {
-    const currentClaim = claims.find((claim) => claim.id === claimId);
+    const currentClaim = demoClaimsRef.current.find((claim) => claim.id === claimId);
     if (!currentClaim || currentClaim.version !== expectedVersion) {
       return { ok: false, error: "This claim changed elsewhere.", stale: true };
     }
@@ -171,14 +200,14 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       version: currentClaim.version + 1,
       updatedAt: now(),
     };
-    setClaims((current) => current.map((claim) => claim.id === claimId ? changed : claim));
+    writeDemoClaims(demoClaimsRef.current.map((claim) => claim.id === claimId ? changed : claim));
     setEventsByClaim((current) => ({ ...current, [claimId]: [...(current[claimId] || []), {
       id: `${claimId}-${eventType}-${changed.version}`, claimId, actorId: currentUserId,
       eventType, previousLifecycle: currentClaim.lifecycle, nextLifecycle,
       requestRound: currentClaim.requestRound, reason, occurredAt: now(),
     }] }));
     return { ok: true, claim: changed };
-  }, [claims, currentUserId]);
+  }, [currentUserId, writeDemoClaims]);
 
   const withdrawClaim = useCallback((claimId, version, reason) => isDemo
     ? Promise.resolve(demoTransition(claimId, version, "withdrawn", "withdrawn", reason))
