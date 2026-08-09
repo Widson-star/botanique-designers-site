@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import { SiteCostsContext } from "../context/siteCosts";
+import { FundRequestsContext } from "../context/fundRequests";
 import AdminDailySiteOperations from "./AdminDailySiteOperations";
 import MorningComplianceCard from "../components/dailysite/MorningComplianceCard";
 import { todayIso } from "../utils/dailySiteFormatters";
@@ -13,7 +14,7 @@ const projects = [
   { id: "p2", projectName: "Lugulu Estate", status: "Ongoing", stage: "Implementation", archived: false },
 ];
 
-function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {}, projectsOverride, claims = [] } = {}) {
+function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {}, projectsOverride, claims = [], finance = {} } = {}) {
   const adminValue = {
     role, projects: projectsOverride || projects, profilesById: {}, currentUserId: "m1",
   };
@@ -28,7 +29,11 @@ function renderRoute({ role = "manager", entries = [], compliance = [], authoris
       <AdminDataContext.Provider value={adminValue}>
         <DailySiteOperationsContext.Provider value={dailyValue}>
           <SiteCostsContext.Provider value={{ claims, status: "ready", error: "" }}>
+            <FundRequestsContext.Provider value={{
+              requests: [], allocations: [], releases: [], acquittals: [], ...finance,
+            }}>
             <AdminDailySiteOperations />
+            </FundRequestsContext.Provider>
           </SiteCostsContext.Provider>
         </DailySiteOperationsContext.Provider>
       </AdminDataContext.Provider>

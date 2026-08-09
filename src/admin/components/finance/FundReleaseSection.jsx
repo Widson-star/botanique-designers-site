@@ -3,7 +3,7 @@ import {
   acceptanceRequiresReason, acquittalOutcome, calculateAcquittalSpend,
   canConfirmFundReleaseReceipt, canDecideFundAcquittal, canRecordFundRelease,
   canReverseFundRelease, canSubmitFundAcquittal, CUSTODY_CONSEQUENCE, CUSTODY_DISPOSITIONS,
-  FINANCIAL_POSITIONS, isAccountableAdvance, PAYMENT_CHANNELS, RECONCILIATION_STATES,
+  isAccountableAdvance, PAYMENT_CHANNELS, RECONCILIATION_STATES, RELEASE_STATES,
 } from "../../utils/fundReleaseCapabilities";
 import { profilePresentationName } from "../../utils/personName";
 
@@ -94,9 +94,21 @@ export default function FundReleaseSection({
             Approval authorises money. A release records that money actually moved.
           </p>
         </div>
-        <span className="shrink-0 rounded-md border border-stone-300 px-2.5 py-1 text-xs font-semibold">
-          {FINANCIAL_POSITIONS[position.financialPosition]}
-        </span>
+        {/* Funding and reconciliation are independent, and one collapsed label
+            hid half the truth: an authority that is only partly released while
+            an advance is unaccounted for read as "Funded — reconciliation
+            outstanding". Both dimensions are stated, so neither conceals the
+            other. The underlying derived position is unchanged. */}
+        <div className="flex shrink-0 flex-wrap gap-1.5">
+          <span className="rounded-md border border-stone-300 px-2.5 py-1 text-xs font-semibold">
+            {RELEASE_STATES[position.releaseState]}
+          </span>
+          {position.reconciliationState !== "not_required" && (
+            <span className="rounded-md border border-stone-300 px-2.5 py-1 text-xs font-semibold">
+              {RECONCILIATION_STATES[position.reconciliationState]}
+            </span>
+          )}
+        </div>
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
@@ -117,12 +129,15 @@ export default function FundReleaseSection({
         </p>
       )}
 
-      {position.reconciliationState !== "not_required" && (
+      {position.releaseState === "partially_released" && (
+        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+          {money(position.remainingReleasableAmount)} of this authority is still unreleased.
+        </p>
+      )}
+
+      {position.reconciliationState !== "not_required" && position.varianceAmount !== 0 && (
         <p className="mt-4 text-xs text-gray-600">
-          {RECONCILIATION_STATES[position.reconciliationState]}
-          {position.varianceAmount !== 0 && (
-            <> · variance {money(position.varianceAmount)}</>
-          )}
+          Variance {money(position.varianceAmount)}
         </p>
       )}
 

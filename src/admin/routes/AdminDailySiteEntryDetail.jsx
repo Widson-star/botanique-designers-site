@@ -13,6 +13,7 @@ import {
   canEditDailyDraft,
 } from "../utils/dailySiteCapabilities";
 import { useSiteCosts } from "../context/siteCosts";
+import { useFundRequests } from "../context/fundRequests";
 import { summariseFinancialFollowUp } from "../utils/dailySiteCostLink";
 import {
   DISPOSITION_LABELS,
@@ -45,6 +46,9 @@ export default function AdminDailySiteEntryDetail() {
     voidEntry, correctEntry, supersedeEntry,
   } = useDailySiteOperations();
   const { claims } = useSiteCosts();
+  // Read-only fund-request context. The operational record reaches the money
+  // records to REPORT them; it never records, reconciles or decides anything.
+  const { requests, allocations, releases, acquittals } = useFundRequests();
 
   const entry = entries.find((item) => item.id === entryId);
   const [events, setEvents] = useState([]);
@@ -80,7 +84,9 @@ export default function AdminDailySiteEntryDetail() {
   const supersededByLink = entries.find((item) => item.supersedesEntryId === entry.id);
   // Derived only — the operational record reads the claim position, it never
   // writes one. See src/admin/utils/dailySiteCostLink.js.
-  const financialPosition = summariseFinancialFollowUp(entry, claims, role);
+  const financialPosition = summariseFinancialFollowUp(entry, claims, role, {
+    requests, allocations, releases, acquittals,
+  });
 
   async function run(action) {
     setBusy(true);

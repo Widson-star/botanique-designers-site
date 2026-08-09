@@ -6678,3 +6678,68 @@ matrix and the surface tests, and is not claimed as demo-verified.
 Tools & Equipment, Project Costs remediation, Project Summary, Reports Centre, and evidence files.
 
 Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/implementation-record.md`.
+
+---
+
+### BD-FIN-01C — read integration: Daily Site Record and Project Costs financial position — 9 August 2026
+
+Second unit against the BD-FIN-01C authority, after PR #98. **Read side only.** No migration, no
+RLS change, no RPC change, no new payment type, reconciliation state, approval state, compensation
+type, expense category or financial role. No production data touched. No authority image altered.
+
+**Founder confirmation recorded.** The deliberate PR #98 extension — a `custody_disposition` on each
+release *in addition to* `fund_requests.intended_custody_type` — is **approved and kept**. The request
+records what custody was intended; the release records how the money actually moved. One authority may
+legitimately produce both a direct supplier payment and an accountable advance, and the reconciliation
+obligation must follow the money, not the intention.
+
+**The problem this unit fixes.** One collapsed status label was concealing half the financial truth.
+A KES 20,000 authority with KES 10,000 released as an unreconciled advance is *simultaneously* partly
+funded and reconciliation-outstanding; it read as "Funded — reconciliation outstanding", which is false
+about the funding half. **No schema change was needed** — `fund_request_financial_position()` already
+returned `release_state` and `reconciliation_state` as independent columns, and every surface now shows
+both. A compact phrase is still used where only one line exists, and it names both dimensions when both
+say something. No mutable status column was added.
+
+**One new derivation**, `src/admin/utils/claimFunding.js`, walks claim → allocation → request → release
+→ acquittal and reuses the existing `deriveFinancialPosition()` as its only arithmetic, so no component
+recomputes money differently. Nothing is pro-rated: a release belongs to a request, not a claim, so no
+claim-level released figure is manufactured, and an authority shared with other claims says so. Nothing
+is invented: a claim on no fund request reads "No fund request raised", never "unpaid", and a day with
+no claim shows no financial position at all.
+
+**A release is not actual expenditure.** For an accountable advance, actual expenditure is the current
+acquittal's spend and nothing else, so an unaccounted advance contributes zero and stays visible. A
+direct settled payment is actual expenditure when released — nobody holds it, there is no return leg,
+and ruling D3 deliberately gives it no acquittal.
+
+**Daily Site Record** now surfaces authorised, released, unreleased, funding position, whether an
+accountable advance exists, reconciliation position, actual spend, variance and settlement, as a
+summary plus drill-through. It is **still not the ledger**: no release, reconciliation, expenditure
+line, reversal or decision can be performed there. **Operational close stays independent of financial
+settlement** — no financial state gates any operational transition.
+
+**Project Costs** gained a first-view financial band (authorised / released / actual / unreleased across
+the distinct fund requests behind the visible claims), a per-row funding and reconciliation phrase, a
+financial-position filter including "anything still unresolved", and drill-through to the authority. The
+compact direction is preserved. Visible language stays **Project Costs**; internal names are unchanged.
+
+**One defect corrected on the PR #98 surface**: `FundReleaseSection` showed only the collapsed label and
+now shows both dimensions plus the unreleased remainder. Four PR #98 assertions were updated to assert
+both dimensions rather than the collapsed label — strictly stronger, and matching what those tests were
+already named for. No finance-integrity test was weakened.
+
+**Verified.** Full application suite passes. Production build clean; lint identical to the 19-error
+baseline; `git diff --check` clean. Browser-verified at desktop, 375px and 400px with no horizontal
+overflow and no console errors, against a real position built through the demo. Cross-role continuity is
+still not claimed: switching preview role resets in-memory demo state, so Operations Manager behaviour is
+proven by surface tests and the unchanged SQL/RLS matrix.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** Hosted authenticated verification under real Principal and
+Operations Manager accounts is still outstanding and requires the Founder to sign in.
+
+**Still unbuilt, explicitly:** Company Expenses, Staff Compensation, unified Approvals, Maintenance,
+Tools & Equipment, Project Summary, Reports Centre, evidence files, and a portfolio-level funding
+position on Finance Overview. Finance is **not** complete.
+
+Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/implementation-record.md`.

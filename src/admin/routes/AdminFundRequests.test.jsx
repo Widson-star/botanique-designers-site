@@ -214,7 +214,9 @@ describe("Fund Requests admin surfaces", () => {
 
   it("reads approved but unpaid until a release is recorded, and offers the Principal the action", () => {
     detail(contexts({ requests: [approved] }));
-    expect(screen.getByText("Approved — unpaid")).toBeInTheDocument();
+    // Funding and reconciliation are shown as separate dimensions, so an
+    // approved authority with nothing against it says exactly that.
+    expect(screen.getByText("Nothing released")).toBeInTheDocument();
     expect(screen.getByText(/No funds have been released/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Record a release" })).toBeInTheDocument();
     // Nothing claims money moved, and nothing claims a reconciliation is owed.
@@ -223,7 +225,7 @@ describe("Fund Requests admin surfaces", () => {
 
   it("gives the Operations Manager no way to fabricate a release", () => {
     detail(contexts({ role: "manager", requests: [approved] }));
-    expect(screen.getByText("Approved — unpaid")).toBeInTheDocument();
+    expect(screen.getByText("Nothing released")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Record a release" })).not.toBeInTheDocument();
   });
 
@@ -247,15 +249,20 @@ describe("Fund Requests admin surfaces", () => {
 
   it("shows a partly funded position, the remaining amount and the outstanding advance", () => {
     detail(contexts({ requests: [approved], releases: [advanceRelease] }));
-    expect(screen.getByText("Funded — reconciliation outstanding")).toBeInTheDocument();
-    expect(screen.getByText(/KES\s*13,000\.00/)).toBeInTheDocument();
+    // Partly funded AND unreconciled at once. Neither label may conceal the
+    // other, and the unreleased remainder is stated rather than implied.
+    expect(screen.getByText("Partly released")).toBeInTheDocument();
+    expect(screen.getByText("Reconciliation outstanding")).toBeInTheDocument();
+    expect(screen.getAllByText(/KES\s*13,000\.00/).length).toBeGreaterThan(0);
     expect(screen.getByText(/10,000\.00 of the KES 23,000\.00 authorised has been released/)).toBeInTheDocument();
-    expect(screen.getByText(/Reconciliation outstanding/)).toBeInTheDocument();
+    expect(screen.getByText(/13,000\.00 of this authority is still unreleased/)).toBeInTheDocument();
   });
 
   it("does not demand a reconciliation, or an acknowledgement, for a direct supplier payment", () => {
     detail(contexts({ requests: [approved], releases: [directRelease] }));
-    expect(screen.getByText("Financially settled")).toBeInTheDocument();
+    expect(screen.getByText("Fully released")).toBeInTheDocument();
+    // A direct settled payment never acquires a reconciliation obligation.
+    expect(screen.queryByText("Reconciliation outstanding")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Siaya Hardware/ }));
     expect(screen.getByText(/No accountable-advance reconciliation is\s+required/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Account for this advance" })).not.toBeInTheDocument();

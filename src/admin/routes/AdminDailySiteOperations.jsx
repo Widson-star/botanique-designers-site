@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useSiteCosts } from "../context/siteCosts";
+import { useFundRequests } from "../context/fundRequests";
 import { financialFollowUpSummary } from "../utils/dailySiteCostLink";
 import { canSeeSiteCosts } from "../utils/siteCostCapabilities";
 import { todayIso } from "../utils/dailySiteFormatters";
@@ -54,6 +55,8 @@ export default function AdminDailySiteOperations() {
   // Read-only: the list shows whether a day already has a cost claim so the
   // 4:00 pm hand-off is visible without opening every record.
   const { claims } = useSiteCosts();
+  const { requests, allocations, releases, acquittals } = useFundRequests();
+  const finance = { requests, allocations, releases, acquittals };
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get("status") || "today";
   const projectFilter = searchParams.get("project") || "all";
@@ -225,7 +228,7 @@ export default function AdminDailySiteOperations() {
                   const project = projectsById[entry.projectId];
                   const isLateBadge =
                     entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state);
-                  const followUp = financialFollowUpSummary(entry, claims, role);
+                  const followUp = financialFollowUpSummary(entry, claims, role, finance);
                   return (
                     <tr key={entry.id} className="align-top">
                       <td className="px-4 py-3">
@@ -285,7 +288,7 @@ export default function AdminDailySiteOperations() {
               const project = projectsById[entry.projectId];
               const isLateBadge =
                 entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state);
-              const followUp = financialFollowUpSummary(entry, claims, role);
+              const followUp = financialFollowUpSummary(entry, claims, role, finance);
               return (
                 <li key={entry.id}>
                   <Link
