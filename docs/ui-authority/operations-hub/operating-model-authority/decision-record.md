@@ -118,3 +118,23 @@ forgotten. None has been acted on:
 Nothing in this architecture. Every item above is Founder-settled. The only remaining gates
 before implementation are (1) this authority PR being reviewed and merged, and (2) a separate,
 explicit implementation authorisation, as was required for Stage 6.
+
+## Addendum — 9 August 2026: three image rulings, and the payment/reconciliation authority
+
+Added after the ten working-authority screens were frozen (PR #95). Nothing above is amended,
+withdrawn or weakened; the three rulings **confirm** this record against the images.
+
+1. **Image `06`'s "Project Templates" is not approved product architecture.** Projects remains
+   Project Register + Project Proposals. No Project Templates module, route or model exists or may
+   be implemented.
+2. **Image `13`'s persistent Finance sidebar children do not reopen Option A.** The five Finance
+   areas listed above stay authoritative, but Finance remains **one** shell destination with the
+   in-page area selector shipped in PR #94. Option B stands.
+3. **Image `11` does not merge Maintenance and Tools & Equipment.** They remain two distinct
+   Operations capabilities, exactly as the navigation-domains table above records them.
+
+Separately, the Hierarchy line above — "…transaction/obligation → approval → **payment/release →
+reconciliation** → reporting" — describes states the repository cannot currently represent. The
+authority that settles that gap is `../payment-reconciliation-authority/`, added the same day: a
+current-state proof, the smallest proposed entity and state model, and five outstanding Founder
+decisions. It authorises no implementation.
