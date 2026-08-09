@@ -6325,3 +6325,134 @@ Martine's authority is unchanged by this correction: he retains ordinary create,
 end authority on his accessible engagements, and continues to have no ability to correct or reopen
 a closed engagement. An engagement continues to grant no portal or project access. This closure
 does not begin stage 6; the programme position recorded above is unchanged.
+
+### Operating model authority, corrected shell, and working-authority preservation — 7–9 August 2026
+
+Three things happened in sequence and none of them was recorded here until now: the operating-model
+authority merged (PR #93), the corrected shell merged (PR #94), and ten further composition screens
+were frozen by the Founder and preserved (this entry). The first two are recorded below as fact; the
+third is the change this entry accompanies.
+
+**PR #93 — operating-model authority (merge `7642885130e1d1d353abc5980fb43f038d19317a`).** Founder-
+approved architecture in `docs/ui-authority/operations-hub/operating-model-authority/`: the official
+`public/botanique.png` identity with "Operations Hub" subordinate, a 104px collapsed rail superseding
+Stage 6's 64px, six domains with `More` removed, Projects renamed to Project Register and Project
+Proposals, People moved under Operations, Finance as one shell destination with an in-page area
+selector (Option B, with five persistent sidebar children explicitly rejected), Approvals promoted to
+standalone, and the product-wide Compact Presentation Standard. Documentation only; it authorised no
+code.
+
+**PR #94 — corrected shell (merge `a33b0399309905d03c52ce2766eacdd5a86eb544`, production
+`dpl_GtWotV9TCzRECDQH3Hp7GTwndx8e`, source commit exact, READY).** Implemented the shell and
+navigation portion of that authority and nothing else. 623 tests across 58 files passed, production
+build passed, and the change touched no migration, no RLS policy and no production row. Local and
+demo-role verification passed at desktop, 375px and 400px.
+
+**What PR #94 did not do, stated plainly.** It renamed navigation and added one Finance landing page.
+It did not build the operating model. Finance renders three areas — Overview, Project Costs and
+Funding, Payments and Reconciliation — each summarising records that already existed, and deliberately
+omits Company Expenses and Staff Compensation because neither has any table behind it. Approvals moved
+in the sidebar; it was not made an aggregating decision centre. Daily Site Record was renamed; its
+workflow was untouched. A navigation label existing is not the capability existing, and this entry
+exists partly so that distinction is not lost later.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`, unchanged.** The corrected shell is merged and deployed, but
+the hosted authenticated Principal and Operations Manager walkthroughs have not been performed — the
+sign-in page was reached and no credential was handled. Merged and deployed is not verified, and this
+entry does not upgrade the classification.
+
+**Ten working-authority screens preserved.** `docs/ui-authority/operations-hub/working-authority/`
+now holds images `05`–`14`, numbered to continue the four approved screens, copied byte-for-byte and
+verified by SHA-256 and `cmp` against the Founder's originals; the four originals were re-hashed and
+are unchanged. The Founder froze them ("I HONESTLY LOVE THE CURRENT SLIDES. DONT CHANGE/ALTER ANY OF
+THEM RIGHT NOW"), so no image was redrawn, cropped, recompressed, annotated or regenerated. They are
+composition and workflow-direction authority, **not** production-data authority: every name, figure,
+date, balance, attendance split and inventory count inside them is illustrative and may not be written
+to the database. Per-image hashes and scope are in that directory's `README.md`.
+
+**Three image-vs-decision-record tensions, unresolved.** Image `06`'s sidebar shows a "Project
+Templates" destination that appears in no decision record and has no route, table or capability —
+almost certainly an illustrative slip, and not to be implemented. Image `13`'s sidebar shows Finance
+expanded with four persistent children, which is the Option A that the decision record explicitly
+rejected in favour of the in-page selector shipped in PR #94; Option B stands. Image `11` renders
+Maintenance and Tools & Equipment as one page where the settled model lists two Operations children.
+All three await a Founder ruling; none has been resolved here.
+
+#### Repository reconciliation
+
+Read against the migrations, routes and capability modules actually on `main`:
+
+| Capability | Status | Grounding |
+| --- | --- | --- |
+| Dashboard | PARTIALLY SATISFIED | `AdminDashboard.jsx` has greeting, KPIs, attention list, activity. No operational-spine strip (`05`); the four-step rhythm has no state to render. |
+| Project Register | PARTIALLY SATISFIED | `AdminProjects.jsx` + `projects`. Renamed and filtered; no project ID, no % complete, no page-size cap. |
+| Project Proposals | PARTIALLY SATISFIED | `AdminProjectIntakes.jsx` + `project_intake_requests`. Renamed; no projected-budget or converted-count KPIs. |
+| Daily Site Record list | PARTIALLY SATISFIED | `AdminDailySiteOperations.jsx` + `daily_site_entries`. Register exists; no cost-claim hand-off (`08`). |
+| Daily Site Record detail | PARTIALLY SATISFIED | `AdminDailySiteEntryDetail.jsx`. Planned workforce/labour exist. No skill split, weather, safety incidents, or spine. |
+| Attendance | BLOCKED BY DATA/MODEL AUTHORITY | `expected_worker_count` is a *planned* integer and `crew_reference` is free text. No actual attendance anywhere. `14` shows present/absent/unplanned; nothing can compute it. |
+| Evidence | BLOCKED BY DATA/MODEL AUTHORITY | `evidence_status` is an enum of four labels only. There is no attachment table, no storage bucket, no file column. `09` shows four attached photographs. |
+| Cost-claim hand-off | MISSING | `internal_cost_claims` exists and `canCopyDailySiteToCost` exists, but no route or control carries a reviewed record into a claim as `08`/`09` require. Presentation work on an existing model. |
+| People list | SATISFIED | `AdminPeople.jsx` + `people`. Matches `10`, including people without portal access. |
+| People detail | PARTIALLY SATISFIED | `AdminPersonDetail.jsx` renders four stacked panels. `10` requires internal tabs (Overview / Engagements / Profile / Documents / Activity). Presentation work; Documents has no model. |
+| Engagements | SATISFIED (as a model) | `people_engagements` + lifecycle correction carry project, role, dates, open/closed. Correctly a tab inside the person, not a module. |
+| Maintenance | MISSING | No table, route, component or capability. Entire domain. |
+| Tools & Equipment | MISSING | No table, route, component or capability. Entire domain. |
+| Finance Overview | PARTIALLY SATISFIED | `AdminFinance.jsx` summarises real claims and requests. `12`'s bank balance, money-in/out and net position have no model. |
+| Project Costs | PARTIALLY SATISFIED | `internal_cost_claims` + lines. Voteheads in `13` are a `category` text field, not a controlled vocabulary. |
+| Company Expenses | MISSING | No table. Correctly not rendered. |
+| Staff Compensation | MISSING | No table. Correctly not rendered. Martine's compensation cannot be represented anywhere today. |
+| Funding, Payments and Reconciliation | BLOCKED BY DATA/MODEL AUTHORITY | `fund_requests` terminates at `approved`. There is no paid state, no reconciled state, no payment record, no bank account. `13` shows all three. |
+| Aggregated Approvals | PARTIALLY SATISFIED | `approval_requests` covers project changes only. Cost claims and fund requests carry their own separate decision paths. `14` requires one queue across all four types. |
+| Project Summary | PARTIALLY SATISFIED | `AdminReports.jsx`. Long dossier. `14` requires compact; its budget, retention, certified-to-date and attendance panels have no model. |
+| Reports Centre | FUTURE SCOPE | Deferred by standing decision. |
+| WhatsApp support | MISSING (unblocked) | `CONTACT.whatsapp` = `254720861592` in `src/utils/backend.js` with `waLink()` in `src/utils/whatsapp.js`, already used across the public site. The admin `HelpCard` still reads "Contact your system admin" and links nowhere. No number needs inventing. |
+| Stage 6 verification | MISSING | Hosted authenticated walkthroughs not performed. |
+
+#### The central gap
+
+The settled rhythm is morning record → cost claim by 4:00pm → Principal decision by 4:30pm →
+payment/release → reconciliation → close-out by 5:00pm. The repository supports the first three. It
+has **no representation of anything after the decision**. `fund_requests.status` ends at `approved`,
+and every payment, release and reconciliation reference in the entire migration history is a comment
+explaining that those things are deliberately *not* modelled. Both `09` and `14` state the rule the
+product must eventually honour — approval is authority to incur, not payment — but the schema cannot
+currently record the payment outcome that sentence promises. Until a Founder decision creates a
+payment/reconciliation model, Finance cannot truthfully show a paid or reconciled state, Project
+Summary cannot show paid-to-date or balance-due, and the day cannot actually be closed out with its
+financial result known. This single gap blocks more of the operating model than any other.
+
+Four further model decisions are required before their domains can be built: an attendance model
+(planned vs actual, by person or by count); an evidence/attachment model, which also depends on the
+storage-backup posture recorded earlier; a company-expenses and staff-compensation model, which must
+keep Martine's compensation out of project cost claims; and an inventory/custody model for Tools &
+Equipment kept strictly separate from Finance's expenditure truth, so one purchase creates one
+expenditure record and one or more asset records without duplicating the commercial detail.
+
+#### Recommended sequence
+
+The dependency order below is grounded in what the repository can support, and it differs from the
+obvious one in a single respect: **WhatsApp support should go first**, because it is the only item on
+the whole list that is fully unblocked, needs no decision, and takes one small change.
+
+1. **WhatsApp support** — point the admin `HelpCard` at the existing `waLink()`. No new authority, no
+   invented number, no model. Verification: both roles, both viewports, link opens the existing number.
+2. **Payment and reconciliation authority (documentation only)** — the Founder decision that unblocks
+   Finance, Project Summary and the close-out. Must define paid, reconciled and their evidence.
+   Explicitly not an implementation.
+3. **Daily Site Record → cost claim hand-off** — presentation work on models that already exist, and
+   the first visible piece of the spine. Must not introduce attendance, evidence or liabilities.
+4. **Payment/reconciliation implementation** — only after (2). Carries the schema change.
+5. **Aggregated Approvals** — needs (4) so funding decisions have somewhere truthful to land.
+6. **People detail compact remediation** — independent, safe, can move in parallel from step 3.
+7. **Attendance and evidence authority, then implementation** — gated on the storage posture.
+8. **Company Expenses and Staff Compensation** — after (2) settles how money leaves.
+9. **Maintenance**, then **Tools & Equipment** — the latter needs (8) for purchase provenance.
+10. **Compact Project Summary**, then the **Reports Centre** — last, because they consume everything above.
+
+The safest next unit is (1) alone, or (1) paired with (2) as a documentation decision. Everything from
+(3) onward should be its own authorised unit with its own hosted verification gate.
+
+**Nothing in this entry authorises implementation, and no production data was touched.** The
+fixture projects, fixture proposals, fixture approvals, `ZZ Verification Record — Stage 5`, the
+Martine name-order inconsistency and the unresolved `LEM` identity all remain deferred exactly as
+recorded earlier; none was read for change or modified here.

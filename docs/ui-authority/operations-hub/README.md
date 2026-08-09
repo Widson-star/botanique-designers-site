@@ -69,7 +69,17 @@ for why).
 
 `operating-model-authority/` — the Founder-approved operating-model architecture that supersedes
 parts of Stage 6's navigation (Finance, Approvals, People, the collapsed rail, and product-wide
-presentation discipline). Visual/architectural authority; not implementation authority.
+presentation discipline). Visual/architectural authority; not implementation authority. The shell
+and navigation portion of it was implemented and merged via PR #94.
+
+`working-authority/` — ten Founder-frozen composition screens numbered `05`–`14`, preserved on
+9 August 2026, which **supplement** the four screens in this directory rather than replacing them.
+They govern how each domain composes on the page (Dashboard operational spine, Project Register,
+Project Proposals, Daily Site Record list and detail, People and engagements, Maintenance and
+Tools & Equipment, Finance overview and children, Approvals and Project Summary). They are
+composition and workflow-direction authority only — **not** production-data authority, and not
+implementation authority. Three known image-vs-decision-record tensions are recorded unresolved in
+`working-authority/README.md`; where they disagree, the operating-model decision record wins.
 
 ## Relationship to the delivered Alerts capability
 
