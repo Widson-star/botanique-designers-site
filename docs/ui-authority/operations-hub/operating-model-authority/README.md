@@ -52,12 +52,22 @@ container around a single child · no invented figures · no invented logo treat
 
 ## Status
 
-Stage 6 (`stage-6-navigation-authority/`) remains **NOT ACTIVE_VERIFIED**. The live production
-shell now embodies several elements this authority supersedes (64px rail, People under More, Site
-Costs and Approvals under Operations, Finance's single-child Fund Requests navigation, the absent
-Dashboard greeting, the missing Operations Hub product label in collapsed mode). The Operations
-Manager hosted walkthrough required to close Stage 6 should be performed against the corrected
-shell once implemented, not used to certify a shell already known to be superseded.
+**Superseded shell elements are now corrected.** PR #94 (merge `a33b039`, deployed
+`dpl_GtWotV9TCzRECDQH3Hp7GTwndx8e`) implemented the shell and navigation portion of this authority:
+the official badge with a subordinate "Operations Hub" label, the 104px collapsed rail, the EAT
+Dashboard greeting, the six domains with `More` removed, Project Register / Project Proposals,
+Daily Site Record and People under Operations, Finance as one shell destination, and standalone
+Approvals.
 
-**Application implementation remains unauthorised pending this authority PR's review and merge —
-and, after that, a separate implementation authorisation.**
+**Stage 6 (`stage-6-navigation-authority/`) nevertheless remains NOT ACTIVE_VERIFIED.** The
+corrected shell is merged and deployed, but the hosted authenticated Principal and Operations
+Manager walkthroughs required to close Stage 6 have not been performed. Merged-and-deployed is not
+verified.
+
+**Only the shell was implemented.** The wider operating model — the Finance areas beyond Overview /
+Project Costs / Funding, Payments and Reconciliation, the payment and reconciliation lifecycle,
+aggregated Approvals, the Daily Site Record operational spine, People engagements presentation,
+Maintenance, Tools & Equipment, and the Reports Centre — remains unbuilt. Each still requires its
+own explicit implementation authorisation, and several are blocked on data-model decisions that have
+not been made. See `WORKSTREAMS.md` (9 August 2026) for the repository-grounded gap analysis, and
+`../working-authority/` for the composition authority those future units must follow.
