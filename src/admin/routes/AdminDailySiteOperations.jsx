@@ -2,6 +2,9 @@ import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
+import { useSiteCosts } from "../context/siteCosts";
+import { financialFollowUpSummary } from "../utils/dailySiteCostLink";
+import { canSeeSiteCosts } from "../utils/siteCostCapabilities";
 import { todayIso } from "../utils/dailySiteFormatters";
 import { canSeeDailySiteOperations, canRecordDailySiteEntry, summarizeCompliance } from "../utils/dailySiteCapabilities";
 import { ROLES } from "../constants/roles";
@@ -48,6 +51,9 @@ function matchesFilter(entry, filter, today) {
 export default function AdminDailySiteOperations() {
   const { role, projects } = useAdminData();
   const { entries, compliance, authorisedProjects, status, error } = useDailySiteOperations();
+  // Read-only: the list shows whether a day already has a cost claim so the
+  // 4:00 pm hand-off is visible without opening every record.
+  const { claims } = useSiteCosts();
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get("status") || "today";
   const projectFilter = searchParams.get("project") || "all";
@@ -219,6 +225,7 @@ export default function AdminDailySiteOperations() {
                   const project = projectsById[entry.projectId];
                   const isLateBadge =
                     entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state);
+                  const followUp = financialFollowUpSummary(entry, claims, role);
                   return (
                     <tr key={entry.id} className="align-top">
                       <td className="px-4 py-3">
@@ -252,6 +259,9 @@ export default function AdminDailySiteOperations() {
                             Late
                           </span>
                         )}
+                        {followUp && (
+                          <span className="mt-0.5 block text-xs text-gray-500">{followUp}</span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-right">
                         <Link
@@ -275,6 +285,7 @@ export default function AdminDailySiteOperations() {
               const project = projectsById[entry.projectId];
               const isLateBadge =
                 entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state);
+              const followUp = financialFollowUpSummary(entry, claims, role);
               return (
                 <li key={entry.id}>
                   <Link
@@ -319,6 +330,7 @@ export default function AdminDailySiteOperations() {
                           Late
                         </span>
                       )}
+                      {followUp && <span className="text-xs text-gray-500">{followUp}</span>}
                     </div>
                   </Link>
                 </li>
@@ -326,6 +338,23 @@ export default function AdminDailySiteOperations() {
             })}
           </ul>
         </>
+      )}
+
+      {/* The hand-off, stated once at the foot of the day's list. No claim is
+          created here; Site Costs owns the claim, its decision and its history. */}
+      {canSeeSiteCosts(role) && (
+        <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-gray-600">
+            Once a site record is submitted, the day's known costs move into a cost claim — normally
+            by 4:00 pm. Raising a claim is always a deliberate step.
+          </p>
+          <Link
+            to="/admin/site-costs"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold text-botanique-green hover:bg-stone-50"
+          >
+            Go to Site Costs
+          </Link>
+        </div>
       )}
     </div>
   );

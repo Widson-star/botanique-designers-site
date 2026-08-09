@@ -1,5 +1,12 @@
 # Findings by category, and the Founder decisions still genuinely required
 
+> **Status: all five decisions in Category C were settled by the Founder on 9 August 2026.**
+> The rulings as given are recorded in `founder-rulings-settled.md` and govern. Two of them are
+> narrower than the recommendation below — **D2** (recipient acknowledgement is not universally
+> required, and no Finance Officer role exists) and **D4(ii)** (the ruling addresses overrides of
+> an abnormal *reconciliation* position; it did not re-open the principal-direct claim reason).
+> Read the rulings before implementing anything from this file.
+
 Findings are separated so that only genuinely open questions reach the Founder. Category C is kept
 deliberately small: **five decisions**, each in plain language, each with concrete options,
 consequences and a recommendation.

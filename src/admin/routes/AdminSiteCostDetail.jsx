@@ -45,6 +45,8 @@ export default function AdminSiteCostDetail() {
     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="text-2xl font-semibold">{claim.recipientLabel}</h1><p className="mt-1 text-sm text-gray-600">{project?.projectName || "Project"} · {claim.category.replaceAll("_", " ")} · request round {claim.requestRound}</p></div><span className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-semibold">{SITE_COST_LIFECYCLES[claim.lifecycle]}</span></div>
     <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">This is an internal cost obligation. Approval does not mean funded, released, paid, or reconciled.</div>
     {claim.dailySiteSnapshot && <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950"><p className="font-semibold">Daily Site planning source</p><p className="mt-1">Work date {claim.dailySiteSnapshot.work_date} · source version {claim.dailySiteSourceVersion} · planning state {claim.dailySiteSnapshot.state}</p><p className="mt-1 text-xs">This preserved planning snapshot does not change with later Daily Site edits.</p></div>}
+    {/* Return leg of the hand-off: the operational record the claim came from. */}
+    {claim.dailySiteEntryId && <Link to={`/admin/daily-site-operations/${claim.dailySiteEntryId}`} className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-botanique-green hover:underline">← Back to the Daily Site Record</Link>}
     {error && <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
     <div className="mt-5 grid gap-5 lg:grid-cols-[2fr_1fr]">
       <div className="space-y-5">
