@@ -41,15 +41,15 @@ function wrap(element, values, initial = "/admin/site-costs") {
   return render(<MemoryRouter initialEntries={[initial]}><AdminDataContext.Provider value={values.admin}><DailySiteOperationsContext.Provider value={values.daily}><SiteCostsContext.Provider value={values.costs}>{element}</SiteCostsContext.Provider></DailySiteOperationsContext.Provider></AdminDataContext.Provider></MemoryRouter>);
 }
 
-describe("Site Costs admin surfaces", () => {
+describe("Project Costs admin surfaces", () => {
   it("renders the Principal queue in desktop-table and mobile-card layouts", () => {
     const values = contexts();
     const { container } = wrap(<AdminSiteCosts />, values);
-    expect(screen.getByRole("heading", { name: "Site Costs" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Project Costs" })).toBeInTheDocument();
     expect(screen.getAllByText("Alego Usonga").length).toBeGreaterThan(1);
     expect(screen.getAllByText(/KES\s*3,350\.00/).length).toBeGreaterThan(1);
     expect(container.querySelector("table")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Authorise site cost" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Authorise project cost" })).toBeInTheDocument();
   });
 
   it("shows whole-claim Principal decisions, immutable history and stale recovery", async () => {
@@ -77,7 +77,7 @@ describe("Site Costs admin surfaces", () => {
   it("uses a distinct Principal direct-authority action", () => {
     const values = contexts({ role: "owner", claims: [] });
     wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new");
-    expect(screen.getByRole("heading", { name: "Authorise site cost" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Authorise project cost" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Authorise cost" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /submit/i })).not.toBeInTheDocument();
   });

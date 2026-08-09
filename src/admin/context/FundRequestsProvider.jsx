@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminData } from "./adminData";
 import { useSiteCosts } from "./siteCosts";
 import { FundRequestsContext } from "./fundRequests";
@@ -9,8 +9,15 @@ import {
   withdrawFundRequest,
 } from "../lib/fundRequests";
 import {
+  confirmFundReleaseReceipt, decideFundAcquittal, fetchFundAcquittalLines, fetchFundAcquittals,
+  fetchFundReleases, recordFundRelease, reverseFundRelease, submitFundAcquittal,
+} from "../lib/fundReleases";
+import {
   calculateFundRequestTotal, isReservingFundRequest,
 } from "../utils/fundRequestCapabilities";
+import {
+  calculateAcquittalSpend, deriveFinancialPosition, remainingReleasable,
+} from "../utils/fundReleaseCapabilities";
 
 const now = () => new Date().toISOString();
 
@@ -49,6 +56,44 @@ function mapEvent(row) {
   };
 }
 
+function mapRelease(row) {
+  return {
+    id: row.id, releaseNumber: row.release_number, fundRequestId: row.fund_request_id,
+    status: row.status, custodyDisposition: row.custody_disposition,
+    recipientProfileId: row.recipient_profile_id || "", recipientLabel: row.recipient_label || "",
+    currency: row.currency, releasedAmount: Number(row.released_amount),
+    releasedAt: row.released_at, paymentChannel: row.payment_channel,
+    paymentReference: row.payment_reference || "", note: row.note || "",
+    recordedBy: row.recorded_by, recordedAt: row.recorded_at,
+    receiptConfirmedBy: row.receipt_confirmed_by || "",
+    receiptConfirmedAt: row.receipt_confirmed_at || "",
+    reversedBy: row.reversed_by || "", reversedAt: row.reversed_at || "",
+    reversalReason: row.reversal_reason || "", version: row.version,
+  };
+}
+
+function mapAcquittal(row) {
+  return {
+    id: row.id, fundReleaseId: row.fund_release_id, state: row.state,
+    releasedAmountSnapshot: Number(row.released_amount_snapshot),
+    actualSpendTotal: Number(row.actual_spend_total),
+    returnedAmount: Number(row.returned_amount),
+    varianceAmount: Number(row.variance_amount),
+    evidenceReference: row.evidence_reference || "", note: row.note || "",
+    submittedBy: row.submitted_by, submittedAt: row.submitted_at,
+    acceptedBy: row.accepted_by || "", acceptedAt: row.accepted_at || "",
+    varianceOverrideReason: row.variance_override_reason || "", version: row.version,
+  };
+}
+
+function mapAcquittalLine(row) {
+  return {
+    id: row.id, acquittalId: row.acquittal_id, lineNumber: row.line_number,
+    description: row.description, category: row.category, amount: Number(row.amount),
+    spentOn: row.spent_on,
+  };
+}
+
 function mapAvailability(row) {
   return {
     claimId: row.claim_id, projectId: row.project_id, claimReference: row.claim_reference,
@@ -68,7 +113,29 @@ export default function FundRequestsProvider({ children, session, role, isDemo }
   const [requests, setRequests] = useState([]);
   const [allocations, setAllocations] = useState([]);
   const [eventsByRequest, setEventsByRequest] = useState({});
+  const [releases, setReleases] = useState([]);
+  const [acquittals, setAcquittals] = useState([]);
+  const [acquittalLines, setAcquittalLines] = useState([]);
   const [remoteProjects, setRemoteProjects] = useState([]);
+  // Demo mode has no database to re-read, so the money records are mirrored synchronously for
+  // the same reason SiteCostsProvider mirrors claims: a surface may record a release and read
+  // the resulting position before React has re-rendered.
+  const demoReleasesRef = useRef([]);
+  const demoAcquittalsRef = useRef([]);
+  const demoAcquittalLinesRef = useRef([]);
+
+  const writeDemoReleases = useCallback((next) => {
+    demoReleasesRef.current = next;
+    setReleases(next);
+  }, []);
+  const writeDemoAcquittals = useCallback((next, nextLines) => {
+    demoAcquittalsRef.current = next;
+    setAcquittals(next);
+    if (nextLines) {
+      demoAcquittalLinesRef.current = nextLines;
+      setAcquittalLines(nextLines);
+    }
+  }, []);
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
   const [error, setError] = useState("");
 
@@ -80,12 +147,17 @@ export default function FundRequestsProvider({ children, session, role, isDemo }
   const refresh = useCallback(async () => {
     if (isDemo) return { ok: true };
     try {
-      const [requestRows, allocationRows, projectRows] = await Promise.all([
-        fetchFundRequests(accessToken), fetchFundRequestAllocations(accessToken),
-        fetchFundRequestProjects(accessToken),
-      ]);
+      const [requestRows, allocationRows, projectRows, releaseRows, acquittalRows, lineRows] =
+        await Promise.all([
+          fetchFundRequests(accessToken), fetchFundRequestAllocations(accessToken),
+          fetchFundRequestProjects(accessToken), fetchFundReleases(accessToken),
+          fetchFundAcquittals(accessToken), fetchFundAcquittalLines(accessToken),
+        ]);
       setRequests((requestRows || []).map(mapRequest));
       setAllocations((allocationRows || []).map(mapAllocation));
+      setReleases((releaseRows || []).map(mapRelease));
+      setAcquittals((acquittalRows || []).map(mapAcquittal));
+      setAcquittalLines((lineRows || []).map(mapAcquittalLine));
       setRemoteProjects((projectRows || []).map((row) => ({
         id: row.id, projectName: row.project_name, status: row.status, archived: Boolean(row.archived),
       })));
@@ -250,16 +322,182 @@ export default function FundRequestsProvider({ children, session, role, isDemo }
     ? Promise.resolve(demoTransition(requestId, version, "cancelled", "cancelled", reason))
     : run(() => cancelFundRequest(accessToken, requestId, version, reason)), [accessToken, demoTransition, isDemo, run]);
 
+  // ---------------------------------------------------------------------------
+  // BD-FIN-01C. Money movement and what became of it. Every guard below mirrors the RPC that
+  // enforces it in the database; the demo path never permits something the database refuses.
+  // ---------------------------------------------------------------------------
+
+  const runMoney = useCallback(async (operation, key) => {
+    try {
+      const result = await operation();
+      await refresh();
+      return { ok: true, [key]: result || null };
+    } catch (nextError) {
+      const message = nextError.message || "The action did not complete.";
+      return {
+        ok: false,
+        error: message,
+        stale: nextError.code === "40001" || /stale/i.test(message),
+        // The approved authority ran out while the form was open.
+        conflict: nextError.code === "BDF02" || /remains releasable/i.test(message),
+      };
+    }
+  }, [refresh]);
+
+  const demoRecordRelease = useCallback((requestId, values) => {
+    const request = requests.find((item) => item.id === requestId);
+    if (!request || request.status !== "approved") {
+      return { ok: false, error: "Only an approved fund request may carry a release." };
+    }
+    const amount = Number(values.releasedAmount);
+    const remaining = remainingReleasable(request,
+      demoReleasesRef.current.filter((release) => release.fundRequestId === requestId));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return { ok: false, error: "A release must record a positive amount." };
+    }
+    if (amount > remaining) {
+      return {
+        ok: false, conflict: true,
+        error: `Only KES ${remaining.toLocaleString("en-KE")} remains releasable against this authority.`,
+      };
+    }
+    const id = `demo-release-${Date.now()}`;
+    const release = {
+      id, releaseNumber: `BDRL-${new Date().getFullYear()}-DEMO`, fundRequestId: requestId,
+      status: "recorded", custodyDisposition: values.custodyDisposition,
+      recipientProfileId: values.recipientProfileId || "",
+      recipientLabel: values.recipientLabel || "", currency: "KES", releasedAmount: amount,
+      releasedAt: values.releasedAt || now(), paymentChannel: values.paymentChannel,
+      paymentReference: values.paymentReference || "", note: values.note || "",
+      recordedBy: currentUserId, recordedAt: now(), receiptConfirmedBy: "",
+      receiptConfirmedAt: "", reversedBy: "", reversedAt: "", reversalReason: "", version: 1,
+    };
+    writeDemoReleases([release, ...demoReleasesRef.current]);
+    return { ok: true, release };
+  }, [currentUserId, requests, writeDemoReleases]);
+
+  const recordRelease = useCallback((requestId, values) => isDemo
+    ? Promise.resolve(demoRecordRelease(requestId, values))
+    : runMoney(() => recordFundRelease(accessToken, requestId, values), "release"),
+  [accessToken, demoRecordRelease, isDemo, runMoney]);
+
+  const demoUpdateRelease = useCallback((releaseId, expectedVersion, patch) => {
+    const current = demoReleasesRef.current.find((release) => release.id === releaseId);
+    if (!current || current.version !== expectedVersion) {
+      return { ok: false, error: "This release changed elsewhere.", stale: true };
+    }
+    const changed = { ...current, ...patch, version: current.version + 1 };
+    writeDemoReleases(demoReleasesRef.current.map((release) => release.id === releaseId ? changed : release));
+    return { ok: true, release: changed };
+  }, [writeDemoReleases]);
+
+  const reverseRelease = useCallback((releaseId, expectedVersion, reason) => isDemo
+    ? Promise.resolve(demoUpdateRelease(releaseId, expectedVersion, {
+      status: "reversed", reversedBy: currentUserId, reversedAt: now(), reversalReason: reason,
+    }))
+    : runMoney(() => reverseFundRelease(accessToken, releaseId, expectedVersion, reason), "release"),
+  [accessToken, currentUserId, demoUpdateRelease, isDemo, runMoney]);
+
+  const confirmReceipt = useCallback((releaseId, expectedVersion) => isDemo
+    ? Promise.resolve(demoUpdateRelease(releaseId, expectedVersion, {
+      receiptConfirmedBy: currentUserId, receiptConfirmedAt: now(),
+    }))
+    : runMoney(() => confirmFundReleaseReceipt(accessToken, releaseId, expectedVersion), "release"),
+  [accessToken, currentUserId, demoUpdateRelease, isDemo, runMoney]);
+
+  const demoSubmitAcquittal = useCallback((releaseId, expectedVersion, values) => {
+    const release = demoReleasesRef.current.find((item) => item.id === releaseId);
+    if (!release) return { ok: false, error: "Fund release not found." };
+    const existing = demoAcquittalsRef.current.find((item) => item.fundReleaseId === releaseId);
+    if (existing && existing.state !== "amendment_requested") {
+      return { ok: false, error: "This reconciliation is not open for a further submission." };
+    }
+    const expected = existing ? existing.version : release.version;
+    if (expected !== expectedVersion) {
+      return { ok: false, error: "This reconciliation changed elsewhere.", stale: true };
+    }
+    const spend = calculateAcquittalSpend(values.lines);
+    const id = existing?.id || `demo-acquittal-${Date.now()}`;
+    const acquittal = {
+      id, fundReleaseId: releaseId, state: "submitted",
+      releasedAmountSnapshot: release.releasedAmount, actualSpendTotal: spend,
+      returnedAmount: Number(values.returnedAmount || 0),
+      varianceAmount: Math.round((release.releasedAmount - spend - Number(values.returnedAmount || 0)) * 100) / 100,
+      evidenceReference: values.evidenceReference || "", note: values.note || "",
+      submittedBy: currentUserId, submittedAt: now(), acceptedBy: "", acceptedAt: "",
+      varianceOverrideReason: "", version: existing ? existing.version + 1 : 1,
+    };
+    const nextLines = [
+      ...demoAcquittalLinesRef.current.filter((line) => line.acquittalId !== id),
+      ...(values.lines || []).map((line, index) => ({
+        id: `${id}-line-${index}`, acquittalId: id, lineNumber: index + 1,
+        description: line.description, category: line.category,
+        amount: Number(line.amount), spentOn: line.spentOn,
+      })),
+    ];
+    writeDemoAcquittals(
+      existing
+        ? demoAcquittalsRef.current.map((item) => item.id === id ? acquittal : item)
+        : [acquittal, ...demoAcquittalsRef.current],
+      nextLines
+    );
+    return { ok: true, acquittal };
+  }, [currentUserId, writeDemoAcquittals]);
+
+  const submitAcquittal = useCallback((releaseId, expectedVersion, values) => isDemo
+    ? Promise.resolve(demoSubmitAcquittal(releaseId, expectedVersion, values))
+    : runMoney(() => submitFundAcquittal(accessToken, releaseId, expectedVersion, values), "acquittal"),
+  [accessToken, demoSubmitAcquittal, isDemo, runMoney]);
+
+  const demoDecideAcquittal = useCallback((acquittalId, expectedVersion, decision, reason) => {
+    const current = demoAcquittalsRef.current.find((item) => item.id === acquittalId);
+    if (!current || current.version !== expectedVersion) {
+      return { ok: false, error: "This reconciliation changed elsewhere.", stale: true };
+    }
+    if (decision === "accepted" && current.varianceAmount !== 0 && !String(reason || "").trim()) {
+      return { ok: false, error: "Accepting a reconciliation that does not balance requires a stated reason." };
+    }
+    const changed = {
+      ...current, state: decision,
+      acceptedBy: decision === "accepted" ? currentUserId : "",
+      acceptedAt: decision === "accepted" ? now() : "",
+      varianceOverrideReason: decision === "accepted" && current.varianceAmount !== 0 ? reason : "",
+      version: current.version + 1,
+    };
+    writeDemoAcquittals(demoAcquittalsRef.current.map((item) => item.id === acquittalId ? changed : item));
+    return { ok: true, acquittal: changed };
+  }, [currentUserId, writeDemoAcquittals]);
+
+  const decideAcquittal = useCallback((acquittalId, expectedVersion, decision, reason) => isDemo
+    ? Promise.resolve(demoDecideAcquittal(acquittalId, expectedVersion, decision, reason))
+    : runMoney(() => decideFundAcquittal(accessToken, acquittalId, expectedVersion, decision, reason), "acquittal"),
+  [accessToken, demoDecideAcquittal, isDemo, runMoney]);
+
   const value = useMemo(() => ({
     requests, allocations, eventsByRequest, authorisedProjects, status, error, profiles,
+    releases, acquittals, acquittalLines,
     refresh, loadEvents, loadAvailability, createDraft, authoriseDirect, updateRequest,
     submitRequest, withdrawRequest, decideRequest, cancelRequest,
+    recordRelease, reverseRelease, confirmReceipt, submitAcquittal, decideAcquittal,
     allocationsForRequest: (requestId) => allocations
       .filter((allocation) => allocation.fundRequestId === requestId)
       .sort((first, second) => first.allocationOrder - second.allocationOrder),
+    releasesForRequest: (requestId) => releases
+      .filter((release) => release.fundRequestId === requestId)
+      .sort((first, second) => String(second.releasedAt).localeCompare(String(first.releasedAt))),
+    acquittalForRelease: (releaseId) => acquittals
+      .find((acquittal) => acquittal.fundReleaseId === releaseId) || null,
+    linesForAcquittal: (acquittalId) => acquittalLines
+      .filter((line) => line.acquittalId === acquittalId)
+      .sort((first, second) => first.lineNumber - second.lineNumber),
+    // One derivation, read by every surface, never stored.
+    positionForRequest: (requestId) => deriveFinancialPosition(
+      requests.find((request) => request.id === requestId), releases, acquittals),
   }), [requests, allocations, eventsByRequest, authorisedProjects, status, error, profiles,
+    releases, acquittals, acquittalLines,
     refresh, loadEvents, loadAvailability, createDraft, authoriseDirect, updateRequest,
-    submitRequest, withdrawRequest, decideRequest, cancelRequest]);
+    submitRequest, withdrawRequest, decideRequest, cancelRequest,
+    recordRelease, reverseRelease, confirmReceipt, submitAcquittal, decideAcquittal]);
 
   return <FundRequestsContext.Provider value={value}>{children}</FundRequestsContext.Provider>;
 }

@@ -67,14 +67,15 @@ export default function FinancialFollowUp({ position, entryId }) {
           to="/admin/site-costs"
           className="min-h-11 py-2 text-sm font-medium text-botanique-green hover:underline"
         >
-          Go to Site Costs
+          Go to Project Costs
         </Link>
       </div>
 
       <p className="mt-3 text-xs text-gray-400">
-        Site costs normally move into a claim by 4:00 pm and the Principal decides in Site Costs.
-        The day can close operationally while a claim is still outstanding. Payment, release and
-        reconciliation are not recorded in the Operations Hub yet.
+        Project costs normally move into a claim by 4:00 pm and the Principal decides in Project
+        Costs. The day can close operationally while a claim is still outstanding. Payment,
+        release and reconciliation belong to the fund request the claim is allocated to, and are
+        shown there rather than on this record.
       </p>
     </section>
   );

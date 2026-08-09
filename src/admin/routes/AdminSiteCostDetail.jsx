@@ -27,8 +27,8 @@ export default function AdminSiteCostDetail() {
   const profileMap = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);
 
   useEffect(() => { if (claimId) loadEvents(claimId).catch(() => {}); }, [claimId, loadEvents]);
-  if (status === "loading" && !claim) return <p className="text-sm text-gray-600">Loading site cost…</p>;
-  if (!claim) return <section><h1 className="text-2xl font-semibold">Site cost unavailable</h1><p className="mt-2 text-sm text-gray-600">It may not exist or you may not have project authority.</p><Link to="/admin/site-costs" className="mt-4 inline-block text-sm font-medium text-botanique-green">Back to Site Costs</Link></section>;
+  if (status === "loading" && !claim) return <p className="text-sm text-gray-600">Loading project cost…</p>;
+  if (!claim) return <section><h1 className="text-2xl font-semibold">Project cost unavailable</h1><p className="mt-2 text-sm text-gray-600">It may not exist or you may not have project authority.</p><Link to="/admin/site-costs" className="mt-4 inline-block text-sm font-medium text-botanique-green">Back to Project Costs</Link></section>;
 
   async function act(operation) {
     if (working) return;
@@ -41,7 +41,7 @@ export default function AdminSiteCostDetail() {
 
   const actorName = (id) => profileMap.get(id) ? profilePresentationName(profileMap.get(id), { formal: true }) : "Authorised user";
   return <section className="mx-auto max-w-6xl">
-    <Link to="/admin/site-costs" className="text-sm font-medium text-botanique-green hover:underline">← Site Costs</Link>
+    <Link to="/admin/site-costs" className="text-sm font-medium text-botanique-green hover:underline">← Project Costs</Link>
     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><h1 className="text-2xl font-semibold">{claim.recipientLabel}</h1><p className="mt-1 text-sm text-gray-600">{project?.projectName || "Project"} · {claim.category.replaceAll("_", " ")} · request round {claim.requestRound}</p></div><span className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-semibold">{SITE_COST_LIFECYCLES[claim.lifecycle]}</span></div>
     <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">This is an internal cost obligation. Approval does not mean funded, released, paid, or reconciled.</div>
     {claim.dailySiteSnapshot && <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950"><p className="font-semibold">Daily Site planning source</p><p className="mt-1">Work date {claim.dailySiteSnapshot.work_date} · source version {claim.dailySiteSourceVersion} · planning state {claim.dailySiteSnapshot.state}</p><p className="mt-1 text-xs">This preserved planning snapshot does not change with later Daily Site edits.</p></div>}

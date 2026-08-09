@@ -86,23 +86,39 @@ select pg_temp.assert_true(not has_function_privilege('authenticated', 'public.p
 select pg_temp.assert_true(not has_function_privilege('authenticated', 'public.private_guard_internal_cost_claim_fund_reservation()', 'EXECUTE'), 'claim reservation guard is private');
 select pg_temp.assert_true(has_function_privilege('authenticated', 'public.submit_fund_request(uuid,integer)', 'EXECUTE'), 'submit RPC is executable');
 
--- O. This slice introduces exactly three tables and no release/payment/reconciliation object.
+-- O. This slice introduces exactly three tables, and a fund request is still authority rather
+-- than money.
+--
+-- Until BD-FIN-01C this asserted that no release, payment or reconciliation object existed
+-- anywhere in the database. BD-FIN-01C deliberately creates that object family, so the
+-- absence assertion is now false by authorised design. What it was really protecting is
+-- asserted instead, and more strictly: the fund request itself must never become the payment
+-- ledger. No paid/released/reconciled column may appear on it, no 'paid' status may be added
+-- to its lifecycle, and payment truth must live in its own tables.
 select pg_temp.assert_true((
   select count(*) = 3 from pg_tables where schemaname = 'public'
     and tablename in ('fund_requests', 'fund_request_allocations', 'fund_request_events')
 ), 'the three fund request tables exist');
 select pg_temp.assert_true((
-  select count(*) = 0 from pg_tables where schemaname = 'public' and (
-    tablename like '%release%' or tablename like '%payment%' or tablename like '%disburse%'
-    or tablename like '%expenditure%' or tablename like '%reconcil%' or tablename like '%advance%'
+  select count(*) = 0 from information_schema.columns
+  where table_schema = 'public' and table_name = 'fund_requests' and (
+    column_name like '%paid%' or column_name like '%released%' or column_name like '%disburse%'
+    or column_name like '%expenditure%' or column_name like '%reconcil%'
+    or column_name like '%settle%' or column_name like '%variance%'
   )
-), 'no release, payment, expenditure or reconciliation table exists');
+), 'no payment, release or reconciliation shortcut column was bolted onto fund_requests');
 select pg_temp.assert_true((
-  select count(*) = 0 from pg_proc where pronamespace = 'public'::regnamespace and (
-    proname like '%release%' or proname like '%payment%' or proname like '%disburse%'
-    or proname like '%reconcil%'
-  )
-), 'no release, payment or reconciliation function exists');
+  select pg_get_constraintdef(oid) not like '%paid%'
+    and pg_get_constraintdef(oid) not like '%released%'
+    and pg_get_constraintdef(oid) not like '%reconciled%'
+    and pg_get_constraintdef(oid) not like '%settled%'
+  from pg_constraint where conname = 'fund_requests_status_check'
+), 'no payment state was added to the fund request lifecycle');
+select pg_temp.assert_true((
+  select count(*) = 0 from information_schema.columns
+  where table_schema = 'public' and table_name = 'fund_request_allocations'
+    and (column_name like '%paid%' or column_name like '%released%')
+), 'an allocation still reserves authority and records no payment');
 
 -- ---------------------------------------------------------------------------
 -- Approved BD-FIN-01A claims that back the matrix.

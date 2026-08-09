@@ -16,12 +16,21 @@ authority that must exist before the payment/reconciliation schema can be writte
 | `proposed-domain-model.md` | The smallest coherent future entity set, the four-axis state model, and the ten scenarios tested against it |
 | `founder-decisions-required.md` | The five decisions that were put to the Founder, each with options, consequences and a recommendation — **all five are now settled; read the rulings first** |
 | `founder-rulings-settled.md` | **The five Founder rulings as given, 9 August 2026.** Where a ruling and a recommendation differ, the ruling wins. Also records exactly what the Daily Site Record → cost claim hand-off supports, and what remains unsupported |
+| `implementation-record.md` | **What was actually built, 9 August 2026.** The schema, RLS, RPCs, over-release protection, derived position, where the implementation extends the proposal and why, the demo defect correction, and an explicit list of what remains unbuilt |
 
 ## What this directory is NOT
 
 - **Not implementation authority.** As with `../operating-model-authority/`, a separate explicit
   authorisation is required before any migration, table, column, RLS policy, RPC, route or
-  component is written. Nothing proposed here exists.
+  component is written.
+
+  > **Superseded in part, 9 August 2026.** That authorisation was given, and the release plus
+  > accountable-advance reconciliation model described here **has now been built**. Read
+  > `implementation-record.md` for what actually exists. The rest of this directory remains the
+  > authority the implementation was written against; where the two differ, the implementation
+  > record states the difference and the reason. Everything beyond release and reconciliation —
+  > Company Expenses, Staff Compensation, unified Approvals, Maintenance, Tools & Equipment,
+  > Project Costs remediation — is still unauthorised for implementation and still unbuilt.
 - **Not a schema.** No SQL appears anywhere in this directory by design. Entities are described
   conceptually so the Founder can rule on the business meaning before anyone commits to a shape.
 - **Not a data change.** No production row was read for modification or modified.

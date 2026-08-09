@@ -65,7 +65,7 @@ export function relatedCostClaims(claims, entry) {
 // Why a claim cannot be raised from this record yet, in the reader's language.
 function unavailableReason(entry) {
   if (entry?.disposition === "no_work") {
-    return "No work was planned, so no site cost follows from this record.";
+    return "No work was planned, so no project cost follows from this record.";
   }
   if (["voided", "superseded"].includes(entry?.state)) {
     return "This record is no longer the live record for the day.";
@@ -86,7 +86,7 @@ export function summariseFinancialFollowUp(entry, claims, role) {
       code: canCreate ? "none_yet" : "not_available",
       label: entry.disposition === "no_work" ? "No cost claim expected" : "No cost claim yet",
       detail: canCreate
-        ? "No site cost has been claimed for this day. Raising a claim is a separate, deliberate step."
+        ? "No project cost has been claimed for this day. Raising a claim is a separate, deliberate step."
         : unavailableReason(entry),
       needsAttention: false,
       canCreate,

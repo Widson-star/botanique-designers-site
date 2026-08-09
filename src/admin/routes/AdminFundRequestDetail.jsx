@@ -7,6 +7,7 @@ import {
   canWithdrawFundRequest, FUND_REQUEST_STATUSES, INTENDED_CUSTODY_TYPES,
 } from "../utils/fundRequestCapabilities";
 import { profilePresentationName } from "../utils/personName";
+import FundReleaseSection from "../components/finance/FundReleaseSection";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", currencyDisplay: "code" }).format(amount || 0);
 const when = (value) => value ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "—";
@@ -31,9 +32,13 @@ export default function AdminFundRequestDetail() {
   const {
     requests, allocationsForRequest, eventsByRequest, loadEvents, submitRequest,
     withdrawRequest, decideRequest, cancelRequest, refresh, status,
+    releasesForRequest, acquittalForRelease, linesForAcquittal, positionForRequest,
+    recordRelease, reverseRelease, confirmReceipt, submitAcquittal, decideAcquittal,
   } = useFundRequests();
   const request = requests.find((item) => item.id === requestId);
   const allocations = request ? allocationsForRequest(request.id) : [];
+  const releases = request ? releasesForRequest(request.id) : [];
+  const position = request ? positionForRequest(request.id) : null;
   const events = eventsByRequest[requestId] || [];
   const [reason, setReason] = useState("");
   const [working, setWorking] = useState(false);
@@ -62,6 +67,7 @@ export default function AdminFundRequestDetail() {
     }
     await refresh();
     await loadEvents(request.id, true).catch(() => {});
+    return result;
   }
 
   const actorName = (id) => profileMap.get(id)
@@ -82,10 +88,15 @@ export default function AdminFundRequestDetail() {
       <span className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm font-semibold">{FUND_REQUEST_STATUSES[request.status]}</span>
     </div>
 
+    {/* Approval is not payment. Before BD-FIN-01C nothing downstream could be recorded, so
+        this said so unconditionally. It now states the actual position, and only claims that
+        nothing has moved when no release row exists. */}
     <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-      No funds have been released. {request.status === "approved"
-        ? "This approval authorises Botanique to make up to the approved amount available against the listed approved claims. It does not record a release or payment."
-        : "A fund request records requested or approved authority only, never a release, transfer, advance receipt or payment."}
+      {request.status !== "approved"
+        ? "A fund request records requested or approved authority only, never a release, transfer, advance receipt or payment."
+        : position.releaseState === "none"
+          ? "No funds have been released. This approval authorises Botanique to make up to the approved amount available against the listed approved claims. It does not record a release or payment."
+          : `${money(position.releasedAmount)} of the ${money(position.authorisedAmount)} authorised has been released. Approval authorised the money; the releases below record that it actually moved.`}
     </div>
 
     {request.authorityType === "principal_direct" && <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
@@ -132,6 +143,23 @@ export default function AdminFundRequestDetail() {
           </div>
         </div>
 
+        {request.status === "approved" && <FundReleaseSection
+          request={request}
+          releases={releases}
+          acquittalForRelease={acquittalForRelease}
+          linesForAcquittal={linesForAcquittal}
+          position={position}
+          profiles={profiles}
+          role={role}
+          currentUserId={currentUserId}
+          working={working}
+          onRecord={(values) => act(() => recordRelease(request.id, values))}
+          onReverse={(releaseId, version, reason) => act(() => reverseRelease(releaseId, version, reason))}
+          onConfirmReceipt={(releaseId, version) => act(() => confirmReceipt(releaseId, version))}
+          onSubmitAcquittal={(releaseId, version, values) => act(() => submitAcquittal(releaseId, version, values))}
+          onDecideAcquittal={(acquittalId, version, decision, reason) => act(() => decideAcquittal(acquittalId, version, decision, reason))}
+        />}
+
         <div className="rounded-lg border border-stone-200 bg-white p-5">
           <h2 className="font-semibold">Immutable history</h2>
           <ol className="mt-4 space-y-4">{events.map((event) => <li key={event.id} className="border-l-2 border-botanique-green pl-4 text-sm">
@@ -157,7 +185,9 @@ export default function AdminFundRequestDetail() {
             <button disabled={working || !reason.trim()} onClick={() => act(() => decideRequest(request.id, request.version, "amendment_requested", reason))} className="min-h-11 rounded-md border border-amber-400 px-3 text-sm font-semibold text-amber-900 disabled:opacity-50">Request amendment</button>
             <button disabled={working || !reason.trim()} onClick={() => act(() => decideRequest(request.id, request.version, "rejected", reason))} className="min-h-11 rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Reject request</button>
           </div>}
-          {canCancelFundRequest(request, role) && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelRequest(request.id, request.version, reason))} className="mt-3 min-h-11 w-full rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved request</button>}
+          {/* An authority with real money against it cannot be cancelled — the database
+              refuses it, so the action is not offered. */}
+          {canCancelFundRequest(request, role) && position.releaseState === "none" && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelRequest(request.id, request.version, reason))} className="mt-3 min-h-11 w-full rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved request</button>}
         </div>}
 
         {(canEditFundRequest(request, role, currentUserId) || canWithdrawFundRequest(request, role, currentUserId)) && <div className="rounded-lg border border-stone-200 bg-white p-5">

@@ -6605,3 +6605,76 @@ implementation unit is the minimal payment/release plus accountable-advance reco
 authorised by BD-FIN-01C and the five rulings above.
 
 Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/founder-rulings-settled.md`.
+
+### BD-FIN-01C — fund release and accountable-advance reconciliation, implemented — 9 August 2026
+
+Implemented against `origin/main` `fd4bc1ac` (the merge of PR #97), under the authority settled in
+PR #96 and the five Founder rulings merged in PR #97.
+
+**The gap this closes.** Until now the database terminated at `decide_fund_request` setting
+`fund_requests.status = 'approved'`. Nothing after that could be recorded: not that money was
+released, received, spent, returned or reconciled. An approved request was indistinguishable from a
+paid one. It no longer is.
+
+**What was built.** One migration, five tables, and one derived read model.
+
+`fund_releases` owns the fact that money moved — amount, when, to whom, through what channel, under
+what reference, recorded by whom, against which approved authority. A request may have zero, one or
+many releases, each partial. **Zero is precisely "approved but unpaid"**, which is why not a single
+release row was backfilled for the existing approved requests; they simply read truthfully now.
+Each release carries its own `custody_disposition` in the vocabulary `intended_custody_type` already
+uses — an accountable advance to a named person, or a direct settled payment to a named payee —
+because one authority may legitimately produce both, and the reconciliation obligation must follow
+the money rather than the intention.
+
+`fund_acquittals` and `fund_acquittal_lines` own what became of an advance: actual expenditure,
+classified with the same category vocabulary as cost claims, plus the returned amount and a stored
+generated `variance_amount = released − spend − returned`. Unspent, returned, further-amount-required
+and unaccounted-for are all derived from that one number rather than stored as figures that could
+contradict each other. An acquittal row exists only when a custodian actually submits one, so a
+direct supplier payment never acquires a fictional Martine acquittal and an unaccounted-for advance
+is outstanding by absence rather than by a fabricated placeholder.
+
+**Authority.** Operations requests, the Principal decides, and the Principal records the actual
+release. No Finance Officer role was invented. Receipt confirmation exists but is optional and only
+for an accountable advance. Reconciliation is submitted by the person who held the money and accepted
+by the Principal, who may not accept their own. Accepting a position that does not balance requires a
+stated reason that stays permanently visible in history; balances are never silently zeroed. Every
+one of the five tables has exactly one SELECT policy and no write policy, and no client of any role
+holds an INSERT, UPDATE or DELETE grant, so a release event cannot be fabricated outside the RPCs.
+
+**Integrity.** Aggregate non-reversed releases can never exceed the approved authority: a row lock on
+the fund request serialises concurrent attempts, an explicit check raises `BDF02`, and a constraint
+trigger re-asserts the invariant at the database level. An authority with money released against it
+cannot be cancelled. A recorded release is immutable in every factual field — a correction is an
+explicit reversal that leaves the original permanently readable.
+
+**Nothing existing was overloaded.** No `paid` value was added to `internal_cost_claims.lifecycle`.
+No payment state, and no `paid_amount`/`paid_at` shortcut column, was added to `fund_requests` — the
+BD-FIN-01B1 test now asserts that directly, having previously asserted the weaker point that no
+release table existed anywhere. `daily_site_entries` gained no financial column, constraint or
+trigger: **operational close remains entirely independent of financial settlement**, per ruling D5.
+Approvals is untouched and is not the payment ledger.
+
+**Two corrections carried in the same unit.** The demo `submitClaim` defect PR #97 identified was
+reproduced from authoritative main, root-caused (state assigned inside a `setState` updater, plus a
+stale `lines` closure, plus — not in the PR #97 diagnosis — no version check at all in the demo path)
+and fixed with three regression tests that fail before it. And the visible wording now says **Project
+Costs** consistently instead of oscillating with "Site Costs"; routes, tables and components keep
+their technical names.
+
+**Verified.** All nine database suites pass, including a new fourteen-scenario release and
+reconciliation matrix run under real RLS with role impersonation. 686 application tests pass.
+Production build clean; lint identical to baseline. Demo walkthrough verified at desktop, 375px and
+400px with no horizontal overflow and no console errors.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** Hosted authenticated verification under real Principal and
+Operations Manager accounts is still outstanding and requires the Founder to sign in. The
+Principal-records-release → Manager-reconciles hand-off cannot be completed in a single demo session,
+because switching preview role resets in-memory demo state; that path is proven by the database
+matrix and the surface tests, and is not claimed as demo-verified.
+
+**Still unbuilt, explicitly:** Company Expenses, Staff Compensation, unified Approvals, Maintenance,
+Tools & Equipment, Project Costs remediation, Project Summary, Reports Centre, and evidence files.
+
+Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/implementation-record.md`.
