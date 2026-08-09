@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
+import { SiteCostsContext } from "../context/siteCosts";
 import AdminDailySiteOperations from "./AdminDailySiteOperations";
 import MorningComplianceCard from "../components/dailysite/MorningComplianceCard";
 import { todayIso } from "../utils/dailySiteFormatters";
@@ -12,7 +13,7 @@ const projects = [
   { id: "p2", projectName: "Lugulu Estate", status: "Ongoing", stage: "Implementation", archived: false },
 ];
 
-function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {}, projectsOverride } = {}) {
+function renderRoute({ role = "manager", entries = [], compliance = [], authorisedProjects = projects, dailyOverrides = {}, projectsOverride, claims = [] } = {}) {
   const adminValue = {
     role, projects: projectsOverride || projects, profilesById: {}, currentUserId: "m1",
   };
@@ -26,7 +27,9 @@ function renderRoute({ role = "manager", entries = [], compliance = [], authoris
     <MemoryRouter>
       <AdminDataContext.Provider value={adminValue}>
         <DailySiteOperationsContext.Provider value={dailyValue}>
-          <AdminDailySiteOperations />
+          <SiteCostsContext.Provider value={{ claims, status: "ready", error: "" }}>
+            <AdminDailySiteOperations />
+          </SiteCostsContext.Provider>
         </DailySiteOperationsContext.Provider>
       </AdminDataContext.Provider>
     </MemoryRouter>

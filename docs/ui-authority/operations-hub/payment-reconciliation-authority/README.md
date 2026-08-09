@@ -14,7 +14,8 @@ authority that must exist before the payment/reconciliation schema can be writte
 | `README.md` | This orientation, the scope boundary, and the three settled image rulings |
 | `current-state-model-map.md` | What the repository can and cannot represent today, table by table, and the exact line at which the model terminates |
 | `proposed-domain-model.md` | The smallest coherent future entity set, the four-axis state model, and the ten scenarios tested against it |
-| `founder-decisions-required.md` | The five decisions that genuinely still need the Founder, each with options, consequences and a recommendation |
+| `founder-decisions-required.md` | The five decisions that were put to the Founder, each with options, consequences and a recommendation — **all five are now settled; read the rulings first** |
+| `founder-rulings-settled.md` | **The five Founder rulings as given, 9 August 2026.** Where a ruling and a recommendation differ, the ruling wins. Also records exactly what the Daily Site Record → cost claim hand-off supports, and what remains unsupported |
 
 ## What this directory is NOT
 

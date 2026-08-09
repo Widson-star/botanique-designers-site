@@ -12,7 +12,8 @@ import {
   canVoidDailyEntry,
   canEditDailyDraft,
 } from "../utils/dailySiteCapabilities";
-import { canCopyDailySiteToCost } from "../utils/siteCostCapabilities";
+import { useSiteCosts } from "../context/siteCosts";
+import { summariseFinancialFollowUp } from "../utils/dailySiteCostLink";
 import {
   DISPOSITION_LABELS,
   ENTRY_EVENT_LABELS,
@@ -24,6 +25,7 @@ import {
 } from "../utils/dailySiteFormatters";
 import ConfirmDialog from "../components/ConfirmDialog";
 import DailySiteEntryForm from "../components/dailysite/DailySiteEntryForm";
+import FinancialFollowUp from "../components/dailysite/FinancialFollowUp";
 
 function Detail({ label, children }) {
   return (
@@ -42,6 +44,7 @@ export default function AdminDailySiteEntryDetail() {
     entries, loadEvents, submitEntry, returnEntry, acceptEntry,
     voidEntry, correctEntry, supersedeEntry,
   } = useDailySiteOperations();
+  const { claims } = useSiteCosts();
 
   const entry = entries.find((item) => item.id === entryId);
   const [events, setEvents] = useState([]);
@@ -75,6 +78,9 @@ export default function AdminDailySiteEntryDetail() {
 
   const project = projects.find((item) => item.id === entry.projectId);
   const supersededByLink = entries.find((item) => item.supersedesEntryId === entry.id);
+  // Derived only — the operational record reads the claim position, it never
+  // writes one. See src/admin/utils/dailySiteCostLink.js.
+  const financialPosition = summariseFinancialFollowUp(entry, claims, role);
 
   async function run(action) {
     setBusy(true);
@@ -187,11 +193,6 @@ export default function AdminDailySiteEntryDetail() {
       {/* Actions */}
       {!showCorrect && !showSupersede && (
         <section className="flex flex-wrap gap-2">
-          {canCopyDailySiteToCost(entry, role) && (
-            <Link to={`/admin/site-costs/new?dailySiteEntryId=${encodeURIComponent(entry.id)}`} className="rounded-md border border-botanique-green px-4 py-2 text-sm font-semibold text-botanique-green hover:bg-[#edf2ef]">
-              Create cost claim
-            </Link>
-          )}
           {canEditDailyDraft(role, entry, currentUserId) && (
             <Link to={`/admin/daily-site-operations/${entry.id}/edit`} className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
               Edit draft
@@ -228,6 +229,12 @@ export default function AdminDailySiteEntryDetail() {
             </button>
           )}
         </section>
+      )}
+
+      {/* Financial follow-up: status and drill-through only. The cost-claim
+          module remains authoritative for the claim itself. */}
+      {!showCorrect && !showSupersede && (
+        <FinancialFollowUp position={financialPosition} entryId={entry.id} />
       )}
 
       {showCorrect && (

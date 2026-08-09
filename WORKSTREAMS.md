@@ -6551,3 +6551,57 @@ already exist and needs none of the five decisions above; the payment/reconcilia
 (step 4) unblocks only once the Founder rules.
 
 Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/`.
+
+### Daily Site Record → cost claim hand-off, and the five settled Founder rulings — 9 August 2026
+
+Base `origin/main` `8211534defe3abe55b98e238223874e357bdfcbd` (the merge of PR #96). This is
+**step 3 of the recommended sequence**: presentation work on models that already exist. It carries
+**no migration, no schema change, no RLS change, no RPC change and no production-data mutation**,
+and all fourteen authority PNGs remain byte-for-byte unaltered.
+
+**The five Founder decisions left open by PR #96 are now settled.** They are recorded verbatim, as
+rulings rather than recommendations, in
+`docs/ui-authority/operations-hub/payment-reconciliation-authority/founder-rulings-settled.md`, and
+`founder-decisions-required.md` now carries a status banner pointing there. In summary: **(D1)**
+partial approval stays at the funding level — no second partial-approval state on cost claims,
+because authorised project cost and cash actually released are not the same concept; **(D2)** the
+Principal records the release, a recipient of an accountable advance *may* confirm receipt,
+acknowledgement is **not** universally required (Botanique paying a supplier directly must never
+force Martine to acknowledge money he never received), and **no Finance Officer role is to be
+invented** — this is narrower than the recommendation PR #96 offered; **(D3)** accountable advances
+require reconciliation, direct settled payments require truthful expenditure/payment evidence and
+**no artificial advance acquittal**; **(D4)** a future reconciliation must be able to state
+released, spent, unspent/returned, additional-required and variance, all on the acquittal record
+rather than a disconnected balance object, and any exceptional override or closure of an abnormal
+reconciliation position must require a reason and stay visible in history; **(D5)** **two closes** —
+the Daily Site Record may close operationally around 5:00 pm without final financial
+reconciliation, but operational close must never erase or hide outstanding financial workflow.
+
+**What was implemented.** The existing relationship was reused, not replaced:
+`internal_cost_claims.daily_site_entry_id` for a claim raised from a record, plus
+`project_id` + `service_date` so a same-day claim raised directly in Site Costs still appears on the
+operational record it belongs to. `canCopyDailySiteToCost` is unchanged and still gates the create
+path; the prefill route `/admin/site-costs/new?dailySiteEntryId=…` and its planning snapshot are
+unchanged, so the reader never re-finds the same project and day by hand. A new derived-only module
+`src/admin/utils/dailySiteCostLink.js` computes the truthful follow-up position; a new compact
+`FinancialFollowUp` section on the Daily Site Record detail shows that position, lists every related
+claim with its lifecycle and links through to Site Costs; the list gained one line of status per row
+and one hand-off bar; and the cost-claim detail gained a return link to the originating record.
+
+**What it deliberately does not show.** *Funded*, *released*, *paid*, *reconciled* and *financially
+settled* are not derived, stored or displayed anywhere, because no payment or reconciliation model
+exists. Approved is stated as *authority to incur, not a payment*. No release table, acquittal
+table, payment amount, payment reference, returned-balance field or reconciliation evidence model
+was added. The historical safeguard is unweakened: the morning record creates no liability, payment,
+release, reimbursement, approval, invoice or expenditure transaction, and creates **no cost claim on
+its own** — a person must choose to raise one. Operations/Martine remains the ordinary originator;
+the Principal's existing exceptional path is preserved but is no longer the prominent action on the
+operational record. The Daily Site Record shows the financial position and owns none of it.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** Local and demo verification is not authenticated hosted
+verification under real Principal and Operations Manager accounts. The remaining gap from an
+approved fund request to actual release, payment and reconciliation is unchanged and total. The next
+implementation unit is the minimal payment/release plus accountable-advance reconciliation model
+authorised by BD-FIN-01C and the five rulings above.
+
+Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/founder-rulings-settled.md`.

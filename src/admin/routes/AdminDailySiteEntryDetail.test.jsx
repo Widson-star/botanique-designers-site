@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
+import { SiteCostsContext } from "../context/siteCosts";
 import AdminDailySiteEntryDetail from "./AdminDailySiteEntryDetail";
 
 const baseEntry = {
@@ -16,7 +17,14 @@ const baseEntry = {
 
 const projects = [{ id: "p1", projectName: "Karen Residence" }];
 
-function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "o1" } = {}) {
+const baseClaim = {
+  id: "c1", projectId: "p1", serviceDate: "2026-07-28", dailySiteEntryId: "e1",
+  lifecycle: "awaiting_review", recipientLabel: "Turf crew", category: "labour",
+  submittedTotal: 2400, approvedTotal: null, requesterId: "m1",
+  createdAt: "2026-07-28T13:00:00Z",
+};
+
+function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "o1", claims = [] } = {}) {
   const adminValue = { role, projects, profilesById: {}, currentUserId };
   const dailyValue = {
     entries,
@@ -32,9 +40,11 @@ function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "
     <MemoryRouter initialEntries={["/admin/daily-site-operations/e1"]}>
       <AdminDataContext.Provider value={adminValue}>
         <DailySiteOperationsContext.Provider value={dailyValue}>
-          <Routes>
-            <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
-          </Routes>
+          <SiteCostsContext.Provider value={{ claims, status: "ready", error: "" }}>
+            <Routes>
+              <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+            </Routes>
+          </SiteCostsContext.Provider>
         </DailySiteOperationsContext.Provider>
       </AdminDataContext.Provider>
     </MemoryRouter>
@@ -50,9 +60,11 @@ describe("AdminDailySiteEntryDetail", () => {
       <MemoryRouter initialEntries={["/admin/daily-site-operations/not-mine"]}>
         <AdminDataContext.Provider value={{ role: "manager", projects, profilesById: {}, currentUserId: "m1" }}>
           <DailySiteOperationsContext.Provider value={{ entries: [], loadEvents: vi.fn(() => Promise.resolve([])) }}>
-            <Routes>
-              <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
-            </Routes>
+            <SiteCostsContext.Provider value={{ claims: [], status: "ready", error: "" }}>
+              <Routes>
+                <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+              </Routes>
+            </SiteCostsContext.Provider>
           </DailySiteOperationsContext.Provider>
         </AdminDataContext.Provider>
       </MemoryRouter>
@@ -106,14 +118,93 @@ describe("AdminDailySiteEntryDetail", () => {
       <MemoryRouter initialEntries={["/admin/daily-site-operations/e0"]}>
         <AdminDataContext.Provider value={{ role: "owner", projects, profilesById: {}, currentUserId: "o1" }}>
           <DailySiteOperationsContext.Provider value={{ entries: [superseded, replacement], loadEvents: vi.fn(() => Promise.resolve([])) }}>
-            <Routes>
-              <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
-            </Routes>
+            <SiteCostsContext.Provider value={{ claims: [], status: "ready", error: "" }}>
+              <Routes>
+                <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+              </Routes>
+            </SiteCostsContext.Provider>
           </DailySiteOperationsContext.Provider>
         </AdminDataContext.Provider>
       </MemoryRouter>
     );
     expect(screen.getByText(/was superseded by a later correction/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View the current entry" })).toBeInTheDocument();
+  });
+});
+
+describe("AdminDailySiteEntryDetail financial follow-up", () => {
+  const followUp = () => screen.getByRole("region", { name: "Financial follow-up" });
+
+  it("states that no claim exists, and never creates one on its own", () => {
+    renderDetail({ role: "manager", currentUserId: "m1" });
+    expect(within(followUp()).getByText("No cost claim yet")).toBeInTheDocument();
+    expect(within(followUp()).getByRole("link", { name: "Create cost claim" })).toHaveAttribute(
+      "href", "/admin/site-costs/new?dailySiteEntryId=e1"
+    );
+    // The hand-off is a link the reader must follow: nothing is submitted for them.
+    expect(within(followUp()).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("explains that a draft record cannot raise a claim yet", () => {
+    renderDetail({ role: "manager", currentUserId: "m1", entries: [{ ...baseEntry, state: "draft" }] });
+    expect(within(followUp()).queryByRole("link", { name: "Create cost claim" })).not.toBeInTheDocument();
+    expect(within(followUp()).getByText(/once this record has been submitted/)).toBeInTheDocument();
+  });
+
+  it("expects no claim from a no-work day", () => {
+    renderDetail({ role: "manager", currentUserId: "m1", entries: [{ ...baseEntry, disposition: "no_work", noWorkReason: "rain" }] });
+    expect(within(followUp()).getByText("No cost claim expected")).toBeInTheDocument();
+  });
+
+  it("shows an awaiting-review claim and drills through to it", () => {
+    renderDetail({ role: "manager", currentUserId: "m1", claims: [baseClaim] });
+    expect(within(followUp()).getByText("Awaiting review")).toBeInTheDocument();
+    expect(within(followUp()).getByRole("link", { name: /Turf crew/ })).toHaveAttribute(
+      "href", "/admin/site-costs/c1"
+    );
+    expect(within(followUp()).getByText(/raised from this record/)).toBeInTheDocument();
+  });
+
+  it.each([
+    ["approved", "Approved"],
+    ["rejected", "Rejected"],
+    ["amendment_requested", "Amendment requested"],
+    ["withdrawn", "Withdrawn"],
+  ])("shows a %s claim truthfully", (lifecycle, label) => {
+    renderDetail({ role: "manager", currentUserId: "m1", claims: [{ ...baseClaim, lifecycle }] });
+    expect(within(followUp()).getByText(label)).toBeInTheDocument();
+  });
+
+  it("exposes several same-day claims without disabling a further one", () => {
+    renderDetail({ role: "manager", currentUserId: "m1", claims: [
+      { ...baseClaim, lifecycle: "approved" },
+      { ...baseClaim, id: "c2", dailySiteEntryId: "", recipientLabel: "Cart transport", createdAt: "2026-07-28T16:00:00Z" },
+    ] });
+    expect(within(followUp()).getByText("2 related cost claims")).toBeInTheDocument();
+    expect(within(followUp()).getByRole("link", { name: /Turf crew/ })).toBeInTheDocument();
+    expect(within(followUp()).getByRole("link", { name: /Cart transport/ })).toBeInTheDocument();
+    expect(within(followUp()).getByText(/same project and day/)).toBeInTheDocument();
+    expect(within(followUp()).getByRole("link", { name: "Create another cost claim" })).toBeInTheDocument();
+  });
+
+  it("never asserts a payment, release or reconciliation position", () => {
+    const { container } = renderDetail({ role: "owner", claims: [{ ...baseClaim, lifecycle: "approved" }] });
+    expect(container.textContent).not.toMatch(/\b(paid|released|reconciled|settled)\b/i);
+    expect(within(followUp()).getByText(/not a payment/)).toBeInTheDocument();
+  });
+
+  it("keeps the Principal's access without making them the ordinary originator", () => {
+    renderDetail({ role: "owner", claims: [baseClaim] });
+    // The Principal still reaches the claim and its decision surface…
+    expect(within(followUp()).getByRole("link", { name: /Turf crew/ })).toBeInTheDocument();
+    // …and the create path stays where the existing capability already put it:
+    // inside the financial area, not among the operational review actions.
+    const actions = screen.getByRole("button", { name: "Accept" }).closest("section");
+    expect(within(actions).queryByRole("link", { name: /cost claim/i })).not.toBeInTheDocument();
+  });
+
+  it("shows no financial area to a role without site-cost authority", () => {
+    renderDetail({ role: "staff", currentUserId: "s1" });
+    expect(screen.queryByRole("region", { name: "Financial follow-up" })).not.toBeInTheDocument();
   });
 });
