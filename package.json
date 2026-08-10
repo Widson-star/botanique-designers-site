@@ -7,11 +7,12 @@
     "dev": "vite",
     "server": "node server/index.js",
     "dev:full": "concurrently \"vite\" \"node server/index.js\"",
-    "build": "node scripts/generate-sitemap.mjs && vite build && node scripts/prerender.mjs",
+    "build": "node scripts/check-migration-drift.mjs && node scripts/generate-sitemap.mjs && vite build && node scripts/prerender.mjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:migrations": "node scripts/check-migration-drift.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

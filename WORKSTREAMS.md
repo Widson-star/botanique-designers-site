@@ -6809,3 +6809,72 @@ not the same thing as Stage 6 completion. The visual-authority implementation tr
 next unit.
 
 Authority: `docs/ui-authority/operations-hub/payment-reconciliation-authority/implementation-record.md`.
+
+---
+
+## Visual Authority Implementation Tranche 1 — images 08, 09, 12, 13, and WhatsApp support
+
+**10 August 2026. Branch `claude/visual-authority-tranche-1-e3fb6b`, from `main` `00beb46`.**
+
+The first deliberate move away from admin-generated pages toward the settled compact product
+composition. Four frozen working-authority screens were implemented, together with the already-
+settled WhatsApp support refinement and one small deployment-safety guard. **No authority PNG was
+altered — all fourteen remain byte-identical.** No schema change, no migration, no RLS change, no
+production data mutated.
+
+**Migration deployment safety.** PR #100 established that Vercel ships the frontend on every merge
+while nothing ships the database, which is how PR #98/#99 code reached production ahead of its
+tables. `scripts/check-migration-drift.mjs` now runs as the first step of `npm run build` and
+fails the build when `supabase/migrations/*.sql` is ahead of a checked-in ledger of what has
+actually been applied to production. It reconciles on migration **name**, never on the filename
+timestamp, because Supabase stamps its own version on apply. It needs no credential, opens no
+network connection and applies nothing — automatic application would require production database
+authority that is not settled, so this **detects and fails** and the controlled manual step is
+documented. `ALLOW_UNAPPLIED_MIGRATIONS=1` is a loud, deliberate override for a frontend-only
+hotfix. Production is currently in sync: 14 repository migrations, 14 recorded as applied.
+Authority: `docs/ui-authority/operations-hub/MIGRATION-DEPLOYMENT.md`.
+
+**Image 08 — Daily Site Record list.** Implemented. Five day counts with the sites they cover, the
+missing-record band above the list, compact filter chips and a work-date control, and a seven-
+column table ending in one next action per row. Financial follow-up stays one compact line under
+the status and never becomes a column; both dimensions are named when both say something, so
+"Partly funded · Reconciliation outstanding" can never collapse into a single flattering badge.
+
+**Image 09 — Daily Site Record detail.** Implemented as one coherent record: a three-stage progress
+rail, the authority-to-incur banner, compact equal-weight panels, and history capped at four
+events with a one-press toggle so today's position is never the tail of a dossier. **No fourth
+"Day close-out" step was invented** — operational close and financial settlement remain distinct.
+The PR #100 duplicate-claim safeguards are untouched.
+
+**Image 12 — Finance Overview.** Implemented. A portfolio money position — authorised, released,
+actual expenditure, authorised-not-released — folded from the same `deriveFinancialPosition()`
+rows the drill-through pages read, so the Overview cannot disagree with the page behind it. A
+release is still not expenditure. A "what needs attention now" area names what is waiting, with
+counts, amounts and links, and **decides nothing**: unified Approvals remains the eventual
+aggregated decision surface. Zero data is a sentence, not a grid of KES 0 cards.
+
+**Image 13 — Finance children.** Project Costs and Funding, Payments and Reconciliation materially
+improved; the canonical name is now used on the visible surface, with `/admin/fund-requests`
+surviving only as an internal route. Custody is presented per release, so one authority carrying
+both a direct settled payment and an accountable advance shows both — a direct payment never gains
+a fictional acquittal, and an advance never loses its outstanding position. **Persistent Finance
+sidebar children were NOT implemented**; PR #94's navigation decision stands.
+
+**Company Expenses and Staff Compensation** are named in a compact "not yet built" strip with no
+figures, no cards and no route. **No schema, model or amount was invented for either.**
+
+**WhatsApp support.** "Contact your system admin" — which named a person who does not exist — is
+replaced by "Open WhatsApp support", using `CONTACT.whatsapp` through `waLink()`. No number is
+written into the Hub. Verified live in the running app.
+
+**Verified.** 808 application tests pass (43 new, including the drift-detection failure path).
+Production build clean with the guard running first; lint identical to the 19-error baseline;
+`git diff --check` clean. Demo-verified as Principal and Operations Manager at desktop, 375px and
+400px — no horizontal overflow on any of the four critical surfaces, and no console errors.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** This tranche is presentation implementation; it is not
+BD-FIN-01C hosted verification and not wider Operations Hub completion. The end-to-end production
+verification of a real release and reconciliation stays outstanding, and will stay outstanding
+until a legitimate transaction exists — no money movement was fabricated to close it.
+
+Authority: `docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md`.

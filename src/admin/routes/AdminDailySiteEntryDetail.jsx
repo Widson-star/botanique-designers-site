@@ -24,16 +24,65 @@ import {
   formatKes,
   formatWorkDate,
 } from "../utils/dailySiteFormatters";
+import { recordNextStep, recordProgressSteps } from "../utils/dailySiteRecordProgress";
 import ConfirmDialog from "../components/ConfirmDialog";
 import DailySiteEntryForm from "../components/dailysite/DailySiteEntryForm";
 import FinancialFollowUp from "../components/dailysite/FinancialFollowUp";
 
 function Detail({ label, children }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className="mt-0.5 text-sm text-botanique-charcoal">{children}</dd>
+      <dd className="mt-0.5 break-words text-sm text-botanique-charcoal">{children}</dd>
     </div>
+  );
+}
+
+// One compact panel of the record. The authority composes the page from small
+// equal-weight cards rather than one long dossier, so each fact group is a
+// panel and no panel is allowed to grow into a section of its own.
+function Panel({ title, children, className = "" }) {
+  return (
+    <section className={`rounded-lg border border-stone-200 bg-white p-4 ${className}`}>
+      <h2 className="text-sm font-semibold text-botanique-charcoal">{title}</h2>
+      <div className="mt-2.5">{children}</div>
+    </section>
+  );
+}
+
+const STEP_TONE = {
+  done: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  current: "border-botanique-green/30 bg-[#f2f7f4] text-botanique-charcoal",
+  attention: "border-amber-200 bg-amber-50 text-amber-900",
+  waiting: "border-stone-200 bg-stone-50 text-gray-500",
+};
+
+const STEP_MARK = { done: "✓", current: "•", attention: "!", waiting: "·" };
+
+// How much history the first read shows before the reader asks for the rest.
+const HISTORY_PREVIEW = 4;
+
+// The record's position across the three stages the product genuinely holds.
+// There is deliberately no fourth "day close-out" step: see
+// src/admin/utils/dailySiteRecordProgress.js.
+function ProgressRail({ steps }) {
+  return (
+    <section aria-label="Record progress" className="grid gap-2 sm:grid-cols-3">
+      {steps.map((step, index) => (
+        <div key={step.key} className={`rounded-lg border px-3.5 py-3 ${STEP_TONE[step.status]}`}>
+          <p className="flex items-center gap-2 text-xs font-semibold">
+            <span
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/70 text-[11px]"
+              aria-hidden="true"
+            >
+              {STEP_MARK[step.status]}
+            </span>
+            <span className="min-w-0 break-words">{index + 1}. {step.label}</span>
+          </p>
+          {step.detail && <p className="mt-1 break-words text-xs opacity-90">{step.detail}</p>}
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -58,6 +107,7 @@ export default function AdminDailySiteEntryDetail() {
   const [supersedeReason, setSupersedeReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -119,23 +169,89 @@ export default function AdminDailySiteEntryDetail() {
   const showCorrect = mode === "correct";
   const showSupersede = mode === "supersede";
 
+  // Newest first, so the most recent event is the one the reader sees.
+  const orderedEvents = [...events].sort((left, right) =>
+    String(right.occurredAt || "").localeCompare(String(left.occurredAt || "")));
+  const visibleEvents = showAllHistory ? orderedEvents : orderedEvents.slice(0, HISTORY_PREVIEW);
+  const steps = recordProgressSteps(entry, financialPosition);
+  const nextStep = recordNextStep(entry, financialPosition);
+  const actions = !showCorrect && !showSupersede;
+
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-4">
       <div>
         <Link to="/admin/daily-site-operations" className="text-sm text-gray-500 hover:text-botanique-green">
           ← Daily Site Record
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold">{project?.projectName || "Authorised project"}</h1>
-          <span className="rounded-full bg-stone-100 px-3 py-1 text-xs font-medium text-gray-600">
-            {ENTRY_STATE_LABELS[entry.state]}
-          </span>
-          {entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state) && (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">Late</span>
+        <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="min-w-0 break-words text-2xl font-semibold">
+                {project?.projectName || "Authorised project"}
+              </h1>
+              <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
+                {ENTRY_STATE_LABELS[entry.state]}
+              </span>
+              {entry.isLate && ["submitted", "resubmitted", "accepted"].includes(entry.state) && (
+                <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">Late</span>
+              )}
+            </div>
+            <p className="mt-1 text-sm text-gray-500">
+              Daily Site Record · {formatWorkDate(entry.workDate)}
+            </p>
+          </div>
+          {/* The decisions this reader actually holds, where the authority puts
+              them. Every one is still gated by its own capability check. */}
+          {actions && (
+            <div role="group" aria-label="Record actions" className="flex flex-wrap gap-2 sm:justify-end">
+              {canEditDailyDraft(role, entry, currentUserId) && (
+                <Link to={`/admin/daily-site-operations/${entry.id}/edit`} className="inline-flex min-h-11 items-center rounded-md border border-stone-300 px-4 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
+                  Edit draft
+                </Link>
+              )}
+              {canSubmitDailyEntry(role, entry, currentUserId) && (
+                <button type="button" disabled={busy} onClick={() => run(() => submitEntry(entry.id)).then((ok) => ok && loadEvents(entry.id, true).then(setEvents))} className="inline-flex min-h-11 items-center rounded-md bg-botanique-green px-4 text-sm font-semibold text-white hover:bg-botanique-dark disabled:opacity-60">
+                  Submit for review
+                </button>
+              )}
+              {canCorrectDailyEntry(role, entry, currentUserId) && (
+                <button type="button" onClick={() => setMode("correct")} className="inline-flex min-h-11 items-center rounded-md bg-botanique-green px-4 text-sm font-semibold text-white hover:bg-botanique-dark">
+                  Correct &amp; resubmit
+                </button>
+              )}
+              {canReturnDailyEntry(role, entry) && (
+                <button type="button" onClick={() => { setDialog("return"); setReason(""); }} className="inline-flex min-h-11 items-center rounded-md border border-stone-300 px-4 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
+                  Return for correction
+                </button>
+              )}
+              {canAcceptDailyEntry(role, entry) && (
+                <button type="button" onClick={() => { setDialog("accept"); setReason(""); }} className="inline-flex min-h-11 items-center rounded-md bg-botanique-green px-4 text-sm font-semibold text-white hover:bg-botanique-dark">
+                  Accept
+                </button>
+              )}
+              {canSupersedeDailyEntry(role, entry) && (
+                <button type="button" onClick={() => setMode("supersede")} className="inline-flex min-h-11 items-center rounded-md border border-stone-300 px-4 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
+                  Correct by supersession
+                </button>
+              )}
+              {canVoidDailyEntry(role, entry) && (
+                <button type="button" onClick={() => { setDialog("void"); setReason(""); }} className="inline-flex min-h-11 items-center rounded-md border border-red-200 px-4 text-sm font-medium text-red-700 hover:bg-red-50">
+                  Void
+                </button>
+              )}
+            </div>
           )}
         </div>
-        <p className="mt-1 text-sm text-gray-500">{formatWorkDate(entry.workDate)}</p>
       </div>
+
+      {/* The day's position, before any detail. Three stages, because three is
+          what the product holds — there is no day close-out step. */}
+      <ProgressRail steps={steps} />
+
+      <p className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm text-gray-600">
+        Approval is authority to incur. Money moving, and what became of it, are
+        recorded separately in Funding, Payments and Reconciliation.
+      </p>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</div>
@@ -157,85 +273,95 @@ export default function AdminDailySiteEntryDetail() {
         </div>
       )}
 
-      {/* Entry facts */}
-      <section className="rounded-lg border border-stone-200 bg-white p-5">
-        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Detail label="Site activity status">{DISPOSITION_LABELS[entry.disposition]}</Detail>
+      {/* The record itself, as compact panels rather than one long dossier. */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        <Panel title="Site activity status">
+          <dl className="space-y-2.5">
+            <Detail label="Disposition">{DISPOSITION_LABELS[entry.disposition]}</Detail>
+            {entry.disposition === "no_work" ? (
+              <Detail label="Reason">
+                {NO_WORK_REASON_LABELS[entry.noWorkReason] || "—"}
+                {entry.reasonDetail ? ` — ${entry.reasonDetail}` : ""}
+              </Detail>
+            ) : (
+              <Detail label="Planned site activities">{entry.workPlanned || "—"}</Detail>
+            )}
+            {entry.crewReference && (
+              <Detail label="Crew or team reference">{entry.crewReference}</Detail>
+            )}
+            {entry.notes && <Detail label="Notes">{entry.notes}</Detail>}
+          </dl>
+        </Panel>
+
+        <Panel title="Planned workforce">
           {entry.disposition === "no_work" ? (
-            <Detail label="Reason">
-              {NO_WORK_REASON_LABELS[entry.noWorkReason] || "—"}
-              {entry.reasonDetail ? ` — ${entry.reasonDetail}` : ""}
-            </Detail>
+            <p className="text-sm text-gray-500">No workforce was planned for this day.</p>
           ) : (
-            <>
-              <Detail label="Planned workforce">{entry.expectedWorkerCount ?? "—"}</Detail>
+            <dl className="space-y-2.5">
+              <Detail label="Workers">
+                <span className="text-xl font-semibold tabular-nums">
+                  {entry.expectedWorkerCount ?? "—"}
+                </span>
+              </Detail>
               <Detail label="Labour pricing">
                 {entry.agreedLabourTotal != null
                   ? `Agreed total ${formatKes(entry.agreedLabourTotal)}`
                   : `${formatKes(entry.ratePerWorker)} per worker`}
               </Detail>
               <Detail label="Estimated labour cost">{formatKes(entry.plannedLabourCost)}</Detail>
-              {entry.crewReference && <Detail label="Crew or team reference">{entry.crewReference}</Detail>}
-              <Detail label="Planned site activities">{entry.workPlanned || "—"}</Detail>
-            </>
+            </dl>
           )}
-          <Detail label="Site funds currently available">{formatKes(entry.fundsAvailable)}</Detail>
-          <Detail label="Additional site funds required">{formatKes(entry.additionalAmountRequested)}</Detail>
-          <Detail label="Supporting evidence">{EVIDENCE_STATUS_LABELS[entry.evidenceStatus]}</Detail>
-          <Detail label="Recorded by">{resolveActorLabel(entry.createdBy, profilesById)}</Detail>
-          {entry.submittedAt && (
-            <Detail label="Submitted">
-              {formatDateTime(entry.submittedAt)} {entry.isLate ? "(late)" : "(on time)"}
-            </Detail>
-          )}
-          {entry.reviewedAt && <Detail label="Reviewed">{formatDateTime(entry.reviewedAt)} by {resolveActorLabel(entry.reviewedBy, profilesById)}</Detail>}
-          {entry.notes && <Detail label="Notes">{entry.notes}</Detail>}
-        </dl>
-        <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-gray-400">
-          Funds figures are planning signals only — no payment, fund release or approval is created.
-        </p>
-      </section>
+        </Panel>
 
-      {/* Actions */}
-      {!showCorrect && !showSupersede && (
-        <section className="flex flex-wrap gap-2">
-          {canEditDailyDraft(role, entry, currentUserId) && (
-            <Link to={`/admin/daily-site-operations/${entry.id}/edit`} className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
-              Edit draft
-            </Link>
+        <Panel title="Site funds (planning only)">
+          <dl className="space-y-2.5">
+            <Detail label="Currently available">{formatKes(entry.fundsAvailable)}</Detail>
+            <Detail label="Additional required">
+              <span className={entry.additionalAmountRequested > 0 ? "font-semibold text-amber-800" : ""}>
+                {formatKes(entry.additionalAmountRequested)}
+              </span>
+            </Detail>
+          </dl>
+          <p className="mt-2.5 border-t border-stone-100 pt-2 text-xs text-gray-400">
+            Planning signals only. No payment, fund release or approval is created here.
+          </p>
+        </Panel>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Panel title="Recorded by">
+          <p className="break-words text-sm text-botanique-charcoal">
+            {resolveActorLabel(entry.createdBy, profilesById)}
+          </p>
+          {entry.submittedAt && (
+            <p className="mt-0.5 text-xs text-gray-500">
+              {formatDateTime(entry.submittedAt)} · {entry.isLate ? "late" : "on time"}
+            </p>
           )}
-          {canSubmitDailyEntry(role, entry, currentUserId) && (
-            <button type="button" disabled={busy} onClick={() => run(() => submitEntry(entry.id)).then((ok) => ok && loadEvents(entry.id, true).then(setEvents))} className="rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark disabled:opacity-60">
-              Submit for review
-            </button>
+        </Panel>
+        <Panel title="Reviewed by">
+          {entry.reviewedAt ? (
+            <>
+              <p className="break-words text-sm text-botanique-charcoal">
+                {resolveActorLabel(entry.reviewedBy, profilesById)}
+              </p>
+              <p className="mt-0.5 text-xs text-gray-500">{formatDateTime(entry.reviewedAt)}</p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-500">Not yet reviewed.</p>
           )}
-          {canCorrectDailyEntry(role, entry, currentUserId) && (
-            <button type="button" onClick={() => setMode("correct")} className="rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-              Correct &amp; resubmit
-            </button>
-          )}
-          {canReturnDailyEntry(role, entry) && (
-            <button type="button" onClick={() => { setDialog("return"); setReason(""); }} className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
-              Return for correction
-            </button>
-          )}
-          {canAcceptDailyEntry(role, entry) && (
-            <button type="button" onClick={() => { setDialog("accept"); setReason(""); }} className="rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-              Accept
-            </button>
-          )}
-          {canVoidDailyEntry(role, entry) && (
-            <button type="button" onClick={() => { setDialog("void"); setReason(""); }} className="rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50">
-              Void
-            </button>
-          )}
-          {canSupersedeDailyEntry(role, entry) && (
-            <button type="button" onClick={() => setMode("supersede")} className="rounded-md border border-stone-300 px-4 py-2 text-sm font-medium text-botanique-charcoal hover:bg-stone-50">
-              Correct by supersession
-            </button>
-          )}
-        </section>
-      )}
+        </Panel>
+        {/* Evidence is a declared status, not a file store. Nothing here implies
+            an attachment the product cannot hold. */}
+        <Panel title="Supporting evidence">
+          <p className="text-sm text-botanique-charcoal">
+            {EVIDENCE_STATUS_LABELS[entry.evidenceStatus]}
+          </p>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Declared on the record. Files are not stored in the Hub.
+          </p>
+        </Panel>
+      </div>
 
       {/* Financial follow-up: status and drill-through only. The cost-claim
           module remains authoritative for the claim itself. */}
@@ -289,25 +415,51 @@ export default function AdminDailySiteEntryDetail() {
         </section>
       )}
 
-      {/* Immutable timeline */}
-      <section className="rounded-lg border border-stone-200 bg-white p-5">
-        <h2 className="text-base font-semibold">History</h2>
-        <ol className="mt-3 space-y-3">
-          {events.map((event) => (
-            <li key={event.id} className="flex gap-3 text-sm">
-              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-botanique-green" aria-hidden="true" />
-              <div>
-                <p className="font-medium text-botanique-charcoal">{ENTRY_EVENT_LABELS[event.eventType] || event.eventType}</p>
+      {/* Immutable timeline, kept subordinate. Nothing is hidden or summarised
+          away — every event stays reachable — but a long-running record must not
+          turn today's position into the tail of a dossier. */}
+      <section className="rounded-lg border border-stone-200 bg-white p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 className="text-sm font-semibold">History</h2>
+          {events.length > HISTORY_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setShowAllHistory((value) => !value)}
+              aria-expanded={showAllHistory}
+              className="min-h-9 text-sm font-semibold text-botanique-green hover:underline"
+            >
+              {showAllHistory ? "Show recent only" : `Show all ${events.length} events`}
+            </button>
+          )}
+        </div>
+        <ol className="mt-2.5 space-y-2.5">
+          {visibleEvents.map((event) => (
+            <li key={event.id} className="flex gap-2.5 text-sm">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-botanique-green" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="break-words font-medium text-botanique-charcoal">{ENTRY_EVENT_LABELS[event.eventType] || event.eventType}</p>
                 <p className="text-xs text-gray-500">
                   {resolveActorLabel(event.actorId, profilesById)} · {formatDateTime(event.occurredAt)}
                 </p>
-                {event.eventNotes && <p className="mt-0.5 text-sm text-gray-600">{event.eventNotes}</p>}
+                {event.eventNotes && <p className="mt-0.5 break-words text-sm text-gray-600">{event.eventNotes}</p>}
               </div>
             </li>
           ))}
           {events.length === 0 && <li className="text-sm text-gray-500">No history yet.</li>}
         </ol>
+        {!showAllHistory && events.length > HISTORY_PREVIEW && (
+          <p className="mt-2.5 border-t border-stone-100 pt-2 text-xs text-gray-500">
+            Showing the {HISTORY_PREVIEW} most recent of {events.length} events. The full record is
+            immutable and complete.
+          </p>
+        )}
       </section>
+
+      {nextStep && (
+        <p className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5 text-sm text-gray-700">
+          {nextStep}
+        </p>
+      )}
 
       <ConfirmDialog
         open={dialog === "return"}
