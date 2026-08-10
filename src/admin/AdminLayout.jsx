@@ -30,6 +30,12 @@ import { resolveDisplayName } from "./utils/personName";
 import { useAlerts } from "./utils/useAlerts";
 import { useAdminData } from "./context/adminData";
 import { resolveActive, visibleDomains } from "./navigation";
+import { waLink } from "../utils/whatsapp";
+
+// Opens the Botanique WhatsApp support thread with the Hub already named, so
+// whoever answers knows this is an Operations Hub question rather than a lead.
+const SUPPORT_MESSAGE =
+  "Hello Botanique Designers, I need help with the Operations Hub.";
 
 const COLLAPSE_KEY = "botanique.admin.sidebarCollapsed";
 
@@ -225,15 +231,27 @@ function NavTree({ role, collapsed, activeDomainId, openDomain, onToggleDomain, 
   );
 }
 
+// Support, made useful. "Contact your system admin" told the reader nothing they
+// could act on — there is no system admin to contact, and the Botanique team is
+// already reachable on the same WhatsApp number the public site uses. The
+// destination is CONTACT.whatsapp via waLink(), never a number typed in here, so
+// the Hub can never drift away from the number the rest of the product uses.
 function HelpCard() {
   return (
-    <div className="mx-3.5 mb-2.5 flex items-center gap-2.5 rounded-[11px] border border-stone-200 bg-white px-3 py-2.5">
-      <Icon path="M4 12.4v-2.2a6 6 0 0 1 12 0v2.2M2.6 13a1.5 1.5 0 0 1 1.5-1.5h.2V16h-.2A1.5 1.5 0 0 1 2.6 14.5V13Zm14.8 0v1.5A1.5 1.5 0 0 1 15.9 16h-.2v-4.5h.2A1.5 1.5 0 0 1 17.4 13Z" />
-      <span>
+    <a
+      href={waLink(SUPPORT_MESSAGE)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`mx-3.5 mb-2.5 flex min-h-11 items-center gap-2.5 rounded-[11px] border border-stone-200 bg-white px-3 py-2.5 transition hover:border-botanique-green/40 hover:bg-[#f7faf8] ${FOCUS_RING}`}
+    >
+      <svg className="h-5 w-5 shrink-0 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.48 1.34 5L2 22l5.2-1.36a9.9 9.9 0 0 0 4.84 1.24h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2Zm0 18.16h-.01a8.24 8.24 0 0 1-4.2-1.15l-.3-.18-3.1.81.83-3.02-.2-.31a8.2 8.2 0 0 1-1.26-4.39c0-4.56 3.71-8.27 8.28-8.27a8.27 8.27 0 0 1 0 16.54Zm4.53-6.19c-.25-.13-1.47-.72-1.69-.8-.23-.09-.39-.13-.56.12-.16.25-.64.8-.78.97-.15.16-.29.18-.53.06-.25-.13-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.09-.16.04-.31-.02-.44-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.16 0-.43.06-.65.31-.22.25-.85.83-.85 2.03s.87 2.35.99 2.51c.12.17 1.71 2.61 4.14 3.66.58.25 1.03.4 1.38.51.58.19 1.11.16 1.53.1.47-.07 1.47-.6 1.68-1.18.2-.58.2-1.07.14-1.18-.06-.11-.22-.17-.47-.29Z" />
+      </svg>
+      <span className="min-w-0">
         <span className="block text-[12.5px] font-semibold text-botanique-charcoal">Need help?</span>
-        <span className="block text-[11px] text-gray-500">Contact your system admin</span>
+        <span className="block text-[11px] text-gray-500">Open WhatsApp support</span>
       </span>
-    </div>
+    </a>
   );
 }
 

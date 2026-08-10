@@ -5,6 +5,8 @@ import { useFundRequests } from "../context/fundRequests";
 import {
   canDirectAuthoriseFundRequest, FUND_REQUEST_STATUSES, INTENDED_CUSTODY_TYPES,
 } from "../utils/fundRequestCapabilities";
+import { CUSTODY_DISPOSITIONS } from "../utils/fundReleaseCapabilities";
+import { portfolioPosition, requestPositions } from "../utils/financePortfolio";
 import { profilePresentationName } from "../utils/personName";
 import { describeActiveFilters, withinReportedPeriod } from "../utils/listUrlFilters";
 
@@ -17,7 +19,10 @@ const date = (value) => value ? new Intl.DateTimeFormat("en-KE", { dateStyle: "m
 // which requests exist for this reader.
 export default function AdminFundRequests() {
   const { role, projects, profiles } = useAdminData();
-  const { requests, status, error } = useFundRequests();
+  // Releases and acquittals are read only. This register lists the authorities;
+  // the release and reconciliation records live on each request's own detail
+  // surface, which is where they are created and decided.
+  const { requests, releases, acquittals, status, error } = useFundRequests();
   const [searchParams, setSearchParams] = useSearchParams();
   const statusFilter = searchParams.get("status") || "all";
   const projectId = searchParams.get("project") || "all";
@@ -38,6 +43,11 @@ export default function AdminFundRequests() {
     (statusFilter === "all" || request.status === statusFilter) &&
     (projectId === "all" || request.projectId === projectId) &&
     withinReportedPeriod(request.submittedAt, request.decidedAt, from, to));
+  const visibleFinance = { requests: visible, releases: releases || [], acquittals: acquittals || [] };
+  const position = portfolioPosition(visibleFinance);
+  const positions = requestPositions(visibleFinance);
+  const positionById = new Map(positions.map((row) => [row.request.id, row.position]));
+  const awaitingCount = visible.filter((request) => request.status === "submitted").length;
   const activeFilterSummary = describeActiveFilters({
     projectName: projectId !== "all" ? projectMap.get(projectId)?.projectName || "one project" : "",
     statusLabel: statusFilter !== "all" ? FUND_REQUEST_STATUSES[statusFilter] : "",
@@ -54,11 +64,14 @@ export default function AdminFundRequests() {
     <section>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-botanique-green">People and finance</p>
-          <h1 className="mt-1 text-2xl font-semibold">Fund Requests</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-botanique-green">Finance</p>
+          {/* The canonical departmental name. "Fund requests" survives only as
+              the internal route, because renaming a URL would break every
+              existing drill-through link and grants nothing. */}
+          <h1 className="mt-1 text-2xl font-semibold">Funding, Payments and Reconciliation</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-600">
-            Requests for Principal authority to make money available against approved claims.
-            No funds have been released.
+            Authority to make money available, the releases that actually moved it, and what became
+            of it. Approval is not payment.
           </p>
         </div>
         <Link to="/admin/fund-requests/new" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
@@ -80,6 +93,31 @@ export default function AdminFundRequests() {
           </select>
         </label>
       </div>
+
+      {/* The lifecycle, in order, for exactly the requests in view. Every figure
+          folds the same deriveFinancialPosition() rows the detail surface and
+          the Finance Overview read, so this register can never disagree with
+          either. */}
+      {visible.length > 0 && (
+        <div className="mt-3 rounded-lg border border-stone-200 bg-white p-4">
+          <h2 className="text-sm font-semibold">Position of these authorities</h2>
+          <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Cell label="Awaiting decision" value={String(awaitingCount)} hint="Requests submitted" />
+            <Cell label="Authorised" value={money(position.authorisedAmount)} hint={`${position.requestCount} approved`} />
+            <Cell label="Released" value={money(position.releasedAmount)} hint="Money that actually moved" />
+            <Cell
+              label="Reconciliation outstanding"
+              value={money(position.advanceOutstandingAmount)}
+              tone={position.advanceOutstandingAmount > 0 ? "text-amber-800" : ""}
+              hint="Advances not yet accounted for"
+            />
+          </dl>
+          <p className="mt-2 text-xs text-gray-500">
+            An approved authority is permission to move money. It becomes a payment only when a
+            release is recorded against it.
+          </p>
+        </div>
+      )}
 
       {activeFilterSummary && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-gray-600">
@@ -110,7 +148,7 @@ export default function AdminFundRequests() {
               </td>
               <td className="px-4 py-3 text-right font-semibold">{money(request.totalRequestedAmount)}</td>
               <td className="px-4 py-3">{FUND_REQUEST_STATUSES[request.status]}</td>
-              <td className="px-4 py-3">{INTENDED_CUSTODY_TYPES[request.intendedCustodyType]}</td>
+              <td className="px-4 py-3"><Custody request={request} position={positionById.get(request.id)} /></td>
               {isPrincipal && <td className="px-4 py-3">{request.submissionRound}</td>}
               <td className="px-4 py-3">{isPrincipal ? originOf(request) : date(request.updatedAt)}
                 {isPrincipal && <div className="text-xs text-gray-500">{date(request.updatedAt)}</div>}
@@ -127,11 +165,38 @@ export default function AdminFundRequests() {
             <span className="text-xs font-semibold text-gray-600">{FUND_REQUEST_STATUSES[request.status]}</span>
           </div>
           <div className="mt-3 flex items-end justify-between">
-            <p className="text-xs text-gray-500">{INTENDED_CUSTODY_TYPES[request.intendedCustodyType]} · {date(request.updatedAt)}</p>
+            <p className="text-xs text-gray-500"><Custody request={request} position={positionById.get(request.id)} /> · {date(request.updatedAt)}</p>
             <p className="font-semibold">{money(request.totalRequestedAmount)}</p>
           </div>
         </Link>)}</div>
       </>}
     </section>
   );
+}
+
+function Cell({ label, value, hint, tone = "" }) {
+  return (
+    <div className="rounded-md bg-stone-50 px-3 py-2">
+      <dt className="text-xs text-gray-500">{label}</dt>
+      <dd className={`mt-0.5 break-words text-sm font-semibold tabular-nums ${tone || "text-botanique-charcoal"}`}>{value}</dd>
+      {hint && <p className="mt-0.5 break-words text-[11px] text-gray-500">{hint}</p>}
+    </div>
+  );
+}
+
+// What custody actually turned out to be, once money has moved — not what was
+// intended. One authority may carry BOTH a direct settled payment and an
+// accountable advance, so both are named; flattening them would manufacture or
+// erase a reconciliation obligation. Before any release, the intent is all there
+// is, and it is labelled as an intent.
+function Custody({ request, position }) {
+  if (!position || position.releaseCount === 0) {
+    return <span className="text-gray-600">{INTENDED_CUSTODY_TYPES[request.intendedCustodyType]}</span>;
+  }
+  const parts = [];
+  if (position.directPaidAmount > 0) parts.push(CUSTODY_DISPOSITIONS.direct_recipient_funding);
+  if (position.advanceReleasedAmount > 0) {
+    parts.push(CUSTODY_DISPOSITIONS.operations_manager_accountable_advance);
+  }
+  return <span className="text-gray-700">{parts.join(" + ")}</span>;
 }

@@ -134,7 +134,11 @@ describe("URL-addressable drill-through filters", () => {
       `/admin/daily-site-operations?project=p1&status=all&${AUGUST}`
     );
     expect(screen.getAllByText("Alego Usonga").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Karen Retreat")).not.toBeInTheDocument();
+    // No OTHER project's record is listed. The site filter still offers every
+    // project as a choice, which is how a reader widens the view again — an
+    // option in a control is not a record in the results.
+    const rows = document.querySelector("tbody");
+    expect(within(rows).queryByText("Karen Retreat")).not.toBeInTheDocument();
     expect(screen.getByText(/Filtered to Alego Usonga · 2026-08-01 to 2026-08-31\./)).toBeInTheDocument();
   });
 

@@ -25,11 +25,11 @@ const baseClaim = {
   createdAt: "2026-07-28T13:00:00Z",
 };
 
-function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "o1", claims = [], finance = {} } = {}) {
+function renderDetail({ role = "owner", entries = [baseEntry], currentUserId = "o1", claims = [], finance = {}, events = [] } = {}) {
   const adminValue = { role, projects, profilesById: {}, currentUserId };
   const dailyValue = {
     entries,
-    loadEvents: vi.fn(() => Promise.resolve([])),
+    loadEvents: vi.fn(() => Promise.resolve(events)),
     submitEntry: vi.fn(() => Promise.resolve({ ok: true })),
     returnEntry: vi.fn(() => Promise.resolve({ ok: true })),
     acceptEntry: vi.fn(() => Promise.resolve({ ok: true })),
@@ -208,7 +208,8 @@ describe("AdminDailySiteEntryDetail financial follow-up", () => {
     expect(within(followUp()).getByRole("link", { name: /Turf crew/ })).toBeInTheDocument();
     // …and the create path stays where the existing capability already put it:
     // inside the financial area, not among the operational review actions.
-    const actions = screen.getByRole("button", { name: "Accept" }).closest("section");
+    const actions = screen.getByRole("group", { name: "Record actions" });
+    expect(within(actions).getByRole("button", { name: "Accept" })).toBeInTheDocument();
     expect(within(actions).queryByRole("link", { name: /cost claim/i })).not.toBeInTheDocument();
   });
 
@@ -388,5 +389,87 @@ describe("AdminDailySiteEntryDetail duplicate cost-claim control", () => {
     // No claim is cancelled, rejected or altered from the operational record.
     expect(screen.queryByRole("button", { name: /cancel claim/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /reject/i })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Visual Authority Tranche 1 — image 09. One coherent operational record, with
+// today's position and action above the history, not below it.
+// ---------------------------------------------------------------------------
+
+describe("Daily Site Record detail — composition (authority image 09)", () => {
+  const ADVANCE = "operations_manager_accountable_advance";
+  const accepted = {
+    ...baseEntry, state: "accepted", reviewedBy: "o1", reviewedAt: "2026-07-28T08:10:00Z",
+  };
+
+  it("states the three stages the product holds, and no day close-out", () => {
+    renderDetail({ entries: [accepted] });
+    const rail = screen.getByRole("region", { name: "Record progress" });
+    expect(within(rail).getByText(/1\. Site record/)).toBeInTheDocument();
+    expect(within(rail).getByText(/2\. Cost claim/)).toBeInTheDocument();
+    expect(within(rail).getByText(/3\. Funding, payment and reconciliation/)).toBeInTheDocument();
+    // Settled decision: operational close and financial settlement are distinct,
+    // and no day-close action, state or record exists. The authority image's
+    // fourth box must not become one.
+    expect(screen.queryByText(/close.?out/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /close (the )?day/i })).not.toBeInTheDocument();
+  });
+
+  it("puts the operational position and the reader's action above the history", () => {
+    const { container } = renderDetail({ entries: [accepted] });
+    const rail = screen.getByRole("region", { name: "Record progress" });
+    const history = screen.getByText("History");
+    expect(rail.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And the page is panels, not one long dossier: several small sections.
+    expect(container.querySelectorAll("section").length).toBeGreaterThan(4);
+  });
+
+  it("shows evidence as a declared status and never implies a stored file", () => {
+    renderDetail({ entries: [accepted] });
+    expect(screen.getByText("Supporting evidence")).toBeInTheDocument();
+    expect(screen.getByText("Expected later")).toBeInTheDocument();
+    expect(screen.getByText(/Files are not stored in the Hub/)).toBeInTheDocument();
+  });
+
+  it("names the funding stage without repeating the funding panel's own words", () => {
+    renderDetail({
+      entries: [accepted],
+      claims: [{ ...baseClaim, lifecycle: "approved", approvedTotal: 20000, submittedTotal: 20000 }],
+      finance: {
+        requests: [{ id: "r1", requestNumber: "BDFR-2026-0001", projectId: "p1", status: "approved", intendedCustodyType: ADVANCE, totalRequestedAmount: 20000, version: 1 }],
+        allocations: [{ id: "a1", fundRequestId: "r1", claimId: "c1", requestedAmount: 20000 }],
+        releases: [{ id: "rel1", fundRequestId: "r1", status: "recorded", custodyDisposition: ADVANCE, releasedAmount: 10000, version: 1 }],
+        acquittals: [],
+      },
+    });
+    const rail = screen.getByRole("region", { name: "Record progress" });
+    expect(within(rail).getByText(/Part of the authority released · advance not accounted for/))
+      .toBeInTheDocument();
+    // The panel still states the position in full, in its own language.
+    expect(screen.getByText("Partly funded")).toBeInTheDocument();
+    expect(screen.getAllByText("Reconciliation outstanding").length).toBeGreaterThan(0);
+  });
+});
+
+describe("Daily Site Record detail — history stays subordinate", () => {
+  const event = (index) => ({
+    id: `ev${index}`, entryId: "e1", eventType: "draft_updated", actorId: "m1",
+    occurredAt: `2026-07-2${index}T06:00:00Z`, eventNotes: "",
+  });
+
+  it("shows the most recent events first and keeps the rest one press away", async () => {
+    renderDetail({ events: [1, 2, 3, 4, 5, 6].map(event) });
+    const toggle = await screen.findByRole("button", { name: "Show all 6 events" });
+    expect(screen.getByText(/Showing the 4 most recent of 6 events/)).toBeInTheDocument();
+    expect(screen.getByText(/immutable and complete/)).toBeInTheDocument();
+    toggle.click();
+    expect(await screen.findByRole("button", { name: "Show recent only" })).toBeInTheDocument();
+  });
+
+  it("does not offer a toggle when the whole history already fits", async () => {
+    renderDetail({ events: [1, 2].map(event) });
+    await screen.findByText("History");
+    expect(screen.queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
   });
 });

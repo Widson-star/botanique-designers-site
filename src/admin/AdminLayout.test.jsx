@@ -4,6 +4,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "./context/adminData";
 import AdminLayout from "./AdminLayout";
+import { waLink } from "../utils/whatsapp";
+import { CONTACT } from "../utils/backend";
 
 function renderLayout({
   role = "owner",
@@ -485,10 +487,23 @@ describe("Operating-model preserved shell", () => {
   it("uses the approved help footer and drops the finance-boundary note", () => {
     renderLayout();
     expect(screen.getAllByText("Need help?").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Contact your system admin").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Open WhatsApp support").length).toBeGreaterThan(0);
+    // The old treatment named a person who does not exist.
+    expect(screen.queryByText("Contact your system admin")).not.toBeInTheDocument();
     expect(
       screen.queryByText("Financial documents remain managed in Simple Invoice Manager.")
     ).not.toBeInTheDocument();
+  });
+
+  it("opens WhatsApp support at the authoritative Botanique number", () => {
+    renderLayout();
+    const [support] = screen.getAllByText("Open WhatsApp support").map((node) => node.closest("a"));
+    // The destination is CONTACT.whatsapp through waLink(), never a number
+    // hardcoded into the Hub, so support can never drift from the public site.
+    expect(support).toHaveAttribute("href", waLink("Hello Botanique Designers, I need help with the Operations Hub."));
+    expect(support.getAttribute("href")).toContain(`wa.me/${CONTACT.whatsapp}`);
+    expect(support).toHaveAttribute("target", "_blank");
+    expect(support).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
 
   // Settled terminology authority: visible waive-family wording is prohibited.

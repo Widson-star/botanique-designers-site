@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { FundRequestsContext } from "../context/fundRequests";
@@ -112,15 +112,50 @@ function wrap(element, values, initial = "/admin/fund-requests") {
 }
 
 describe("Fund Requests admin surfaces", () => {
-  it("renders the Principal queue in desktop-table and mobile-card layouts with no-release copy", () => {
+  it("renders the Principal queue in desktop-table and mobile-card layouts under the canonical name", () => {
     const { container } = wrap(<AdminFundRequests />, contexts());
-    expect(screen.getByRole("heading", { name: "Fund Requests" })).toBeInTheDocument();
-    expect(screen.getByText(/No funds have been released/)).toBeInTheDocument();
+    // The canonical departmental name. "Fund requests" survives as the route only.
+    expect(screen.getByRole("heading", { name: "Funding, Payments and Reconciliation" }))
+      .toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Fund Requests" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Approval is not payment/)).toBeInTheDocument();
     expect(screen.getAllByText("BDFR-2026-000001").length).toBeGreaterThan(1);
     expect(screen.getAllByText(/KES\s*23,000\.00/).length).toBeGreaterThan(1);
+    // Nothing has been released, so custody is still only an intent.
     expect(screen.getAllByText("Intended accountable advance").length).toBeGreaterThan(0);
     expect(container.querySelector("table")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Authorise funds directly" })).toBeInTheDocument();
+  });
+
+  it("states the lifecycle position of the authorities in view, approval apart from release", () => {
+    wrap(<AdminFundRequests />, contexts());
+    const panel = screen.getByText("Position of these authorities").closest("div");
+    expect(within(panel).getByText("Awaiting decision").parentElement).toHaveTextContent("1");
+    // A submitted request authorises nothing yet.
+    expect(within(panel).getByText("Authorised").parentElement).toHaveTextContent(/KES\s*0/);
+    expect(within(panel).getByText("Released").parentElement).toHaveTextContent(/KES\s*0/);
+    expect(screen.getByText(/It becomes a payment only when a release is recorded/))
+      .toBeInTheDocument();
+  });
+
+  it("names the custody money actually took, and both halves of a mixed authority", () => {
+    const approved = { ...request, status: "approved" };
+    wrap(<AdminFundRequests />, contexts({
+      requests: [approved],
+      releases: [
+        { id: "rel1", fundRequestId: "r1", status: "recorded", custodyDisposition: "operations_manager_accountable_advance", releasedAmount: 10000, version: 1 },
+        { id: "rel2", fundRequestId: "r1", status: "recorded", custodyDisposition: "direct_recipient_funding", releasedAmount: 5000, version: 1 },
+      ],
+    }));
+    // Intent is superseded by what actually happened, and neither custody type
+    // is allowed to hide the other.
+    expect(screen.getAllByText("Direct settled payment + Accountable advance").length)
+      .toBeGreaterThan(0);
+    expect(screen.queryByText("Intended accountable advance")).not.toBeInTheDocument();
+    const panel = screen.getByText("Position of these authorities").closest("div");
+    expect(within(panel).getByText("Released").parentElement).toHaveTextContent(/15,000/);
+    expect(within(panel).getByText("Reconciliation outstanding").parentElement)
+      .toHaveTextContent(/10,000/);
   });
 
   it("offers the Operations Manager a request action rather than direct authority", () => {
