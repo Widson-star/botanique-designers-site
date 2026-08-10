@@ -15,6 +15,8 @@ import { canSeeApprovals } from "./utils/approvalCapabilities";
 import { canManageStaff } from "./utils/permissions";
 import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
 import { canSeeFinance } from "./utils/financeCapabilities";
+import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
+import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
 import { canSeeReports } from "./utils/reportCapabilities";
 import { canSeePeople } from "./utils/peopleCapabilities";
 
@@ -58,15 +60,30 @@ export const NAV_DOMAINS = [
   {
     id: "finance",
     label: "Finance",
-    // One stable shell destination, not a disclosure: the area selector lives
-    // inside the Finance page itself (AdminFinance.jsx), not the sidebar.
-    // Visiting a Site Costs or Fund Requests URL directly still highlights
-    // Finance as the owning domain, because both remain part of the same
-    // financial record Finance now fronts.
-    to: "/admin/finance",
-    matches: ["/admin/finance", "/admin/site-costs", "/admin/fund-requests"],
+    // FOUNDER AMENDMENT, 10 August 2026. Finance now EXPANDS in the sidebar with
+    // its four capability children, as image 13 draws it. This supersedes the
+    // in-page tab architecture PR #94 settled: the committed authority image is
+    // the product authority, and the Founder has ruled the horizontal five-tab
+    // arrangement out where it conflicts with it.
+    //
+    // Company Expenses and Staff Compensation have no model. They keep their
+    // place in the department — the image makes that place part of the
+    // authority — and their pages state truthfully that nothing exists yet
+    // rather than being hidden or given invented figures.
     icon: "M10 3.1a6.9 6.9 0 1 0 0 13.8 6.9 6.9 0 0 0 0-13.8Zm0 2.8v8.2m2.2-6.2a2 2 0 0 0-1.9-1.3H9.2a1.7 1.7 0 0 0 0 3.4h1.6a1.7 1.7 0 0 1 0 3.4H9.6a2 2 0 0 1-1.9-1.3",
-    capability: canSeeFinance,
+    matches: ["/admin/finance", "/admin/site-costs", "/admin/fund-requests"],
+    children: [
+      { to: "/admin/site-costs", label: "Project Costs", capability: canSeeSiteCosts },
+      { to: "/admin/finance/company-expenses", label: "Company Expenses", capability: canSeeFinance },
+      { to: "/admin/finance/staff-compensation", label: "Staff Compensation", capability: canSeeFinance },
+      {
+        to: "/admin/fund-requests",
+        // Short inside Finance, where the context is already financial. The full
+        // canonical name stays on the capability page and in the authority.
+        label: "Funding, Payments & Reconciliation",
+        capability: canSeeFundRequests,
+      },
+    ],
   },
   {
     id: "approvals",
@@ -79,13 +96,13 @@ export const NAV_DOMAINS = [
   {
     id: "reports",
     label: "Reports",
-    // A container label only. The route keeps `/admin/reports`, and the
-    // destination is still named Project Summary: the category-based Reports
-    // Centre does not exist and nothing here may imply it does.
+    // FOUNDER RULING, 10 August 2026: ONE visible module name — Reports. The
+    // nested "Reports → Project Summary" duplication showed two names for one
+    // destination and is removed. The page may contain project summaries and
+    // other reporting views; the module is called Reports.
+    to: "/admin/reports",
     icon: "M4 16.5V9.4m4 7.1V4.6m4 11.9v-5.2m4 5.2V7.9",
-    children: [
-      { to: "/admin/reports", label: "Project Summary", capability: canSeeReports },
-    ],
+    capability: canSeeReports,
   },
 ];
 
@@ -129,6 +146,12 @@ export function resolveActive(pathname) {
       if (isUnder(pathname, child.to)) {
         return { domainId: domain.id, to: child.to };
       }
+    }
+    // A domain may also own paths that are not one of its children — Finance
+    // owns its own landing at /admin/finance. Those open the domain without
+    // marking any child current.
+    if ((domain.matches || []).some((base) => isUnder(pathname, base))) {
+      return { domainId: domain.id, to: null };
     }
   }
   return null;

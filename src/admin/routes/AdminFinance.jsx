@@ -350,7 +350,7 @@ function Overview({ areas, claims, portfolio, attention, positions, projectName,
           actually spent and still unreleased. Money-in, net position and bank
           balance have no model and are absent rather than invented. */}
       <div className="grid gap-3 lg:grid-cols-5">
-        <section className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-3">
+        <section className="min-w-0 rounded-xl border border-stone-200 bg-white p-4 lg:col-span-3">
           <h2 className="text-[13px] font-semibold text-botanique-charcoal">Finance at a glance</h2>
           {portfolio.hasAnyAuthority ? (
             <>
@@ -378,7 +378,7 @@ function Overview({ areas, claims, portfolio, attention, positions, projectName,
           )}
         </section>
 
-        <section className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-2">
+        <section className="min-w-0 rounded-xl border border-stone-200 bg-white p-4 lg:col-span-2">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="text-[13px] font-semibold text-botanique-charcoal">Recent finance activity</h2>
             {attention.length > 0 && (

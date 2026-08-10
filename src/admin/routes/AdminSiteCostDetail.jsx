@@ -3,8 +3,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useSiteCosts } from "../context/siteCosts";
 import { useFundRequests } from "../context/fundRequests";
+import { useDailySiteOperations } from "../context/dailySiteOperations";
 import {
   canCancelSiteCost, canDecideSiteCost, canEditSiteCost, canSubmitSiteCost,
+  canSubmitCostFromDailySite, costSubmissionBlockedReason,
   canWithdrawSiteCost, SITE_COST_LIFECYCLES,
 } from "../utils/siteCostCapabilities";
 import { profilePresentationName } from "../utils/personName";
@@ -22,6 +24,7 @@ export default function AdminSiteCostDetail() {
   const { role, currentUserId, projects, profiles } = useAdminData();
   const { claims, linesForClaim, eventsByClaim, loadEvents, submitClaim, withdrawClaim, decideClaim, cancelClaim, refresh, status } = useSiteCosts();
   const { requests, allocations, releases, acquittals } = useFundRequests();
+  const { entries: dailyEntries = [] } = useDailySiteOperations();
   // Structural overlap only: same Daily Site Record, same category, at least one identical
   // cost line. Never a verdict — the Principal keeps the decision and nothing is auto-rejected.
   const possibleDuplicates = useMemo(
@@ -29,6 +32,11 @@ export default function AdminSiteCostDetail() {
     [claimId, claims, linesForClaim]
   );
   const claim = claims.find((item) => item.id === claimId);
+  // The Daily Site Record this cost came from, if any. Used only to enforce the
+  // Founder's ordering ruling; the record itself is unchanged from here.
+  const sourceEntry = claim?.dailySiteEntryId
+    ? dailyEntries.find((item) => item.id === claim.dailySiteEntryId) || null
+    : null;
   const lines = claim ? linesForClaim(claim.id) : [];
   const events = eventsByClaim[claimId] || [];
   const [reason, setReason] = useState("");
@@ -88,7 +96,12 @@ export default function AdminSiteCostDetail() {
       </div>
       <aside className="space-y-4">
         {(canDecideSiteCost(claim, role) || canCancelSiteCost(claim, role)) && <div className="rounded-lg border border-stone-200 bg-white p-5"><h2 className="font-semibold">Principal action</h2><label className="mt-3 block text-sm font-medium">Reason or instructions<textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-1 w-full rounded-md border border-stone-300 px-3 py-2.5" /></label>{canDecideSiteCost(claim, role) && <div className="mt-3 grid gap-2"><button disabled={working} onClick={() => act(() => decideClaim(claim.id, claim.version, "approved", reason))} className="min-h-11 rounded-md bg-botanique-green px-3 text-sm font-semibold text-white">Approve whole claim</button><button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "amendment_requested", reason))} className="min-h-11 rounded-md border border-amber-400 px-3 text-sm font-semibold text-amber-900 disabled:opacity-50">Request amendment</button><button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "rejected", reason))} className="min-h-11 rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Reject claim</button></div>}{canCancelSiteCost(claim, role) && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelClaim(claim.id, claim.version, reason))} className="mt-3 min-h-11 w-full rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved claim</button>}</div>}
-        {(canEditSiteCost(claim, role, currentUserId) || canSubmitSiteCost(claim, role, currentUserId) || canWithdrawSiteCost(claim, role, currentUserId)) && <div className="rounded-lg border border-stone-200 bg-white p-5"><h2 className="font-semibold">Manager action</h2><div className="mt-3 grid gap-2">{canEditSiteCost(claim, role, currentUserId) && <button onClick={() => navigate(`/admin/site-costs/${claim.id}/edit`)} className="min-h-11 rounded-md border border-stone-300 px-3 text-sm font-semibold">Edit claim</button>}{canSubmitSiteCost(claim, role, currentUserId) && <button disabled={working} onClick={() => act(() => submitClaim(claim.id, claim.version))} className="min-h-11 rounded-md bg-botanique-green px-3 text-sm font-semibold text-white">{claim.lifecycle === "draft" ? "Submit for review" : "Resubmit for review"}</button>}{canWithdrawSiteCost(claim, role, currentUserId) && <button disabled={working} onClick={() => act(() => withdrawClaim(claim.id, claim.version, reason))} className="min-h-11 rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700">Withdraw claim</button>}</div></div>}
+        {(canEditSiteCost(claim, role, currentUserId) || canSubmitSiteCost(claim, role, currentUserId) || canWithdrawSiteCost(claim, role, currentUserId)) && <div className="rounded-lg border border-stone-200 bg-white p-5"><h2 className="font-semibold">Manager action</h2><div className="mt-3 grid gap-2">{canEditSiteCost(claim, role, currentUserId) && <button onClick={() => navigate(`/admin/site-costs/${claim.id}/edit`)} className="min-h-11 rounded-md border border-stone-300 px-3 text-sm font-semibold">Edit claim</button>}{canSubmitSiteCost(claim, role, currentUserId) && (sourceEntry && !canSubmitCostFromDailySite(sourceEntry)
+          /* Founder ruling: a derived cost may be prepared while the site record
+             is still under review, but it may not go to the Principal for a
+             financial decision until that record is accepted. */
+          ? <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950">{costSubmissionBlockedReason(sourceEntry)}</p>
+          : <button disabled={working} onClick={() => act(() => submitClaim(claim.id, claim.version))} className="min-h-11 rounded-md bg-botanique-green px-3 text-sm font-semibold text-white">{claim.lifecycle === "draft" ? "Submit for review" : "Resubmit for review"}</button>)}{canWithdrawSiteCost(claim, role, currentUserId) && <button disabled={working} onClick={() => act(() => withdrawClaim(claim.id, claim.version, reason))} className="min-h-11 rounded-md border border-red-300 px-3 text-sm font-semibold text-red-700">Withdraw claim</button>}</div></div>}
       </aside>
     </div>
   </section>;

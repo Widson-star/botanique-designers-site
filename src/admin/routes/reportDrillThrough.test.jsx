@@ -165,7 +165,7 @@ describe("URL-addressable drill-through filters", () => {
       <Route path="/admin/site-costs" element={<AdminSiteCosts />} />,
       "/admin/site-costs?project=p1&status=rejected"
     );
-    expect(screen.getByText("No project costs match these filters.")).toBeInTheDocument();
+    expect(screen.getByText("No project cost matches these filters.")).toBeInTheDocument();
   });
 
   it("keeps a URL project selectable even when no record in view references it", () => {

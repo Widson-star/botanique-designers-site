@@ -7030,3 +7030,67 @@ authority PNGs byte-identical.
 
 **Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
 Founder's visual review of the preview, not CI.
+
+---
+
+## FOUNDER AMENDMENT — Project Costs, Finance navigation, Reports naming
+
+**10 August 2026. PR #102, correction pass 3. NOT MERGED — awaiting Founder visual acceptance.**
+
+**Project Costs follows the Simple Invoice register interaction pattern** for readability:
+Date · Cost Reference · Project · Status · Total · Balance · Paid · Action. Funding mechanics are
+no longer the primary financial state of a cost; actual payment and outstanding balance are.
+**Where historic payment truth has not been recorded in the Hub, Paid and Balance remain unknown
+rather than falsely implying unpaid.** Botanique costs are not invoices — only the shape of the
+list is borrowed, never the vocabulary or architecture.
+
+**REPORTS is the single visible reporting module name.** The "Reports → Project Summary" nesting
+showed two names for one destination and is removed.
+
+**"Not yet funded — no fund request" is gone from Project Costs.** Three distinct honest reasons
+now produce an unknown payment: no fund request exists (the usual historical case); the authority
+also funds other costs, so no per-cost figure exists without apportioning a release; or the cost
+was never approved. Costs with no payment record are counted separately, never folded into unpaid.
+
+**Cost Ref.** reuses the `ICC-` convention already stamped into
+`fund_request_allocations.claim_reference_snapshot`. Nothing invented; a stored sequential number
+is reported as a schema decision, not taken.
+
+**Finance now expands in the sidebar** with its four capability children, as image 13 draws it,
+superseding the horizontal five-tab arrangement. Company Expenses and Staff Compensation have real
+destinations stating plainly that nothing is built. No invented expense, salary or payroll data.
+
+**Funding · Payments · Reconciliation** is one child with three clearly separate in-page sections
+and the image's four lifecycle tiles. No new top-level navigation was invented.
+
+### FOUNDER ORDERING RULING — implemented in the UI, database half reported
+
+A cost derived from a Daily Site Record may be prepared while that record is under review, but
+cannot reach a Principal financial decision until the record is accepted. Both routes to approval
+are gated — the manager's submit and the Principal's direct authorisation — with a plain-language
+reason. **The database half is not closed:**
+`private_internal_cost_claim_daily_site_snapshot` still accepts `submitted`/`resubmitted` at submit
+time, so a direct RPC caller could bypass the UI. That needs a migration to the function, reported
+rather than taken.
+
+### STOP-AND-REPORT — the payment model cannot record a historical payment
+
+`fund_releases.fund_request_id` is **NOT NULL**, and a release belongs to the request rather than
+to a claim. A directly paid historical cost therefore cannot be recorded without **fabricating a
+fund request** — an approval nobody gave, which would corrupt every authorised-versus-released
+figure. **No migration was added.** The full report, including the smallest additive extension
+(optional `fund_request_id`, new `internal_cost_claim_id`, an exactly-one-parent check, and a
+`recorded_context` marker), is in
+`docs/ui-authority/operations-hub/PAYMENT-MODEL-LIMITATION.md`. PR #102's visual work continues
+safely without it: the register already shows payment truth as unknown where the Hub has none, and
+the same columns fill in when the extension lands.
+
+**Verified.** 840 tests pass (14 new). Production build clean with the drift guard first; lint
+identical to the 19-error baseline; `git diff --check` clean. Verified as Principal and Operations
+Manager at 1280px, 375px and 400px — a real mobile overflow on the Finance landing was found and
+fixed — and no console errors on a clean load. No migration, schema, RLS or production-data change;
+all 51 authority PNGs byte-identical. Dashboard, Project Register, Project Proposals, People,
+Maintenance/Tools and Approvals untouched.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
+Founder's visual review.

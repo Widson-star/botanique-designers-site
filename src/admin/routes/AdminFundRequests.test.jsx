@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { FundRequestsContext } from "../context/fundRequests";
@@ -115,10 +115,10 @@ describe("Fund Requests admin surfaces", () => {
   it("renders the Principal queue in desktop-table and mobile-card layouts under the canonical name", () => {
     const { container } = wrap(<AdminFundRequests />, contexts());
     // The canonical departmental name. "Fund requests" survives as the route only.
-    expect(screen.getByRole("heading", { name: "Funding, Payments and Reconciliation" }))
+    expect(screen.getByRole("heading", { name: "Funding, Payments & Reconciliation" }))
       .toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Fund Requests" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Approval is not payment/)).toBeInTheDocument();
+    expect(screen.getByText(/Money made available before it is spent/)).toBeInTheDocument();
     expect(screen.getAllByText("BDFR-2026-000001").length).toBeGreaterThan(1);
     expect(screen.getAllByText(/KES\s*23,000\.00/).length).toBeGreaterThan(1);
     // Nothing has been released, so custody is still only an intent.
@@ -129,13 +129,14 @@ describe("Fund Requests admin surfaces", () => {
 
   it("states the lifecycle position of the authorities in view, approval apart from release", () => {
     wrap(<AdminFundRequests />, contexts());
-    const panel = screen.getByText("Position of these authorities").closest("div");
-    expect(within(panel).getByText("Awaiting decision").parentElement).toHaveTextContent("1");
-    // A submitted request authorises nothing yet.
-    expect(within(panel).getByText("Authorised").parentElement).toHaveTextContent(/KES\s*0/);
-    expect(within(panel).getByText("Released").parentElement).toHaveTextContent(/KES\s*0/);
-    expect(screen.getByText(/It becomes a payment only when a release is recorded/))
-      .toBeInTheDocument();
+    // The authority's four lifecycle tiles, in order.
+    const tiles = document.querySelectorAll("main .grid > div, section > .grid > div");
+    const tileText = [...tiles].map((t) => t.textContent).join(" | ");
+    expect(tileText).toMatch(/Submitted.*1 request awaiting decision/);
+    // A submitted request authorises nothing yet, and authority is not payment.
+    expect(tileText).toMatch(/Approved.*KES\s*0/);
+    expect(tileText).toMatch(/Paid.*KES\s*0/);
+    expect(screen.getByText(/not yet payment/)).toBeInTheDocument();
   });
 
   it("names the custody money actually took, and both halves of a mixed authority", () => {
@@ -149,18 +150,18 @@ describe("Fund Requests admin surfaces", () => {
     }));
     // Intent is superseded by what actually happened, and neither custody type
     // is allowed to hide the other.
-    expect(screen.getAllByText("Direct settled payment + Accountable advance").length)
-      .toBeGreaterThan(0);
-    expect(screen.queryByText("Intended accountable advance")).not.toBeInTheDocument();
-    const panel = screen.getByText("Position of these authorities").closest("div");
-    expect(within(panel).getByText("Released").parentElement).toHaveTextContent(/15,000/);
-    expect(within(panel).getByText("Reconciliation outstanding").parentElement)
-      .toHaveTextContent(/10,000/);
+    // Both custody outcomes are visible on the Payments section; neither hides
+    // the other, and only the advance is asked to be reconciled.
+    const tiles = [...document.querySelectorAll("section > .grid > div")].map((t) => t.textContent).join(" | ");
+    expect(tiles).toMatch(/Paid.*15,000/);
+    fireEvent.click(screen.getByRole("tab", { name: "Payments" }));
+    expect(screen.getAllByText("Accountable advance").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Direct settled payment").length).toBeGreaterThan(0);
   });
 
   it("offers the Operations Manager a request action rather than direct authority", () => {
     wrap(<AdminFundRequests />, contexts({ role: "manager" }));
-    expect(screen.getByRole("link", { name: "New fund request" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Request funds" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Authorise funds directly" })).not.toBeInTheDocument();
   });
 

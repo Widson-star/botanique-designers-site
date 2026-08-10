@@ -30,6 +30,7 @@ import AdminFundRequests from "./routes/AdminFundRequests";
 import AdminFundRequestForm from "./routes/AdminFundRequestForm";
 import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
 import AdminFinance from "./routes/AdminFinance";
+import AdminFinanceUnbuilt from "./routes/AdminFinanceUnbuilt";
 import AdminReports from "./routes/AdminReports";
 import AdminPeople from "./routes/AdminPeople";
 import AdminPersonDetail from "./routes/AdminPersonDetail";
@@ -249,6 +250,11 @@ export default function AdminApp() {
               <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
               <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
               <Route path="/admin/finance" element={<AdminFinance />} />
+              {/* Image 13 gives Company Expenses and Staff Compensation a place
+                  in the department. They have no model, so their pages say so
+                  truthfully rather than being hidden or given invented data. */}
+              <Route path="/admin/finance/company-expenses" element={<AdminFinanceUnbuilt area="company-expenses" />} />
+              <Route path="/admin/finance/staff-compensation" element={<AdminFinanceUnbuilt area="staff-compensation" />} />
               <Route path="/admin/people" element={<AdminPeople />} />
               <Route path="/admin/people/:personId" element={<AdminPersonDetail />} />
               {/* Declared before the /admin/* catch-all, per the existing pattern. */}

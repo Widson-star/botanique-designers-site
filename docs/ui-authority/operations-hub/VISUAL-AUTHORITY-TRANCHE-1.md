@@ -424,3 +424,115 @@ A cost claim can currently be **approved while its Daily Site Record is still
 awaiting review**. The audit result is recorded in WORKSTREAMS.md: this is
 **inherited implementation behaviour with no settled Founder authority**. No
 lifecycle was changed. The decision needed is stated there.
+
+---
+
+# FOUNDER AMENDMENT — PROJECT COSTS
+
+**10 August 2026. Amends the Finance authority. The committed PNGs remain
+authoritative outside this targeted change.**
+
+Project Costs follows the Simple Invoice register interaction pattern for
+readability:
+
+    Date · Cost Reference · Project · Status · Total · Balance · Paid · Action
+
+Funding mechanics are not presented as the primary financial state of a project
+cost. Actual payment and outstanding balance are the primary money truth.
+
+Where historic payment truth has not yet been recorded in the Operations Hub,
+**Paid and Balance must remain unknown rather than falsely implying unpaid.**
+
+Botanique costs are NOT invoices. Only the shape of the list is borrowed — no
+invoice vocabulary, no "Invoice No.", no "Received Amount", no accounting
+architecture, no colours, sidebar or typography from that product.
+
+Also recorded: **REPORTS is the single visible reporting module name.** The
+nested "Reports → Project Summary" duplication is removed.
+
+## Simple Invoice's exact role
+
+Evidence for one adopted interaction pattern, plus general simplicity lessons
+(one page one job, obvious next action, filters together, compact lists,
+contextual action menus, progressive disclosure, simple empty states). It is
+**not** a design authority. The committed Botanique PNGs remain the visual
+authority.
+
+# Correction pass 3 — what changed
+
+## Project Costs
+
+The register is rebuilt on the amended columns. Status and payment are kept
+apart: "Approved" is a decision about authority, "Paid" is a fact about money,
+and neither implies the other.
+
+`Paid` and `Balance` are `—` unless the Hub genuinely holds the payment truth
+for that one cost. Three cases produce `—`, each for a different honest reason:
+no fund request exists (the usual historical case); the authority behind the
+cost also funds other costs, so no per-cost figure exists without apportioning a
+release; or the cost was never approved. The register footer counts costs with
+no payment record separately rather than folding them into "unpaid", and shows
+`—` for the totals when nothing in view has known payment truth.
+
+**"Not yet funded — no fund request" no longer appears anywhere.**
+
+Rows are compact: date, reference, project, recipient, status, three amounts, a
+menu. Full purpose, labour breakdown, requester, source record and history stay
+in the drill-through.
+
+The `•••` menu is state- and role-aware: View cost · View source site record ·
+Review and decide (Principal, awaiting review) · Request funds (manager, approved
+with no payment record) · View payments (where one exists) · Cancel approved cost
+(Principal). An action that does not apply is absent, not disabled.
+
+**Cost Ref.** uses `ICC-` + the first eight hex of the claim id — the convention
+the schema already stamps into `fund_request_allocations.claim_reference_snapshot`
+and returns from `available_claims_for_fund_request`. It is not invented here. A
+stored sequential number would read better but is a schema decision, reported
+rather than taken. Where no usable reference exists the column shows `—` rather
+than a raw id.
+
+## Finance navigation
+
+Finance now **expands in the sidebar** with its four capability children —
+Project Costs, Company Expenses, Staff Compensation, Funding Payments &
+Reconciliation — as image 13 draws it. This supersedes the horizontal five-tab
+arrangement. `/admin/finance` remains the landing described by image 12.
+
+Company Expenses and Staff Compensation have real destinations that state
+plainly that nothing is built, and offer the areas that work. No invented
+expense, subscription, bill, salary, allowance, rate or payroll anywhere.
+
+## Funding · Payments · Reconciliation
+
+One Finance child, three clearly separate jobs, reached by three in-page
+sections. **No new top-level navigation.** Four lifecycle tiles in the image's
+order — Submitted → Approved → Paid → Reconciliation — then:
+
+- **Funding** — the requests, with separate Status, Paid and Reconciled columns,
+  exactly as image 13's table does.
+- **Payments** — date, reference, paid to, channel, amount. Botanique wording,
+  no `fund_release` vocabulary.
+- **Reconciliation** — per advance: advanced, spent, returned, unaccounted, and
+  the next action, plus the image's progress bar computed only over advances
+  that genuinely require accounting for.
+
+## Daily Site Record ordering
+
+**Founder ruling implemented.** A cost derived from a Daily Site Record may be
+prepared while that record is under review, but cannot reach a Principal
+financial decision until the record is accepted. Both routes to approval are
+gated — the manager's submit and the Principal's direct authorisation — with a
+plain-language reason.
+
+**The database half is NOT closed.** `private_internal_cost_claim_daily_site_snapshot`
+still accepts `submitted`/`resubmitted` at submit time, so a direct RPC caller
+could bypass the UI. Closing it needs a migration to that function, which is
+reported rather than taken.
+
+## Payment model
+
+See `PAYMENT-MODEL-LIMITATION.md`. `fund_releases.fund_request_id` is NOT NULL,
+so a payment cannot exist without a fund request and a directly paid historical
+cost cannot be recorded without fabricating one. **Stopped and reported; no
+migration added.**
