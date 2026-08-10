@@ -1,76 +1,95 @@
-// The day's operational position, in the five counts the working authority
-// (08-daily-site-record-list-working-authority.png) puts in the first viewport.
+// The day's operational position.
+//
+// Visual Authority Tranche 1 rendered this as five equal statistic cards
+// followed by a separate alert strip. The Founder's review of the hosted result
+// was that five equal cards give every count the same weight, so nothing leads,
+// and that when sites are missing a record "the missing-site requirement should
+// feel like the central operational task, not just another yellow strip beneath
+// five cards".
+//
+// So the counts are no longer a set of cards. They are:
+//
+//   * ONE HEADLINE — the single sentence that is the day's position, chosen by
+//     what actually needs doing, not by a fixed slot order;
+//   * COUNTS ATTACHED TO THE FILTERS that select them, so a number is a way of
+//     getting somewhere rather than a decoration.
 //
 // Every count is derived from records the reader can already see. Nothing is
-// stored, nothing is estimated, and a count of zero is a real answer rather than
-// a reason to hide the cell — "no site record is late today" is exactly the
-// thing a Principal opens this page to learn.
-//
-// Two sources, each used for what it is authoritative about:
-//   * `compliance` rows answer "was a record DUE, and did one arrive" — the
-//     database computes due-ness, weekends and not-required in EAT.
-//   * `entries` answer "what state is the record in" — accepted, awaiting
-//     review, returned.
-// They are never mixed: a due count is never inferred from entries, and a state
-// count is never inferred from a compliance status.
+// stored and nothing is estimated. Two sources, each used for what it is
+// authoritative about: `compliance` rows answer "was a record DUE, and did one
+// arrive" (the database computes due-ness, weekends and not-required in EAT);
+// `entries` answer "what state is the record in". They are never mixed.
 
 const AWAITING_REVIEW_STATES = ["submitted", "resubmitted"];
 
-function countSites(rows, pick) {
+function sites(rows, pick) {
   return new Set(rows.map(pick).filter(Boolean)).size;
 }
 
-// `n sites` / `n site`, or the authority's own phrasing for the not-required
-// cell, where the number of sites is not the interesting part.
-function acrossSites(count) {
-  return count === 1 ? "Across 1 site" : `Across ${count} sites`;
+export function dayCounts(entries = [], compliance = [], today = "") {
+  const todays = entries.filter((entry) => entry.workDate === today);
+  const due = compliance.filter((row) => row.due);
+  const missingRows = compliance.filter((row) => row.complianceStatus === "missing");
+
+  return {
+    due: due.length,
+    dueSites: sites(due, (row) => row.projectId),
+    missing: missingRows.length,
+    missingProjects: missingRows,
+    late: compliance.filter((row) => row.complianceStatus === "entry_late").length,
+    notRequired: compliance.filter((row) => row.complianceStatus === "waived").length,
+    awaitingReview: todays.filter((entry) => AWAITING_REVIEW_STATES.includes(entry.state)).length,
+    accepted: todays.filter((entry) => entry.state === "accepted").length,
+    returned: todays.filter((entry) => entry.state === "returned_for_correction").length,
+    recorded: todays.length,
+  };
 }
 
-export function summariseDay(entries = [], compliance = [], today = "") {
-  const todaysEntries = entries.filter((entry) => entry.workDate === today);
-  const due = compliance.filter((row) => row.due);
-  const late = compliance.filter((row) => row.complianceStatus === "entry_late");
-  const notRequired = compliance.filter((row) => row.complianceStatus === "waived");
-  const awaiting = todaysEntries.filter((entry) => AWAITING_REVIEW_STATES.includes(entry.state));
-  const accepted = todaysEntries.filter((entry) => entry.state === "accepted");
-
-  return [
-    {
-      key: "due",
-      label: "Due today",
-      value: due.length,
-      hint: acrossSites(countSites(due, (row) => row.projectId)),
-      tone: "default",
-    },
-    {
-      key: "awaiting_review",
-      label: "Awaiting review",
-      value: awaiting.length,
-      hint: acrossSites(countSites(awaiting, (entry) => entry.projectId)),
-      tone: awaiting.length > 0 ? "waiting" : "default",
-    },
-    {
-      key: "late",
-      label: "Late",
-      value: late.length,
-      hint: acrossSites(countSites(late, (row) => row.projectId)),
-      tone: late.length > 0 ? "attention" : "default",
-    },
-    {
-      key: "accepted",
-      label: "Accepted",
-      value: accepted.length,
-      hint: acrossSites(countSites(accepted, (entry) => entry.projectId)),
-      tone: accepted.length > 0 ? "settled" : "default",
-    },
-    {
-      key: "not_required",
-      label: "Not required",
-      value: notRequired.length,
-      hint: "No work planned",
-      tone: "default",
-    },
-  ];
+// The day in one sentence, chosen by what needs doing. Worst first: a site with
+// no record at all outranks a record waiting for review, which outranks a day
+// where everything is done.
+export function dayHeadline(counts, { ready = true } = {}) {
+  if (!ready) {
+    return { tone: "neutral", icon: "clock", headline: "Loading today's site records…", detail: "" };
+  }
+  if (counts.missing > 0) {
+    return {
+      tone: "attention",
+      icon: "alert",
+      headline: counts.missing === 1
+        ? "1 site still needs a morning record"
+        : `${counts.missing} sites still need a morning record`,
+      detail: "Recording the morning position is the first task of the day.",
+    };
+  }
+  if (counts.due === 0) {
+    return {
+      tone: "neutral",
+      icon: "pause",
+      headline: "No site record is due today",
+      detail: counts.notRequired > 0
+        ? `${counts.notRequired} ${counts.notRequired === 1 ? "site is" : "sites are"} marked not required.`
+        : "No active site has work planned that requires a record.",
+    };
+  }
+  if (counts.awaitingReview > 0) {
+    return {
+      tone: "waiting",
+      icon: "clock",
+      headline: counts.awaitingReview === 1
+        ? "1 record is waiting for review"
+        : `${counts.awaitingReview} records are waiting for review`,
+      detail: "Every active site has recorded its morning position.",
+    };
+  }
+  return {
+    tone: "settled",
+    icon: "check",
+    headline: "Every active site has recorded today",
+    detail: counts.notRequired > 0
+      ? `${counts.notRequired} ${counts.notRequired === 1 ? "site was" : "sites were"} marked not required.`
+      : "Nothing is outstanding on the morning record.",
+  };
 }
 
 // The one action a row is actually waiting for. The authority puts a verb in

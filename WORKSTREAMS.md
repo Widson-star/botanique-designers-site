@@ -6878,3 +6878,68 @@ verification of a real release and reconciliation stays outstanding, and will st
 until a legitimate transaction exists — no money movement was fabricated to close it.
 
 Authority: `docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md`.
+
+---
+
+## Visual Authority Tranche 1 — FIDELITY CORRECTION
+
+**10 August 2026. Branch `claude/visual-authority-tranche-1-fidelity`, from `main` `5354492`.**
+
+The Founder reviewed the hosted result of PR #101 and concluded: **functional progress
+substantial, visual fidelity insufficient.** The live pages still read as the pre-existing generic
+admin/card/table system. This is recorded as a genuine acceptance failure of the visual portion of
+Tranche 1, not a difference of opinion, and this correction is the response.
+
+**No backend or domain behaviour changed.** No migration, no RLS change, no schema, no production
+data touched, no authority PNG altered. Tranche 2 (images 05, 06, 07) was deliberately **not**
+started, so the shallow interpretation is corrected before it is propagated.
+
+**The root cause was a missing visual vocabulary.** The authority screens share four devices the
+build had none of: an icon in a tinted disc beside every metric and heading; metrics laid out
+horizontally so a row reads as a band rather than a row of boxes; panel headers carrying title,
+subordinate line and control on one baseline; and absence stated on one line. Without them every
+page resolved to the same stack of bordered rectangles full of prose. `Surfaces.jsx` now holds
+them and all four surfaces are built from them.
+
+**Image 08.** The five equal statistic cards are gone. The page opens with one banner whose
+headline is chosen by what needs doing — missing outranks awaiting review outranks done — and when
+sites have no record the recording actions sit *inside* that banner, because recording them is the
+day's work. The counts moved onto the filters that select them, merging two regions into one and
+making every number a way of getting somewhere. Six stacked regions became four.
+
+**Image 09.** A connected rail, then a genuine two-column body: the operational record as ONE panel
+with hairline-separated bands on the left, and compliance, financial follow-up and history as a
+supporting column on the right. Finance is a column card, not a full-width section with its own
+metric grid. History is a closed disclosure. Seven stacked regions became three, and the whole
+record now fits the first viewport.
+
+**Image 12.** The authority's signature region — one card per Finance area with its own icon and
+headline figure — had been omitted entirely; it is now the first thing on the page. Position and
+attention sit side by side rather than stacked. Every empty state is one line inside its panel.
+The full-width dashed block is gone: Company Expenses and Staff Compensation sit in the department
+row at the weight of a capability that does not exist — muted, no figure, not clickable, not a tab.
+
+**Image 13.** Project Costs leads with a single weighted "Awaiting a decision" block and three
+supporting figures, not four equal tiles, then two *bounded* lists instead of one unbounded one.
+Funding presents the lifecycle as one ordered strip — awaiting decision → authorised → released →
+advance outstanding → settled — so approval can never be read as payment.
+
+**Corrected in passing.** Three surfaces still asserted "no funds have been released" as a fact
+about the product. True before PR #98; a false statement about money since. The fund-request form,
+its back link and the Reports fund-request section now state what a fund request *is*. The one
+remaining instance is conditional and only renders when no release exists.
+
+**Also fixed:** the `AdminReports` URL test raced the projects read and had flaked twice under full
+-suite load. It now waits for the option to exist before selecting it — a real fix, not a loosened
+assertion.
+
+**Verified.** 811 tests pass. Production build clean with the drift guard running first; lint
+identical to the 19-error baseline; `git diff --check` clean. Verified as Principal and Operations
+Manager at 1280px, 375px and 400px — no horizontal overflow on any of the four critical surfaces,
+and no console errors on a clean load.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** The acceptance gate for this PR is the Founder's VISUAL
+review of the preview deployment, not CI.
+
+Authority: `docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md` (fidelity-correction
+section, which supersedes the composition described in the original section).

@@ -52,7 +52,7 @@ export default function AdminFundRequestDetail() {
   if (!request) return <section>
     <h1 className="text-2xl font-semibold">Fund request unavailable</h1>
     <p className="mt-2 text-sm text-gray-600">It may not exist or you may not have project authority.</p>
-    <Link to="/admin/fund-requests" className="mt-4 inline-block text-sm font-medium text-botanique-green">Back to Fund Requests</Link>
+    <Link to="/admin/fund-requests" className="mt-4 inline-block text-sm font-medium text-botanique-green">Back to Funding, Payments and Reconciliation</Link>
   </section>;
 
   async function act(operation) {

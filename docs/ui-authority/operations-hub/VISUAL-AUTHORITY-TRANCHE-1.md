@@ -3,6 +3,13 @@
 **10 August 2026.** The first deliberate move from admin-generated pages toward the settled
 compact product composition.
 
+> **READ THE FIDELITY CORRECTION AT THE FOOT OF THIS FILE FIRST.** The Founder reviewed the
+> hosted result of PR #101 and found the visual fidelity insufficient. Where the sections below
+> describe a composition — five day counts, a three-column card grid, a compact "also part of
+> Finance" strip, a four-event history cap — **the correction supersedes them.** What still stands
+> unchanged from the sections below is the *authority precedence* table, and every deliberate
+> deviation not explicitly revised in the correction.
+
 Primary authority, all frozen and **byte-identical after this tranche**:
 
 - `working-authority/08-daily-site-record-list-working-authority.png`
@@ -165,3 +172,119 @@ Project Costs grouping and export · a day-close concept of any kind.
 
 **Still NOT `ACTIVE_VERIFIED`.** Shipping this tranche is presentation implementation. It is not
 BD-FIN-01C hosted verification, and it is not wider Operations Hub completion.
+
+---
+
+# Fidelity correction — 10 August 2026
+
+The Founder reviewed the hosted result of PR #101 and the conclusion was:
+**functional progress substantial, visual fidelity insufficient.** The live pages
+still read as the pre-existing generic admin/card/table system. This is recorded
+as a genuine acceptance failure of the visual portion of Tranche 1, and the
+correction below is the response. No backend or domain behaviour changed, no
+migration, no RLS change, no authority PNG touched.
+
+## The audit that preceded the code
+
+| Region | Authority | PR #101 result | Verdict |
+| --- | --- | --- | --- |
+| **08** page skeleton | banner-led day, then records | header → 5 equal cards → alert strip → filter row → table → hand-off strip | **Mismatch** — six stacked rectangles, none leading |
+| **08** summary | counts subordinate to the day | five equal statistic cards | **Mismatch** — "Not required: 0" weighted equally with "3 sites have no record" |
+| **08** attention | the missing record is the day's task | a yellow strip *below* the cards | **Mismatch** |
+| **08** filters | compact, adjacent to the day | separate full-width row | **Mismatch** — a region that could be merged |
+| **09** skeleton | dense card grid, one record | 7 stacked full-width regions | **Mismatch** |
+| **09** rail | connected progression | 3 separate bordered cards | **Mismatch** |
+| **09** history | absent from the authority entirely | a full-width section equal in weight to today | **Mismatch** |
+| **09** finance | not a region of the authority page | a full-width section with a nested 4-figure metric grid | **Mismatch** — read as a second application |
+| **12** department | 5 capability cards, icon + metric + link | **absent entirely** | **Mismatch** — the authority's signature region was missing |
+| **12** position/attention | side by side | stacked, each a full-width panel of prose | **Mismatch** |
+| **12** empty state | n/a | two large panels explaining that nothing had happened | **Mismatch** — emptiest regions took the most space |
+| **12** unbuilt areas | named quietly | a full-width dashed block | **Mismatch** |
+| **13** Project Costs | panel header, metric row, two content columns | four equal metrics → one list | **Mismatch** |
+| **13** Funding | lifecycle position | one explanatory box when empty | **Mismatch** |
+| all | icons in tinted discs | **no icons anywhere** | **Mismatch** — the single biggest reason the pages read as generated |
+
+## What changed structurally
+
+**A shared visual vocabulary** (`src/admin/components/ui/Surfaces.jsx`). The
+authority screens share four devices this build had none of: an icon in a tinted
+disc beside every metric and heading; metrics laid out horizontally so a row
+reads as a band rather than a row of boxes; panel headers carrying title,
+subordinate line and control on one baseline; and absence stated on one line.
+Everything below is built from them.
+
+**Image 08 — the five equal cards are gone.** A day has one position, so the page
+opens with a single banner whose headline is *chosen by what needs doing*:
+"3 sites still need a morning record" → "2 records are waiting for review" →
+"Every active site has recorded today", each with its own surface tint. When
+sites have no record, the recording actions sit **inside** that banner at full
+prominence — recording them *is* the day's work. The five counts moved onto the
+filters that select them, so "Awaiting review 2" is now the control that shows
+those two records. Two former regions became one, and every number became a way
+of getting somewhere.
+
+**Image 09 — a two-column record.** The rail is one connected strip with the
+progression drawn between the stages. Below it, the left column is the
+operational record as **one panel with hairline-separated bands** (site activity,
+workforce and labour, site funds) rather than six cards; the right column is the
+supporting rail — compliance and evidence, financial follow-up, history. Finance
+is now a **column card**: a position, the claims, four figures as rows, and a
+link. History is a **closed disclosure**. Both changes do the same thing: the
+record is operational first, and nothing beside it can compete with today.
+
+**Image 12 — the department row is back.** One card per Finance area, each with
+its icon and its own headline figure, is the authority's signature region and it
+was missing entirely. Below it, position and attention sit **side by side**
+(3/5 and 2/5). Zero position and an empty attention list are each **one line
+inside their panel**. The dashed block is gone: Company Expenses and Staff
+Compensation now sit in the department row at the weight of a capability that
+does not exist — muted, no figure, not clickable, not a tab.
+
+**Image 13 — grouped by decision importance.** Project Costs leads with a single
+prominent "Awaiting a decision" block (count and amount, tinted when non-zero),
+with three supporting figures beside it — not four equal tiles because four
+values exist. Below, two **bounded** lists — "Needs a decision" and "Recently
+decided" — replace the single unbounded list. Funding presents the lifecycle as
+one ordered strip: awaiting decision → authorised → released → advance
+outstanding → settled, so approval can never be read as payment.
+
+## Answers to the three named faults
+
+- **Card-per-metric clutter.** Image 08 went from five statistic cards to zero.
+  Image 12's position panel uses a hairline metric band, not four bordered boxes.
+  Image 13's Project Costs went from four equal tiles to one weighted block plus
+  three supporting figures.
+- **Empty-state visual weight.** Every absence is now one line inside a panel
+  (`EmptyLine`), with an action where one exists. No empty region occupies a
+  full-width panel anywhere in Finance or the Daily Site Record.
+- **Vertical stacking.** Image 08: six regions → four. Image 09: seven → three
+  (rail, two-column body, next step). Image 12: five stacked panels → two rows.
+  Image 13 Project Costs: two stacked regions → two rows, the second side by side.
+
+## Deliberate deviations that stand
+
+Unchanged from the original tranche and re-affirmed here: no persistent Finance
+sidebar children (PR #94 stands); no fourth "Day close-out" stage; no money-in,
+bank balance, expense-category or payroll figures; no export; no raw record ID;
+evidence as a declared status, never thumbnails; no per-row overflow menu; no
+votehead breakdown; no staff payment table; Project Costs grouping and export
+still deferred.
+
+New in this correction:
+
+- **The site monogram is hidden below `xl` in the table**, so a long site name
+  keeps the width on a narrower desktop.
+- **History opens to the whole immutable list, not a preview slice.** The
+  disclosure is what makes it subordinate; truncating it as well would hide
+  audit history for no benefit.
+- **The record count and the cost-claim hand-off share one line** at the foot of
+  image 08, rather than being two stacked regions.
+
+## Corrected elsewhere
+
+Three surfaces still asserted "no funds have been released" as a fact about the
+product. That was true before PR #98 and is now a false statement about money.
+The fund-request form, its back link and the Reports fund-request section were
+corrected to state what a fund request *is* — authority, not payment. The one
+remaining instance, on the fund-request detail, is conditional and only renders
+when no release exists, which is true.

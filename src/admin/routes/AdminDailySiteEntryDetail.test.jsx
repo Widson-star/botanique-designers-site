@@ -250,9 +250,12 @@ describe("AdminDailySiteEntryDetail funding and reconciliation", () => {
 
   it("states approved authority that has not been released", () => {
     renderDetail({ claims: [approvedClaim], finance: finance() });
-    expect(screen.getByText("Funding and reconciliation")).toBeInTheDocument();
-    expect(screen.getByText("Approved — not yet funded")).toBeInTheDocument();
-    expect(screen.getAllByText("KES 20,000").length).toBeGreaterThan(0);
+    // The money now sits in the record's side rail as a summary, not in a
+    // nested full-width funding panel beneath the record.
+    const followUp = screen.getByRole("region", { name: "Financial follow-up" });
+    expect(within(followUp).getByText("Approved — not yet funded")).toBeInTheDocument();
+    expect(within(followUp).getByText("Authorised").parentElement).toHaveTextContent("KES 20,000");
+    expect(within(followUp).getByText("Released").parentElement).toHaveTextContent("KES 0");
   });
 
   it("shows both dimensions of the mixed partly-funded, unreconciled position", () => {
@@ -267,9 +270,11 @@ describe("AdminDailySiteEntryDetail funding and reconciliation", () => {
     renderDetail({ claims: [approvedClaim], finance: finance({
       releases: [advance({ custodyDisposition: DIRECT, releasedAmount: 20000, recipientLabel: "Kisumu Hardware" })],
     }) });
-    expect(screen.getByText("Fully funded")).toBeInTheDocument();
+    const followUp = screen.getByRole("region", { name: "Financial follow-up" });
+    expect(within(followUp).getByText("Fully funded")).toBeInTheDocument();
+    // A direct settled payment is never given a reconciliation debt.
     expect(screen.queryByText("Reconciliation outstanding")).not.toBeInTheDocument();
-    expect(screen.getByText(/financial workflow for this cost is complete/i)).toBeInTheDocument();
+    expect(within(followUp).getByText("Actual spend").parentElement).toHaveTextContent("KES 20,000");
   });
 
   it("drills through to the fund request rather than editing it here", () => {
@@ -298,9 +303,11 @@ describe("AdminDailySiteEntryDetail funding and reconciliation", () => {
       entries: [accepted], claims: [approvedClaim],
       finance: finance({ releases: [advance()] }),
     });
-    // The day is operationally closed and Finance is still outstanding. Both are true.
+    // The day is operationally closed and Finance is still outstanding. Both are
+    // true at once: the record shows Accepted while the money is unreconciled.
     expect(screen.getByText("Reconciliation outstanding")).toBeInTheDocument();
-    expect(screen.getByText(/day can close operationally/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Accepted").length).toBeGreaterThan(0);
+    expect(screen.getByText(/waiting to be accounted for/i)).toBeInTheDocument();
   });
 });
 
@@ -458,18 +465,24 @@ describe("Daily Site Record detail — history stays subordinate", () => {
     occurredAt: `2026-07-2${index}T06:00:00Z`, eventNotes: "",
   });
 
-  it("shows the most recent events first and keeps the rest one press away", async () => {
+  // History is now a CLOSED disclosure in the side rail. The immutable record
+  // stays complete and one press away, but it can no longer compete with
+  // today's position for the first viewport.
+  it("keeps history closed by default, and says how much there is", async () => {
     renderDetail({ events: [1, 2, 3, 4, 5, 6].map(event) });
-    const toggle = await screen.findByRole("button", { name: "Show all 6 events" });
-    expect(screen.getByText(/Showing the 4 most recent of 6 events/)).toBeInTheDocument();
-    expect(screen.getByText(/immutable and complete/)).toBeInTheDocument();
-    toggle.click();
-    expect(await screen.findByRole("button", { name: "Show recent only" })).toBeInTheDocument();
+    const toggle = await screen.findByRole("button", { name: /History/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText(/6 events · immutable/)).toBeInTheDocument();
+    // Nothing from the history is rendered until it is asked for.
+    expect(screen.queryByText("Draft updated")).not.toBeInTheDocument();
   });
 
-  it("does not offer a toggle when the whole history already fits", async () => {
-    renderDetail({ events: [1, 2].map(event) });
-    await screen.findByText("History");
-    expect(screen.queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
+  it("opens the whole history on one press", async () => {
+    renderDetail({ events: [1, 2, 3, 4, 5, 6].map(event) });
+    const toggle = await screen.findByRole("button", { name: /History/ });
+    toggle.click();
+    // The whole immutable history, newest first — one press away, never hidden.
+    expect((await screen.findAllByText("Draft updated")).length).toBe(6);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
   });
 });

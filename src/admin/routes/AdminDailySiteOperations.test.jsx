@@ -80,8 +80,9 @@ describe("AdminDailySiteOperations queue and summary", () => {
 
   it("shows compliance counts and the missing project with a record link", () => {
     renderRoute({ entries, compliance });
-    expect(screen.getByText("One site still needs a morning record today")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Lugulu Estate → record/ })).toBeInTheDocument();
+    expect(screen.getByText("1 site still needs a morning record")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Lugulu Estate/ }))
+      .toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
   });
 
   it("renders entries as readable rows without raw ids or JSON", () => {
@@ -103,8 +104,8 @@ describe("AdminDailySiteOperations queue and summary", () => {
       "Project / Site",
       "Work date",
       "Site plan",
-      "Planned workforce",
-      "Planned labour cost",
+      "Workforce",
+      "Planned labour",
       "Status",
       "Next action",
     ]);
@@ -181,9 +182,10 @@ describe("AdminDailySiteOperations queue and summary", () => {
       ],
     });
     expect(screen.getAllByText("Not required").length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/Every active site has a morning record today, or was marked not required/)
-    ).toBeInTheDocument();
+    // A day whose only due site was marked not required is a complete day, and
+    // the not-required fact is carried in the headline's detail line.
+    expect(screen.getByText("Every active site has recorded today")).toBeInTheDocument();
+    expect(screen.getByText(/1 site was marked not required/)).toBeInTheDocument();
     expect(screen.queryByText(/waive/i)).not.toBeInTheDocument();
   });
 });
@@ -203,33 +205,11 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
     submittedAt: `${today}T07:30:00Z`, ...overrides,
   });
 
-  it("leads with the five day counts, each with how many sites they cover", () => {
+  // The fidelity correction's central claim: a day has ONE position, and the
+  // headline is chosen by what actually needs doing — not five equal cards that
+  // give "Not required: 0" the same weight as "3 sites have no record".
+  it("leads with one headline chosen by what needs doing, not five equal cards", () => {
     renderRoute({
-      role: "owner",
-      entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted", reviewedAt: `${today}T09:15:00Z` })],
-      compliance: [
-        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
-        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "entry_late" },
-      ],
-    });
-    const region = screen.getByRole("region", { name: "Today's site record position" });
-    ["Due today", "Awaiting review", "Late", "Accepted", "Not required"].forEach((label) => {
-      expect(within(region).getByText(label)).toBeInTheDocument();
-    });
-    expect(within(region).getByText("Due today").parentElement).toHaveTextContent("Across 2 sites");
-    expect(within(region).getByText("Awaiting review").parentElement).toHaveTextContent("Across 1 site");
-  });
-
-  // A count of zero is a real answer. Hiding the cell would make "nothing is
-  // late today" indistinguishable from "nobody has looked".
-  it("keeps a zero count visible rather than hiding the cell", () => {
-    renderRoute({ role: "owner", entries: [], compliance: [] });
-    const region = screen.getByRole("region", { name: "Today's site record position" });
-    expect(within(region).getByText("Late").parentElement).toHaveTextContent("0");
-  });
-
-  it("puts a site with no record at all above every record that exists", () => {
-    const { container } = renderRoute({
       role: "owner",
       entries: [entry()],
       compliance: [
@@ -237,20 +217,83 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
         { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" },
       ],
     });
-    const missing = screen.getByText("One site still needs a morning record today");
-    const table = container.querySelector("table");
-    // Document order is the reading order: the missing band precedes the records.
-    expect(missing.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    expect(within(region).getByText("1 site still needs a morning record")).toBeInTheDocument();
+    // The old five-card band is gone: no statistic card per status.
+    expect(within(region).queryByText("Due today")).not.toBeInTheDocument();
+    expect(within(region).queryByText("Awaiting review")).not.toBeInTheDocument();
+  });
+
+  it("escalates the headline: missing outranks awaiting review, which outranks done", () => {
+    const compliance = (status) => [
+      { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: status },
+    ];
+    const { unmount } = renderRoute({ role: "owner", entries: [entry()], compliance: compliance("missing") });
+    expect(screen.getByText("1 site still needs a morning record")).toBeInTheDocument();
+    unmount();
+
+    const second = renderRoute({ role: "owner", entries: [entry()], compliance: compliance("entry_present") });
+    expect(screen.getByText("1 record is waiting for review")).toBeInTheDocument();
+    second.unmount();
+
+    renderRoute({
+      role: "owner",
+      entries: [entry({ state: "accepted", reviewedAt: `${today}T09:15:00Z` })],
+      compliance: compliance("entry_present"),
+    });
+    expect(screen.getByText("Every active site has recorded today")).toBeInTheDocument();
+  });
+
+  // The Founder's specific objection: a missing record must feel like the day's
+  // central task, not a yellow strip beneath five cards.
+  it("puts the recording action inside the headline region, not in a strip below it", () => {
+    renderRoute({
+      role: "owner",
+      entries: [entry()],
+      compliance: [
+        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
+        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" },
+      ],
+    });
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    const action = within(region).getByRole("link", { name: /Lugulu Estate/ });
+    expect(action).toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
+  });
+
+  // Counts now live on the controls that select them, so a number is a way of
+  // getting somewhere rather than a decoration.
+  it("carries each count on the filter that selects it", () => {
+    renderRoute({
+      role: "owner",
+      entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted" })],
+      compliance: [
+        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
+        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "entry_late" },
+      ],
+    });
+    const filters = screen.getByRole("tablist", { name: "Record filters" });
+    expect(within(filters).getByRole("tab", { name: /Awaiting review 1/ })).toBeInTheDocument();
+    expect(within(filters).getByRole("tab", { name: /Accepted 1/ })).toBeInTheDocument();
+    expect(within(filters).getByRole("tab", { name: /Late 1/ })).toBeInTheDocument();
+  });
+
+  it("keeps a zero count visible on its filter rather than hiding it", () => {
+    renderRoute({ role: "owner", entries: [], compliance: [] });
+    const filters = screen.getByRole("tablist", { name: "Record filters" });
+    expect(within(filters).getByRole("tab", { name: /Late 0/ })).toBeInTheDocument();
   });
 
   it("shows when the record actually arrived, and whether that was late", () => {
-    renderRoute({
-      role: "owner",
-      entries: [entry({ isLate: true })],
-      compliance: [],
-    });
+    renderRoute({ role: "owner", entries: [entry({ isLate: true })], compliance: [] });
     expect(screen.getAllByText(/Submitted late/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Late").length).toBeGreaterThan(0);
+  });
+
+  // No large empty rectangle on a quiet day.
+  it("states a quiet day on one line, with a way to widen the view", () => {
+    renderRoute({ role: "owner", entries: [], compliance: [] });
+    expect(screen.getByText(/No record has been captured for today yet/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show all records" })).toBeInTheDocument();
   });
 });
 

@@ -118,11 +118,15 @@ export default function AdminFundRequestForm() {
   }
 
   return <section className="mx-auto max-w-5xl">
-    <Link to={existing ? `/admin/fund-requests/${existing.id}` : "/admin/fund-requests"} className="text-sm font-medium text-botanique-green hover:underline">← Back to Fund Requests</Link>
+    <Link to={existing ? `/admin/fund-requests/${existing.id}` : "/admin/fund-requests"} className="text-sm font-medium text-botanique-green hover:underline">← Funding, Payments and Reconciliation</Link>
     <h1 className="mt-3 text-2xl font-semibold">{isPrincipal ? "Authorise funds directly" : existing ? "Amend fund request" : "New fund request"}</h1>
     <p className="mt-1 text-sm text-gray-600">
-      Every allocation must be backed by an approved claim in one project. This records requested
-      authority only — no funds have been released.
+      {/* This form records AUTHORITY. It was written before releases existed and
+          said "no funds have been released" as a statement about the product;
+          since PR #98 that is a claim about money and it is not this form's to
+          make. What is true here is that authorising is not releasing. */}
+      Every allocation must be backed by an approved claim in one project. This records authority
+      to make money available — releasing it is a separate, later step.
     </p>
 
     {!isPrincipal && !existing && <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
