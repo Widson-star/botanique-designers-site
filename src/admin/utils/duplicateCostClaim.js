@@ -71,6 +71,44 @@ export function claimCoversPlanningLine(claim, lines, entry) {
   return (lines || []).some((line) => lineMatchesFingerprint(line, fingerprint));
 }
 
+// WHAT, EXACTLY, HAS ALREADY BEEN CLAIMED.
+//
+// A claim of KES 5,950 containing a KES 5,000 planning line and a KES 950 line
+// is NOT "KES 5,950 of site labour already claimed" — only the KES 5,000 line
+// matched. The hosted review of PR #102 found the whole claim total being
+// presented as the duplicated labour, which overstates it and is not supported
+// by anything the reader can see.
+//
+// So the matched amount is derived from the MATCHING LINES ONLY, and the claim
+// total may be described as the already-claimed cost only when the claim
+// consists of nothing else. When the lines cannot be read at all, the amount is
+// null and the caller must say so without a figure rather than invent precision.
+export function matchedPlanningCost(claim, lines, entry) {
+  const fingerprint = planningLineFingerprint(entry);
+  if (!fingerprint || !claim) return null;
+  const rows = lines || [];
+  const matching = rows.filter((line) => lineMatchesFingerprint(line, fingerprint));
+  if (!matching.length) return null;
+
+  const matchedTotal = matching.reduce((sum, line) => {
+    // money() coerces null to 0, so an absent line total must be detected before
+    // it is coerced — otherwise a missing figure would silently read as zero.
+    const hasTotal = line.lineTotal !== null && line.lineTotal !== undefined && line.lineTotal !== "";
+    if (hasTotal) return sum + (money(line.lineTotal) || 0);
+    const quantity = money(line.quantity);
+    const unitRate = money(line.unitRate);
+    return sum + (quantity || 0) * (unitRate || 0);
+  }, 0);
+
+  return {
+    matchedTotal: Math.round(matchedTotal * 100) / 100,
+    matchedLineCount: matching.length,
+    // True only when every line on the claim is a matched planning line. Only
+    // then does the claim total and the matched labour describe the same money.
+    coversWholeClaim: matching.length === rows.length,
+  };
+}
+
 // The hand-off position for one Daily Site Record.
 //
 // `linesForClaim` is the provider's own accessor, so this reads the same lines the claim
@@ -79,12 +117,20 @@ export function duplicateRiskForEntry(entry, claims = [], linesForClaim = () => 
   const fromThisRecord = claims.filter((claim) => claim?.dailySiteEntryId === entry?.id);
   const live = fromThisRecord.filter(isLiveClaim);
   const covering = live.filter((claim) => claimCoversPlanningLine(claim, linesForClaim(claim.id), entry));
+  // The matched-line position for the first covering claim, so a caller can
+  // name the already-claimed amount without ever mistaking a richer claim's
+  // total for the matched labour.
+  const matched = covering.length
+    ? matchedPlanningCost(covering[0], linesForClaim(covering[0].id), entry)
+    : null;
 
   return {
     // Every live claim raised from this record, whether or not it covers the planning cost.
     liveClaims: live,
     // The live claims that already contain this record's own planning cost.
     coveringClaims: covering,
+    // What actually matched, in money. Null when it cannot be determined.
+    matchedPlanningCost: matched,
     // True only when the record's planning cost has demonstrably already been claimed.
     planningCostAlreadyClaimed: covering.length > 0,
     // What the ordinary user should be steered to. "open" never removes the additional path;
@@ -126,4 +172,39 @@ export function describeCoveringClaim(claim) {
   if (!claim) return "";
   const state = SITE_COST_LIFECYCLES[claim.lifecycle] || "raised";
   return `${state.toLowerCase()}`;
+}
+
+// THE WARNING AT THE MOMENT IT IS USEFUL.
+//
+// A claim being drafted, checked against the live claims already raised from the
+// same Daily Site Record. This is where PR #100's structural detection now
+// speaks: not on every view of the record — an existing claim is a normal
+// downstream state, not an error — but when someone is actually about to create
+// a second claim that overlaps one that already exists.
+//
+// `draft` is the in-progress form values: { dailySiteEntryId, category, lines }.
+// Matching is the same exact structural equality used everywhere else in this
+// module: description, rate type, quantity and unit rate. No fuzzy matching, no
+// scoring, and a blank or incomplete line never matches anything.
+export function overlappingClaimsForDraft(draft, claims = [], linesForClaim = () => [], excludeClaimId = "") {
+  if (!draft?.dailySiteEntryId) return [];
+  const drafted = (draft.lines || []).filter((line) =>
+    String(line?.description || "").trim() && money(line?.unitRate) != null && money(line?.unitRate) > 0);
+  if (!drafted.length) return [];
+
+  return claims
+    .filter((claim) => claim.id !== excludeClaimId)
+    .filter((claim) => claim.dailySiteEntryId === draft.dailySiteEntryId)
+    .filter((claim) => claim.category === draft.category)
+    .filter(isLiveClaim)
+    .map((claim) => {
+      const existing = linesForClaim(claim.id) || [];
+      const matches = drafted.filter((line) => existing.some((candidate) =>
+        candidate.description === String(line.description).trim()
+        && candidate.rateType === line.rateType
+        && money(candidate.quantity) === money(line.quantity)
+        && money(candidate.unitRate) === money(line.unitRate)));
+      return { claim, matchedLines: matches };
+    })
+    .filter((entry) => entry.matchedLines.length > 0);
 }

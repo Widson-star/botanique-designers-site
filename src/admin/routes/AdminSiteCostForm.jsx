@@ -4,6 +4,7 @@ import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useSiteCosts } from "../context/siteCosts";
 import { calculateSiteCostTotal } from "../utils/siteCostCapabilities";
+import { overlappingClaimsForDraft } from "../utils/duplicateCostClaim";
 
 const emptyLine = () => ({ description: "", rateType: "lump_sum", quantity: "1", unit: "item", unitRate: "" });
 const money = (amount) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", currencyDisplay: "code" }).format(amount || 0);
@@ -80,14 +81,41 @@ export default function AdminSiteCostForm() {
     else setError(result.stale ? "This claim changed elsewhere. Refresh and review the latest version." : result.error);
   }
 
+  // Read-only: the live claims already raised from this record, compared against
+  // the lines being drafted right now.
+  const overlaps = overlappingClaimsForDraft(
+    { dailySiteEntryId: values.dailySiteEntryId, category: values.category, lines: values.lines },
+    claims, linesForClaim, existing?.id || ""
+  );
+
   return <section className="mx-auto max-w-5xl">
     <Link to={existing ? `/admin/site-costs/${existing.id}` : "/admin/site-costs"} className="text-sm font-medium text-botanique-green hover:underline">← Back to Project Costs</Link>
     <h1 className="mt-3 text-2xl font-semibold">{role === "owner" ? "Authorise project cost" : existing ? "Amend cost claim" : "New cost claim"}</h1>
     <p className="mt-1 text-sm text-gray-600">One recipient or crew and one category per claim. Amounts below are claims, not payments.</p>
-    {source && additional && <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-      <p className="font-semibold">Additional cost for a day that has already been claimed</p>
-      <p className="mt-1">This day&rsquo;s site labour is already on another claim, so nothing has been pre-filled here. Enter only the new or later cost, and say what it is for.</p>
-      <p className="mt-1 text-xs">If you meant the cost that was already claimed, go back and open that claim instead of raising this one.</p>
+    {source && additional && <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-gray-700">
+      <p className="font-semibold text-botanique-charcoal">Additional cost for a day that already has a claim</p>
+      <p className="mt-1">Nothing has been pre-filled, so this claim cannot repeat a cost by accident. Enter only the new or later cost, and say what it is for.</p>
+    </div>}
+    {/* PR #100's structural duplicate detection, at the moment it is useful:
+        the claim being drafted overlaps a claim that already exists. Nothing is
+        blocked — the Principal keeps every decision — but the person creating
+        it is told before they submit rather than after. */}
+    {overlaps.length > 0 && <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+      <p className="font-semibold">This looks like a cost that has already been claimed</p>
+      <p className="mt-1">
+        {overlaps.length === 1
+          ? "Another live claim from this site record already contains the same line:"
+          : "Other live claims from this site record already contain the same lines:"}
+      </p>
+      <ul className="mt-1.5 space-y-1">
+        {overlaps.map(({ claim, matchedLines }) => <li key={claim.id}>
+          <Link to={`/admin/site-costs/${claim.id}`} className="font-semibold underline">{claim.recipientLabel || "Cost claim"}</Link>
+          {" — "}
+          {matchedLines.map((line) => line.description).join(", ")}
+          {" ("}{money(matchedLines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unitRate) || 0), 0))}{")"}
+        </li>)}
+      </ul>
+      <p className="mt-2 text-xs">If this is genuinely an additional cost, change the line so it describes what is actually new. Otherwise open the existing claim instead.</p>
     </div>}
     {source && !additional && <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
       <p className="font-semibold">Copied planning context — no liability was created automatically</p>

@@ -80,7 +80,7 @@ describe("AdminDailySiteOperations queue and summary", () => {
 
   it("shows compliance counts and the missing project with a record link", () => {
     renderRoute({ entries, compliance });
-    expect(screen.getByText("1 site still needs a morning record")).toBeInTheDocument();
+    expect(screen.getByText("1 site is due today and has no record yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Lugulu Estate/ }))
       .toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
   });
@@ -100,12 +100,13 @@ describe("AdminDailySiteOperations queue and summary", () => {
     const headers = Array.from(container.querySelectorAll("thead th")).map((th) =>
       th.textContent.trim()
     );
+    // Exactly the authority image's seven columns, in its order.
     expect(headers).toEqual([
       "Project / Site",
       "Work date",
       "Site plan",
-      "Workforce",
-      "Planned labour",
+      "Planned workforce",
+      "Planned labour cost",
       "Status",
       "Next action",
     ]);
@@ -182,10 +183,10 @@ describe("AdminDailySiteOperations queue and summary", () => {
       ],
     });
     expect(screen.getAllByText("Not required").length).toBeGreaterThan(0);
-    // A day whose only due site was marked not required is a complete day, and
-    // the not-required fact is carried in the headline's detail line.
-    expect(screen.getByText("Every active site has recorded today")).toBeInTheDocument();
-    expect(screen.getByText(/1 site was marked not required/)).toBeInTheDocument();
+    // The authority's fifth metric card carries it.
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    expect(within(region).getByText("Not required").parentElement.parentElement)
+      .toHaveTextContent("No work planned");
     expect(screen.queryByText(/waive/i)).not.toBeInTheDocument();
   });
 });
@@ -195,7 +196,7 @@ describe("AdminDailySiteOperations queue and summary", () => {
 // is the day's position, and what is waiting on me" before it shows one record.
 // ---------------------------------------------------------------------------
 
-describe("Daily Site Record list — the day's position (authority image 08)", () => {
+describe("Daily Site Record list — the authority's five metrics (image 08)", () => {
   const today = todayIso();
 
   const entry = (overrides = {}) => ({
@@ -205,64 +206,10 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
     submittedAt: `${today}T07:30:00Z`, ...overrides,
   });
 
-  // The fidelity correction's central claim: a day has ONE position, and the
-  // headline is chosen by what actually needs doing — not five equal cards that
-  // give "Not required: 0" the same weight as "3 sites have no record".
-  it("leads with one headline chosen by what needs doing, not five equal cards", () => {
-    renderRoute({
-      role: "owner",
-      entries: [entry()],
-      compliance: [
-        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
-        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" },
-      ],
-    });
-    const region = screen.getByRole("region", { name: "Today's site record position" });
-    expect(within(region).getByText("1 site still needs a morning record")).toBeInTheDocument();
-    // The old five-card band is gone: no statistic card per status.
-    expect(within(region).queryByText("Due today")).not.toBeInTheDocument();
-    expect(within(region).queryByText("Awaiting review")).not.toBeInTheDocument();
-  });
-
-  it("escalates the headline: missing outranks awaiting review, which outranks done", () => {
-    const compliance = (status) => [
-      { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: status },
-    ];
-    const { unmount } = renderRoute({ role: "owner", entries: [entry()], compliance: compliance("missing") });
-    expect(screen.getByText("1 site still needs a morning record")).toBeInTheDocument();
-    unmount();
-
-    const second = renderRoute({ role: "owner", entries: [entry()], compliance: compliance("entry_present") });
-    expect(screen.getByText("1 record is waiting for review")).toBeInTheDocument();
-    second.unmount();
-
-    renderRoute({
-      role: "owner",
-      entries: [entry({ state: "accepted", reviewedAt: `${today}T09:15:00Z` })],
-      compliance: compliance("entry_present"),
-    });
-    expect(screen.getByText("Every active site has recorded today")).toBeInTheDocument();
-  });
-
-  // The Founder's specific objection: a missing record must feel like the day's
-  // central task, not a yellow strip beneath five cards.
-  it("puts the recording action inside the headline region, not in a strip below it", () => {
-    renderRoute({
-      role: "owner",
-      entries: [entry()],
-      compliance: [
-        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
-        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" },
-      ],
-    });
-    const region = screen.getByRole("region", { name: "Today's site record position" });
-    const action = within(region).getByRole("link", { name: /Lugulu Estate/ });
-    expect(action).toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
-  });
-
-  // Counts now live on the controls that select them, so a number is a way of
-  // getting somewhere rather than a decoration.
-  it("carries each count on the filter that selects it", () => {
+  // The committed authority image shows FIVE metric cards across the top, in
+  // this order. A previous pass deleted them on an inferred "card-per-metric"
+  // rule; the image is the higher authority and they are restored.
+  it("renders the five authority metrics, in the authority's order", () => {
     renderRoute({
       role: "owner",
       entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted" })],
@@ -271,16 +218,67 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
         { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "entry_late" },
       ],
     });
-    const filters = screen.getByRole("tablist", { name: "Record filters" });
-    expect(within(filters).getByRole("tab", { name: /Awaiting review 1/ })).toBeInTheDocument();
-    expect(within(filters).getByRole("tab", { name: /Accepted 1/ })).toBeInTheDocument();
-    expect(within(filters).getByRole("tab", { name: /Late 1/ })).toBeInTheDocument();
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    const labels = within(region).getAllByText(
+      /^(Due today|Awaiting review|Late|Accepted|Not required)$/
+    ).map((node) => node.textContent);
+    expect(labels).toEqual(["Due today", "Awaiting review", "Late", "Accepted", "Not required"]);
   });
 
-  it("keeps a zero count visible on its filter rather than hiding it", () => {
+  it("counts each metric truthfully and names the sites it covers", () => {
+    renderRoute({
+      role: "owner",
+      entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted" })],
+      compliance: [
+        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
+        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "entry_late" },
+      ],
+    });
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    const card = (label) => within(region).getByText(label).closest("div").parentElement;
+    expect(card("Due today")).toHaveTextContent("2");
+    expect(card("Due today")).toHaveTextContent("Across 2 sites");
+    expect(card("Awaiting review")).toHaveTextContent("Across 1 site");
+    expect(card("Late")).toHaveTextContent("1");
+    expect(card("Accepted")).toHaveTextContent("1");
+  });
+
+  it("keeps a zero metric visible rather than hiding the card", () => {
     renderRoute({ role: "owner", entries: [], compliance: [] });
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    expect(within(region).getByText("Late").closest("div").parentElement).toHaveTextContent("0");
+  });
+
+  // The image's filter chips carry no counts — the counts are in the cards.
+  it("renders the authority's filter chips without duplicating the counts", () => {
+    renderRoute({ role: "owner", entries: [entry()], compliance: [] });
     const filters = screen.getByRole("tablist", { name: "Record filters" });
-    expect(within(filters).getByRole("tab", { name: /Late 0/ })).toBeInTheDocument();
+    expect(within(filters).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Today", "Awaiting review", "Late", "Returned", "Accepted", "All",
+    ]);
+  });
+
+  // The image's illustrative data has no missing site, so it settles no
+  // treatment for one. It goes in the image's own contextual bottom bar.
+  it("surfaces a due site with no record in the contextual bottom bar", () => {
+    renderRoute({
+      role: "owner",
+      entries: [entry()],
+      compliance: [
+        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
+        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" },
+      ],
+    });
+    expect(screen.getByText("1 site is due today and has no record yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lugulu Estate" }))
+      .toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
+  });
+
+  it("otherwise carries the authority's cost-claim hand-off in that bar", () => {
+    renderRoute({ role: "owner", entries: [entry()], compliance: [] });
+    expect(screen.getByText(/Once all due site records are accepted/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Go to Cost Claims/ }))
+      .toHaveAttribute("href", "/admin/site-costs");
   });
 
   it("shows when the record actually arrived, and whether that was late", () => {
@@ -289,11 +287,9 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
     expect(screen.getAllByText("Late").length).toBeGreaterThan(0);
   });
 
-  // No large empty rectangle on a quiet day.
-  it("states a quiet day on one line, with a way to widen the view", () => {
-    renderRoute({ role: "owner", entries: [], compliance: [] });
-    expect(screen.getByText(/No record has been captured for today yet/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Show all records" })).toBeInTheDocument();
+  it("shows the authority's record count under the table", () => {
+    renderRoute({ role: "owner", entries: [entry()], compliance: [] });
+    expect(screen.getByText(/Showing 1 to 1 of 1 record/)).toBeInTheDocument();
   });
 });
 

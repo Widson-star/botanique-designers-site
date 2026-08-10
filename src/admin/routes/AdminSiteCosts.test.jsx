@@ -76,6 +76,43 @@ describe("Project Costs admin surfaces", () => {
     expect(screen.getByRole("button", { name: "Save and submit" })).toBeEnabled();
   });
 
+  // The duplicate warning belongs HERE — where an overlapping claim would
+  // actually be created — not on every view of a record that legitimately
+  // already has a claim.
+  it("warns on the claim form when the drafted cost repeats an existing live claim", () => {
+    const dailyEntry = { id: "d1", projectId: "p1", workDate: "2026-07-31", disposition: "working", state: "accepted", version: 2, expectedWorkerCount: 6, crewReference: "Alego turf crew", ratePerWorker: 500, agreedLabourTotal: null, plannedLabourCost: 3000, workPlanned: "Lay turf" };
+    const existing = {
+      ...claim, id: "cx", dailySiteEntryId: "d1", category: "labour", lifecycle: "approved",
+      approvedTotal: 3000, submittedTotal: 3000, recipientLabel: "Alego turf crew",
+    };
+    const values = contexts({ role: "manager", claims: [existing], dailyEntries: [dailyEntry] });
+    values.costs.linesForClaim = (id) => (id === "cx"
+      ? [{ id: "lx", claimId: "cx", lineNumber: 1, description: "Planned site labour", rateType: "daily", quantity: 6, unit: "worker", unitRate: 500, lineTotal: 3000 }]
+      : []);
+    wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new?dailySiteEntryId=d1");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/already been claimed/i);
+    expect(within(alert).getByRole("link", { name: "Alego turf crew" }))
+      .toHaveAttribute("href", "/admin/site-costs/cx");
+    // Nothing is blocked: the person can still submit, deliberately.
+    expect(screen.getByRole("button", { name: "Save and submit" })).toBeEnabled();
+  });
+
+  it("stays silent on the claim form when the drafted cost is genuinely new", () => {
+    const dailyEntry = { id: "d1", projectId: "p1", workDate: "2026-07-31", disposition: "working", state: "accepted", version: 2, expectedWorkerCount: 6, crewReference: "Alego turf crew", ratePerWorker: 500, agreedLabourTotal: null, plannedLabourCost: 3000, workPlanned: "Lay turf" };
+    const existing = {
+      ...claim, id: "cx", dailySiteEntryId: "d1", category: "labour", lifecycle: "approved",
+      approvedTotal: 3000, submittedTotal: 3000,
+    };
+    const values = contexts({ role: "manager", claims: [existing], dailyEntries: [dailyEntry] });
+    // The existing claim holds a different line, so nothing overlaps.
+    values.costs.linesForClaim = (id) => (id === "cx"
+      ? [{ id: "lx", claimId: "cx", lineNumber: 1, description: "Mkokoteni cartage", rateType: "lump_sum", quantity: 1, unit: "item", unitRate: 800, lineTotal: 800 }]
+      : []);
+    wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new?dailySiteEntryId=d1");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("uses a distinct Principal direct-authority action", () => {
     const values = contexts({ role: "owner", claims: [] });
     wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new");

@@ -1,30 +1,35 @@
 // Daily Site Record — one day, one site.
 //
-// Visual authority: docs/ui-authority/operations-hub/working-authority/
-// 09-daily-site-record-detail-working-authority.png (frozen).
+// AUTHORITY: docs/ui-authority/operations-hub/working-authority/
+// 09-daily-site-record-detail-working-authority.png (frozen, committed).
 //
-// FIDELITY CORRECTION, 10 August 2026. The first implementation stacked seven
-// full-width regions down the page — rail, banner, three panels, three more
-// panels, financial follow-up, history, next step — so the record read as a
-// pile of unrelated boxes and history carried the same weight as today.
+// The page is built FROM that image, region by region:
 //
-// Three structural changes, all visible:
+//   1. breadcrumb, project title, "Daily Site Record • <date>" subtitle, and the
+//      actions at the top right
+//   2. the daily-process rail — numbered stages, icon discs, arrows between
+//   3. the "approval is authority to incur" note
+//   4. a THREE-COLUMN card grid, row 1: site activity status · planned
+//      workforce · labour pricing
+//   5. the same grid, row 2: crew / team reference · planned activities ·
+//      site funds (two stacked sections in one card)
+//   6. a wide band: submitted by · reviewed by · supporting evidence
+//   7. a bottom status bar carrying the next step
 //
-//   1. A CONNECTED RAIL, not three separate cards. The three stages sit in one
-//      strip with the progression drawn between them, which is what makes it a
-//      rail rather than three more boxes.
-//   2. A TWO-COLUMN BODY. The left column is the operational record itself, as
-//      ONE panel with internal sections rather than six cards; the right column
-//      is the supporting rail — compliance, financial follow-up, history. The
-//      record is operational first and finance is a summary beside it, never a
-//      second application pasted underneath.
-//   3. HISTORY IS A CLOSED DISCLOSURE at the foot of the right column. The
-//      immutable record stays complete and one press away, but it can no longer
-//      compete with today's position for the first viewport.
+// CORRECTION, 10 August 2026. PR #102's first pass replaced this with a
+// two-column layout of my own — record panel on the left, a supporting rail of
+// compliance/finance/history cards on the right. That is not what the image
+// shows, and it read as my component library rather than the authority. The
+// three-column grid is restored.
 //
-// There is deliberately NO fourth "Day close-out" stage: operational close and
-// financial settlement are distinct, and no day-close action, state or record
-// exists in this product.
+// WHAT THE IMAGE SHOWS THAT THIS PRODUCT DOES NOT HAVE is omitted rather than
+// substituted: no weather, no site-opened time, no safety-incident count, no
+// named supervisor or contact, no evidence thumbnails, no Record ID, no export.
+// Those regions compact rather than being filled with unrelated cards.
+//
+// The rail has THREE stages, not the image's four: "Day close-out" is not an
+// action, state or record this product holds, and inventing one because the
+// picture has four boxes would be the picture inventing a workflow.
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
@@ -57,73 +62,76 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import DailySiteEntryForm from "../components/dailysite/DailySiteEntryForm";
 import FinancialFollowUp from "../components/dailysite/FinancialFollowUp";
 
-const STEP_TONE = {
-  done: { disc: "settled", text: "text-emerald-800", bar: "bg-emerald-300" },
-  current: { disc: "brand", text: "text-botanique-charcoal", bar: "bg-botanique-green/40" },
-  attention: { disc: "waiting", text: "text-amber-900", bar: "bg-amber-300" },
-  waiting: { disc: "unbuilt", text: "text-gray-500", bar: "bg-stone-200" },
-};
-
+const STEP_TONE = { done: "settled", current: "brand", attention: "waiting", waiting: "unbuilt" };
 const STEP_ICON = { done: "check", current: "clock", attention: "alert", waiting: "pause" };
 
-// The record's position across the three stages the product genuinely holds,
-// drawn as one connected strip.
-function ProgressRail({ steps }) {
+// The daily-process rail: numbered stages with icon discs and arrows between,
+// as the authority draws it.
+function ProcessRail({ steps }) {
   return (
     <section
       aria-label="Record progress"
-      className="flex flex-col gap-0 overflow-hidden rounded-xl border border-stone-200 bg-white sm:flex-row"
+      className="rounded-xl border border-stone-200 bg-white px-4 py-4"
     >
-      {steps.map((step, index) => {
-        const tone = STEP_TONE[step.status];
-        return (
-          <div
-            key={step.key}
-            className={`relative flex min-w-0 flex-1 items-start gap-2.5 px-3.5 py-3 ${
-              index > 0 ? "border-t border-stone-100 sm:border-l sm:border-t-0" : ""
-            }`}
-          >
-            <Disc name={STEP_ICON[step.status]} tone={tone.disc} size="h-7 w-7" />
-            <div className="min-w-0">
-              <p className={`text-[12px] font-semibold leading-tight ${tone.text}`}>
+      <ol className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        {steps.map((step, index) => (
+          <li key={step.key} className="flex min-w-0 flex-1 items-start gap-3">
+            <Disc name={STEP_ICON[step.status]} tone={STEP_TONE[step.status]} size="h-10 w-10" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] font-semibold leading-tight text-botanique-charcoal">
                 {index + 1}. {step.label}
               </p>
               {step.detail && (
-                <p className="mt-0.5 break-words text-[11px] leading-snug text-gray-500">{step.detail}</p>
+                <p className="mt-1 break-words text-[11.5px] leading-snug text-gray-500">{step.detail}</p>
               )}
             </div>
-            {/* The progression itself, drawn between the stages. */}
-            <span
-              aria-hidden="true"
-              className={`absolute inset-x-0 bottom-0 h-[3px] ${tone.bar}`}
-            />
-          </div>
-        );
-      })}
+            {index < steps.length - 1 && (
+              <Glyph
+                name="arrow"
+                className="mt-3 hidden h-4 w-4 shrink-0 text-stone-300 sm:block"
+              />
+            )}
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }
 
-// One labelled fact inside the record panel.
-function Fact({ label, children, className = "" }) {
+// One card of the authority's grid: icon + title, then its rows.
+function GridCard({ icon, title, badge, children, className = "" }) {
   return (
-    <div className={`min-w-0 ${className}`}>
-      <dt className="text-[10.5px] font-medium uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className="mt-0.5 break-words text-[12.5px] text-botanique-charcoal">{children}</dd>
-    </div>
+    <section className={`rounded-xl border border-stone-200 bg-white ${className}`}>
+      <div className="flex flex-wrap items-center gap-2.5 px-4 pb-1 pt-3.5">
+        {icon && <Disc name={icon} tone="brand" size="h-8 w-8" />}
+        <h2 className="min-w-0 flex-1 text-[13px] font-semibold text-botanique-charcoal">{title}</h2>
+        {badge}
+      </div>
+      <div className="px-4 pb-3.5 pt-1.5">{children}</div>
+    </section>
   );
 }
 
-// A section inside the single record panel — hairline separated, never its own
-// bordered card. This is what stops the record reading as a pile of boxes.
-function Band({ icon, title, children }) {
+// A label/value row, as every card in the authority uses. `stack` is for free
+// text, which must sit under its label rather than collide with it on the same
+// baseline.
+function Row({ label, value, tone = "", stack = false }) {
+  if (stack) {
+    return (
+      <div className="py-1.5">
+        <dt className="text-[12px] text-gray-500">{label}</dt>
+        <dd className={`mt-0.5 break-words text-[12.5px] leading-relaxed ${tone || "text-botanique-charcoal"}`}>
+          {value}
+        </dd>
+      </div>
+    );
+  }
   return (
-    <div className="border-t border-stone-100 px-4 py-3 first:border-t-0">
-      <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-        <Glyph name={icon} className="h-3.5 w-3.5 text-botanique-green" />
-        {title}
-      </p>
-      <div className="mt-2">{children}</div>
+    <div className="flex items-baseline justify-between gap-3 py-1">
+      <dt className="min-w-0 text-[12px] text-gray-500">{label}</dt>
+      <dd className={`min-w-0 shrink-0 break-words text-right text-[12.5px] ${tone || "text-botanique-charcoal"}`}>
+        {value}
+      </dd>
     </div>
   );
 }
@@ -149,7 +157,7 @@ export default function AdminDailySiteEntryDetail() {
   const [supersedeReason, setSupersedeReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -212,24 +220,29 @@ export default function AdminDailySiteEntryDetail() {
   const showSupersede = mode === "supersede";
   const actions = !showCorrect && !showSupersede;
 
-  // Newest first, so the most recent event is the one the reader sees.
   const orderedEvents = [...events].sort((left, right) =>
     String(right.occurredAt || "").localeCompare(String(left.occurredAt || "")));
   const steps = recordProgressSteps(entry, financialPosition);
   const nextStep = recordNextStep(entry, financialPosition);
   const isWorking = entry.disposition !== "no_work";
+  const canCreateClaim = Boolean(financialPosition?.canCreate);
+  const hasClaims = Boolean(financialPosition?.claims?.length);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-3">
-      {/* ── IDENTITY AND THE READER'S DECISIONS. */}
+    <div className="space-y-3">
+      {/* 1 · Breadcrumb, identity, actions. Every action names the record it
+          acts on: several workflows meet on this page, and "Accept" alone left
+          the reader guessing whether it accepted the record or the claim. */}
       <div>
-        <Link to="/admin/daily-site-operations" className="inline-flex items-center gap-1 text-[12px] text-gray-500 hover:text-botanique-green">
-          ← Daily Site Record
-        </Link>
+        <nav className="flex items-center gap-1.5 text-[12px] text-gray-500" aria-label="Breadcrumb">
+          <span>Operations</span>
+          <span aria-hidden="true">›</span>
+          <Link to="/admin/daily-site-operations" className="hover:text-botanique-green">Daily Site Record</Link>
+        </nav>
         <div className="mt-1.5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="min-w-0 break-words text-[22px] font-semibold leading-tight">
+              <h1 className="min-w-0 break-words text-[24px] font-semibold leading-tight">
                 {project?.projectName || "Authorised project"}
               </h1>
               <Chip tone={entry.state === "accepted" ? "settled" : ["submitted", "resubmitted"].includes(entry.state) ? "waiting" : "neutral"}>
@@ -239,45 +252,54 @@ export default function AdminDailySiteEntryDetail() {
                 <Chip tone="attention">Late</Chip>
               )}
             </div>
-            <p className="mt-0.5 text-[12.5px] text-gray-500">
-              Daily Site Record · {formatWorkDate(entry.workDate)}
+            <p className="mt-1 text-[12.5px] text-gray-500">
+              Daily Site Record • {formatWorkDate(entry.workDate)}
             </p>
           </div>
           {actions && (
             <div role="group" aria-label="Record actions" className="flex flex-wrap gap-2 lg:justify-end">
+              {canCreateClaim && (
+                <Link
+                  to={`/admin/site-costs/new?dailySiteEntryId=${encodeURIComponent(entry.id)}${hasClaims ? "&additional=1" : ""}`}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-botanique-green px-4 text-[12.5px] font-semibold text-white hover:bg-botanique-dark"
+                >
+                  <Glyph name="money" className="h-4 w-4" />
+                  {hasClaims ? "Raise additional cost claim" : "Create cost claim"}
+                </Link>
+              )}
               {canEditDailyDraft(role, entry, currentUserId) && (
                 <Link to={`/admin/daily-site-operations/${entry.id}/edit`} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-3.5 text-[12.5px] font-medium text-botanique-charcoal hover:bg-stone-50">
-                  Edit draft
+                  Edit site record
                 </Link>
               )}
               {canSubmitDailyEntry(role, entry, currentUserId) && (
                 <button type="button" disabled={busy} onClick={() => run(() => submitEntry(entry.id)).then((ok) => ok && loadEvents(entry.id, true).then(setEvents))} className="inline-flex min-h-10 items-center rounded-lg bg-botanique-green px-3.5 text-[12.5px] font-semibold text-white hover:bg-botanique-dark disabled:opacity-60">
-                  Submit for review
+                  Submit site record
                 </button>
               )}
               {canCorrectDailyEntry(role, entry, currentUserId) && (
                 <button type="button" onClick={() => setMode("correct")} className="inline-flex min-h-10 items-center rounded-lg bg-botanique-green px-3.5 text-[12.5px] font-semibold text-white hover:bg-botanique-dark">
-                  Correct &amp; resubmit
+                  Correct site record
                 </button>
               )}
               {canReturnDailyEntry(role, entry) && (
                 <button type="button" onClick={() => { setDialog("return"); setReason(""); }} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-3.5 text-[12.5px] font-medium text-botanique-charcoal hover:bg-stone-50">
-                  Return for correction
+                  Return site record
                 </button>
               )}
               {canAcceptDailyEntry(role, entry) && (
                 <button type="button" onClick={() => { setDialog("accept"); setReason(""); }} className="inline-flex min-h-10 items-center rounded-lg bg-botanique-green px-3.5 text-[12.5px] font-semibold text-white hover:bg-botanique-dark">
-                  Accept
+                  Accept site record
                 </button>
               )}
               {canSupersedeDailyEntry(role, entry) && (
                 <button type="button" onClick={() => setMode("supersede")} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-3.5 text-[12.5px] font-medium text-botanique-charcoal hover:bg-stone-50">
-                  Correct by supersession
+                  Supersede site record
                 </button>
               )}
               {canVoidDailyEntry(role, entry) && (
                 <button type="button" onClick={() => { setDialog("void"); setReason(""); }} className="inline-flex min-h-10 items-center rounded-lg border border-red-200 px-3.5 text-[12.5px] font-medium text-red-700 hover:bg-red-50">
-                  Void
+                  Void site record
                 </button>
               )}
             </div>
@@ -291,31 +313,29 @@ export default function AdminDailySiteEntryDetail() {
 
       {entry.state === "returned_for_correction" && entry.returnedReason && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-[12.5px] text-amber-900">
-          <span className="font-semibold">Returned for correction:</span> {entry.returnedReason}
+          <span className="font-semibold">Site record returned for correction:</span> {entry.returnedReason}
         </div>
       )}
       {entry.state === "superseded" && (
         <div className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-[12.5px] text-gray-600">
-          This entry was superseded by a later correction.
+          This site record was superseded by a later correction.
           {supersededByLink && (
             <Link to={`/admin/daily-site-operations/${supersededByLink.id}`} className="ml-1 font-semibold text-botanique-green hover:underline">
-              View the current entry
+              View the current record
             </Link>
           )}
         </div>
       )}
 
-      <ProgressRail steps={steps} />
-
       {showCorrect || showSupersede ? (
         <section className="rounded-xl border border-stone-200 bg-white p-5">
           <h2 className="text-base font-semibold">
-            {showCorrect ? "Correct and resubmit" : "Correct by supersession"}
+            {showCorrect ? "Correct and resubmit the site record" : "Correct the site record by supersession"}
           </h2>
           {showSupersede && (
             <>
               <p className="mt-1 text-[12.5px] text-gray-500">
-                The accepted entry is preserved; a corrected copy replaces it.
+                The accepted record is preserved; a corrected copy replaces it.
               </p>
               <div className="mt-4">
                 <label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-supersede-reason">Reason for the correction</label>
@@ -326,7 +346,7 @@ export default function AdminDailySiteEntryDetail() {
           <div className="mt-4">
             <DailySiteEntryForm
               entry={entry}
-              submitLabel={showCorrect ? "Resubmit entry" : "Record correction"}
+              submitLabel={showCorrect ? "Resubmit site record" : "Record correction"}
               busy={busy}
               onSubmit={async (values) => {
                 if (showCorrect) {
@@ -347,163 +367,182 @@ export default function AdminDailySiteEntryDetail() {
           <button type="button" onClick={() => setMode(null)} className="mt-3 text-sm text-gray-500 hover:text-botanique-green">Cancel</button>
         </section>
       ) : (
-        // ── THE RECORD (left) AND ITS SUPPORTING RAIL (right).
-        <div className="grid gap-3 lg:grid-cols-5">
-          <section className="overflow-hidden rounded-xl border border-stone-200 bg-white lg:col-span-3">
-            <Band icon="site" title="Site activity">
-              <dl className="grid gap-3 sm:grid-cols-2">
-                <Fact label="Disposition">{DISPOSITION_LABELS[entry.disposition]}</Fact>
-                {isWorking ? (
-                  <Fact label="Planned activities" className="sm:col-span-2">
-                    {entry.workPlanned || "—"}
-                  </Fact>
-                ) : (
-                  <Fact label="Reason">
-                    {NO_WORK_REASON_LABELS[entry.noWorkReason] || "—"}
-                    {entry.reasonDetail ? ` — ${entry.reasonDetail}` : ""}
-                  </Fact>
+        <>
+          {/* 2 · The daily-process rail. */}
+          <ProcessRail steps={steps} />
+
+          {/* 3 · The authority's standing note. */}
+          <p className="flex items-start gap-2.5 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-[12px] text-gray-600">
+            <Glyph name="doc" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
+            Approval is authority to incur. Payment outcome still needs to be recorded after release.
+          </p>
+
+          {/* 4 · Grid row 1. */}
+          <div className="grid gap-3 lg:grid-cols-3">
+            <GridCard
+              icon="site"
+              title="Site activity status"
+              badge={<Chip tone={entry.state === "accepted" ? "settled" : "waiting"}>{DISPOSITION_LABELS[entry.disposition]}</Chip>}
+            >
+              <dl className="divide-y divide-stone-100">
+                {!isWorking && (
+                  <Row
+                    label="Reason"
+                    stack
+                    value={`${NO_WORK_REASON_LABELS[entry.noWorkReason] || "—"}${entry.reasonDetail ? ` — ${entry.reasonDetail}` : ""}`}
+                  />
                 )}
-                {entry.crewReference && <Fact label="Crew or team">{entry.crewReference}</Fact>}
-                {entry.notes && <Fact label="Notes" className="sm:col-span-2">{entry.notes}</Fact>}
+                <Row label="Submitted" value={entry.submittedAt ? formatDateTime(entry.submittedAt) : "Not yet submitted"} />
+                <Row
+                  label="Timing"
+                  value={entry.submittedAt ? (entry.isLate ? "Late" : "On time") : "—"}
+                  tone={entry.isLate ? "text-amber-800" : ""}
+                />
+                {entry.notes && <Row label="Key notes" stack value={entry.notes} />}
               </dl>
-            </Band>
+            </GridCard>
 
-            {isWorking && (
-              <Band icon="people" title="Workforce and labour">
-                <dl className="grid gap-3 sm:grid-cols-3">
-                  <Fact label="Workers">
-                    <span className="text-[20px] font-semibold leading-none tabular-nums">
-                      {entry.expectedWorkerCount ?? "—"}
-                    </span>
-                  </Fact>
-                  <Fact label="Labour pricing">
-                    {entry.agreedLabourTotal != null
-                      ? `Agreed total ${formatKes(entry.agreedLabourTotal)}`
-                      : `${formatKes(entry.ratePerWorker)} per worker`}
-                  </Fact>
-                  <Fact label="Estimated labour cost">
-                    <span className="font-semibold tabular-nums">{formatKes(entry.plannedLabourCost)}</span>
-                  </Fact>
-                </dl>
-              </Band>
-            )}
-
-            <Band icon="wallet" title="Site funds — planning only">
-              <dl className="grid gap-3 sm:grid-cols-2">
-                <Fact label="Currently available">
-                  <span className="font-semibold tabular-nums">{formatKes(entry.fundsAvailable)}</span>
-                </Fact>
-                <Fact label="Additional required">
-                  <span className={`font-semibold tabular-nums ${entry.additionalAmountRequested > 0 ? "text-amber-800" : ""}`}>
-                    {formatKes(entry.additionalAmountRequested)}
-                  </span>
-                </Fact>
-              </dl>
-              <p className="mt-2 text-[11px] text-gray-400">
-                Planning signals only. No payment, fund release or approval is created here.
-              </p>
-            </Band>
-          </section>
-
-          <div className="space-y-3 lg:col-span-2">
-            {/* Compliance, timing and evidence — the record's own provenance. */}
-            <section className="rounded-xl border border-stone-200 bg-white">
-              <div className="flex items-center gap-2.5 border-b border-stone-100 px-3.5 py-3">
-                <Disc name="check" tone={entry.reviewedAt ? "settled" : "neutral"} size="h-7 w-7" />
-                <h2 className="text-[13px] font-semibold text-botanique-charcoal">Compliance and evidence</h2>
-              </div>
-              <dl className="space-y-2.5 px-3.5 py-3 text-[12px]">
-                <SideRow label="Recorded by">
-                  <span className="break-words">{resolveActorLabel(entry.createdBy, profilesById)}</span>
-                  {entry.submittedAt && (
-                    <span className="mt-0.5 block text-[11px] text-gray-500">
-                      {formatDateTime(entry.submittedAt)} · {entry.isLate ? "late" : "on time"}
-                    </span>
-                  )}
-                </SideRow>
-                <SideRow label="Reviewed by">
-                  {entry.reviewedAt ? (
-                    <>
-                      <span className="break-words">{resolveActorLabel(entry.reviewedBy, profilesById)}</span>
-                      <span className="mt-0.5 block text-[11px] text-gray-500">{formatDateTime(entry.reviewedAt)}</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-500">Not yet reviewed</span>
-                  )}
-                </SideRow>
-                {/* Evidence is a declared status, not a file store. Nothing here
-                    implies an attachment the product cannot hold. */}
-                <SideRow label="Supporting evidence">
-                  <span>{EVIDENCE_STATUS_LABELS[entry.evidenceStatus]}</span>
-                  <span className="mt-0.5 block text-[11px] text-gray-500">
-                    Declared on the record. Files are not stored in the Hub.
-                  </span>
-                </SideRow>
-              </dl>
-            </section>
-
-            {/* Finance sits BESIDE the record as a summary and a link — never
-                beneath it as a second ledger. */}
-            <FinancialFollowUp position={financialPosition} entryId={entry.id} />
-
-            {/* History, closed by default. The immutable record stays complete
-                and one press away; it can no longer compete with today. */}
-            <section className="rounded-xl border border-stone-200 bg-white">
-              <button
-                type="button"
-                onClick={() => setShowAllHistory((value) => !value)}
-                aria-expanded={showAllHistory}
-                className="flex w-full min-h-11 items-center justify-between gap-2 px-3.5 py-3 text-left"
-              >
-                <span className="flex items-center gap-2.5">
-                  <Disc name="clock" tone="neutral" size="h-7 w-7" />
-                  <span className="min-w-0">
-                    <span className="block text-[13px] font-semibold text-botanique-charcoal">History</span>
-                    <span className="block text-[11px] text-gray-500">
-                      {events.length === 1 ? "1 event" : `${events.length} events`} · immutable
-                    </span>
-                  </span>
-                </span>
-                <span className="shrink-0 text-[11.5px] font-semibold text-botanique-green">
-                  {showAllHistory ? "Hide" : "Show"}
-                </span>
-              </button>
-              {showAllHistory && (
-                <ol className="space-y-2.5 border-t border-stone-100 px-3.5 py-3">
-                  {orderedEvents.map((event) => (
-                    <li key={event.id} className="flex gap-2.5">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-botanique-green" aria-hidden="true" />
-                      <div className="min-w-0">
-                        <p className="break-words text-[12px] font-medium text-botanique-charcoal">
-                          {ENTRY_EVENT_LABELS[event.eventType] || event.eventType}
-                        </p>
-                        <p className="text-[11px] text-gray-500">
-                          {resolveActorLabel(event.actorId, profilesById)} · {formatDateTime(event.occurredAt)}
-                        </p>
-                        {event.eventNotes && <p className="mt-0.5 break-words text-[11.5px] text-gray-600">{event.eventNotes}</p>}
-                      </div>
-                    </li>
-                  ))}
-                  {events.length === 0 && <li className="text-[12px] text-gray-500">No history yet.</li>}
-                </ol>
+            <GridCard icon="people" title="Planned workforce">
+              {isWorking ? (
+                <>
+                  <p className="text-[26px] font-semibold leading-none tabular-nums text-botanique-charcoal">
+                    {entry.expectedWorkerCount ?? "—"}
+                    <span className="ml-1.5 text-[13px] font-medium text-gray-500">workers</span>
+                  </p>
+                  <dl className="mt-2.5 divide-y divide-stone-100 border-t border-stone-100 pt-1">
+                    <Row label="Crew or team" value={entry.crewReference || "Not recorded"} />
+                  </dl>
+                </>
+              ) : (
+                <p className="text-[12px] text-gray-500">No workforce was planned for this day.</p>
               )}
+            </GridCard>
+
+            <GridCard icon="scale" title="Labour pricing (KES)">
+              {isWorking ? (
+                <dl className="divide-y divide-stone-100">
+                  {entry.agreedLabourTotal != null ? (
+                    <Row label="Agreed total" value={formatKes(entry.agreedLabourTotal)} />
+                  ) : (
+                    <Row label="Per worker" value={`${formatKes(entry.ratePerWorker)} / day`} />
+                  )}
+                  <Row
+                    label="Estimated labour cost"
+                    value={<span className="font-semibold tabular-nums">{formatKes(entry.plannedLabourCost)}</span>}
+                  />
+                </dl>
+              ) : (
+                <p className="text-[12px] text-gray-500">No labour was priced for this day.</p>
+              )}
+            </GridCard>
+          </div>
+
+          {/* 5 · Grid row 2. The third cell stacks its sections, as the
+              authority's "Available site funds / Additional funds required"
+              cell does — and the related cost claim joins them there, because
+              that is this page's money column. */}
+          <div className="grid gap-3 lg:grid-cols-3">
+            <GridCard icon="doc" title="Planned activities">
+              {isWorking && entry.workPlanned ? (
+                <p className="whitespace-pre-line break-words text-[12.5px] leading-relaxed text-botanique-charcoal">
+                  {entry.workPlanned}
+                </p>
+              ) : (
+                <p className="text-[12px] text-gray-500">
+                  {isWorking ? "No activities were recorded for this day." : "No work was planned for this day."}
+                </p>
+              )}
+            </GridCard>
+
+            <GridCard icon="check" title="Submitted and reviewed">
+              <dl className="divide-y divide-stone-100">
+                <Row label="Submitted by" value={<span className="break-words">{resolveActorLabel(entry.createdBy, profilesById)}</span>} />
+                <Row
+                  label="Reviewed by"
+                  value={entry.reviewedAt
+                    ? <span className="break-words">{resolveActorLabel(entry.reviewedBy, profilesById)}</span>
+                    : <span className="text-gray-500">Not yet reviewed</span>}
+                />
+                {entry.reviewedAt && <Row label="Reviewed" value={formatDateTime(entry.reviewedAt)} />}
+                {/* Evidence is a declared status, not a file store. The
+                    authority's thumbnails have no model behind them, so the
+                    status is shown and nothing implies an attachment. */}
+                <Row label="Supporting evidence" value={EVIDENCE_STATUS_LABELS[entry.evidenceStatus]} />
+              </dl>
+            </GridCard>
+
+            <section className="rounded-xl border border-stone-200 bg-white">
+              <div className="flex flex-wrap items-center gap-2.5 px-4 pb-1 pt-3.5">
+                <Disc name="wallet" tone="brand" size="h-8 w-8" />
+                <h2 className="min-w-0 flex-1 text-[13px] font-semibold text-botanique-charcoal">Available site funds</h2>
+              </div>
+              <div className="px-4 pb-3.5 pt-1.5">
+                <dl className="divide-y divide-stone-100">
+                  <Row label="Funds available" value={<span className="font-semibold tabular-nums text-emerald-800">{formatKes(entry.fundsAvailable)}</span>} />
+                  <Row
+                    label="Additional required"
+                    value={<span className={`font-semibold tabular-nums ${entry.additionalAmountRequested > 0 ? "text-amber-800" : ""}`}>{formatKes(entry.additionalAmountRequested)}</span>}
+                  />
+                </dl>
+                <p className="mt-2 text-[11px] text-gray-400">
+                  Planning signals only. No payment, fund release or approval is created here.
+                </p>
+              </div>
+              <FinancialFollowUp position={financialPosition} />
             </section>
           </div>
-        </div>
-      )}
 
-      {nextStep && actions && (
-        <p className="flex items-start gap-2.5 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-[12.5px] text-gray-700">
-          <Glyph name="arrow" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-botanique-green" />
-          {nextStep}
-        </p>
+          {/* 7 · Bottom status bar, with history reachable but subordinate. */}
+          <section className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3">
+              <Disc name={entry.state === "accepted" ? "check" : "clock"} tone={entry.state === "accepted" ? "settled" : "waiting"} size="h-9 w-9" />
+              <div className="min-w-0">
+                <p className="text-[12.5px] font-semibold text-botanique-charcoal">
+                  Site record {ENTRY_STATE_LABELS[entry.state].toLowerCase()}.
+                </p>
+                {nextStep && <p className="mt-0.5 break-words text-[12px] text-gray-600">{nextStep}</p>}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowHistory((value) => !value)}
+              aria-expanded={showHistory}
+              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 self-start text-[12px] font-semibold text-botanique-green hover:underline sm:self-auto"
+            >
+              {showHistory ? "Hide history" : `History (${events.length})`}
+            </button>
+          </section>
+
+          {showHistory && (
+            <section className="rounded-xl border border-stone-200 bg-white px-4 py-3.5">
+              <h2 className="text-[12.5px] font-semibold text-botanique-charcoal">History</h2>
+              <ol className="mt-2.5 space-y-2.5">
+                {orderedEvents.map((event) => (
+                  <li key={event.id} className="flex gap-2.5">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-botanique-green" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="break-words text-[12px] font-medium text-botanique-charcoal">
+                        {ENTRY_EVENT_LABELS[event.eventType] || event.eventType}
+                      </p>
+                      <p className="text-[11px] text-gray-500">
+                        {resolveActorLabel(event.actorId, profilesById)} · {formatDateTime(event.occurredAt)}
+                      </p>
+                      {event.eventNotes && <p className="mt-0.5 break-words text-[11.5px] text-gray-600">{event.eventNotes}</p>}
+                    </div>
+                  </li>
+                ))}
+                {orderedEvents.length === 0 && <li className="text-[12px] text-gray-500">No history yet.</li>}
+              </ol>
+            </section>
+          )}
+        </>
       )}
 
       <ConfirmDialog
         open={dialog === "return"}
-        title="Return this entry for correction"
-        description="Explain what needs to change. The manager can correct and resubmit."
-        confirmLabel="Return entry"
+        title="Return this site record for correction"
+        description="Explain what needs to change on the site record. The manager can correct and resubmit it."
+        confirmLabel="Return site record"
         confirmDisabled={!reason.trim()}
         busy={busy}
         onCancel={() => setDialog(null)}
@@ -515,9 +554,9 @@ export default function AdminDailySiteEntryDetail() {
 
       <ConfirmDialog
         open={dialog === "accept"}
-        title="Accept this entry"
-        description="The entry becomes part of the accepted record. Later corrections are made by supersession."
-        confirmLabel="Accept entry"
+        title="Accept this site record"
+        description="This accepts the SITE RECORD only. It decides nothing about any cost claim raised from it."
+        confirmLabel="Accept site record"
         busy={busy}
         onCancel={() => setDialog(null)}
         onConfirm={handleDialogConfirm}
@@ -528,9 +567,9 @@ export default function AdminDailySiteEntryDetail() {
 
       <ConfirmDialog
         open={dialog === "void"}
-        title="Void this entry"
-        description="Voiding keeps the record for the audit trail but removes it from active compliance."
-        confirmLabel="Void entry"
+        title="Void this site record"
+        description="Voiding keeps the site record for the audit trail but removes it from active compliance. Cost claims already raised from it are not affected."
+        confirmLabel="Void site record"
         confirmTone="danger"
         confirmDisabled={!reason.trim()}
         busy={busy}
@@ -540,15 +579,6 @@ export default function AdminDailySiteEntryDetail() {
         <label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-void-reason">Reason</label>
         <textarea id="dse-void-reason" rows={3} value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-botanique-green focus:outline-none focus:ring-2 focus:ring-botanique-green/20" />
       </ConfirmDialog>
-    </div>
-  );
-}
-
-function SideRow({ label, children }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-[10.5px] font-medium uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className="mt-0.5 text-botanique-charcoal">{children}</dd>
     </div>
   );
 }

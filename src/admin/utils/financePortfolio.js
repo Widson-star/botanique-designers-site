@@ -159,6 +159,10 @@ export function financeAttention(claims = [], finance = {}, role = "") {
 // whether a real model stands behind it. `available: false` is not "coming
 // soon" — it is a truthful statement that no record, workflow or schema exists,
 // and it is what stops an empty area being drawn at full weight.
+// The Finance department, exactly as image 12's tab row and image 13's four
+// numbered capability panels define it. All five tabs render; the two without a
+// model say so truthfully rather than being hidden, because image 13 makes
+// their place in the department part of the authority.
 export const FINANCE_AREAS = [
   {
     id: "overview",
@@ -175,21 +179,23 @@ export const FINANCE_AREAS = [
   {
     id: "company-expenses",
     label: "Company Expenses",
-    mobileLabel: "Company Expenses",
-    description: "Operating expenses and overheads.",
+    mobileLabel: "Expenses",
+    description: "Manage operating expenses and overheads.",
     unbuilt: true,
   },
   {
     id: "staff-compensation",
     label: "Staff Compensation",
-    mobileLabel: "Staff Compensation",
+    mobileLabel: "Compensation",
     description: "Salaries, allowances and staff payments.",
     unbuilt: true,
   },
   {
     id: "funding",
-    label: "Funding, Payments and Reconciliation",
-    mobileLabel: "Funding & Recon.",
-    description: "Authority to fund, money actually released, and what became of it.",
+    label: "Funding, Payments & Reconciliation",
+    // Inside Finance the context is already financial, so the tab may be short.
+    // The full canonical name stays on the capability panel and in authority.
+    mobileLabel: "Funding",
+    description: "Manage funding, payments and reconciliation.",
   },
 ];

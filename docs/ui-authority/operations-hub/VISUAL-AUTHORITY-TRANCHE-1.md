@@ -288,3 +288,139 @@ The fund-request form, its back link and the Reports fund-request section were
 corrected to state what a fund request *is* — authority, not payment. The one
 remaining instance, on the fund-request detail, is conditional and only renders
 when no release exists, which is true.
+
+---
+
+# Fidelity correction, pass 2 — 10 August 2026
+
+The Founder reviewed the PR #102 preview against the frozen PNGs and did not
+accept it. Two classes of problem, both now addressed.
+
+## The control rule this pass established
+
+**The ten committed working-authority PNGs are the product authority.** A shared
+component library (`Surfaces.jsx`) is an implementation helper and must adapt to
+the slides; the slides must never adapt to it. Pages are designed FROM their
+committed PNG, not from a vocabulary abstracted out of it.
+
+Pass 1 broke that rule in one specific way and it is reverted below.
+
+## Image 08 — the over-correction, reverted
+
+Pass 1 **deleted the five metric cards** the committed image shows across the top
+of the page, and replaced them with an invented single "day banner". The
+reasoning was an inferred "card-per-metric clutter" principle. The image settles
+the question and the principle does not apply where it does.
+
+**Restored**, in the authority's order, each with an icon disc, count and
+"Across N sites": Due today · Awaiting review · Late · Accepted · Not required.
+The filter chips carry **no counts**, as the image shows — the counts live in the
+cards. The table's seven columns, the "Showing 1 to N of N records" line and the
+contextual bottom bar ending in "Go to Cost Claims" are all as the image draws
+them.
+
+The image's illustrative data contains no site that is due with **no record at
+all**, so it settles no treatment for one. That real compliance state uses the
+image's own contextual bottom bar rather than a banner of my own.
+
+## Image 09 — rebuilt from the image
+
+Pass 1 used a two-column layout — record panel left, a rail of
+compliance/finance/history cards right — which is not what the image shows.
+
+**Restored**: the numbered process rail with icon discs and arrows between
+stages, then a **three-column card grid** (site activity status · planned
+workforce · labour pricing, then planned activities · submitted and reviewed ·
+available site funds), then a bottom status bar.
+
+Omitted rather than substituted, because no model exists: weather, site-opened
+time, safety incidents, named supervisor and contact, evidence thumbnails,
+Record ID, Export record. Those regions compact; nothing unrelated fills them.
+
+The rail keeps **three** stages, not the image's four: "Day close-out" is not an
+action, state or record this product holds.
+
+## Action ownership — image 09
+
+Several workflows meet on this page and the Founder could not tell what "Accept"
+was accepting. Every action now names the record it acts on:
+
+`Accept site record` · `Return site record` · `Void site record` ·
+`Submit site record` · `Correct site record` · `Supersede site record` ·
+`Edit site record`. The accept dialog states explicitly that it accepts the site
+record only and decides nothing about any cost claim raised from it.
+
+## The duplicate treatment — normal state versus raise time
+
+The perpetual warning is **gone**. An existing approved claim is the normal
+downstream state of an accepted record, not an error, and it is now presented
+neutrally: recipient, amount, lifecycle chip, and a link into the claim.
+
+PR #100's structural detection is **unchanged** and now speaks where it is
+useful — on the claim form, when the lines being drafted structurally repeat a
+line on a live claim from the same record and category. Nothing is blocked; the
+person is told before they submit. A different category, a different record, a
+genuinely different line, and any rejected or withdrawn prior claim all leave
+the ordinary path untouched.
+
+## The amount that was overstated
+
+The old warning called the **whole claim total** the already-claimed "site
+labour". On the Alego example that meant KES 5,950 — a claim containing a
+KES 5,000 planning line and a KES 950 line — described entirely as labour.
+
+`matchedPlanningCost()` now derives the amount from the **matching lines only**,
+reports how many matched, and reports whether the matched lines are the whole
+claim. A claim total may be described as the already-claimed cost only when
+nothing else is on it. When the lines cannot be read, no figure is stated at all.
+
+## Images 12 and 13 — rebuilt from the images
+
+Image 12's tab row has **five** tabs and all five now render. Company Expenses
+and Staff Compensation keep their place in the department — image 13 makes that
+place part of the authority — and their panels state truthfully that no records,
+workflow or figures exist. No invented data, no invented architecture.
+
+The capability card row is restored as the image composes it: icon, name,
+description, a labelled headline figure, and a footer link into the capability.
+Below it, "Finance at a glance" beside "Recent finance activity" — the glance
+carries the money this product actually holds, and the activity feed is built
+from real claims and fund requests only.
+
+Image 13's four numbered capability panels govern the children. Project Costs
+gets the numbered header, the four metric tiles and its recent-claims list.
+
+## Funding · Payments · Reconciliation
+
+The Founder found the combined name and undifferentiated experience cumbersome.
+**No new top-level destinations were invented.** Image 13's panel ④ already
+separates the three concerns two ways, and both are reproduced:
+
+- **four tiles in lifecycle order** — Submitted → Approved → Paid →
+  Reconciliation;
+- **separate Status, Paid and Reconciled columns** on the request table, so
+  approval can never be read as payment;
+- plus the image's **reconciliation progress** bar, computed only over advances
+  that genuinely require accounting for.
+
+Short section labels are used inside Finance, where the context is already
+financial. The full canonical name remains on the capability panel and in
+authority documentation.
+
+## Deviations that stand, with reasons
+
+| Deviation | Reason |
+| --- | --- |
+| No persistent Finance sidebar children | PR #94 navigation decision post-dates image 13 |
+| No fourth "Day close-out" rail stage | No such action, state or record exists |
+| No "Finance Approvals" capability card (image 12 has five) | Approvals is a separate top-level domain and unified Approvals is explicitly out of scope; a card implying otherwise would invent architecture |
+| No money-in, net position, bank balance, expense categories, voteheads, payroll, donut | No model; a plausible figure would be a fabrication |
+| No weather, site-opened, safety incidents, supervisor, contact, evidence thumbnails, Record ID, Export | No model |
+| History as a closed disclosure | Image 09 has no history region; audit truth must stay reachable without becoming the page |
+
+## The workflow-order question — NOT changed, referred
+
+A cost claim can currently be **approved while its Daily Site Record is still
+awaiting review**. The audit result is recorded in WORKSTREAMS.md: this is
+**inherited implementation behaviour with no settled Founder authority**. No
+lifecycle was changed. The decision needed is stated there.

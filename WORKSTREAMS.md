@@ -6943,3 +6943,90 @@ review of the preview deployment, not CI.
 
 Authority: `docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md` (fidelity-correction
 section, which supersedes the composition described in the original section).
+
+---
+
+## Visual Authority Tranche 1 — FIDELITY CORRECTION, PASS 2
+
+**10 August 2026. PR #102, same branch. NOT MERGED — awaiting Founder visual acceptance.**
+
+The Founder reviewed the PR #102 preview against the frozen PNGs and did not accept it. This pass
+establishes one control rule and applies it: **the ten committed working-authority PNGs are the
+product authority.** `Surfaces.jsx` and any other shared component library is an implementation
+helper that must adapt to the slides; the slides never adapt to it. Each page is designed FROM its
+committed PNG, not from a vocabulary abstracted out of one.
+
+**Pass 1 broke that rule once, and it is reverted.** Image 08 shows five metric cards across the
+top of the page. Pass 1 deleted them and substituted an invented "day banner", justified by an
+inferred "card-per-metric clutter" principle. The image settles the question, so the five cards —
+Due today · Awaiting review · Late · Accepted · Not required — are restored in the authority's
+order, with the filter chips carrying no counts, as the image draws them.
+
+**Image 09 was likewise rebuilt from the image**: the numbered process rail with arrows, then the
+three-column card grid, then the bottom status bar. Pass 1's two-column layout was mine, not the
+authority's. Everything the image shows that this product has no model for is omitted and the
+region compacted — weather, site-opened time, safety incidents, supervisor, contact, evidence
+thumbnails, Record ID, Export — never substituted with unrelated cards.
+
+**Action ownership.** Several workflows meet on the record page and the Founder could not tell what
+"Accept" was accepting. Every action now names its record: `Accept site record`, `Return site
+record`, `Void site record`, and so on. The accept dialog states that it accepts the site record
+only and decides nothing about any cost claim raised from it.
+
+**The duplicate nag is gone; the protection is not.** An existing approved claim is the normal
+downstream state of an accepted record, so it is now shown neutrally — recipient, amount, lifecycle
+chip, link. PR #100's structural detection is unchanged and now speaks at the moment it is useful:
+on the claim form, when the lines being drafted structurally repeat a line on a live claim from the
+same record and category. Nothing is blocked.
+
+**An overstated amount was corrected.** The old warning described the WHOLE claim total as the
+already-claimed "site labour" — on Alego, KES 5,950 for a claim containing a KES 5,000 planning
+line and a KES 950 line. `matchedPlanningCost()` now derives the figure from the matching lines
+only and reports whether they are the whole claim. Where the lines cannot be read, no figure is
+stated. Regression-tested.
+
+**Finance was rebuilt from images 12 and 13.** All five tabs render; Company Expenses and Staff
+Compensation keep the place image 13 gives them and state truthfully that no model exists. The
+capability card row, "Finance at a glance" and "Recent finance activity" follow image 12; the four
+numbered capability panels follow image 13.
+
+**Funding · Payments · Reconciliation** is separated inside the capability exactly as image 13
+already separates it — four tiles in lifecycle order (Submitted → Approved → Paid →
+Reconciliation) and separate Status / Paid / Reconciled columns on the request table, plus the
+image's reconciliation-progress bar computed only over advances that genuinely need accounting for.
+**No new top-level Finance destinations were invented.**
+
+### WORKFLOW-ORDER AUDIT — a Founder decision is needed
+
+The preview can show a Daily Site Record **awaiting review** while its cost claim is **already
+approved**. The audit result is:
+
+**B — INHERITED IMPLEMENTATION BEHAVIOUR, with no settled Founder authority.**
+
+Evidence: `canCopyDailySiteToCost` permits `submitted`, `resubmitted` and `accepted`. It was
+introduced in commit `74a25ba` ("feat(admin): add internal cost claims") with no rationale in the
+message, no cited ruling, and no corresponding constraint or guard anywhere in the migrations — a
+claim's `daily_site_entry_id` carries no state requirement at the database level. No settled
+document authorises it: the payment/reconciliation founder rulings are silent, and the only stated
+rhythm is *morning record → cost claim by 4:00pm → Principal decision by 4:30pm*, which describes
+timing, not whether the record must be accepted first. Image 09's rail shows a single Principal
+decision point at stage 3, after the claim exists.
+
+**Nothing was changed.** The smallest decision needed is:
+
+> May a cost claim be RAISED, and separately may it be APPROVED, while its Daily Site Record is
+> still awaiting the Principal's review — or must the record be accepted first?
+
+Three options, in increasing strictness: leave as is; allow raising from a submitted record but
+block approval until the record is accepted; require acceptance before a claim can be raised at
+all. Each is a one-line change to `canCopyDailySiteToCost` and/or the claim decision guard, plus a
+matching database constraint. It should not be decided by implementation.
+
+**Verified.** 822 tests pass (12 new). Production build clean with the drift guard first; lint
+identical to the 19-error baseline; `git diff --check` clean. Verified as Principal and Operations
+Manager at 1280px, 375px and 400px — no horizontal overflow on any of the four critical surfaces,
+no console errors on a clean load. No migration, schema, RLS or production-data change; all 51
+authority PNGs byte-identical.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
+Founder's visual review of the preview, not CI.

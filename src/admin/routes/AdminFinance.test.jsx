@@ -44,16 +44,20 @@ const release = (overrides = {}) => ({
   releasedAmount: 5000, version: 1, ...overrides,
 });
 
-describe("Finance department shell", () => {
-  it("offers only the areas a real model stands behind", () => {
+describe("Finance department shell (image 12)", () => {
+  // Image 12's tab row has FIVE tabs. Company Expenses and Staff Compensation
+  // are part of the department, so they render; what they must never do is
+  // carry invented data.
+  it("renders all five departmental tabs, in the authority's order", () => {
     renderFinance();
     const tabs = screen.getAllByRole("tab").map((tab) => tab.textContent);
-    expect(tabs.slice(0, 3)).toEqual([
-      "Overview", "Project Costs", "Funding, Payments and Reconciliation",
+    expect(tabs.slice(0, 5)).toEqual([
+      "Overview",
+      "Project Costs",
+      "Company Expenses",
+      "Staff Compensation",
+      "Funding, Payments & Reconciliation",
     ]);
-    // The unbuilt two are never selectable, because selecting them leads nowhere.
-    expect(screen.queryByRole("tab", { name: "Company Expenses" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Staff Compensation" })).not.toBeInTheDocument();
   });
 
   it("uses the wrapped mobile chip selector, never a horizontally-scrolling row", () => {
@@ -70,240 +74,193 @@ describe("Finance department shell", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Overview — authority image 12.
-// ---------------------------------------------------------------------------
-
-describe("Finance Overview — portfolio position", () => {
-  it("leads with authorised, released, actual expenditure and unreleased", () => {
+describe("Finance Overview — image 12 composition", () => {
+  it("leads with the capability card row, each card carrying its own figure", () => {
     renderFinance({ fundsOverrides: { releases: [release()] } });
-    const panel = screen.getByText("Money position").closest("section");
-    expect(within(panel).getByText("Authorised").parentElement).toHaveTextContent("KES 8,000");
-    expect(within(panel).getByText("Released").parentElement).toHaveTextContent("KES 5,000");
+    // Project Costs card: one claim awaiting a decision at 4,500.
+    const cards = screen.getByRole("region", { name: "Finance capabilities" });
+    const costs = within(cards).getByLabelText("Project Costs");
+    expect(costs).toHaveTextContent("Awaiting decision");
+    expect(costs).toHaveTextContent("KES 4,500");
+    expect(within(costs).getByRole("button", { name: /View project costs/ })).toBeInTheDocument();
+  });
+
+  it("gives the funding card its reconciliation position, as the authority labels it", () => {
+    renderFinance({ fundsOverrides: { releases: [release()] } });
+    const cards = screen.getByRole("region", { name: "Finance capabilities" });
+    const funding = within(cards).getByLabelText("Funding, Payments & Reconciliation");
+    expect(funding).toHaveTextContent("Reconciliation position");
+    expect(funding).toHaveTextContent("KES 5,000");
+  });
+
+  it("shows Finance at a glance from money this product actually holds", () => {
+    renderFinance({ fundsOverrides: { releases: [release()] } });
+    const glance = screen.getByText("Finance at a glance").closest("section");
+    expect(within(glance).getByText("Authorised").parentElement).toHaveTextContent("KES 8,000");
+    expect(within(glance).getByText("Released").parentElement).toHaveTextContent("KES 5,000");
     // A release is not expenditure: an unaccounted advance counts as zero spend.
-    expect(within(panel).getByText("Actual spend").parentElement).toHaveTextContent("KES 0");
-    expect(within(panel).getByText("Not released").parentElement).toHaveTextContent("KES 3,000");
+    expect(within(glance).getByText("Actual spend").parentElement).toHaveTextContent("KES 0");
+    expect(within(glance).getByText("Not released").parentElement).toHaveTextContent("KES 3,000");
   });
 
-  it("names the advance that has not been accounted for rather than counting it as spend", () => {
-    renderFinance({ fundsOverrides: { releases: [release()] } });
-    expect(screen.getByText(/KES 5,000 of accountable advances has not been accounted for/))
-      .toBeInTheDocument();
+  it("invents no money-in, net position, bank balance or expense categories", () => {
+    const { container } = renderFinance();
+    expect(container.textContent).not.toMatch(/bank balance/i);
+    expect(container.textContent).not.toMatch(/total money in/i);
+    expect(container.textContent).not.toMatch(/net position/i);
+    expect(container.textContent).not.toMatch(/top expense categories/i);
+    expect(container.textContent).not.toMatch(/payroll/i);
   });
 
-  it("counts a direct settled payment as expenditure with no acquittal anywhere", () => {
-    renderFinance({
-      fundsOverrides: { releases: [release({ custodyDisposition: DIRECT, releasedAmount: 8000 })] },
-    });
-    const panel = screen.getByText("Money position").closest("section");
-    expect(within(panel).getByText("Actual spend").parentElement).toHaveTextContent("KES 8,000");
-    expect(screen.queryByText(/has not been accounted for/)).not.toBeInTheDocument();
-  });
-
-  // The Overview must never disagree with the register a reader drills into.
-  it("derives its money from the same rows Project Costs reads", () => {
-    renderFinance({ fundsOverrides: { releases: [release()] } });
-    const overview = screen.getByText("Money position").closest("section");
-    const released = within(overview).getByText("Released").parentElement.textContent;
-    expect(released).toContain("KES 5,000");
-  });
-
-  it("gives a compact, useful empty state rather than a canvas of zeroes", () => {
-    renderFinance({ costsOverrides: { claims: [] }, fundsOverrides: { requests: [] } });
-    // Absence is ONE LINE inside the panel, never a full-width panel of prose.
-    expect(screen.getByText(/No fund authority is approved/)).toBeInTheDocument();
-    // No metric tiles are drawn at full weight for a position that does not exist.
-    expect(screen.queryByText("Authorised")).not.toBeInTheDocument();
-  });
-});
-
-describe("Finance Overview — attention", () => {
-  it("names what is waiting, with counts and amounts, and links to the register that owns it", () => {
+  it("fills recent finance activity from real claims and requests only", () => {
     renderFinance();
-    const panel = screen.getByText("Needs attention").closest("section");
-    const claimItem = within(panel).getByRole("link", { name: /Cost claims awaiting your decision/ });
-    expect(claimItem).toHaveAttribute("href", "/admin/site-costs?status=awaiting_review");
-    expect(claimItem).toHaveTextContent("KES 4,500");
-    expect(within(panel).getByRole("link", { name: /Fund requests awaiting your decision/ }))
-      .toHaveAttribute("href", "/admin/fund-requests?status=submitted");
-    // Approval is not release, and it gets its own line.
-    expect(within(panel).getByRole("link", { name: /Approved — nothing released yet/ }))
-      .toBeInTheDocument();
+    const feed = screen.getByText("Recent finance activity").closest("section");
+    expect(within(feed).getByRole("link", { name: /BDFR-2026-0002/ }))
+      .toHaveAttribute("href", "/admin/fund-requests/r2");
+    expect(within(feed).getAllByRole("link").length).toBeGreaterThan(1);
+  });
+
+  it("names what is awaiting a decision and decides nothing itself", () => {
+    const { container } = renderFinance();
+    const panel = screen.getByText("Awaiting a decision").closest("section");
+    expect(within(panel).getByRole("link", { name: /Cost claims awaiting your decision/ }))
+      .toHaveAttribute("href", "/admin/site-costs?status=awaiting_review");
+    expect(within(panel).queryByRole("button")).not.toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/\bApprove\b|\bReject\b|\bDecide\b/);
   });
 
   it("speaks to the Operations Manager without offering them a Principal decision", () => {
     renderFinance({ role: "manager" });
-    const panel = screen.getByText("Needs attention").closest("section");
+    const panel = screen.getByText("Awaiting a decision").closest("section");
     expect(within(panel).getByText(/Cost claims awaiting the Principal/)).toBeInTheDocument();
     expect(within(panel).queryByText(/awaiting your decision/)).not.toBeInTheDocument();
-    // And Finance never grows a decision control of its own.
-    expect(within(panel).queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  it("surfaces an outstanding accountable advance as attention", () => {
-    renderFinance({ fundsOverrides: { releases: [release()] } });
-    const panel = screen.getByText("Needs attention").closest("section");
-    expect(within(panel).getByRole("link", { name: /Accountable advances not yet accounted for/ }))
-      .toHaveTextContent("KES 5,000");
-  });
-
-  it("says plainly when nothing financial is waiting on anyone", () => {
-    renderFinance({
-      costsOverrides: { claims: [claims[0]] },
-      fundsOverrides: {
-        requests: [requests[0]],
-        releases: [release({ custodyDisposition: DIRECT, releasedAmount: 8000 })],
-      },
-    });
-    expect(screen.getByText(/Every claim has been decided, every approved authority released/)).toBeInTheDocument();
-  });
-
-  it("is not a second Approvals centre: it decides nothing and only links out", () => {
-    const { container } = renderFinance();
-    const panel = screen.getByText("Needs attention").closest("section");
-    expect(within(panel).queryByRole("button")).not.toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/\bApprove\b|\bReject\b|\bDecide\b/);
   });
 });
 
-describe("Finance Overview — Company Expenses and Staff Compensation", () => {
-  // They appear in the department row, at the weight of a capability that does
-  // not exist: muted, no figure, and not a route.
-  it("names both in the department row and gives neither a figure or a route", () => {
-    renderFinance();
-    const expenses = screen.getByText("Company Expenses").closest("div");
-    const staff = screen.getByText("Staff Compensation").closest("div");
-    [expenses, staff].forEach((card) => {
-      const holder = card.closest("[class*='border-dashed']");
-      expect(holder).toBeTruthy();
-      expect(holder.textContent).toMatch(/Not yet built/);
-      expect(holder.textContent).not.toMatch(/KES/);
-      expect(holder.tagName).not.toBe("BUTTON");
-    });
-    // And neither is selectable, because selecting them leads nowhere.
-    expect(screen.queryByRole("tab", { name: "Company Expenses" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "Staff Compensation" })).not.toBeInTheDocument();
-  });
-
-  it("invents no money-in, bank balance or expense-category figure", () => {
-    const { container } = renderFinance();
-    // The authority image shows all three. Botanique has no record of any of
-    // them, so a plausible number would be a fabrication.
-    expect(container.textContent).not.toMatch(/bank balance/i);
-    expect(container.textContent).not.toMatch(/total money in/i);
-    expect(container.textContent).not.toMatch(/top expense categories/i);
-    expect(container.textContent).not.toMatch(/payroll/i);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Finance children — authority image 13.
-// ---------------------------------------------------------------------------
-
-describe("Finance → Project Costs", () => {
-  it("answers what is approved, what is waiting, and what actually moved", async () => {
-    const user = userEvent.setup();
-    renderFinance({ fundsOverrides: { releases: [release()] } });
-    await user.click(screen.getAllByRole("tab", { name: "Project Costs" })[0]);
-    // Decision leads, at its own weight; the supporting figures sit beside it.
-    const decision = screen.getByText("Awaiting a decision").closest("div").parentElement.parentElement;
-    expect(decision).toHaveTextContent("1");
-    expect(decision).toHaveTextContent("KES 4,500");
-    expect(screen.getByText("Approved").parentElement).toHaveTextContent("KES 12,000");
-    expect(screen.getByText("Released").parentElement).toHaveTextContent("KES 5,000");
-    expect(screen.getByText("Not released").parentElement).toHaveTextContent("KES 3,000");
-  });
-
-  it("drills through to an individual claim rather than restating the ledger", async () => {
+describe("Finance — Company Expenses and Staff Compensation (image 13 place, no data)", () => {
+  it("keeps their place in the department and states the truth, with no figures", async () => {
     const user = userEvent.setup();
     renderFinance();
-    await user.click(screen.getAllByRole("tab", { name: "Project Costs" })[0]);
-    // Two BOUNDED lists, never an unbounded accounting dump, and no table.
-    const needs = screen.getByText("Needs a decision").closest("section");
-    expect(within(needs).getAllByRole("link", { name: /Alego Usonga/ })[0])
-      .toHaveAttribute("href", "/admin/site-costs/c2");
-    const decided = screen.getByText("Recently decided").closest("section");
-    expect(within(decided).getAllByRole("link", { name: /Alego Usonga/ })[0])
-      .toHaveAttribute("href", "/admin/site-costs/c1");
-    expect(document.querySelector("main table")).toBeNull();
+    await user.click(screen.getAllByRole("tab", { name: "Company Expenses" })[0]);
+    const panel = screen.getByRole("region", { name: "Company Expenses" });
+    expect(panel).toHaveTextContent(/not built yet/);
+    expect(panel).toHaveTextContent(/No records, workflow or figures exist/);
+    expect(panel.textContent).not.toMatch(/KES/);
   });
 
-  it("gives a compact empty state that says what raises a claim", async () => {
+  it("does the same for Staff Compensation", async () => {
     const user = userEvent.setup();
-    renderFinance({ costsOverrides: { claims: [] } });
-    await user.click(screen.getAllByRole("tab", { name: "Project Costs" })[0]);
-    expect(screen.getByText(/No project cost has been claimed yet/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Go to Project Costs/ }))
-      .toHaveAttribute("href", "/admin/site-costs");
+    renderFinance();
+    await user.click(screen.getAllByRole("tab", { name: "Staff Compensation" })[0]);
+    const panel = screen.getByRole("region", { name: "Staff Compensation" });
+    expect(panel).toHaveTextContent(/not built yet/);
+    expect(panel.textContent).not.toMatch(/KES/);
   });
 });
 
-describe("Finance → Funding, Payments and Reconciliation", () => {
-  async function openFunding() {
+describe("Finance → Project Costs (image 13, panel 1)", () => {
+  async function open() {
     const user = userEvent.setup();
-    await user.click(screen.getAllByRole("tab", { name: "Funding, Payments and Reconciliation" })[0]);
+    await user.click(screen.getAllByRole("tab", { name: "Project Costs" })[0]);
   }
 
-  it("uses the canonical name and never regresses to Fund Requests as the architecture", async () => {
+  it("renders the authority's four metric tiles", async () => {
+    renderFinance({ fundsOverrides: { releases: [release()] } });
+    await open();
+    const panel = screen.getByRole("region", { name: "Project Costs" });
+    // "Awaiting review" and "Approved" also appear as lifecycle chips in the
+    // claim list below, so the tile is the first occurrence.
+    const tile = (label) => within(panel).getAllByText(label)[0].closest("div").parentElement;
+    expect(tile("Total project costs")).toHaveTextContent("KES 16,500");
+    expect(tile("Awaiting review")).toHaveTextContent("KES 4,500");
+    expect(tile("Approved")).toHaveTextContent("KES 12,000");
+    expect(tile("Released")).toHaveTextContent("KES 5,000");
+  });
+
+  it("lists recent cost claims with drill-through, and no unbounded ledger", async () => {
     renderFinance();
-    await openFunding();
-    expect(screen.getAllByText("Funding, Payments and Reconciliation").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("heading", { name: "Fund Requests" })).not.toBeInTheDocument();
+    await open();
+    const list = screen.getByText("Recent cost claims").closest("div").parentElement;
+    expect(within(list).getAllByRole("link", { name: /Alego Usonga/ })[0])
+      .toHaveAttribute("href", "/admin/site-costs/c2");
   });
 
-  it("states the lifecycle in order without implying approval is release", async () => {
+  it("states the empty case without inventing a figure", async () => {
+    renderFinance({ costsOverrides: { claims: [] } });
+    await open();
+    expect(screen.getByText(/No project cost has been claimed yet/)).toBeInTheDocument();
+  });
+});
+
+describe("Finance → Funding, Payments & Reconciliation (image 13, panel 4)", () => {
+  async function open() {
+    const user = userEvent.setup();
+    await user.click(screen.getAllByRole("tab", { name: "Funding, Payments & Reconciliation" })[0]);
+  }
+
+  // The image separates the three concerns as FOUR TILES in lifecycle order and
+  // as SEPARATE Status / Paid / Reconciled columns. No new destinations.
+  it("renders the four lifecycle tiles in the authority's order", async () => {
     renderFinance({ fundsOverrides: { releases: [release()] } });
-    await openFunding();
-    // The lifecycle is one ordered strip, so approval can never read as payment.
-    const strip = screen.getByText("Awaiting decision").closest("ol");
-    const stages = [...strip.children].map((li) => li.textContent);
-    expect(stages[0]).toMatch(/Awaiting decision/);
-    expect(stages[1]).toMatch(/Authorised.*KES 8,000/);
-    expect(stages[2]).toMatch(/Released.*KES 5,000/);
-    expect(stages[3]).toMatch(/Advance outstanding.*KES 5,000/);
-    expect(stages[4]).toMatch(/Settled/);
+    await open();
+    const panel = screen.getByRole("region", { name: "Funding, Payments & Reconciliation" });
+    const tile = (label) => within(panel).getAllByText(label)[0].closest("div").parentElement;
+    ["Submitted", "Approved", "Paid", "Reconciliation"].forEach((label) => {
+      expect(within(panel).getAllByText(label).length).toBeGreaterThan(0);
+    });
+    expect(tile("Approved")).toHaveTextContent("KES 8,000");
+    expect(tile("Paid")).toHaveTextContent("KES 5,000");
   });
 
-  it("shows a partly released authority as partly released, not as paid", async () => {
+  it("carries Status, Paid and Reconciled as separate columns", async () => {
     renderFinance({ fundsOverrides: { releases: [release()] } });
-    await openFunding();
-    expect(screen.getByText(/KES 5,000 released/)).toBeInTheDocument();
+    await open();
+    const headers = [...document.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+    expect(headers).toEqual([
+      "Request", "Project / Purpose", "Amount (KES)", "Status", "Paid", "Reconciled",
+    ]);
   });
 
-  it("keeps both custody types visible on a mixed authority", async () => {
+  // Approval is not payment, and the columns must never conflate them.
+  it("shows an approved authority with a partial release as approved but part paid", async () => {
+    renderFinance({ fundsOverrides: { releases: [release()] } });
+    await open();
+    const row = screen.getByRole("link", { name: "BDFR-2026-0001" }).closest("tr");
+    expect(within(row).getByText("Approved — not released")).toBeInTheDocument();
+    expect(within(row).getByText("Part paid")).toBeInTheDocument();
+    expect(within(row).getByText("No")).toBeInTheDocument();
+  });
+
+  it("never asks a direct settled payment to be reconciled", async () => {
+    renderFinance({
+      fundsOverrides: { releases: [release({ custodyDisposition: DIRECT, releasedAmount: 8000 })] },
+    });
+    await open();
+    const row = screen.getByRole("link", { name: "BDFR-2026-0001" }).closest("tr");
+    expect(within(row).getByText("Paid")).toBeInTheDocument();
+    expect(within(row).getByText("Not required")).toBeInTheDocument();
+    // And no reconciliation progress bar is drawn for money nobody must account for.
+    expect(screen.queryByText("Reconciliation progress")).not.toBeInTheDocument();
+  });
+
+  it("shows reconciliation progress only over advances that need accounting for", async () => {
     renderFinance({
       fundsOverrides: {
-        releases: [
-          release({ id: "rel1", releasedAmount: 5000 }),
-          release({ id: "rel2", custodyDisposition: DIRECT, releasedAmount: 3000 }),
-        ],
+        releases: [release()],
+        acquittals: [{
+          id: "acq1", fundReleaseId: "rel1", state: "accepted", releasedAmountSnapshot: 5000,
+          actualSpendTotal: 5000, returnedAmount: 0, varianceAmount: 0, version: 1,
+        }],
       },
     });
-    await openFunding();
-    // One authority, two custody outcomes. Flattening it to one would either
-    // manufacture or erase a reconciliation obligation.
-    expect(screen.getByText(/Accountable advance KES 5,000/)).toBeInTheDocument();
-    expect(screen.getByText(/Direct settled payment KES 3,000/)).toBeInTheDocument();
+    await open();
+    expect(screen.getByText("Reconciliation progress")).toBeInTheDocument();
+    expect(screen.getByText(/1 of 1 accountable advance has been accounted for/)).toBeInTheDocument();
   });
 
-  it("never shows an acquittal against a direct settled payment", async () => {
-    renderFinance({
-      fundsOverrides: {
-        releases: [release({ custodyDisposition: DIRECT, releasedAmount: 8000 })],
-      },
-    });
-    await openFunding();
-    expect(screen.getByText(/Direct settled payment KES 8,000/)).toBeInTheDocument();
-    const strip = screen.getByText("Awaiting decision").closest("ol");
-    expect([...strip.children][3].textContent).toMatch(/Advance outstanding.*KES 0/);
-  });
-
-  it("gives a compact empty state that distinguishes authority from payment", async () => {
+  it("states the empty case without implying approval is payment", async () => {
     renderFinance({ fundsOverrides: { requests: [] } });
-    await openFunding();
-    // Absence is one line with an action, not a large card in a blank canvas.
+    await open();
     expect(screen.getByText(/approval is not payment/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open/ }))
-      .toHaveAttribute("href", "/admin/fund-requests");
   });
 });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  claimCoversPlanningLine, duplicateRiskForEntry, isLiveClaim,
-  planningLineFingerprint, possibleDuplicateClaims,
+  claimCoversPlanningLine, duplicateRiskForEntry, isLiveClaim, matchedPlanningCost, overlappingClaimsForDraft, planningLineFingerprint, possibleDuplicateClaims,
 } from "./duplicateCostClaim";
 
 // The real production shape found in the hosted walkthrough: a Daily Site Record for
@@ -178,5 +177,112 @@ describe("isLiveClaim", () => {
       .forEach((lifecycle) => expect(isLiveClaim({ lifecycle })).toBe(true));
     ["rejected", "withdrawn", "cancelled"]
       .forEach((lifecycle) => expect(isLiveClaim({ lifecycle })).toBe(false));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The hosted review of PR #102 found the WHOLE CLAIM TOTAL being presented as
+// the already-claimed "site labour". Only the matching lines are that.
+// ---------------------------------------------------------------------------
+
+describe("matchedPlanningCost — what has actually already been claimed", () => {
+  const entry = {
+    id: "e1", disposition: "working", expectedWorkerCount: 10, ratePerWorker: 500,
+    agreedLabourTotal: null,
+  };
+  const planningLine = {
+    id: "l1", description: "Planned site labour", rateType: "daily",
+    quantity: 10, unitRate: 500, lineTotal: 5000,
+  };
+  const otherLine = {
+    id: "l2", description: "Materials top-up", rateType: "lump_sum",
+    quantity: 1, unitRate: 950, lineTotal: 950,
+  };
+  const claim = { id: "c1", dailySiteEntryId: "e1", category: "labour", lifecycle: "approved" };
+
+  it("reports only the matched line, not the richer claim's total", () => {
+    const matched = matchedPlanningCost(claim, [planningLine, otherLine], entry);
+    // The claim is 5,950. Only 5,000 of it is the planning line that matched.
+    expect(matched.matchedTotal).toBe(5000);
+    expect(matched.matchedLineCount).toBe(1);
+    expect(matched.coversWholeClaim).toBe(false);
+  });
+
+  it("says the claim total IS the matched cost only when nothing else is on it", () => {
+    const matched = matchedPlanningCost(claim, [planningLine], entry);
+    expect(matched.matchedTotal).toBe(5000);
+    expect(matched.coversWholeClaim).toBe(true);
+  });
+
+  it("returns null when nothing matched, so no amount can be claimed as duplicated", () => {
+    expect(matchedPlanningCost(claim, [otherLine], entry)).toBeNull();
+  });
+
+  it("falls back to quantity × rate when a line total is missing, never guessing", () => {
+    const matched = matchedPlanningCost(claim, [{ ...planningLine, lineTotal: null }], entry);
+    expect(matched.matchedTotal).toBe(5000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The warning belongs at the moment someone raises an overlapping claim, not on
+// every view of a record that legitimately already has one.
+// ---------------------------------------------------------------------------
+
+describe("overlappingClaimsForDraft — the warning at raise time", () => {
+  const existingLines = [{
+    id: "l1", description: "Planned site labour", rateType: "daily",
+    quantity: 10, unitRate: 500, lineTotal: 5000,
+  }];
+  const existing = { id: "c1", dailySiteEntryId: "e1", category: "labour", lifecycle: "approved", recipientLabel: "Turf crew" };
+  const linesFor = (id) => (id === "c1" ? existingLines : []);
+
+  const draft = (lines) => ({ dailySiteEntryId: "e1", category: "labour", lines });
+
+  it("flags a drafted line that structurally repeats an existing live claim", () => {
+    const found = overlappingClaimsForDraft(
+      draft([{ description: "Planned site labour", rateType: "daily", quantity: "10", unitRate: "500" }]),
+      [existing], linesFor
+    );
+    expect(found).toHaveLength(1);
+    expect(found[0].claim.id).toBe("c1");
+    expect(found[0].matchedLines).toHaveLength(1);
+  });
+
+  it("says nothing about a genuinely different additional cost", () => {
+    const found = overlappingClaimsForDraft(
+      draft([{ description: "Mkokoteni cartage", rateType: "lump_sum", quantity: "1", unitRate: "800" }]),
+      [existing], linesFor
+    );
+    expect(found).toEqual([]);
+  });
+
+  it("says nothing while the form is still blank", () => {
+    expect(overlappingClaimsForDraft(draft([{ description: "", rateType: "daily", quantity: "", unitRate: "" }]), [existing], linesFor)).toEqual([]);
+  });
+
+  it("never flags a rejected or withdrawn claim, so re-claiming stays legitimate", () => {
+    const dead = { ...existing, lifecycle: "rejected" };
+    const found = overlappingClaimsForDraft(
+      draft([{ description: "Planned site labour", rateType: "daily", quantity: "10", unitRate: "500" }]),
+      [dead], linesFor
+    );
+    expect(found).toEqual([]);
+  });
+
+  it("never flags a different category on the same record", () => {
+    const found = overlappingClaimsForDraft(
+      { dailySiteEntryId: "e1", category: "materials", lines: [{ description: "Planned site labour", rateType: "daily", quantity: "10", unitRate: "500" }] },
+      [existing], linesFor
+    );
+    expect(found).toEqual([]);
+  });
+
+  it("never flags the claim being amended against itself", () => {
+    const found = overlappingClaimsForDraft(
+      draft([{ description: "Planned site labour", rateType: "daily", quantity: "10", unitRate: "500" }]),
+      [existing], linesFor, "c1"
+    );
+    expect(found).toEqual([]);
   });
 });

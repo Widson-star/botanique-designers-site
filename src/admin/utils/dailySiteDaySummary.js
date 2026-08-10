@@ -1,95 +1,76 @@
-// The day's operational position.
+// The day's five status metrics, exactly as the committed authority defines them.
 //
-// Visual Authority Tranche 1 rendered this as five equal statistic cards
-// followed by a separate alert strip. The Founder's review of the hosted result
-// was that five equal cards give every count the same weight, so nothing leads,
-// and that when sites are missing a record "the missing-site requirement should
-// feel like the central operational task, not just another yellow strip beneath
-// five cards".
+// AUTHORITY: 08-daily-site-record-list-working-authority.png. The image shows
+// five metric cards across the top of the page, in this order, each with an icon
+// disc, a label, a count and a sub-line naming how many sites it covers:
 //
-// So the counts are no longer a set of cards. They are:
+//   Due today · Awaiting review · Late · Accepted · Not required
 //
-//   * ONE HEADLINE — the single sentence that is the day's position, chosen by
-//     what actually needs doing, not by a fixed slot order;
-//   * COUNTS ATTACHED TO THE FILTERS that select them, so a number is a way of
-//     getting somewhere rather than a decoration.
+// PR #102's first pass DELETED these five cards and replaced them with a single
+// invented "day banner", on the reasoning that five equal cards were generic
+// clutter. That was a design heuristic overriding a committed authority image,
+// which is exactly backwards. The cards are restored here and the heuristic is
+// discarded: where the PNG settles a question, the PNG wins.
 //
 // Every count is derived from records the reader can already see. Nothing is
 // stored and nothing is estimated. Two sources, each used for what it is
 // authoritative about: `compliance` rows answer "was a record DUE, and did one
-// arrive" (the database computes due-ness, weekends and not-required in EAT);
+// arrive" — the database computes due-ness, weekends and not-required in EAT;
 // `entries` answer "what state is the record in". They are never mixed.
 
 const AWAITING_REVIEW_STATES = ["submitted", "resubmitted"];
 
-function sites(rows, pick) {
+function countSites(rows, pick) {
   return new Set(rows.map(pick).filter(Boolean)).size;
 }
 
-export function dayCounts(entries = [], compliance = [], today = "") {
-  const todays = entries.filter((entry) => entry.workDate === today);
-  const due = compliance.filter((row) => row.due);
-  const missingRows = compliance.filter((row) => row.complianceStatus === "missing");
-
-  return {
-    due: due.length,
-    dueSites: sites(due, (row) => row.projectId),
-    missing: missingRows.length,
-    missingProjects: missingRows,
-    late: compliance.filter((row) => row.complianceStatus === "entry_late").length,
-    notRequired: compliance.filter((row) => row.complianceStatus === "waived").length,
-    awaitingReview: todays.filter((entry) => AWAITING_REVIEW_STATES.includes(entry.state)).length,
-    accepted: todays.filter((entry) => entry.state === "accepted").length,
-    returned: todays.filter((entry) => entry.state === "returned_for_correction").length,
-    recorded: todays.length,
-  };
+// "Across N sites", as the authority's sub-line reads.
+function acrossSites(count) {
+  return count === 1 ? "Across 1 site" : `Across ${count} sites`;
 }
 
-// The day in one sentence, chosen by what needs doing. Worst first: a site with
-// no record at all outranks a record waiting for review, which outranks a day
-// where everything is done.
-export function dayHeadline(counts, { ready = true } = {}) {
-  if (!ready) {
-    return { tone: "neutral", icon: "clock", headline: "Loading today's site records…", detail: "" };
-  }
-  if (counts.missing > 0) {
-    return {
-      tone: "attention",
-      icon: "alert",
-      headline: counts.missing === 1
-        ? "1 site still needs a morning record"
-        : `${counts.missing} sites still need a morning record`,
-      detail: "Recording the morning position is the first task of the day.",
-    };
-  }
-  if (counts.due === 0) {
-    return {
-      tone: "neutral",
-      icon: "pause",
-      headline: "No site record is due today",
-      detail: counts.notRequired > 0
-        ? `${counts.notRequired} ${counts.notRequired === 1 ? "site is" : "sites are"} marked not required.`
-        : "No active site has work planned that requires a record.",
-    };
-  }
-  if (counts.awaitingReview > 0) {
-    return {
-      tone: "waiting",
-      icon: "clock",
-      headline: counts.awaitingReview === 1
-        ? "1 record is waiting for review"
-        : `${counts.awaitingReview} records are waiting for review`,
-      detail: "Every active site has recorded its morning position.",
-    };
-  }
-  return {
-    tone: "settled",
-    icon: "check",
-    headline: "Every active site has recorded today",
-    detail: counts.notRequired > 0
-      ? `${counts.notRequired} ${counts.notRequired === 1 ? "site was" : "sites were"} marked not required.`
-      : "Nothing is outstanding on the morning record.",
-  };
+// The five cards of the authority image, in the authority's order.
+export function dayMetrics(entries = [], compliance = [], today = "") {
+  const todays = entries.filter((entry) => entry.workDate === today);
+  const due = compliance.filter((row) => row.due);
+  const late = compliance.filter((row) => row.complianceStatus === "entry_late");
+  const notRequired = compliance.filter((row) => row.complianceStatus === "waived");
+  const awaiting = todays.filter((entry) => AWAITING_REVIEW_STATES.includes(entry.state));
+  const accepted = todays.filter((entry) => entry.state === "accepted");
+
+  return [
+    {
+      key: "due", label: "Due today", icon: "calendar", tone: "neutral",
+      value: due.length, hint: acrossSites(countSites(due, (row) => row.projectId)),
+    },
+    {
+      key: "awaiting_review", label: "Awaiting review", icon: "clock",
+      tone: awaiting.length > 0 ? "waiting" : "neutral",
+      value: awaiting.length, hint: acrossSites(countSites(awaiting, (entry) => entry.projectId)),
+    },
+    {
+      key: "late", label: "Late", icon: "alert",
+      tone: late.length > 0 ? "attention" : "neutral",
+      value: late.length, hint: acrossSites(countSites(late, (row) => row.projectId)),
+    },
+    {
+      key: "accepted", label: "Accepted", icon: "check",
+      tone: accepted.length > 0 ? "settled" : "neutral",
+      value: accepted.length, hint: acrossSites(countSites(accepted, (entry) => entry.projectId)),
+    },
+    {
+      key: "not_required", label: "Not required", icon: "pause", tone: "neutral",
+      value: notRequired.length, hint: "No work planned",
+    },
+  ];
+}
+
+// Sites that are due today and have no record at all. The authority image has no
+// missing state in its illustrative data, so it settles no treatment for one;
+// this is real compliance truth the product must still surface, and it is shown
+// in the authority's own contextual bottom bar rather than as an invented banner.
+export function missingSites(compliance = []) {
+  return compliance.filter((row) => row.complianceStatus === "missing");
 }
 
 // The one action a row is actually waiting for. The authority puts a verb in

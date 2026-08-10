@@ -1,38 +1,32 @@
-// Finance — one stable shell destination with an in-page area selector.
+// Finance.
 //
-// Architecture authority: docs/ui-authority/operations-hub/
-// operating-model-authority/ (PR #93, PR #94). Finance is a top-level domain
-// with INTERNAL departmental navigation. Working-authority image 13 draws
-// persistent Finance children in the sidebar; that arrangement is deliberately
-// NOT implemented, because the navigation decision post-dates it. Image 13
-// still governs what each child contains.
+// AUTHORITY:
+//   12-finance-overview-working-authority.png — the Finance landing: title,
+//   a FIVE-tab row, a row of capability cards each with an icon, a description,
+//   a headline figure and a footer link, then "at a glance" beside "recent
+//   finance activity".
+//   13-finance-children-working-authority.png — the four numbered capability
+//   panels: ① Project Costs ② Company Expenses ③ Staff Compensation
+//   ④ Funding, Payments & Reconciliation. Each is a numbered header with
+//   filters at the right, a row of FOUR metric tiles, then its content.
 //
-// Visual authority: 12-finance-overview-working-authority.png (Overview) and
-// 13-finance-children-working-authority.png (the departmental surfaces).
+// ARCHITECTURE: image 13 draws persistent Finance children in the sidebar. That
+// arrangement is NOT implemented — PR #94 settled Finance as one top-level
+// domain with in-page navigation, and that decision post-dates the image. The
+// image still governs what each capability contains, which is what is built here.
 //
-// FIDELITY CORRECTION, 10 August 2026. The first implementation was truthful
-// but skeletal: heading → tabs → a large panel explaining that no money had
-// moved → a large panel explaining that nothing needed attention → two module
-// cards → a dashed block for the two unbuilt areas. Five stacked rectangles,
-// mostly sentences, with the emptiest regions taking the most space. The
-// Founder's review rejected it as not yet a Finance command surface.
+// CORRECTION, 10 August 2026. PR #102's first pass invented its own Finance
+// information architecture — four cards, a "money position" panel beside a
+// "needs attention" panel — assembled from a shared component library rather
+// than from these two images. The images are the product authority and the
+// component library is an implementation helper; this file is rebuilt from the
+// images. All five tabs now render, as image 12 shows. Company Expenses and
+// Staff Compensation keep their place in the department and state truthfully
+// that no model exists, rather than being hidden or given invented figures.
 //
-// Four structural changes, all visible:
-//
-//   1. THE DEPARTMENT ROW IS BACK. The authority's signature region — one card
-//      per Finance area, each with its own icon and its own headline figure —
-//      was missing entirely. It is the first thing on the page now, and it is
-//      what makes this read as a department rather than a report.
-//   2. POSITION AND ATTENTION SIT SIDE BY SIDE, not stacked. Finance answers
-//      two questions — where does the money stand, and what is waiting — and
-//      they belong on one screen, not one above the other.
-//   3. ABSENCE IS ONE LINE. A zero position and an empty attention list are now
-//      single lines inside their panels. Nothing empty is allowed to occupy a
-//      full-width panel while something real is pushed below the fold.
-//   4. THE UNBUILT AREAS LOST THEIR DASHED BLOCK. Company Expenses and Staff
-//      Compensation appear in the department row at the weight of a capability
-//      that does not exist: muted, no figure, not clickable. Truthful, and
-//      unable to out-shout an area that works.
+// WHAT THE IMAGES SHOW THAT THIS PRODUCT DOES NOT HAVE is omitted, never
+// substituted: no money-in, no bank balance, no net position, no expense
+// categories, no votehead breakdown, no payroll, no donut chart.
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
@@ -40,21 +34,18 @@ import { useSiteCosts } from "../context/siteCosts";
 import { useFundRequests } from "../context/fundRequests";
 import { canSeeSiteCosts } from "../utils/siteCostCapabilities";
 import { canSeeFundRequests, FUND_REQUEST_STATUSES } from "../utils/fundRequestCapabilities";
-import { CUSTODY_DISPOSITIONS } from "../utils/fundReleaseCapabilities";
 import {
   FINANCE_AREAS, financeAttention, portfolioPosition, requestPositions,
 } from "../utils/financePortfolio";
 import { formatKes } from "../utils/dailySiteFormatters";
-import {
-  Chip, Disc, EmptyLine, Glyph, Metric, MetricBand, Panel,
-} from "../components/ui/Surfaces";
+import { Chip, Disc, Glyph } from "../components/ui/Surfaces";
 
 const AREA_ICON = {
   overview: "spark",
-  "project-costs": "site",
+  "project-costs": "calendar",
   "company-expenses": "doc",
   "staff-compensation": "people",
-  funding: "wallet",
+  funding: "money",
 };
 
 const LIFECYCLE_LABEL = {
@@ -66,6 +57,60 @@ const LIFECYCLE_LABEL = {
   withdrawn: "Withdrawn",
   cancelled: "Cancelled",
 };
+
+// One of the authority's metric tiles: icon disc, label, big value, sub-line.
+function Tile({ icon, label, value, hint, tone = "neutral" }) {
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white px-3.5 py-3">
+      <div className="flex items-center gap-2.5">
+        <Disc name={icon} tone={tone} size="h-8 w-8" />
+        <p className="min-w-0 truncate text-[11.5px] text-gray-500">{label}</p>
+      </div>
+      <p className="mt-2 break-words text-[19px] font-semibold leading-none tabular-nums text-botanique-charcoal">
+        {value}
+      </p>
+      {hint && <p className="mt-1.5 truncate text-[11px] text-gray-500">{hint}</p>}
+    </div>
+  );
+}
+
+// A numbered capability panel, as image 13 composes each of its four regions.
+function CapabilityPanel({ number, icon, title, subtitle, action, children }) {
+  return (
+    <section aria-label={title} className="rounded-xl border border-stone-200 bg-white p-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-botanique-green text-[11px] font-semibold text-white">
+            {number}
+          </span>
+          {icon && <Disc name={icon} tone="brand" size="h-8 w-8" />}
+          <div className="min-w-0">
+            <h2 className="truncate text-[14px] font-semibold text-botanique-charcoal">{title}</h2>
+            {subtitle && <p className="truncate text-[11.5px] text-gray-500">{subtitle}</p>}
+          </div>
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      <div className="mt-3.5">{children}</div>
+    </section>
+  );
+}
+
+// A capability with no model behind it. Image 13 gives it a numbered panel and a
+// place in the department; this product gives it that place and nothing else.
+function UnbuiltPanel({ number, area }) {
+  return (
+    <CapabilityPanel number={number} icon={AREA_ICON[area.id]} title={area.label} subtitle={area.description}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg bg-stone-50 px-3.5 py-3">
+        <Disc name="pause" tone="unbuilt" size="h-8 w-8" />
+        <p className="min-w-0 flex-1 text-[12.5px] leading-snug text-gray-600">
+          This capability is part of the Finance department but is not built yet. No records,
+          workflow or figures exist for it, so none are shown.
+        </p>
+      </div>
+    </CapabilityPanel>
+  );
+}
 
 export default function AdminFinance() {
   const { role, projects } = useAdminData();
@@ -79,14 +124,15 @@ export default function AdminFinance() {
     [requests, allocations, releases, acquittals]
   );
 
-  // Only areas with a real model are selectable. The unbuilt two still appear
-  // in the department row, where they cannot be mistaken for a route.
+  // All five areas of image 12's tab row. The two without a model are still
+  // selectable, because the image makes them part of the department and the
+  // panel they open states the truth rather than inventing data.
   const areas = useMemo(
     () =>
       FINANCE_AREAS.filter((area) => {
-        if (area.unbuilt) return false;
         if (area.id === "project-costs") return canCosts;
         if (area.id === "funding") return canFunds;
+        if (area.unbuilt) return canCosts || canFunds;
         return canCosts || canFunds;
       }),
     [canCosts, canFunds]
@@ -119,16 +165,15 @@ export default function AdminFinance() {
   const loading = costsStatus === "loading" || fundsStatus === "loading";
 
   return (
-    <section className="space-y-3.5">
+    <section className="space-y-4">
       <div>
-        <h1 className="text-[22px] font-semibold leading-tight">Finance</h1>
-        <p className="mt-0.5 max-w-2xl text-[13px] text-gray-600">
-          All Botanique money-in and money-out records live here. Approval is authority to incur;
-          a release is money that actually moved.
+        <h1 className="text-[24px] font-semibold leading-tight">Finance</h1>
+        <p className="mt-1 max-w-2xl text-[13px] text-gray-600">
+          All Botanique money-in and money-out records live here.
         </p>
       </div>
 
-      {/* Desktop: one continuous segmented control, matching the authority. */}
+      {/* Image 12's tab row. */}
       <div className="hidden rounded-lg bg-stone-100 p-1 sm:inline-flex" role="tablist" aria-label="Finance area">
         {areas.map((area) => (
           <button
@@ -147,8 +192,6 @@ export default function AdminFinance() {
           </button>
         ))}
       </div>
-
-      {/* Mobile: wrapped chips that never require horizontal scrolling. */}
       <div className="flex flex-wrap gap-2 sm:hidden" role="tablist" aria-label="Finance area">
         {areas.map((area) => (
           <button
@@ -169,549 +212,461 @@ export default function AdminFinance() {
       {loading && <p className="text-[13px] text-gray-600">Loading the Finance position…</p>}
 
       {active.id === "overview" && (
-        <OverviewArea
+        <Overview
+          areas={FINANCE_AREAS}
+          claims={claims}
           portfolio={portfolio}
           attention={attention}
-          claims={claims}
+          positions={positions}
+          projectName={projectName}
           canCosts={canCosts}
           canFunds={canFunds}
           onSelect={select}
         />
       )}
-
       {active.id === "project-costs" && (
-        <ProjectCostsArea claims={claims} portfolio={portfolio} projectName={projectName} />
+        <ProjectCosts claims={claims} portfolio={portfolio} projectName={projectName} />
       )}
-
+      {active.id === "company-expenses" && (
+        <UnbuiltPanel number={2} area={FINANCE_AREAS.find((a) => a.id === "company-expenses")} />
+      )}
+      {active.id === "staff-compensation" && (
+        <UnbuiltPanel number={3} area={FINANCE_AREAS.find((a) => a.id === "staff-compensation")} />
+      )}
       {active.id === "funding" && (
-        <FundingArea positions={positions} portfolio={portfolio} projectName={projectName} />
+        <Funding positions={positions} portfolio={portfolio} projectName={projectName} />
       )}
     </section>
   );
 }
 
 // ---------------------------------------------------------------------------
-// The department row — authority image 12's signature region.
+// Overview — image 12.
 // ---------------------------------------------------------------------------
 
-function AreaCard({ area, metric, hint, tone = "brand", onOpen }) {
-  const body = (
-    <>
-      <div className="flex items-start gap-2.5">
-        <Disc name={AREA_ICON[area.id]} tone={area.unbuilt ? "unbuilt" : tone} size="h-8 w-8" />
-        <div className="min-w-0">
-          <p className={`text-[13px] font-semibold leading-tight ${area.unbuilt ? "text-gray-500" : "text-botanique-charcoal"}`}>
-            {area.label}
-          </p>
-          <p className="mt-0.5 line-clamp-2 text-[11.5px] leading-snug text-gray-500">{area.description}</p>
-        </div>
-      </div>
-      <div className="mt-3">
-        {area.unbuilt ? (
-          // No model, so no figure — and deliberately the quietest thing on the
-          // page, so an unbuilt area can never out-shout one that works.
-          <p className="text-[11.5px] font-medium text-gray-400">Not yet built</p>
-        ) : (
-          <>
-            <p className="break-words text-[19px] font-semibold leading-tight tabular-nums text-botanique-charcoal">
-              {metric}
-            </p>
-            <p className="mt-0.5 line-clamp-1 text-[11px] text-gray-500">{hint}</p>
-          </>
-        )}
-      </div>
-    </>
-  );
-
-  if (area.unbuilt) {
-    return (
-      <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/60 p-3.5">{body}</div>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="rounded-xl border border-stone-200 bg-white p-3.5 text-left transition hover:border-botanique-green hover:shadow-sm"
-    >
-      {body}
-      <p className="mt-2 inline-flex items-center gap-1 text-[11.5px] font-semibold text-botanique-green">
-        Open <Glyph name="arrow" className="h-3 w-3" />
-      </p>
-    </button>
-  );
-}
-
-function OverviewArea({ portfolio, attention, claims, canCosts, canFunds, onSelect }) {
+function Overview({ areas, claims, portfolio, attention, positions, projectName, canCosts, canFunds, onSelect }) {
   const awaiting = claims.filter((claim) => claim.lifecycle === "awaiting_review");
-  const approvedClaims = claims.filter((claim) => claim.lifecycle === "approved");
-  const approvedTotal = approvedClaims.reduce(
-    (sum, claim) => sum + Number(claim.approvedTotal ?? claim.submittedTotal ?? 0), 0
-  );
+  const awaitingTotal = awaiting.reduce((sum, claim) => sum + Number(claim.submittedTotal ?? 0), 0);
 
-  const cards = FINANCE_AREAS.filter((area) => {
-    if (area.id === "overview") return false;
-    if (area.id === "project-costs") return canCosts;
-    if (area.id === "funding") return canFunds;
-    return true; // the two unbuilt areas are always named
-  });
-
-  const metricFor = (area) => {
+  // Image 12's card row. Each card: icon, name, description, a labelled headline
+  // figure, and a footer link into the capability.
+  const cards = areas.filter((area) => area.id !== "overview").map((area) => {
     if (area.id === "project-costs") {
       return {
-        metric: claims.length ? formatKes(approvedTotal) : "No claims yet",
-        hint: claims.length
-          ? `${approvedClaims.length} approved · ${awaiting.length} awaiting review`
-          : "Raised from an accepted site record",
-        tone: awaiting.length > 0 ? "waiting" : "brand",
+        area,
+        visible: canCosts,
+        label: "Awaiting decision",
+        value: claims.length ? formatKes(awaitingTotal) : formatKes(0),
+        hint: `${awaiting.length} ${awaiting.length === 1 ? "item" : "items"}`,
+        link: "View project costs",
       };
     }
-    return {
-      metric: portfolio.hasAnyAuthority ? formatKes(portfolio.releasedAmount) : "Nothing released",
-      hint: portfolio.hasAnyAuthority
-        ? `of ${formatKes(portfolio.authorisedAmount)} authorised`
-        : "No fund authority approved yet",
-      tone: portfolio.advanceOutstandingAmount > 0 ? "waiting" : "brand",
-    };
-  };
+    if (area.id === "funding") {
+      return {
+        area,
+        visible: canFunds,
+        label: "Reconciliation position",
+        value: portfolio.advanceOutstandingAmount > 0
+          ? formatKes(portfolio.advanceOutstandingAmount)
+          : formatKes(0),
+        hint: portfolio.advanceOutstandingAmount > 0 ? "Outstanding" : "Balanced",
+        settled: portfolio.advanceOutstandingAmount === 0,
+        link: "View reconciliation",
+      };
+    }
+    return { area, visible: true };
+  });
+
+  // Image 12's "recent finance activity". There is no cross-department activity
+  // model, but claims and fund requests both carry timestamps and are genuine
+  // finance activity, so the region is filled from them and from nothing else.
+  const activity = [
+    ...claims.map((claim) => ({
+      id: `c-${claim.id}`,
+      icon: "calendar",
+      title: claim.recipientLabel || "Cost claim",
+      subtitle: `${projectName[claim.projectId] || "Project"} · ${LIFECYCLE_LABEL[claim.lifecycle] || claim.lifecycle}`,
+      amount: Number(claim.approvedTotal ?? claim.submittedTotal ?? 0),
+      at: claim.updatedAt || "",
+      to: `/admin/site-costs/${claim.id}`,
+    })),
+    ...positions.map(({ request }) => ({
+      id: `r-${request.id}`,
+      icon: "money",
+      title: request.requestNumber,
+      subtitle: `${projectName[request.projectId] || "Project"} · ${FUND_REQUEST_STATUSES[request.status]}`,
+      amount: Number(request.totalRequestedAmount || 0),
+      at: request.updatedAt || "",
+      to: `/admin/fund-requests/${request.id}`,
+    })),
+  ].sort((left, right) => String(right.at).localeCompare(String(left.at))).slice(0, 5);
 
   return (
-    <div className="space-y-3.5">
-      {/* 1. The department, one card per area. */}
-      <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map((area) => {
-          const { metric, hint, tone } = area.unbuilt ? {} : metricFor(area);
-          return (
-            <AreaCard
-              key={area.id}
-              area={area}
-              metric={metric}
-              hint={hint}
-              tone={tone}
-              onOpen={() => onSelect(area.id)}
-            />
-          );
-        })}
+    <div className="space-y-4">
+      {/* Capability card row. */}
+      <div role="region" aria-label="Finance capabilities" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.filter((card) => card.visible).map(({ area, label, value, hint, link, settled }) => (
+          <div key={area.id} aria-label={area.label} className="flex flex-col rounded-xl border border-stone-200 bg-white">
+            <div className="flex-1 p-4">
+              <div className="flex items-start gap-2.5">
+                <Disc name={AREA_ICON[area.id]} tone={area.unbuilt ? "unbuilt" : "brand"} size="h-9 w-9" />
+                <div className="min-w-0">
+                  <p className={`text-[13px] font-semibold leading-tight ${area.unbuilt ? "text-gray-500" : "text-botanique-charcoal"}`}>
+                    {area.label}
+                  </p>
+                  <p className="mt-1 text-[11.5px] leading-snug text-gray-500">{area.description}</p>
+                </div>
+              </div>
+              {area.unbuilt ? (
+                <p className="mt-3.5 text-[12px] font-medium text-gray-400">Not yet built</p>
+              ) : (
+                <div className="mt-3.5">
+                  <p className="text-[11.5px] text-gray-500">{label}</p>
+                  <p className="mt-1 break-words text-[22px] font-semibold leading-none tabular-nums text-botanique-charcoal">
+                    {value}
+                  </p>
+                  <p className={`mt-1.5 text-[11.5px] ${settled ? "font-medium text-emerald-700" : "text-gray-500"}`}>
+                    {hint}
+                  </p>
+                </div>
+              )}
+            </div>
+            {!area.unbuilt && (
+              <button
+                type="button"
+                onClick={() => onSelect(area.id)}
+                className="flex min-h-11 items-center gap-1.5 border-t border-stone-100 px-4 text-[12px] font-semibold text-botanique-green hover:bg-[#f7faf8]"
+              >
+                {link}
+                <Glyph name="arrow" className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* 2. Position and attention, side by side. */}
-      <div className="grid gap-2.5 lg:grid-cols-5">
-        <Panel
-          icon="scale"
-          title="Money position"
-          subtitle="Across every project you can see"
-          className="lg:col-span-3"
-        >
+      {/* "Finance at a glance" beside "Recent finance activity". The glance row
+          carries the money this product actually holds: authorised, released,
+          actually spent and still unreleased. Money-in, net position and bank
+          balance have no model and are absent rather than invented. */}
+      <div className="grid gap-3 lg:grid-cols-5">
+        <section className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-3">
+          <h2 className="text-[13px] font-semibold text-botanique-charcoal">Finance at a glance</h2>
           {portfolio.hasAnyAuthority ? (
             <>
-              <MetricBand columns={4}>
-                <Metric
-                  icon="doc" label="Authorised" value={formatKes(portfolio.authorisedAmount)}
-                  hint={portfolio.requestCount === 1 ? "1 approved authority" : `${portfolio.requestCount} approved authorities`}
-                />
-                <Metric
-                  icon="send" label="Released" value={formatKes(portfolio.releasedAmount)}
-                  hint="Money that actually moved"
-                />
-                <Metric
-                  icon="money" label="Actual spend" value={formatKes(portfolio.actualExpenditureAmount)}
-                  hint="Reconciled advances + direct payments"
-                />
-                <Metric
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+                <Glance icon="doc" label="Authorised" value={formatKes(portfolio.authorisedAmount)} hint={`${portfolio.requestCount} approved`} />
+                <Glance icon="send" label="Released" value={formatKes(portfolio.releasedAmount)} hint="Money that moved" />
+                <Glance icon="money" label="Actual spend" value={formatKes(portfolio.actualExpenditureAmount)} hint="Reconciled + direct" />
+                <Glance
                   icon="clock" label="Not released" value={formatKes(portfolio.unreleasedAmount)}
-                  tone={portfolio.unreleasedAmount > 0 ? "waiting" : "neutral"}
-                  hint="Authorised, still unreleased"
+                  hint="Still unreleased" tone={portfolio.unreleasedAmount > 0 ? "waiting" : "neutral"}
                 />
-              </MetricBand>
-              {(portfolio.advanceOutstandingAmount > 0 || portfolio.varianceAmount !== 0) && (
-                <div className="mt-3 space-y-1 border-t border-stone-100 pt-2.5">
-                  {portfolio.advanceOutstandingAmount > 0 && (
-                    <p className="text-[12px] text-amber-800">
-                      {formatKes(portfolio.advanceOutstandingAmount)} of accountable advances has not
-                      been accounted for, so it is not counted as spend.
-                    </p>
-                  )}
-                  {portfolio.varianceAmount !== 0 && (
-                    <p className="text-[12px] text-amber-800">
-                      {portfolio.varianceAmount > 0
-                        ? `${formatKes(portfolio.varianceAmount)} released is neither spent nor returned.`
-                        : `${formatKes(Math.abs(portfolio.varianceAmount))} was spent beyond the advances released.`}
-                    </p>
-                  )}
-                </div>
+              </dl>
+              {portfolio.advanceOutstandingAmount > 0 && (
+                <p className="mt-3 border-t border-stone-100 pt-2.5 text-[12px] text-amber-800">
+                  {formatKes(portfolio.advanceOutstandingAmount)} of accountable advances has not been
+                  accounted for, so it is not counted as spend.
+                </p>
               )}
             </>
           ) : (
-            // Zero position is one line, never a full panel of explanation.
-            <EmptyLine icon="wallet">
+            <p className="mt-2 text-[12.5px] text-gray-600">
               No fund authority is approved, so nothing has been released and nothing is owed an
-              account. A position appears here once a claim is approved and funded.
-            </EmptyLine>
+              account.
+            </p>
           )}
-        </Panel>
+        </section>
 
-        <Panel
-          icon="alert"
-          title="Needs attention"
-          subtitle={attention.length ? `${attention.length} ${attention.length === 1 ? "item" : "items"}` : "Nothing outstanding"}
-          tone={attention.length ? "waiting" : "settled"}
-          className="lg:col-span-2"
-        >
-          {attention.length === 0 ? (
-            <EmptyLine icon="check">
-              Every claim has been decided, every approved authority released, and every accountable
-              advance accounted for.
-            </EmptyLine>
+        <section className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-[13px] font-semibold text-botanique-charcoal">Recent finance activity</h2>
+            {attention.length > 0 && (
+              <Link to={attention[0].href} className="shrink-0 text-[12px] font-semibold text-botanique-green hover:underline">
+                View all
+              </Link>
+            )}
+          </div>
+          {activity.length === 0 ? (
+            <p className="mt-2 text-[12.5px] text-gray-600">No finance record has been created yet.</p>
           ) : (
-            <ul className="-my-1 divide-y divide-stone-100">
-              {attention.map((item) => (
-                <li key={item.key}>
-                  <Link
-                    to={item.href}
-                    className="flex min-h-11 items-center gap-2.5 py-2 transition hover:bg-stone-50"
-                  >
-                    <span
-                      className={`flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
-                        item.tone === "attention" ? "bg-amber-100 text-amber-900" : "bg-stone-100 text-gray-600"
-                      }`}
-                    >
-                      {item.count}
-                    </span>
+            <ul className="mt-2 divide-y divide-stone-100">
+              {activity.map((item) => (
+                <li key={item.id}>
+                  <Link to={item.to} className="flex min-h-11 items-start gap-2.5 py-2 hover:bg-stone-50">
+                    <Disc name={item.icon} tone="neutral" size="h-7 w-7" />
                     <span className="min-w-0 flex-1">
-                      <span className="block break-words text-[12.5px] font-medium leading-snug text-botanique-charcoal">
-                        {item.label}
-                      </span>
-                      {item.amount > 0 && (
-                        <span className="block text-[11px] tabular-nums text-gray-500">{formatKes(item.amount)}</span>
-                      )}
+                      <span className="block truncate text-[12.5px] font-medium text-botanique-charcoal">{item.title}</span>
+                      <span className="block truncate text-[11px] text-gray-500">{item.subtitle}</span>
                     </span>
-                    <Glyph name="arrow" className="h-3.5 w-3.5 shrink-0 text-botanique-green" />
+                    <span className="shrink-0 text-[12px] font-semibold tabular-nums text-botanique-charcoal">
+                      {formatKes(item.amount)}
+                    </span>
                   </Link>
                 </li>
               ))}
             </ul>
           )}
-          {/* Finance states its own financial attention. It decides nothing:
+        </section>
+      </div>
+
+      {attention.length > 0 && (
+        <section className="rounded-xl border border-stone-200 bg-white p-4">
+          <h2 className="text-[13px] font-semibold text-botanique-charcoal">Awaiting a decision</h2>
+          <ul className="mt-2 divide-y divide-stone-100">
+            {attention.map((item) => (
+              <li key={item.key}>
+                <Link to={item.href} className="flex min-h-11 items-center gap-2.5 py-2 hover:bg-stone-50">
+                  <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 px-1.5 text-[11px] font-semibold tabular-nums text-gray-700">
+                    {item.count}
+                  </span>
+                  <span className="min-w-0 flex-1 break-words text-[12.5px] text-botanique-charcoal">{item.label}</span>
+                  {item.amount > 0 && (
+                    <span className="shrink-0 text-[12px] tabular-nums text-gray-500">{formatKes(item.amount)}</span>
+                  )}
+                  <Glyph name="arrow" className="h-3.5 w-3.5 shrink-0 text-botanique-green" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {/* Finance states its own financial attention and decides nothing:
               unified Approvals remains the eventual aggregated decision surface. */}
-        </Panel>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Glance({ icon, label, value, hint, tone = "neutral" }) {
+  return (
+    <div className="flex min-w-0 items-start gap-2.5">
+      <Disc name={icon} tone={tone} size="h-8 w-8" />
+      <div className="min-w-0">
+        <p className="truncate text-[11px] text-gray-500">{label}</p>
+        <p className="mt-0.5 break-words text-[15px] font-semibold leading-tight tabular-nums text-botanique-charcoal">{value}</p>
+        {hint && <p className="mt-0.5 truncate text-[10.5px] text-gray-500">{hint}</p>}
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Project Costs — authority image 13, panel 1.
-//
-// Grouped by decision importance rather than shown as four equal tiles: what
-// needs a decision leads, everything else supports it.
+// ① Project Costs — image 13, panel 1.
 // ---------------------------------------------------------------------------
 
-function ClaimRow({ claim, projectName }) {
-  return (
-    <li className="py-2">
-      <Link
-        to={`/admin/site-costs/${claim.id}`}
-        className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12.5px] font-semibold text-botanique-green hover:underline"
-      >
-        <span className="min-w-0 break-words">{projectName[claim.projectId] || "Project"}</span>
-        <span className="shrink-0 tabular-nums text-botanique-charcoal">
-          {formatKes(claim.approvedTotal ?? claim.submittedTotal)}
-        </span>
-      </Link>
-      <p className="mt-0.5 break-words text-[11px] text-gray-500">
-        {claim.recipientLabel || "Cost claim"} · {LIFECYCLE_LABEL[claim.lifecycle] || claim.lifecycle}
-      </p>
-    </li>
-  );
-}
-
-function ProjectCostsArea({ claims, portfolio, projectName }) {
-  const byLifecycle = (lifecycle) => claims.filter((claim) => claim.lifecycle === lifecycle);
-  const awaiting = byLifecycle("awaiting_review");
-  const amendment = byLifecycle("amendment_requested");
-  const approved = byLifecycle("approved");
-  const total = (rows) => rows.reduce(
-    (sum, claim) => sum + Number(claim.approvedTotal ?? claim.submittedTotal ?? 0), 0
-  );
-  const decided = claims
-    .filter((claim) => !["awaiting_review", "draft"].includes(claim.lifecycle))
+function ProjectCosts({ claims, portfolio, projectName }) {
+  const by = (lifecycle) => claims.filter((claim) => claim.lifecycle === lifecycle);
+  const awaiting = by("awaiting_review");
+  const approved = by("approved");
+  const returned = by("amendment_requested");
+  const total = (rows) => rows.reduce((sum, claim) => sum + Number(claim.approvedTotal ?? claim.submittedTotal ?? 0), 0);
+  const recent = [...claims]
     .sort((left, right) => String(right.updatedAt || "").localeCompare(String(left.updatedAt || "")))
     .slice(0, 5);
-  const needsDecision = [...awaiting, ...amendment].slice(0, 5);
-
-  if (claims.length === 0) {
-    return (
-      <Panel
-        icon="site"
-        title="Project Costs"
-        subtitle="Track and control project-related costs"
-        action={<Link to="/admin/site-costs" className="text-[12.5px] font-semibold text-botanique-green hover:underline">View all →</Link>}
-      >
-        <EmptyLine
-          icon="doc"
-          action={
-            <Link
-              to="/admin/site-costs"
-              className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-stone-300 bg-white px-3 text-[12px] font-semibold text-botanique-green hover:border-botanique-green"
-            >
-              Go to Project Costs <Glyph name="arrow" className="h-3 w-3" />
-            </Link>
-          }
-        >
-          No project cost has been claimed yet. A claim is raised deliberately from an accepted
-          Daily Site Record, or directly in Project Costs.
-        </EmptyLine>
-      </Panel>
-    );
-  }
 
   return (
-    <div className="space-y-2.5">
-      {/* Decision first, at its own weight; the supporting figures beside it. */}
-      <div className="grid gap-2.5 lg:grid-cols-5">
-        <div
-          className={`rounded-xl border p-4 lg:col-span-2 ${
-            awaiting.length + amendment.length > 0
-              ? "border-amber-200 bg-[#fdfaf3]"
-              : "border-stone-200 bg-white"
-          }`}
-        >
-          <div className="flex items-start gap-2.5">
-            <Disc
-              name={awaiting.length + amendment.length > 0 ? "alert" : "check"}
-              tone={awaiting.length + amendment.length > 0 ? "waiting" : "settled"}
-              size="h-9 w-9"
-            />
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                Awaiting a decision
-              </p>
-              <p className="mt-0.5 text-[24px] font-semibold leading-none tabular-nums text-botanique-charcoal">
-                {awaiting.length + amendment.length}
-              </p>
-              <p className="mt-1 break-words text-[12px] text-gray-600">
-                {awaiting.length + amendment.length > 0
-                  ? `${formatKes(total(awaiting) + total(amendment))} of claimed cost`
-                  : "Every claim has been decided."}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-stone-200 bg-white p-4 lg:col-span-3">
-          <MetricBand columns={3}>
-            <Metric
-              icon="doc" label="Approved" value={formatKes(total(approved))}
-              hint={`${approved.length} ${approved.length === 1 ? "claim" : "claims"} · authority to incur`}
-            />
-            <Metric
-              icon="send" label="Released" value={formatKes(portfolio.releasedAmount)}
-              hint="Across all fund authorities"
-            />
-            <Metric
-              icon="clock" label="Not released" value={formatKes(portfolio.unreleasedAmount)}
-              tone={portfolio.unreleasedAmount > 0 ? "waiting" : "neutral"}
-              hint="Authorised, still unreleased"
-            />
-          </MetricBand>
-        </div>
+    <CapabilityPanel
+      number={1}
+      icon="calendar"
+      title="Project Costs"
+      subtitle="Track and manage all project-related cost claims."
+      action={
+        <Link to="/admin/site-costs" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-300 px-3 text-[12px] font-semibold text-botanique-charcoal hover:border-botanique-green hover:text-botanique-green">
+          View all
+          <Glyph name="arrow" className="h-3.5 w-3.5" />
+        </Link>
+      }
+    >
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile icon="calendar" label="Total project costs" value={formatKes(total(claims))} hint={`${claims.length} ${claims.length === 1 ? "item" : "items"}`} />
+        <Tile icon="clock" label="Awaiting review" value={formatKes(total(awaiting))} hint={`${awaiting.length} ${awaiting.length === 1 ? "item" : "items"}`} tone={awaiting.length ? "waiting" : "neutral"} />
+        <Tile icon="check" label="Approved" value={formatKes(total(approved))} hint={`${approved.length} ${approved.length === 1 ? "item" : "items"}`} tone={approved.length ? "settled" : "neutral"} />
+        <Tile icon="send" label="Released" value={formatKes(portfolio.releasedAmount)} hint="Money that actually moved" />
       </div>
 
-      {/* Two bounded lists rather than one unbounded ledger. */}
-      <div className="grid gap-2.5 lg:grid-cols-2">
-        <Panel
-          icon="alert"
-          tone={needsDecision.length ? "waiting" : "settled"}
-          title="Needs a decision"
-          subtitle={needsDecision.length ? "Oldest first" : "Nothing waiting"}
-          action={needsDecision.length ? (
-            <Link to="/admin/site-costs?status=awaiting_review" className="text-[12.5px] font-semibold text-botanique-green hover:underline">View all →</Link>
-          ) : null}
-        >
-          {needsDecision.length === 0 ? (
-            <EmptyLine icon="check">Every cost claim has been decided.</EmptyLine>
-          ) : (
-            <ul className="-my-1 divide-y divide-stone-100">
-              {needsDecision.map((claim) => (
-                <ClaimRow key={claim.id} claim={claim} projectName={projectName} />
-              ))}
-            </ul>
-          )}
-        </Panel>
-
-        <Panel
-          icon="check"
-          tone="settled"
-          title="Recently decided"
-          subtitle="Most recent first"
-          action={<Link to="/admin/site-costs" className="text-[12.5px] font-semibold text-botanique-green hover:underline">View all →</Link>}
-        >
-          {decided.length === 0 ? (
-            <EmptyLine icon="clock">No claim has been decided yet.</EmptyLine>
-          ) : (
-            <ul className="-my-1 divide-y divide-stone-100">
-              {decided.map((claim) => (
-                <ClaimRow key={claim.id} claim={claim} projectName={projectName} />
-              ))}
-            </ul>
-          )}
-        </Panel>
+      <div className="mt-3.5 rounded-xl border border-stone-200">
+        <div className="flex items-baseline justify-between gap-3 border-b border-stone-100 px-3.5 py-2.5">
+          <h3 className="text-[12.5px] font-semibold text-botanique-charcoal">Recent cost claims</h3>
+          <Link to="/admin/site-costs" className="text-[12px] font-semibold text-botanique-green hover:underline">View all</Link>
+        </div>
+        {recent.length === 0 ? (
+          <p className="px-3.5 py-3 text-[12.5px] text-gray-600">
+            No project cost has been claimed yet. A claim is raised deliberately from an accepted
+            Daily Site Record, or directly in Project Costs.
+          </p>
+        ) : (
+          <ul className="divide-y divide-stone-100">
+            {recent.map((claim) => (
+              <li key={claim.id}>
+                <Link to={`/admin/site-costs/${claim.id}`} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5 hover:bg-stone-50">
+                  <span className="min-w-0 flex-1">
+                    <span className="block break-words text-[12.5px] font-medium text-botanique-charcoal">
+                      {projectName[claim.projectId] || "Project"}
+                    </span>
+                    <span className="block break-words text-[11px] text-gray-500">{claim.recipientLabel || "Cost claim"}</span>
+                  </span>
+                  <Chip tone={claim.lifecycle === "approved" ? "settled" : claim.lifecycle === "awaiting_review" ? "waiting" : "neutral"}>
+                    {LIFECYCLE_LABEL[claim.lifecycle] || claim.lifecycle}
+                  </Chip>
+                  <span className="shrink-0 text-[12.5px] font-semibold tabular-nums text-botanique-charcoal">
+                    {formatKes(claim.approvedTotal ?? claim.submittedTotal)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-    </div>
+      {returned.length > 0 && (
+        <p className="mt-2.5 text-[11.5px] text-gray-500">
+          {returned.length} {returned.length === 1 ? "claim was" : "claims were"} returned for amendment.
+        </p>
+      )}
+    </CapabilityPanel>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Funding, Payments and Reconciliation — authority image 13, panel 4.
+// ④ Funding, Payments & Reconciliation — image 13, panel 4.
 //
-// The canonical name is used throughout. "Fund requests" survives only as an
-// internal route, because renaming a URL would break every existing drill-
-// through link and grants nothing.
+// The image separates the three concerns two ways, and both are reproduced:
+// the four tiles run Submitted → Approved → Paid → Reconciliation, and the
+// request table carries Status, Paid and Reconciled as SEPARATE columns. That
+// separation is the image's own answer to "funding vs payments vs
+// reconciliation" — no new tabs or destinations are invented for it.
 // ---------------------------------------------------------------------------
 
-// The lifecycle as one connected strip, so approval can never be read as
-// payment: each stage is a stage, in order, with what is actually sitting in it.
-function LifecycleStrip({ stages }) {
-  return (
-    <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-      {stages.map((stage, index) => (
-        <li
-          key={stage.key}
-          className={`relative rounded-lg px-3 py-2.5 ${
-            stage.tone === "waiting" ? "bg-amber-50" : stage.tone === "settled" ? "bg-emerald-50" : "bg-stone-50"
-          }`}
-        >
-          <p className="flex items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-wide text-gray-500">
-            <span className="tabular-nums">{index + 1}</span>
-            <span className="min-w-0 truncate">{stage.label}</span>
-          </p>
-          <p className={`mt-1 break-words text-[15px] font-semibold leading-tight tabular-nums ${
-            stage.tone === "waiting" ? "text-amber-800" : stage.tone === "settled" ? "text-emerald-800" : "text-botanique-charcoal"
-          }`}>
-            {stage.value}
-          </p>
-          {stage.hint && <p className="mt-0.5 break-words text-[10.5px] text-gray-500">{stage.hint}</p>}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function FundingArea({ positions, portfolio, projectName }) {
+function Funding({ positions, portfolio, projectName }) {
   const approved = positions.filter((row) => row.request.status === "approved");
   const submitted = positions.filter((row) => row.request.status === "submitted");
   const outstanding = approved.filter((row) => row.position.reconciliationState === "outstanding");
-  const settled = approved.filter((row) => row.position.financialPosition === "financially_settled");
-  const recent = [...positions]
-    .sort((left, right) =>
-      String(right.request.updatedAt || "").localeCompare(String(left.request.updatedAt || "")))
-    .slice(0, 6);
+  const submittedTotal = submitted.reduce((sum, row) => sum + Number(row.request.totalRequestedAmount || 0), 0);
+  // Reconciliation progress: of the advances that need accounting for, how many
+  // have been accounted for. Never a percentage of money that never moved.
+  const advances = approved.filter((row) => row.position.advanceReleasedAmount > 0);
+  const reconciled = advances.filter((row) => row.position.reconciliationState === "accepted");
+  const progress = advances.length ? Math.round((reconciled.length / advances.length) * 100) : null;
 
-  if (positions.length === 0) {
-    return (
-      <Panel
-        icon="wallet"
-        title="Funding, Payments and Reconciliation"
-        subtitle="Authority to fund, money released, and what became of it"
-        action={<Link to="/admin/fund-requests" className="text-[12.5px] font-semibold text-botanique-green hover:underline">View all →</Link>}
-      >
-        <EmptyLine
-          icon="send"
-          action={
-            <Link
-              to="/admin/fund-requests"
-              className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-lg border border-stone-300 bg-white px-3 text-[12px] font-semibold text-botanique-green hover:border-botanique-green"
-            >
-              Open <Glyph name="arrow" className="h-3 w-3" />
-            </Link>
-          }
-        >
+  const rows = [...positions]
+    .sort((left, right) => String(right.request.updatedAt || "").localeCompare(String(left.request.updatedAt || "")))
+    .slice(0, 8);
+
+  return (
+    <CapabilityPanel
+      number={4}
+      icon="money"
+      title="Funding, Payments & Reconciliation"
+      subtitle="Track funding and payment requests and reconciliation status."
+      action={
+        <Link to="/admin/fund-requests" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-stone-300 px-3 text-[12px] font-semibold text-botanique-charcoal hover:border-botanique-green hover:text-botanique-green">
+          View all
+          <Glyph name="arrow" className="h-3.5 w-3.5" />
+        </Link>
+      }
+    >
+      {/* FUNDING · PAYMENTS · RECONCILIATION, in the image's tile order. */}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile icon="send" label="Submitted" value={formatKes(submittedTotal)} hint={`${submitted.length} ${submitted.length === 1 ? "request" : "requests"}`} tone={submitted.length ? "waiting" : "neutral"} />
+        <Tile icon="check" label="Approved" value={formatKes(portfolio.authorisedAmount)} hint={`${approved.length} ${approved.length === 1 ? "request" : "requests"}`} />
+        <Tile icon="wallet" label="Paid" value={formatKes(portfolio.releasedAmount)} hint="Released against authority" />
+        <Tile
+          icon="scale"
+          label="Reconciliation"
+          value={progress === null ? "—" : `${progress}%`}
+          hint={progress === null
+            ? "No advance to account for"
+            : outstanding.length ? `${outstanding.length} outstanding` : "On track"}
+          tone={outstanding.length ? "waiting" : progress === 100 ? "settled" : "neutral"}
+        />
+      </div>
+
+      {positions.length === 0 ? (
+        <p className="mt-3.5 rounded-lg bg-stone-50 px-3.5 py-3 text-[12.5px] text-gray-600">
           No fund request has been raised. A request asks the Principal to authorise money against
           approved claims — approval is not payment, and a release is recorded separately when money
           actually moves.
-        </EmptyLine>
-      </Panel>
-    );
-  }
+        </p>
+      ) : (
+        <>
+          <div className="mt-3.5 overflow-x-auto rounded-xl border border-stone-200">
+            <div className="flex items-baseline justify-between gap-3 border-b border-stone-100 px-3.5 py-2.5">
+              <h3 className="text-[12.5px] font-semibold text-botanique-charcoal">Funding &amp; payment requests</h3>
+              <Link to="/admin/fund-requests" className="shrink-0 text-[12px] font-semibold text-botanique-green hover:underline">View all</Link>
+            </div>
+            <table className="w-full text-left text-[12.5px]">
+              <thead className="border-b border-stone-100 text-[11px] text-gray-500">
+                <tr>
+                  <th className="px-3.5 py-2 font-medium">Request</th>
+                  <th className="px-3.5 py-2 font-medium">Project / Purpose</th>
+                  <th className="whitespace-nowrap px-3.5 py-2 text-right font-medium">Amount (KES)</th>
+                  <th className="px-3.5 py-2 font-medium">Status</th>
+                  <th className="px-3.5 py-2 font-medium">Paid</th>
+                  <th className="px-3.5 py-2 font-medium">Reconciled</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {rows.map(({ request, position }) => {
+                  const paid = position.releasedAmount > 0;
+                  const fullyPaid = position.releaseState === "fully_released";
+                  const needsReconciliation = position.advanceReleasedAmount > 0;
+                  return (
+                    <tr key={request.id} className="align-top">
+                      <td className="px-3.5 py-2.5">
+                        <Link to={`/admin/fund-requests/${request.id}`} className="font-semibold text-botanique-green hover:underline">
+                          {request.requestNumber}
+                        </Link>
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <span className="block break-words text-gray-700">{projectName[request.projectId] || "Project"}</span>
+                        {request.purpose && <span className="mt-0.5 block break-words text-[11px] text-gray-500">{request.purpose}</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums">
+                        {formatKes(request.totalRequestedAmount)}
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        <Chip tone={request.status === "approved" ? "settled" : request.status === "submitted" ? "waiting" : "neutral"}>
+                          {FUND_REQUEST_STATUSES[request.status]}
+                        </Chip>
+                      </td>
+                      {/* Paid is a separate column from Status precisely because
+                          approval is not payment. */}
+                      <td className="px-3.5 py-2.5">
+                        {request.status !== "approved"
+                          ? <span className="text-gray-400">—</span>
+                          : <Chip tone={fullyPaid ? "settled" : paid ? "waiting" : "neutral"}>
+                              {fullyPaid ? "Paid" : paid ? "Part paid" : "Not paid"}
+                            </Chip>}
+                      </td>
+                      <td className="px-3.5 py-2.5">
+                        {!needsReconciliation
+                          ? <span className="text-gray-400">Not required</span>
+                          : <Chip tone={position.reconciliationState === "accepted" ? "settled" : "waiting"}>
+                              {position.reconciliationState === "accepted" ? "Yes" : "No"}
+                            </Chip>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-  return (
-    <div className="space-y-2.5">
-      <Panel
-        icon="wallet"
-        title="Funding, Payments and Reconciliation"
-        subtitle="The lifecycle, in order. Approval is not payment."
-        action={<Link to="/admin/fund-requests" className="text-[12.5px] font-semibold text-botanique-green hover:underline">View all →</Link>}
-      >
-        <LifecycleStrip
-          stages={[
-            {
-              key: "requested", label: "Awaiting decision", value: String(submitted.length),
-              hint: submitted.length ? "Requests submitted" : "None submitted",
-              tone: submitted.length ? "waiting" : "neutral",
-            },
-            {
-              key: "authorised", label: "Authorised", value: formatKes(portfolio.authorisedAmount),
-              hint: `${approved.length} approved ${approved.length === 1 ? "authority" : "authorities"}`,
-            },
-            {
-              key: "released", label: "Released", value: formatKes(portfolio.releasedAmount),
-              hint: "Money that actually moved",
-            },
-            {
-              key: "advance", label: "Advance outstanding",
-              value: formatKes(portfolio.advanceOutstandingAmount),
-              hint: `${outstanding.length} ${outstanding.length === 1 ? "advance" : "advances"} unaccounted`,
-              tone: outstanding.length ? "waiting" : "neutral",
-            },
-            {
-              key: "settled", label: "Settled", value: String(settled.length),
-              hint: settled.length === 1 ? "1 authority complete" : `${settled.length} authorities complete`,
-              tone: settled.length ? "settled" : "neutral",
-            },
-          ]}
-        />
-      </Panel>
-
-      <Panel icon="doc" title="Authorities" subtitle="Most recently updated first">
-        <ul className="-my-1 divide-y divide-stone-100">
-          {recent.map(({ request, position }) => (
-            <li key={request.id} className="py-2">
-              <Link
-                to={`/admin/fund-requests/${request.id}`}
-                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[12.5px] font-semibold text-botanique-green hover:underline"
-              >
-                <span className="min-w-0 break-words">{request.requestNumber}</span>
-                <span className="shrink-0 tabular-nums text-botanique-charcoal">
-                  {formatKes(request.totalRequestedAmount)}
-                </span>
-              </Link>
-              <p className="mt-0.5 break-words text-[11px] text-gray-500">
-                {projectName[request.projectId] || "Project"} · {FUND_REQUEST_STATUSES[request.status]}
-                {request.status === "approved" && ` · ${formatKes(position.releasedAmount)} released`}
+          {progress !== null && (
+            <div className="mt-3.5">
+              <div className="flex items-baseline justify-between gap-3">
+                <h3 className="text-[12.5px] font-semibold text-botanique-charcoal">Reconciliation progress</h3>
+                <span className="text-[12.5px] font-semibold tabular-nums text-botanique-charcoal">{progress}%</span>
+              </div>
+              <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-stone-100">
+                <div className="h-full rounded-full bg-botanique-green" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="mt-1.5 text-[11px] text-gray-500">
+                {reconciled.length} of {advances.length} accountable {advances.length === 1 ? "advance has" : "advances have"} been accounted for.
               </p>
-              {/* Custody belongs to each release, not to the whole authority:
-                  one authority may carry BOTH a direct settled payment and an
-                  accountable advance, and flattening the two would manufacture
-                  — or erase — a reconciliation obligation. */}
-              {request.status === "approved" && position.releaseCount > 0 && (
-                <p className="mt-1 flex flex-wrap gap-1.5">
-                  {position.directPaidAmount > 0 && (
-                    <Chip tone="neutral">
-                      {CUSTODY_DISPOSITIONS.direct_recipient_funding} {formatKes(position.directPaidAmount)}
-                    </Chip>
-                  )}
-                  {position.advanceReleasedAmount > 0 && (
-                    <Chip tone={position.reconciliationState === "outstanding" ? "waiting" : "neutral"}>
-                      {CUSTODY_DISPOSITIONS.operations_manager_accountable_advance}{" "}
-                      {formatKes(position.advanceReleasedAmount)}
-                    </Chip>
-                  )}
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
-      </Panel>
-    </div>
+            </div>
+          )}
+        </>
+      )}
+    </CapabilityPanel>
   );
 }
