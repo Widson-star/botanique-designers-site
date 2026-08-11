@@ -1,40 +1,17 @@
-// Project Costs — the register.
+// Project Costs — Founder-approved register pattern.
+// Date · Cost Ref. · Project · Status · Total · Balance · Paid · Action
 //
-// FOUNDER AMENDMENT, 10 August 2026. The previous register led with funding
-// mechanics: a "Financial position" column whose most common value was
-// "Not yet funded — no fund request". That exposed the internals of the fund
-// module instead of answering what a Principal actually asks of a cost, and on
-// historical costs the Founder had genuinely paid it was simply wrong.
-//
-// The register now follows the Simple Invoice list pattern the Founder adopted
-// for readability. Botanique costs are NOT invoices, and none of that product's
-// accounting vocabulary is borrowed — only the shape of the list:
-//
-//     Date · Cost Ref. · Project · Status · Total · Balance · Paid · Action
-//
-// Two rules govern the money columns.
-//
-//   * STATUS AND PAYMENT ARE SEPARATE. "Approved" is a decision about authority
-//     to incur. "Paid" is a fact about money. They never collapse into one
-//     state, so an approved cost is not implied to be paid and a paid cost is
-//     not implied to be approved.
-//   * WHERE THE HUB HAS NO PAYMENT RECORD, PAID AND BALANCE ARE "—", NEVER
-//     ZERO. Most historical costs were paid before this module existed and have
-//     no fund request, so the Hub holds nothing. Printing "Paid KES 0 · Balance
-//     KES 5,950" against a cost the Founder settled in July would be a lie the
-//     register repeats on every view. See src/admin/utils/costPaymentTruth.js.
-//
-// Full purpose, labour breakdown, requester, source Daily Site Record and
-// history stay in the drill-through. The register stays scannable.
+// Payment truth now comes only from first-class Project Cost payments. A historical
+// approved cost remains unknown until the Principal confirms that its payment history
+// is complete. Approval is never treated as payment and Advances are not a substitute
+// for a Project Cost payment.
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useSiteCosts } from "../context/siteCosts";
-import { useFundRequests } from "../context/fundRequests";
 import {
   canCancelSiteCost, canDecideSiteCost, SITE_COST_LIFECYCLES,
 } from "../utils/siteCostCapabilities";
-import { canCreateFundRequest } from "../utils/fundRequestCapabilities";
 import { describeActiveFilters, withinReportedPeriod } from "../utils/listUrlFilters";
 import {
   balanceDisplay, costPaymentTruth, costTotal, paidDisplay, PAYMENT_KNOWLEDGE,
@@ -60,21 +37,18 @@ const STATUS_TONE = {
   cancelled: "neutral",
 };
 
-// The payment filter, in the reader's language rather than the fund module's.
 const PAYMENT_FILTERS = {
   unrecorded: "Payment not recorded",
   part_paid: "Part paid",
   paid: "Paid in full",
-  unpaid: "Approved, nothing paid",
+  unpaid: "Nothing paid",
 };
 
 export default function AdminSiteCosts() {
   const { role, projects } = useAdminData();
-  const { claims, status, error } = useSiteCosts();
-  // Read only. Every figure below is derived; this page records no payment.
-  const { requests, allocations, releases, acquittals } = useFundRequests();
-  const finance = useMemo(() => ({ requests, allocations, releases, acquittals }),
-    [requests, allocations, releases, acquittals]);
+  const {
+    claims, status, error, paymentPositionForClaim,
+  } = useSiteCosts();
   const [searchParams, setSearchParams] = useSearchParams();
   const lifecycle = searchParams.get("status") || "all";
   const projectId = searchParams.get("project") || "all";
@@ -91,11 +65,12 @@ export default function AdminSiteCosts() {
   }
 
   const projectMap = useMemo(() => new Map(projects.map((p) => [p.id, p])), [projects]);
-  // One payment derivation per cost, reused by the row, the filter and the
-  // summary, so one page can never disagree with itself.
   const truthByClaim = useMemo(
-    () => new Map(claims.map((claim) => [claim.id, costPaymentTruth(claim, finance)])),
-    [claims, finance]
+    () => new Map(claims.map((claim) => [
+      claim.id,
+      costPaymentTruth(claim, paymentPositionForClaim(claim.id)),
+    ])),
+    [claims, paymentPositionForClaim]
   );
 
   const matchesPayment = (claim) => {
@@ -116,7 +91,7 @@ export default function AdminSiteCosts() {
     matchesPayment(claim) &&
     withinReportedPeriod(claim.submittedAt, claim.decidedAt, from, to));
 
-  const summary = summarisePaymentTruth(visible, finance);
+  const summary = summarisePaymentTruth(visible, paymentPositionForClaim);
 
   const activeFilterSummary = [
     describeActiveFilters({
@@ -133,7 +108,7 @@ export default function AdminSiteCosts() {
         <div className="min-w-0">
           <h1 className="text-[22px] font-semibold leading-tight">Project Costs</h1>
           <p className="mt-0.5 max-w-2xl text-[13px] text-gray-600">
-            Costs incurred on projects, what has been approved, and what has actually been paid.
+            Costs incurred on projects, what has been approved, what has been paid, and what remains.
           </p>
         </div>
         <Link
@@ -145,7 +120,6 @@ export default function AdminSiteCosts() {
         </Link>
       </div>
 
-      {/* Filters together, as one compact group. */}
       <div className="grid gap-2.5 rounded-xl border border-stone-200 bg-white p-3.5 sm:grid-cols-3">
         <label className="text-[12px] font-medium text-gray-600">Status
           <select value={lifecycle} onChange={(e) => setParam("status", e.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-2.5 text-[13px]">
@@ -210,50 +184,20 @@ export default function AdminSiteCosts() {
                   const truth = truthByClaim.get(claim.id);
                   return (
                     <tr key={claim.id} className="transition hover:bg-[#fbfbfa]">
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-gray-600">
-                        {shortDate(`${claim.serviceDate}T00:00:00`)}
-                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-gray-600">{shortDate(`${claim.serviceDate}T00:00:00`)}</td>
                       <td className="whitespace-nowrap px-3.5 py-2.5">
-                        <Link to={`/admin/site-costs/${claim.id}`} className="font-semibold tabular-nums text-botanique-green hover:underline">
-                          {costReference(claim)}
-                        </Link>
+                        <Link to={`/admin/site-costs/${claim.id}`} className="font-semibold tabular-nums text-botanique-green hover:underline">{costReference(claim)}</Link>
                       </td>
                       <td className="px-3.5 py-2.5">
-                        <span className="block max-w-[16rem] truncate font-medium text-botanique-charcoal">
-                          {projectMap.get(claim.projectId)?.projectName || "Project"}
-                        </span>
-                        {/* Compact secondary context only. The full purpose and
-                            the labour breakdown live in the drill-through. */}
-                        <span className="block max-w-[16rem] truncate text-[11px] text-gray-500">
-                          {claim.recipientLabel}
-                        </span>
+                        <span className="block max-w-[16rem] truncate font-medium text-botanique-charcoal">{projectMap.get(claim.projectId)?.projectName || "Project"}</span>
+                        <span className="block max-w-[16rem] truncate text-[11px] text-gray-500">{claim.recipientLabel}</span>
                       </td>
-                      <td className="px-3.5 py-2.5">
-                        <Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>
-                          {SITE_COST_LIFECYCLES[claim.lifecycle]}
-                        </Chip>
-                      </td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right font-semibold tabular-nums">
-                        {money(costTotal(claim))}
-                      </td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums">
-                        <span className={truth.balance > 0 ? "font-semibold text-amber-800" : "text-gray-600"}>
-                          {balanceDisplay(truth, money)}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums">
-                        <span className={truth.paid > 0 ? "font-semibold text-emerald-800" : "text-gray-600"}>
-                          {paidDisplay(truth, money)}
-                        </span>
-                      </td>
+                      <td className="px-3.5 py-2.5"><Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>{SITE_COST_LIFECYCLES[claim.lifecycle]}</Chip></td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right font-semibold tabular-nums">{money(costTotal(claim))}</td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums"><span className={truth.balance > 0 ? "font-semibold text-amber-800" : "text-gray-600"}>{balanceDisplay(truth, money)}</span></td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums"><span className={truth.paid > 0 ? "font-semibold text-emerald-800" : "text-gray-600"}>{paidDisplay(truth, money)}</span></td>
                       <td className="px-3.5 py-2.5 text-right">
-                        <ActionMenu
-                          claim={claim}
-                          truth={truth}
-                          role={role}
-                          open={openMenu === claim.id}
-                          onToggle={() => setOpenMenu(openMenu === claim.id ? null : claim.id)}
-                        />
+                        <ActionMenu claim={claim} truth={truth} role={role} open={openMenu === claim.id} onToggle={() => setOpenMenu(openMenu === claim.id ? null : claim.id)} />
                       </td>
                     </tr>
                   );
@@ -262,7 +206,6 @@ export default function AdminSiteCosts() {
             </table>
           </div>
 
-          {/* Mobile: the same eight facts, stacked. */}
           <ul className="space-y-2.5 md:hidden">
             {visible.map((claim) => {
               const truth = truthByClaim.get(claim.id);
@@ -270,46 +213,30 @@ export default function AdminSiteCosts() {
                 <li key={claim.id} className="rounded-xl border border-stone-200 bg-white p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Link to={`/admin/site-costs/${claim.id}`} className="block break-words font-semibold text-botanique-green hover:underline">
-                        {costReference(claim)}
-                      </Link>
-                      <p className="mt-0.5 break-words text-[12.5px] text-botanique-charcoal">
-                        {projectMap.get(claim.projectId)?.projectName || "Project"}
-                      </p>
-                      <p className="text-[11px] text-gray-500">
-                        {shortDate(`${claim.serviceDate}T00:00:00`)} · {claim.recipientLabel}
-                      </p>
+                      <Link to={`/admin/site-costs/${claim.id}`} className="block break-words font-semibold text-botanique-green hover:underline">{costReference(claim)}</Link>
+                      <p className="mt-0.5 break-words text-[12.5px] text-botanique-charcoal">{projectMap.get(claim.projectId)?.projectName || "Project"}</p>
+                      <p className="text-[11px] text-gray-500">{shortDate(`${claim.serviceDate}T00:00:00`)} · {claim.recipientLabel}</p>
                     </div>
-                    <Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>
-                      {SITE_COST_LIFECYCLES[claim.lifecycle]}
-                    </Chip>
+                    <Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>{SITE_COST_LIFECYCLES[claim.lifecycle]}</Chip>
                   </div>
-                  <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[12px]">
-                    <div><dt className="text-gray-500">Total</dt><dd className="font-semibold tabular-nums">{money(costTotal(claim))}</dd></div>
-                    <div><dt className="text-gray-500">Paid</dt><dd className="tabular-nums">{paidDisplay(truth, money)}</dd></div>
-                    <div><dt className="text-gray-500">Balance</dt><dd className="tabular-nums">{balanceDisplay(truth, money)}</dd></div>
+                  <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[11px]">
+                    <div><dt className="text-gray-500">Total</dt><dd className="mt-0.5 font-semibold tabular-nums">{money(costTotal(claim))}</dd></div>
+                    <div><dt className="text-gray-500">Paid</dt><dd className="mt-0.5 font-semibold tabular-nums">{paidDisplay(truth, money)}</dd></div>
+                    <div><dt className="text-gray-500">Balance</dt><dd className="mt-0.5 font-semibold tabular-nums">{balanceDisplay(truth, money)}</dd></div>
                   </dl>
-                  {truth.paid == null && (
-                    <p className="mt-1.5 text-[11px] text-gray-500">{truth.note}</p>
-                  )}
+                  <div className="mt-2.5 flex justify-end"><ActionMenu claim={claim} truth={truth} role={role} open={openMenu === claim.id} onToggle={() => setOpenMenu(openMenu === claim.id ? null : claim.id)} /></div>
                 </li>
               );
             })}
           </ul>
 
-          {/* The position of what is in view. Costs whose payment the Hub does
-              not hold are counted, never folded into "unpaid". */}
           <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1.5 px-1 text-[11.5px] text-gray-500">
             <span>{visible.length} of {claims.length} {claims.length === 1 ? "cost" : "costs"}</span>
             <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <span>Total <strong className="font-semibold tabular-nums text-botanique-charcoal">{money(summary.total)}</strong></span>
               <span>Paid <strong className="font-semibold tabular-nums text-botanique-charcoal">{summary.paid == null ? "—" : money(summary.paid)}</strong></span>
               <span>Balance <strong className="font-semibold tabular-nums text-botanique-charcoal">{summary.balance == null ? "—" : money(summary.balance)}</strong></span>
-              {summary.unrecordedCount > 0 && (
-                <span className="text-amber-800">
-                  {summary.unrecordedCount} with no payment record in the Hub
-                </span>
-              )}
+              {summary.unrecordedCount > 0 && <span className="text-amber-800">{summary.unrecordedCount} with payment history not yet confirmed</span>}
             </span>
           </div>
         </>
@@ -318,56 +245,25 @@ export default function AdminSiteCosts() {
   );
 }
 
-// The next valid action for THIS cost in THIS state, for THIS reader. Nothing
-// here grants anything: every item mirrors a capability the destination
-// re-checks, and an action that does not apply is simply absent.
 function ActionMenu({ claim, truth, role, open, onToggle }) {
   const items = [{ label: "View cost", to: `/admin/site-costs/${claim.id}` }];
-
-  if (claim.dailySiteEntryId) {
-    items.push({ label: "View source site record", to: `/admin/daily-site-operations/${claim.dailySiteEntryId}` });
+  if (claim.dailySiteEntryId) items.push({ label: "View source site record", to: `/admin/daily-site-operations/${claim.dailySiteEntryId}` });
+  if (canDecideSiteCost(claim, role)) items.push({ label: "Review and decide", to: `/admin/site-costs/${claim.id}` });
+  if (claim.lifecycle === "approved" && role === "owner" && (truth.balance == null || truth.balance > 0)) {
+    items.push({ label: "Record payment", to: `/admin/site-costs/${claim.id}#payments` });
   }
-  if (canDecideSiteCost(claim, role)) {
-    items.push({ label: "Review and decide", to: `/admin/site-costs/${claim.id}` });
-  }
-  // Money actions only where an approved cost genuinely needs money made
-  // available. A cost already paid outside the Hub is not offered a request.
-  if (claim.lifecycle === "approved" && truth.knowledge === PAYMENT_KNOWLEDGE.unrecorded
-      && canCreateFundRequest(role)) {
-    items.push({ label: "Request funds", to: "/admin/fund-requests/new" });
-  }
-  if (truth.requests?.length) {
-    items.push({ label: "View payments", to: `/admin/fund-requests/${truth.requests[0].request.id}` });
-  }
-  if (canCancelSiteCost(claim, role)) {
-    items.push({ label: "Cancel approved cost", to: `/admin/site-costs/${claim.id}`, tone: "danger" });
-  }
+  if (truth.paymentCount > 0) items.push({ label: "View payments", to: `/admin/site-costs/${claim.id}#payments` });
+  if (canCancelSiteCost(claim, role)) items.push({ label: "Cancel approved cost", to: `/admin/site-costs/${claim.id}`, tone: "danger" });
 
   return (
     <div className="relative inline-block text-left" onClick={(event) => event.stopPropagation()}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={`Actions for ${costReference(claim)}`}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-white text-gray-600 transition hover:border-botanique-green hover:text-botanique-green"
-      >
+      <button type="button" onClick={onToggle} aria-haspopup="menu" aria-expanded={open} aria-label={`Actions for ${costReference(claim)}`} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-white text-gray-600 transition hover:border-botanique-green hover:text-botanique-green">
         <span aria-hidden="true" className="text-[15px] leading-none tracking-widest">···</span>
       </button>
       {open && (
         <div role="menu" className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg">
           {items.map((item) => (
-            <Link
-              key={item.label}
-              role="menuitem"
-              to={item.to}
-              className={`block px-3 py-2 text-left text-[12.5px] transition hover:bg-stone-50 ${
-                item.tone === "danger" ? "text-red-700" : "text-botanique-charcoal"
-              }`}
-            >
-              {item.label}
-            </Link>
+            <Link key={item.label} role="menuitem" to={item.to} className={`block px-3 py-2 text-left text-[12.5px] transition hover:bg-stone-50 ${item.tone === "danger" ? "text-red-700" : "text-botanique-charcoal"}`}>{item.label}</Link>
           ))}
         </div>
       )}
