@@ -8,29 +8,36 @@ import { canSeeFundRequests } from "../utils/fundRequestCapabilities";
 import { formatKes } from "../utils/dailySiteFormatters";
 import { Disc } from "../components/ui/Surfaces";
 
-// Finance landing.
+// Finance landing — committed PNG composition plus Founder amendments, 11 Aug
+// 2026. The department now has five business areas. The landing keeps the PNG's
+// compact high-level visual role; it does not duplicate the sidebar as tabs.
 //
-// Authority: the committed Finance PNGs plus the Founder amendments recorded on
-// 10 Aug 2026. Finance now expands in the sidebar into four children, so this
-// landing page does not repeat that navigation as a second five-tab system.
-// Its only job is to show the four Finance areas together, their most useful
-// current fact, and a clear way into each area.
-//
-// Simple Invoice is used only as a simplicity reference: one page, one job,
-// compact information and obvious next actions. It is not a visual authority.
+// Project Financials = client-side commercial truth.
+// Project Costs = what Botanique spends delivering projects.
+// Company Expenses = non-project operating spend.
+// Staff Compensation = staff-related payments.
+// Advances = money given before expenditure; accounting happens inside it.
 
 const AREAS = [
   {
+    id: "project-financials",
+    label: "Project Financials",
+    description: "Agreed project value, client payments and outstanding client balance.",
+    to: "/admin/finance/project-financials",
+    icon: "chart",
+    unbuilt: true,
+  },
+  {
     id: "project-costs",
     label: "Project Costs",
-    description: "Project-related costs, approvals, payments and balances.",
+    description: "Costs incurred while delivering projects, including what has been paid and what remains.",
     to: "/admin/site-costs",
     icon: "calendar",
   },
   {
     id: "company-expenses",
     label: "Company Expenses",
-    description: "Operating expenses, subscriptions and company bills.",
+    description: "Operating expenses, subscriptions, advertising and company bills.",
     to: "/admin/finance/company-expenses",
     icon: "doc",
     unbuilt: true,
@@ -44,13 +51,15 @@ const AREAS = [
     unbuilt: true,
   },
   {
-    id: "funding",
-    label: "Funding, Payments & Reconciliation",
-    description: "Money requested in advance, money paid, and advances to account for.",
+    id: "advances",
+    label: "Advances",
+    description: "Money issued before expenditure and whether it has been accounted for.",
     to: "/admin/fund-requests",
     icon: "money",
   },
 ];
+
+const ADVANCE_CUSTODY = "operations_manager_accountable_advance";
 
 export default function AdminFinance() {
   const { role, projects } = useAdminData();
@@ -58,7 +67,7 @@ export default function AdminFinance() {
   const { requests, releases, status: fundsStatus } = useFundRequests();
 
   const canCosts = canSeeSiteCosts(role);
-  const canFunds = canSeeFundRequests(role);
+  const canAdvances = canSeeFundRequests(role);
   const loading = costsStatus === "loading" || fundsStatus === "loading";
 
   const projectName = useMemo(
@@ -66,7 +75,7 @@ export default function AdminFinance() {
     [projects]
   );
 
-  if (!canCosts && !canFunds) {
+  if (!canCosts && !canAdvances) {
     return (
       <section className="rounded-xl border border-stone-200 bg-white p-6">
         <h1 className="text-xl font-semibold">Finance unavailable</h1>
@@ -75,17 +84,20 @@ export default function AdminFinance() {
     );
   }
 
-  const awaitingClaims = claims.filter((claim) => claim.lifecycle === "awaiting_review");
-  const approvedClaims = claims.filter((claim) => claim.lifecycle === "approved");
-  const awaitingRequests = requests.filter((request) => request.status === "submitted");
-  const liveReleases = releases.filter((release) => release.status !== "reversed");
+  const awaitingCosts = claims.filter((claim) => claim.lifecycle === "awaiting_review");
+  const approvedCosts = claims.filter((claim) => claim.lifecycle === "approved");
+  const advanceRequests = requests.filter((request) => request.intendedCustodyType === ADVANCE_CUSTODY);
+  const awaitingAdvances = advanceRequests.filter((request) => request.status === "submitted");
+  const advancesIssued = releases.filter(
+    (release) => release.status !== "reversed" && release.custodyDisposition === ADVANCE_CUSTODY
+  );
 
-  const awaitingClaimAmount = sumClaims(awaitingClaims, "submittedTotal");
-  const approvedClaimAmount = approvedClaims.reduce(
+  const awaitingCostAmount = sumClaims(awaitingCosts, "submittedTotal");
+  const approvedCostAmount = approvedCosts.reduce(
     (sum, claim) => sum + Number(claim.approvedTotal ?? claim.submittedTotal ?? 0),
     0
   );
-  const paidAmount = liveReleases.reduce(
+  const advancesIssuedAmount = advancesIssued.reduce(
     (sum, release) => sum + Number(release.releasedAmount ?? 0),
     0
   );
@@ -99,10 +111,10 @@ export default function AdminFinance() {
       at: claim.updatedAt || claim.decidedAt || claim.submittedAt || "",
       to: `/admin/site-costs/${claim.id}`,
     })),
-    ...requests.map((request) => ({
-      id: `fund-${request.id}`,
+    ...advanceRequests.map((request) => ({
+      id: `advance-${request.id}`,
       title: projectName[request.projectId] || "Project",
-      detail: `${request.requestNumber || "Funding request"} · ${plainStatus(request.status)}`,
+      detail: `${request.requestNumber || "Advance"} · ${plainStatus(request.status)}`,
       amount: Number(request.totalRequestedAmount ?? 0),
       at: request.updatedAt || request.submittedAt || "",
       to: `/admin/fund-requests/${request.id}`,
@@ -117,39 +129,39 @@ export default function AdminFinance() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-botanique-green">Finance</p>
         <h1 className="mt-1 text-[24px] font-semibold leading-tight">Finance</h1>
         <p className="mt-1 max-w-2xl text-[13px] text-gray-600">
-          Project costs, company expenses, staff compensation, funding and payments.
+          Client finances, project costs, company expenses, staff compensation and advances.
         </p>
       </header>
 
       {loading && <p className="text-[13px] text-gray-600">Loading Finance…</p>}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Finance areas">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Finance areas">
         {AREAS.map((area) => {
           const allowed = area.id === "project-costs"
             ? canCosts
-            : area.id === "funding"
-              ? canFunds
-              : canCosts || canFunds;
+            : area.id === "advances"
+              ? canAdvances
+              : canCosts || canAdvances;
           if (!allowed) return null;
 
           const summary = areaSummary(area.id, {
-            awaitingClaims,
-            awaitingClaimAmount,
-            awaitingRequests,
-            liveReleases,
-            paidAmount,
+            awaitingCosts,
+            awaitingCostAmount,
+            awaitingAdvances,
+            advancesIssued,
+            advancesIssuedAmount,
           });
 
           return (
-            <article key={area.id} aria-label={area.label} className="flex min-h-[174px] flex-col rounded-xl border border-stone-200 bg-white">
+            <article key={area.id} aria-label={area.label} className="flex min-h-[170px] flex-col rounded-xl border border-stone-200 bg-white">
               <div className="flex-1 p-4">
                 <div className="flex items-start gap-3">
                   <Disc name={area.icon} tone={area.unbuilt ? "unbuilt" : "brand"} size="h-9 w-9" />
                   <div className="min-w-0">
-                    <h2 className={`text-[14px] font-semibold leading-snug ${area.unbuilt ? "text-gray-500" : "text-botanique-charcoal"}`}>
+                    <h2 className={`text-[13.5px] font-semibold leading-snug ${area.unbuilt ? "text-gray-500" : "text-botanique-charcoal"}`}>
                       {area.label}
                     </h2>
-                    <p className="mt-1 text-[11.5px] leading-snug text-gray-500">{area.description}</p>
+                    <p className="mt-1 text-[11px] leading-snug text-gray-500">{area.description}</p>
                   </div>
                 </div>
 
@@ -158,19 +170,19 @@ export default function AdminFinance() {
                 ) : (
                   <div className="mt-4">
                     <p className="text-[11.5px] text-gray-500">{summary.label}</p>
-                    <p className="mt-1 text-[22px] font-semibold leading-none tabular-nums text-botanique-charcoal">
+                    <p className="mt-1 text-[21px] font-semibold leading-none tabular-nums text-botanique-charcoal">
                       {summary.value}
                     </p>
-                    <p className="mt-1.5 text-[11.5px] text-gray-500">{summary.hint}</p>
+                    <p className="mt-1.5 text-[11px] text-gray-500">{summary.hint}</p>
                   </div>
                 )}
               </div>
 
               <Link
                 to={area.to}
-                className="flex min-h-11 items-center justify-between border-t border-stone-100 px-4 text-[12.5px] font-semibold text-botanique-green hover:bg-stone-50"
+                className="flex min-h-11 items-center justify-between border-t border-stone-100 px-4 text-[12px] font-semibold text-botanique-green hover:bg-stone-50"
               >
-                {area.unbuilt ? "View area" : `Open ${shortLabel(area.id)}`}
+                {area.unbuilt ? "View area" : `Open ${area.label}`}
                 <span aria-hidden="true">→</span>
               </Link>
             </article>
@@ -184,14 +196,14 @@ export default function AdminFinance() {
           <dl className="mt-3 divide-y divide-stone-100 text-[12.5px]">
             {canCosts && (
               <>
-                <MetricRow label="Project costs awaiting decision" value={`${awaitingClaims.length} · ${money(awaitingClaimAmount)}`} />
-                <MetricRow label="Approved project costs" value={`${approvedClaims.length} · ${money(approvedClaimAmount)}`} />
+                <MetricRow label="Project costs awaiting decision" value={`${awaitingCosts.length} · ${money(awaitingCostAmount)}`} />
+                <MetricRow label="Approved project costs" value={`${approvedCosts.length} · ${money(approvedCostAmount)}`} />
               </>
             )}
-            {canFunds && (
+            {canAdvances && (
               <>
-                <MetricRow label="Funding requests awaiting decision" value={String(awaitingRequests.length)} />
-                <MetricRow label="Payments recorded" value={`${liveReleases.length} · ${money(paidAmount)}`} />
+                <MetricRow label="Advance requests awaiting decision" value={String(awaitingAdvances.length)} />
+                <MetricRow label="Advances issued" value={`${advancesIssued.length} · ${money(advancesIssuedAmount)}`} />
               </>
             )}
           </dl>
@@ -235,15 +247,15 @@ function areaSummary(id, data) {
   if (id === "project-costs") {
     return {
       label: "Awaiting decision",
-      value: money(data.awaitingClaimAmount),
-      hint: `${data.awaitingClaims.length} ${data.awaitingClaims.length === 1 ? "cost" : "costs"}`,
+      value: money(data.awaitingCostAmount),
+      hint: `${data.awaitingCosts.length} ${data.awaitingCosts.length === 1 ? "cost" : "costs"}`,
     };
   }
-  if (id === "funding") {
+  if (id === "advances") {
     return {
-      label: "Payments recorded",
-      value: money(data.paidAmount),
-      hint: `${data.liveReleases.length} ${data.liveReleases.length === 1 ? "payment" : "payments"}`,
+      label: "Issued",
+      value: money(data.advancesIssuedAmount),
+      hint: `${data.advancesIssued.length} ${data.advancesIssued.length === 1 ? "advance" : "advances"}`,
     };
   }
   return { label: "", value: "", hint: "" };
@@ -255,12 +267,6 @@ function sumClaims(claims, field) {
 
 function money(amount) {
   return formatKes(Number(amount || 0));
-}
-
-function shortLabel(id) {
-  if (id === "project-costs") return "Project Costs";
-  if (id === "funding") return "Funding & Payments";
-  return "area";
 }
 
 function plainStatus(value) {
