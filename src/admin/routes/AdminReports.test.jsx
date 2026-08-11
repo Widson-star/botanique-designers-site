@@ -138,6 +138,12 @@ describe("Reports route", () => {
   it("keeps the project and the period in the URL so drill-through preserves context", async () => {
     renderReports();
     const selector = await screen.findByLabelText("Project");
+    // The selector renders before its options arrive. Selecting a value that is
+    // not yet an option is a no-op, so wait for the option itself — otherwise
+    // this races the projects read and flakes under load.
+    await waitFor(() =>
+      expect(within(selector).getByRole("option", { name: "Alego Usonga" })).toBeInTheDocument()
+    );
     fireEvent.change(selector, { target: { value: "p1" } });
     await waitFor(() =>
       expect(screen.getByTestId("location").textContent).toContain("project=p1")

@@ -1,29 +1,10 @@
-// The Finance department's own position, across every project the reader can
-// already see.
+// Finance read helpers. The committed Finance PNGs remain the visual authority;
+// explicit Founder amendments govern terminology and information architecture.
 //
-// Visual authority: 12-finance-overview-working-authority.png. The image opens
-// with a portfolio money position and a "what needs attention now" area, and
-// this module is where both are derived. Three rules govern it.
-//
-// 1. ONE ARITHMETIC. Every amount is a sum of deriveFinancialPosition() rows —
-//    the same client mirror of public.fund_request_financial_position() that
-//    Project Costs and the Daily Site Record already read. Summing whole rows is
-//    the same arithmetic the database does, so the Overview can never disagree
-//    with the page a reader drills into. Nothing is pro-rated and nothing is
-//    recomputed a second way.
-//
-// 2. NOTHING IS INVENTED WHERE NO MODEL EXISTS. The authority image shows a
-//    money-in figure, a bank balance and expense categories. Botanique has no
-//    money-in record, no bank account record and no company-expense model in
-//    this product, so none of those appear — an empty area is honest and a
-//    plausible number is not. Company Expenses and Staff Compensation are
-//    likewise named but never given amounts.
-//
-// 3. A RELEASE IS NOT EXPENDITURE. Actual expenditure is reconciled advance
-//    spend plus direct settled payments, exactly as claimFunding.js defines it.
-//    An advance nobody has accounted for contributes zero, which is what keeps
-//    the outstanding position visible instead of flattering it.
-
+// Important: existing fund-request/release/acquittal arithmetic remains intact
+// underneath the UI until a separate migration establishes first-class Project
+// Cost payments. The interface must not expose that implementation vocabulary as
+// the department architecture.
 import { deriveFinancialPosition } from "./fundReleaseCapabilities";
 import { ROLES } from "../constants/roles";
 
@@ -32,8 +13,6 @@ function round(value) {
   return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
 }
 
-// One derived position per fund request the reader can see. Everything else in
-// this module is a fold over this list.
 export function requestPositions({ requests = [], releases = [], acquittals = [] } = {}) {
   return requests.map((request) => ({
     request,
@@ -41,8 +20,6 @@ export function requestPositions({ requests = [], releases = [], acquittals = []
   }));
 }
 
-// The portfolio money position: what was authorised, what actually moved, what
-// was actually spent, and what is still unresolved.
 export function portfolioPosition(finance = {}) {
   const rows = requestPositions(finance);
   const approved = rows.filter((row) => row.request.status === "approved");
@@ -65,25 +42,17 @@ export function portfolioPosition(finance = {}) {
   };
 }
 
-// What is waiting on somebody, worst first. Each item is a count, an optional
-// amount and the filtered list that answers it — never a decision surface of its
-// own. Approvals remains the eventual aggregated decision centre across modules;
-// this is Finance stating its own financial attention, which is a different
-// thing and is deliberately scoped to money.
 export function financeAttention(claims = [], finance = {}, role = "") {
   const isPrincipal = role === ROLES.OWNER;
   const rows = requestPositions(finance);
   const approved = rows.filter((row) => row.request.status === "approved");
   const items = [];
-
-  const push = (item) => {
-    if (item.count > 0) items.push(item);
-  };
+  const push = (item) => { if (item.count > 0) items.push(item); };
 
   const claimsAwaiting = claims.filter((claim) => claim.lifecycle === "awaiting_review");
   push({
     key: "claims_awaiting_review",
-    label: isPrincipal ? "Cost claims awaiting your decision" : "Cost claims awaiting the Principal",
+    label: isPrincipal ? "Project costs awaiting your decision" : "Project costs awaiting the Principal",
     count: claimsAwaiting.length,
     amount: round(claimsAwaiting.reduce((total, claim) => total + Number(claim.submittedTotal || 0), 0)),
     href: "/admin/site-costs?status=awaiting_review",
@@ -92,30 +61,28 @@ export function financeAttention(claims = [], finance = {}, role = "") {
 
   const requestsAwaiting = rows.filter((row) => row.request.status === "submitted");
   push({
-    key: "requests_awaiting_decision",
-    label: isPrincipal ? "Fund requests awaiting your decision" : "Fund requests awaiting the Principal",
+    key: "advances_awaiting_decision",
+    label: isPrincipal ? "Advance requests awaiting your decision" : "Advance requests awaiting the Principal",
     count: requestsAwaiting.length,
     amount: round(requestsAwaiting.reduce((total, row) => total + Number(row.request.totalRequestedAmount || 0), 0)),
     href: "/admin/fund-requests?status=submitted",
     tone: isPrincipal ? "attention" : "waiting",
   });
 
-  // Approved is not paid. This is the single most misread state in the product,
-  // so it is named as its own item rather than folded into an "approved" total.
-  const unreleased = approved.filter((row) => row.position.releaseState === "none");
+  const unissued = approved.filter((row) => row.position.releaseState === "none");
   push({
-    key: "approved_unreleased",
-    label: isPrincipal ? "Approved — nothing released yet" : "Approved — awaiting release",
-    count: unreleased.length,
-    amount: round(unreleased.reduce((total, row) => total + Number(row.position.remainingReleasableAmount || 0), 0)),
+    key: "approved_advance_not_issued",
+    label: "Approved advances not yet issued",
+    count: unissued.length,
+    amount: round(unissued.reduce((total, row) => total + Number(row.position.remainingReleasableAmount || 0), 0)),
     href: "/admin/fund-requests?status=approved",
     tone: "waiting",
   });
 
   const outstanding = approved.filter((row) => row.position.reconciliationState === "outstanding");
   push({
-    key: "reconciliation_outstanding",
-    label: "Accountable advances not yet accounted for",
+    key: "advance_accounting_outstanding",
+    label: "Advances not yet fully accounted for",
     count: outstanding.length,
     amount: round(outstanding.reduce((total, row) => total + Number(row.position.advanceReleasedAmount || 0), 0)),
     href: "/admin/fund-requests?status=approved",
@@ -124,8 +91,8 @@ export function financeAttention(claims = [], finance = {}, role = "") {
 
   const submitted = approved.filter((row) => row.position.reconciliationState === "submitted");
   push({
-    key: "reconciliation_submitted",
-    label: isPrincipal ? "Reconciliations awaiting your decision" : "Reconciliations awaiting the Principal",
+    key: "advance_accounting_submitted",
+    label: isPrincipal ? "Advance accounts awaiting your review" : "Advance accounts awaiting the Principal",
     count: submitted.length,
     amount: 0,
     href: "/admin/fund-requests?status=approved",
@@ -134,8 +101,8 @@ export function financeAttention(claims = [], finance = {}, role = "") {
 
   const amendment = approved.filter((row) => row.position.reconciliationState === "amendment_requested");
   push({
-    key: "reconciliation_amendment",
-    label: "Reconciliations sent back for amendment",
+    key: "advance_accounting_amendment",
+    label: "Advance accounts returned for correction",
     count: amendment.length,
     amount: 0,
     href: "/admin/fund-requests?status=approved",
@@ -145,7 +112,7 @@ export function financeAttention(claims = [], finance = {}, role = "") {
   const variance = approved.filter((row) => Number(row.position.varianceAmount || 0) !== 0);
   push({
     key: "unresolved_variance",
-    label: "Advances with an unresolved variance",
+    label: "Advances with an unresolved balance",
     count: variance.length,
     amount: round(variance.reduce((total, row) => total + Number(row.position.varianceAmount || 0), 0)),
     href: "/admin/fund-requests?status=approved",
@@ -155,41 +122,44 @@ export function financeAttention(claims = [], finance = {}, role = "") {
   return items;
 }
 
-// The Finance department's five areas, in the settled order, each carrying
-// whether a real model stands behind it. `available: false` is not "coming
-// soon" — it is a truthful statement that no record, workflow or schema exists,
-// and it is what stops an empty area being drawn at full weight.
+// Final Finance department information architecture, Founder ruling 11 Aug 2026.
+// Project Financials is the commercial side (agreed value, milestones, client
+// receipts). Project Costs is internal project expenditure. Company Expenses
+// and Staff Compensation remain reserved until modelled. Advances is money given
+// before expenditure; accounting/reconciliation is a component of an Advance,
+// not a standalone navigation concept.
 export const FINANCE_AREAS = [
   {
-    id: "overview",
-    label: "Overview",
-    mobileLabel: "Overview",
-    description: "The department's money position and what needs a decision.",
+    id: "project-financials",
+    label: "Project Financials",
+    mobileLabel: "Financials",
+    description: "Agreed project value, client payment milestones, receipts and client balance.",
+    unbuilt: true,
   },
   {
     id: "project-costs",
     label: "Project Costs",
     mobileLabel: "Project Costs",
-    description: "Track and control project-related costs.",
+    description: "Costs incurred while delivering projects, including what has been paid and what remains.",
   },
   {
     id: "company-expenses",
     label: "Company Expenses",
-    mobileLabel: "Company Expenses",
-    description: "Operating expenses and overheads.",
+    mobileLabel: "Expenses",
+    description: "Operating expenses, subscriptions, advertising and company bills.",
     unbuilt: true,
   },
   {
     id: "staff-compensation",
     label: "Staff Compensation",
-    mobileLabel: "Staff Compensation",
-    description: "Salaries, allowances and staff payments.",
+    mobileLabel: "Compensation",
+    description: "Staff payments, allowances and compensation.",
     unbuilt: true,
   },
   {
-    id: "funding",
-    label: "Funding, Payments and Reconciliation",
-    mobileLabel: "Funding & Recon.",
-    description: "Authority to fund, money actually released, and what became of it.",
+    id: "advances",
+    label: "Advances",
+    mobileLabel: "Advances",
+    description: "Money issued before expenditure and whether it has been accounted for.",
   },
 ];

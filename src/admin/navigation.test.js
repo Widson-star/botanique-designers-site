@@ -14,13 +14,32 @@ describe("NAV_DOMAINS shape", () => {
     ]);
   });
 
-  it("keeps Finance and Approvals as direct destinations, not disclosures", () => {
+  it("expands Finance into the five settled business areas", () => {
     const finance = NAV_DOMAINS.find((domain) => domain.id === "finance");
+    expect(finance.children.map((child) => child.label)).toEqual([
+      "Project Financials",
+      "Project Costs",
+      "Company Expenses",
+      "Staff Compensation",
+      "Advances",
+    ]);
+    expect(finance.children.map((child) => child.to)).toEqual([
+      "/admin/finance/project-financials",
+      "/admin/site-costs",
+      "/admin/finance/company-expenses",
+      "/admin/finance/staff-compensation",
+      "/admin/fund-requests",
+    ]);
+  });
+
+  it("keeps Approvals and Reports as direct destinations with one visible name each", () => {
     const approvals = NAV_DOMAINS.find((domain) => domain.id === "approvals");
-    expect(finance.children).toBeUndefined();
-    expect(finance.to).toBe("/admin/finance");
+    const reports = NAV_DOMAINS.find((domain) => domain.id === "reports");
     expect(approvals.children).toBeUndefined();
     expect(approvals.to).toBe("/admin/approvals");
+    expect(reports.children).toBeUndefined();
+    expect(reports.to).toBe("/admin/reports");
+    expect(reports.label).toBe("Reports");
   });
 });
 
@@ -46,16 +65,17 @@ describe("visibleDomains", () => {
 });
 
 describe("resolveActive", () => {
-  it("resolves Finance for its own route and for its Site Costs / Fund Requests drill-through", () => {
-    expect(resolveActive("/admin/finance")).toEqual({ domainId: "finance", to: "/admin/finance" });
-    expect(resolveActive("/admin/site-costs/c1")).toEqual({ domainId: "finance", to: "/admin/finance" });
-    expect(resolveActive("/admin/site-costs/c1/edit")).toEqual({
-      domainId: "finance",
-      to: "/admin/finance",
+  it("resolves Finance for its landing and each Finance area", () => {
+    expect(resolveActive("/admin/finance")).toEqual({ domainId: "finance", to: null });
+    expect(resolveActive("/admin/finance/project-financials")).toEqual({
+      domainId: "finance", to: "/admin/finance/project-financials",
+    });
+    expect(resolveActive("/admin/site-costs/c1")).toEqual({ domainId: "finance", to: "/admin/site-costs" });
+    expect(resolveActive("/admin/finance/company-expenses")).toEqual({
+      domainId: "finance", to: "/admin/finance/company-expenses",
     });
     expect(resolveActive("/admin/fund-requests/r1/edit")).toEqual({
-      domainId: "finance",
-      to: "/admin/finance",
+      domainId: "finance", to: "/admin/fund-requests",
     });
   });
 

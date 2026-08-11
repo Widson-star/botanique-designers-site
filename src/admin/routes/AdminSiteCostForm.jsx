@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useSiteCosts } from "../context/siteCosts";
-import { calculateSiteCostTotal } from "../utils/siteCostCapabilities";
+import { calculateSiteCostTotal, canSubmitCostFromDailySite, costSubmissionBlockedReason } from "../utils/siteCostCapabilities";
+import { overlappingClaimsForDraft } from "../utils/duplicateCostClaim";
 
 const emptyLine = () => ({ description: "", rateType: "lump_sum", quantity: "1", unit: "item", unitRate: "" });
 const money = (amount) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", currencyDisplay: "code" }).format(amount || 0);
@@ -47,6 +48,9 @@ export default function AdminSiteCostForm() {
   const { claims, linesForClaim, authorisedProjects, createDraft, authoriseDirect, updateClaim, submitClaim } = useSiteCosts();
   const existing = claims.find((claim) => claim.id === claimId);
   const source = entries.find((entry) => entry.id === sourceId) || (existing?.dailySiteEntryId ? entries.find((entry) => entry.id === existing.dailySiteEntryId) : null);
+  // A derived cost cannot reach a financial decision before its site record is
+  // accepted. A cost with no site-record source is unaffected.
+  const orderingBlocked = Boolean(source) && !canSubmitCostFromDailySite(source);
   const initial = useMemo(() => existing ? {
     projectId: existing.projectId, serviceDate: existing.serviceDate, dailySiteEntryId: existing.dailySiteEntryId,
     recipientType: existing.recipientType, recipientLabel: existing.recipientLabel,
@@ -80,14 +84,41 @@ export default function AdminSiteCostForm() {
     else setError(result.stale ? "This claim changed elsewhere. Refresh and review the latest version." : result.error);
   }
 
+  // Read-only: the live claims already raised from this record, compared against
+  // the lines being drafted right now.
+  const overlaps = overlappingClaimsForDraft(
+    { dailySiteEntryId: values.dailySiteEntryId, category: values.category, lines: values.lines },
+    claims, linesForClaim, existing?.id || ""
+  );
+
   return <section className="mx-auto max-w-5xl">
     <Link to={existing ? `/admin/site-costs/${existing.id}` : "/admin/site-costs"} className="text-sm font-medium text-botanique-green hover:underline">← Back to Project Costs</Link>
     <h1 className="mt-3 text-2xl font-semibold">{role === "owner" ? "Authorise project cost" : existing ? "Amend cost claim" : "New cost claim"}</h1>
     <p className="mt-1 text-sm text-gray-600">One recipient or crew and one category per claim. Amounts below are claims, not payments.</p>
-    {source && additional && <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-      <p className="font-semibold">Additional cost for a day that has already been claimed</p>
-      <p className="mt-1">This day&rsquo;s site labour is already on another claim, so nothing has been pre-filled here. Enter only the new or later cost, and say what it is for.</p>
-      <p className="mt-1 text-xs">If you meant the cost that was already claimed, go back and open that claim instead of raising this one.</p>
+    {source && additional && <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4 text-sm text-gray-700">
+      <p className="font-semibold text-botanique-charcoal">Additional cost for a day that already has a claim</p>
+      <p className="mt-1">Nothing has been pre-filled, so this claim cannot repeat a cost by accident. Enter only the new or later cost, and say what it is for.</p>
+    </div>}
+    {/* PR #100's structural duplicate detection, at the moment it is useful:
+        the claim being drafted overlaps a claim that already exists. Nothing is
+        blocked — the Principal keeps every decision — but the person creating
+        it is told before they submit rather than after. */}
+    {overlaps.length > 0 && <div className="mt-5 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950" role="alert">
+      <p className="font-semibold">This looks like a cost that has already been claimed</p>
+      <p className="mt-1">
+        {overlaps.length === 1
+          ? "Another live claim from this site record already contains the same line:"
+          : "Other live claims from this site record already contain the same lines:"}
+      </p>
+      <ul className="mt-1.5 space-y-1">
+        {overlaps.map(({ claim, matchedLines }) => <li key={claim.id}>
+          <Link to={`/admin/site-costs/${claim.id}`} className="font-semibold underline">{claim.recipientLabel || "Cost claim"}</Link>
+          {" — "}
+          {matchedLines.map((line) => line.description).join(", ")}
+          {" ("}{money(matchedLines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unitRate) || 0), 0))}{")"}
+        </li>)}
+      </ul>
+      <p className="mt-2 text-xs">If this is genuinely an additional cost, change the line so it describes what is actually new. Otherwise open the existing claim instead.</p>
     </div>}
     {source && !additional && <div className="mt-5 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
       <p className="font-semibold">Copied planning context — no liability was created automatically</p>
@@ -115,10 +146,21 @@ export default function AdminSiteCostForm() {
       </div>)}</div>
       <div className="mt-5 border-t border-stone-200 pt-4 text-right"><p className="text-sm text-gray-500">Derived claim total</p><p className="text-2xl font-semibold">{money(total)}</p></div>
     </div>
+    {orderingBlocked && (
+      <p className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950" role="status">
+        {costSubmissionBlockedReason(source)}
+        {role === "manager" ? " You can still save it as a draft." : ""}
+      </p>
+    )}
     <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
       <Link to="/admin/site-costs" className="inline-flex min-h-11 items-center justify-center rounded-md border border-stone-300 px-4 text-sm font-medium">Cancel</Link>
       {role === "manager" && <button type="button" disabled={!valid || saving} onClick={() => save(false)} className="min-h-11 rounded-md border border-botanique-green px-4 text-sm font-semibold text-botanique-green disabled:opacity-50">{saving ? "Saving…" : "Save draft"}</button>}
-      <button type="button" disabled={!valid || saving} onClick={() => save(role === "manager")} className="min-h-11 rounded-md bg-botanique-green px-4 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Working…" : role === "owner" ? "Authorise cost" : "Save and submit"}</button>
+      {/* FOUNDER RULING, 10 August 2026: a cost derived from a Daily Site Record
+          may be PREPARED while that record is still under review, but it may not
+          reach a Principal financial decision until the record is accepted. This
+          gates both paths that reach approval — the manager's submit and the
+          Principal's direct authorisation. */}
+      <button type="button" disabled={!valid || saving || orderingBlocked} onClick={() => save(role === "manager")} className="min-h-11 rounded-md bg-botanique-green px-4 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Working…" : role === "owner" ? "Authorise cost" : "Save and submit"}</button>
     </div>
   </section>;
 }

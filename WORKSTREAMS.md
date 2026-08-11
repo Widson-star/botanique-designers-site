@@ -6878,3 +6878,219 @@ verification of a real release and reconciliation stays outstanding, and will st
 until a legitimate transaction exists — no money movement was fabricated to close it.
 
 Authority: `docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md`.
+
+---
+
+## Visual Authority Tranche 1 — FIDELITY CORRECTION
+
+**10 August 2026. Branch `claude/visual-authority-tranche-1-fidelity`, from `main` `5354492`.**
+
+The Founder reviewed the hosted result of PR #101 and concluded: **functional progress
+substantial, visual fidelity insufficient.** The live pages still read as the pre-existing generic
+admin/card/table system. This is recorded as a genuine acceptance failure of the visual portion of
+Tranche 1, not a difference of opinion, and this correction is the response.
+
+**No backend or domain behaviour changed.** No migration, no RLS change, no schema, no production
+data touched, no authority PNG altered. Tranche 2 (images 05, 06, 07) was deliberately **not**
+started, so the shallow interpretation is corrected before it is propagated.
+
+**The root cause was a missing visual vocabulary.** The authority screens share four devices the
+build had none of: an icon in a tinted disc beside every metric and heading; metrics laid out
+horizontally so a row reads as a band rather than a row of boxes; panel headers carrying title,
+subordinate line and control on one baseline; and absence stated on one line. Without them every
+page resolved to the same stack of bordered rectangles full of prose. `Surfaces.jsx` now holds
+them and all four surfaces are built from them.
+
+**Image 08.** The five equal statistic cards are gone. The page opens with one banner whose
+headline is chosen by what needs doing — missing outranks awaiting review outranks done — and when
+sites have no record the recording actions sit *inside* that banner, because recording them is the
+day's work. The counts moved onto the filters that select them, merging two regions into one and
+making every number a way of getting somewhere. Six stacked regions became four.
+
+**Image 09.** A connected rail, then a genuine two-column body: the operational record as ONE panel
+with hairline-separated bands on the left, and compliance, financial follow-up and history as a
+supporting column on the right. Finance is a column card, not a full-width section with its own
+metric grid. History is a closed disclosure. Seven stacked regions became three, and the whole
+record now fits the first viewport.
+
+**Image 12.** The authority's signature region — one card per Finance area with its own icon and
+headline figure — had been omitted entirely; it is now the first thing on the page. Position and
+attention sit side by side rather than stacked. Every empty state is one line inside its panel.
+The full-width dashed block is gone: Company Expenses and Staff Compensation sit in the department
+row at the weight of a capability that does not exist — muted, no figure, not clickable, not a tab.
+
+**Image 13.** Project Costs leads with a single weighted "Awaiting a decision" block and three
+supporting figures, not four equal tiles, then two *bounded* lists instead of one unbounded one.
+Funding presents the lifecycle as one ordered strip — awaiting decision → authorised → released →
+advance outstanding → settled — so approval can never be read as payment.
+
+**Corrected in passing.** Three surfaces still asserted "no funds have been released" as a fact
+about the product. True before PR #98; a false statement about money since. The fund-request form,
+its back link and the Reports fund-request section now state what a fund request *is*. The one
+remaining instance is conditional and only renders when no release exists.
+
+**Also fixed:** the `AdminReports` URL test raced the projects read and had flaked twice under full
+-suite load. It now waits for the option to exist before selecting it — a real fix, not a loosened
+assertion.
+
+**Verified.** 811 tests pass. Production build clean with the drift guard running first; lint
+identical to the 19-error baseline; `git diff --check` clean. Verified as Principal and Operations
+Manager at 1280px, 375px and 400px — no horizontal overflow on any of the four critical surfaces,
+and no console errors on a clean load.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** The acceptance gate for this PR is the Founder's VISUAL
+review of the preview deployment, not CI.
+
+Authority: `docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md` (fidelity-correction
+section, which supersedes the composition described in the original section).
+
+---
+
+## Visual Authority Tranche 1 — FIDELITY CORRECTION, PASS 2
+
+**10 August 2026. PR #102, same branch. NOT MERGED — awaiting Founder visual acceptance.**
+
+The Founder reviewed the PR #102 preview against the frozen PNGs and did not accept it. This pass
+establishes one control rule and applies it: **the ten committed working-authority PNGs are the
+product authority.** `Surfaces.jsx` and any other shared component library is an implementation
+helper that must adapt to the slides; the slides never adapt to it. Each page is designed FROM its
+committed PNG, not from a vocabulary abstracted out of one.
+
+**Pass 1 broke that rule once, and it is reverted.** Image 08 shows five metric cards across the
+top of the page. Pass 1 deleted them and substituted an invented "day banner", justified by an
+inferred "card-per-metric clutter" principle. The image settles the question, so the five cards —
+Due today · Awaiting review · Late · Accepted · Not required — are restored in the authority's
+order, with the filter chips carrying no counts, as the image draws them.
+
+**Image 09 was likewise rebuilt from the image**: the numbered process rail with arrows, then the
+three-column card grid, then the bottom status bar. Pass 1's two-column layout was mine, not the
+authority's. Everything the image shows that this product has no model for is omitted and the
+region compacted — weather, site-opened time, safety incidents, supervisor, contact, evidence
+thumbnails, Record ID, Export — never substituted with unrelated cards.
+
+**Action ownership.** Several workflows meet on the record page and the Founder could not tell what
+"Accept" was accepting. Every action now names its record: `Accept site record`, `Return site
+record`, `Void site record`, and so on. The accept dialog states that it accepts the site record
+only and decides nothing about any cost claim raised from it.
+
+**The duplicate nag is gone; the protection is not.** An existing approved claim is the normal
+downstream state of an accepted record, so it is now shown neutrally — recipient, amount, lifecycle
+chip, link. PR #100's structural detection is unchanged and now speaks at the moment it is useful:
+on the claim form, when the lines being drafted structurally repeat a line on a live claim from the
+same record and category. Nothing is blocked.
+
+**An overstated amount was corrected.** The old warning described the WHOLE claim total as the
+already-claimed "site labour" — on Alego, KES 5,950 for a claim containing a KES 5,000 planning
+line and a KES 950 line. `matchedPlanningCost()` now derives the figure from the matching lines
+only and reports whether they are the whole claim. Where the lines cannot be read, no figure is
+stated. Regression-tested.
+
+**Finance was rebuilt from images 12 and 13.** All five tabs render; Company Expenses and Staff
+Compensation keep the place image 13 gives them and state truthfully that no model exists. The
+capability card row, "Finance at a glance" and "Recent finance activity" follow image 12; the four
+numbered capability panels follow image 13.
+
+**Funding · Payments · Reconciliation** is separated inside the capability exactly as image 13
+already separates it — four tiles in lifecycle order (Submitted → Approved → Paid →
+Reconciliation) and separate Status / Paid / Reconciled columns on the request table, plus the
+image's reconciliation-progress bar computed only over advances that genuinely need accounting for.
+**No new top-level Finance destinations were invented.**
+
+### WORKFLOW-ORDER AUDIT — a Founder decision is needed
+
+The preview can show a Daily Site Record **awaiting review** while its cost claim is **already
+approved**. The audit result is:
+
+**B — INHERITED IMPLEMENTATION BEHAVIOUR, with no settled Founder authority.**
+
+Evidence: `canCopyDailySiteToCost` permits `submitted`, `resubmitted` and `accepted`. It was
+introduced in commit `74a25ba` ("feat(admin): add internal cost claims") with no rationale in the
+message, no cited ruling, and no corresponding constraint or guard anywhere in the migrations — a
+claim's `daily_site_entry_id` carries no state requirement at the database level. No settled
+document authorises it: the payment/reconciliation founder rulings are silent, and the only stated
+rhythm is *morning record → cost claim by 4:00pm → Principal decision by 4:30pm*, which describes
+timing, not whether the record must be accepted first. Image 09's rail shows a single Principal
+decision point at stage 3, after the claim exists.
+
+**Nothing was changed.** The smallest decision needed is:
+
+> May a cost claim be RAISED, and separately may it be APPROVED, while its Daily Site Record is
+> still awaiting the Principal's review — or must the record be accepted first?
+
+Three options, in increasing strictness: leave as is; allow raising from a submitted record but
+block approval until the record is accepted; require acceptance before a claim can be raised at
+all. Each is a one-line change to `canCopyDailySiteToCost` and/or the claim decision guard, plus a
+matching database constraint. It should not be decided by implementation.
+
+**Verified.** 822 tests pass (12 new). Production build clean with the drift guard first; lint
+identical to the 19-error baseline; `git diff --check` clean. Verified as Principal and Operations
+Manager at 1280px, 375px and 400px — no horizontal overflow on any of the four critical surfaces,
+no console errors on a clean load. No migration, schema, RLS or production-data change; all 51
+authority PNGs byte-identical.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
+Founder's visual review of the preview, not CI.
+
+---
+
+## FOUNDER AMENDMENT — Project Costs, Finance navigation, Reports naming
+
+**10 August 2026. PR #102, correction pass 3. NOT MERGED — awaiting Founder visual acceptance.**
+
+**Project Costs follows the Simple Invoice register interaction pattern** for readability:
+Date · Cost Reference · Project · Status · Total · Balance · Paid · Action. Funding mechanics are
+no longer the primary financial state of a cost; actual payment and outstanding balance are.
+**Where historic payment truth has not been recorded in the Hub, Paid and Balance remain unknown
+rather than falsely implying unpaid.** Botanique costs are not invoices — only the shape of the
+list is borrowed, never the vocabulary or architecture.
+
+**REPORTS is the single visible reporting module name.** The "Reports → Project Summary" nesting
+showed two names for one destination and is removed.
+
+**"Not yet funded — no fund request" is gone from Project Costs.** Three distinct honest reasons
+now produce an unknown payment: no fund request exists (the usual historical case); the authority
+also funds other costs, so no per-cost figure exists without apportioning a release; or the cost
+was never approved. Costs with no payment record are counted separately, never folded into unpaid.
+
+**Cost Ref.** reuses the `ICC-` convention already stamped into
+`fund_request_allocations.claim_reference_snapshot`. Nothing invented; a stored sequential number
+is reported as a schema decision, not taken.
+
+**Finance now expands in the sidebar** with its four capability children, as image 13 draws it,
+superseding the horizontal five-tab arrangement. Company Expenses and Staff Compensation have real
+destinations stating plainly that nothing is built. No invented expense, salary or payroll data.
+
+**Funding · Payments · Reconciliation** is one child with three clearly separate in-page sections
+and the image's four lifecycle tiles. No new top-level navigation was invented.
+
+### FOUNDER ORDERING RULING — implemented in the UI, database half reported
+
+A cost derived from a Daily Site Record may be prepared while that record is under review, but
+cannot reach a Principal financial decision until the record is accepted. Both routes to approval
+are gated — the manager's submit and the Principal's direct authorisation — with a plain-language
+reason. **The database half is not closed:**
+`private_internal_cost_claim_daily_site_snapshot` still accepts `submitted`/`resubmitted` at submit
+time, so a direct RPC caller could bypass the UI. That needs a migration to the function, reported
+rather than taken.
+
+### STOP-AND-REPORT — the payment model cannot record a historical payment
+
+`fund_releases.fund_request_id` is **NOT NULL**, and a release belongs to the request rather than
+to a claim. A directly paid historical cost therefore cannot be recorded without **fabricating a
+fund request** — an approval nobody gave, which would corrupt every authorised-versus-released
+figure. **No migration was added.** The full report, including the smallest additive extension
+(optional `fund_request_id`, new `internal_cost_claim_id`, an exactly-one-parent check, and a
+`recorded_context` marker), is in
+`docs/ui-authority/operations-hub/PAYMENT-MODEL-LIMITATION.md`. PR #102's visual work continues
+safely without it: the register already shows payment truth as unknown where the Hub has none, and
+the same columns fill in when the extension lands.
+
+**Verified.** 840 tests pass (14 new). Production build clean with the drift guard first; lint
+identical to the 19-error baseline; `git diff --check` clean. Verified as Principal and Operations
+Manager at 1280px, 375px and 400px — a real mobile overflow on the Finance landing was found and
+fixed — and no console errors on a clean load. No migration, schema, RLS or production-data change;
+all 51 authority PNGs byte-identical. Dashboard, Project Register, Project Proposals, People,
+Maintenance/Tools and Approvals untouched.
+
+**Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
+Founder's visual review.

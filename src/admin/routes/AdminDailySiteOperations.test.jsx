@@ -80,8 +80,9 @@ describe("AdminDailySiteOperations queue and summary", () => {
 
   it("shows compliance counts and the missing project with a record link", () => {
     renderRoute({ entries, compliance });
-    expect(screen.getByText("One site still needs a morning record today")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Lugulu Estate → record/ })).toBeInTheDocument();
+    expect(screen.getByText("1 site is due today and has no record yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Lugulu Estate/ }))
+      .toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
   });
 
   it("renders entries as readable rows without raw ids or JSON", () => {
@@ -99,6 +100,7 @@ describe("AdminDailySiteOperations queue and summary", () => {
     const headers = Array.from(container.querySelectorAll("thead th")).map((th) =>
       th.textContent.trim()
     );
+    // Exactly the authority image's seven columns, in its order.
     expect(headers).toEqual([
       "Project / Site",
       "Work date",
@@ -181,9 +183,10 @@ describe("AdminDailySiteOperations queue and summary", () => {
       ],
     });
     expect(screen.getAllByText("Not required").length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/Every active site has a morning record today, or was marked not required/)
-    ).toBeInTheDocument();
+    // The authority's fifth metric card carries it.
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    expect(within(region).getByText("Not required").parentElement.parentElement)
+      .toHaveTextContent("No work planned");
     expect(screen.queryByText(/waive/i)).not.toBeInTheDocument();
   });
 });
@@ -193,7 +196,7 @@ describe("AdminDailySiteOperations queue and summary", () => {
 // is the day's position, and what is waiting on me" before it shows one record.
 // ---------------------------------------------------------------------------
 
-describe("Daily Site Record list — the day's position (authority image 08)", () => {
+describe("Daily Site Record list — the authority's five metrics (image 08)", () => {
   const today = todayIso();
 
   const entry = (overrides = {}) => ({
@@ -203,33 +206,62 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
     submittedAt: `${today}T07:30:00Z`, ...overrides,
   });
 
-  it("leads with the five day counts, each with how many sites they cover", () => {
+  // The committed authority image shows FIVE metric cards across the top, in
+  // this order. A previous pass deleted them on an inferred "card-per-metric"
+  // rule; the image is the higher authority and they are restored.
+  it("renders the five authority metrics, in the authority's order", () => {
     renderRoute({
       role: "owner",
-      entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted", reviewedAt: `${today}T09:15:00Z` })],
+      entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted" })],
       compliance: [
         { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
         { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "entry_late" },
       ],
     });
     const region = screen.getByRole("region", { name: "Today's site record position" });
-    ["Due today", "Awaiting review", "Late", "Accepted", "Not required"].forEach((label) => {
-      expect(within(region).getByText(label)).toBeInTheDocument();
-    });
-    expect(within(region).getByText("Due today").parentElement).toHaveTextContent("Across 2 sites");
-    expect(within(region).getByText("Awaiting review").parentElement).toHaveTextContent("Across 1 site");
+    const labels = within(region).getAllByText(
+      /^(Due today|Awaiting review|Late|Accepted|Not required)$/
+    ).map((node) => node.textContent);
+    expect(labels).toEqual(["Due today", "Awaiting review", "Late", "Accepted", "Not required"]);
   });
 
-  // A count of zero is a real answer. Hiding the cell would make "nothing is
-  // late today" indistinguishable from "nobody has looked".
-  it("keeps a zero count visible rather than hiding the cell", () => {
+  it("counts each metric truthfully and names the sites it covers", () => {
+    renderRoute({
+      role: "owner",
+      entries: [entry(), entry({ id: "e2", projectId: "p2", state: "accepted" })],
+      compliance: [
+        { projectId: "p1", projectName: "Karen Residence", due: true, complianceStatus: "entry_present" },
+        { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "entry_late" },
+      ],
+    });
+    const region = screen.getByRole("region", { name: "Today's site record position" });
+    const card = (label) => within(region).getByText(label).closest("div").parentElement;
+    expect(card("Due today")).toHaveTextContent("2");
+    expect(card("Due today")).toHaveTextContent("Across 2 sites");
+    expect(card("Awaiting review")).toHaveTextContent("Across 1 site");
+    expect(card("Late")).toHaveTextContent("1");
+    expect(card("Accepted")).toHaveTextContent("1");
+  });
+
+  it("keeps a zero metric visible rather than hiding the card", () => {
     renderRoute({ role: "owner", entries: [], compliance: [] });
     const region = screen.getByRole("region", { name: "Today's site record position" });
-    expect(within(region).getByText("Late").parentElement).toHaveTextContent("0");
+    expect(within(region).getByText("Late").closest("div").parentElement).toHaveTextContent("0");
   });
 
-  it("puts a site with no record at all above every record that exists", () => {
-    const { container } = renderRoute({
+  // The image's filter chips carry no counts — the counts are in the cards.
+  it("renders the authority's filter chips without duplicating the counts", () => {
+    renderRoute({ role: "owner", entries: [entry()], compliance: [] });
+    const filters = screen.getByRole("tablist", { name: "Record filters" });
+    expect(within(filters).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Today", "Awaiting review", "Late", "Returned", "Accepted", "All",
+    ]);
+  });
+
+  // The image's illustrative data has no missing site, so it settles no
+  // treatment for one. It goes in the image's own contextual bottom bar.
+  it("surfaces a due site with no record in the contextual bottom bar", () => {
+    renderRoute({
       role: "owner",
       entries: [entry()],
       compliance: [
@@ -237,20 +269,27 @@ describe("Daily Site Record list — the day's position (authority image 08)", (
         { projectId: "p2", projectName: "Lugulu Estate", due: true, complianceStatus: "missing" },
       ],
     });
-    const missing = screen.getByText("One site still needs a morning record today");
-    const table = container.querySelector("table");
-    // Document order is the reading order: the missing band precedes the records.
-    expect(missing.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("1 site is due today and has no record yet")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Lugulu Estate" }))
+      .toHaveAttribute("href", "/admin/daily-site-operations/new?project=p2");
+  });
+
+  it("otherwise carries the authority's cost-claim hand-off in that bar", () => {
+    renderRoute({ role: "owner", entries: [entry()], compliance: [] });
+    expect(screen.getByText(/Once all due site records are accepted/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Go to Cost Claims/ }))
+      .toHaveAttribute("href", "/admin/site-costs");
   });
 
   it("shows when the record actually arrived, and whether that was late", () => {
-    renderRoute({
-      role: "owner",
-      entries: [entry({ isLate: true })],
-      compliance: [],
-    });
+    renderRoute({ role: "owner", entries: [entry({ isLate: true })], compliance: [] });
     expect(screen.getAllByText(/Submitted late/).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Late").length).toBeGreaterThan(0);
+  });
+
+  it("shows the authority's record count under the table", () => {
+    renderRoute({ role: "owner", entries: [entry()], compliance: [] });
+    expect(screen.getByText(/Showing 1 to 1 of 1 record/)).toBeInTheDocument();
   });
 });
 

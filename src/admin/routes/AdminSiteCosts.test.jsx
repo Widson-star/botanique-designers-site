@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
@@ -76,6 +77,43 @@ describe("Project Costs admin surfaces", () => {
     expect(screen.getByRole("button", { name: "Save and submit" })).toBeEnabled();
   });
 
+  // The duplicate warning belongs HERE — where an overlapping claim would
+  // actually be created — not on every view of a record that legitimately
+  // already has a claim.
+  it("warns on the claim form when the drafted cost repeats an existing live claim", () => {
+    const dailyEntry = { id: "d1", projectId: "p1", workDate: "2026-07-31", disposition: "working", state: "accepted", version: 2, expectedWorkerCount: 6, crewReference: "Alego turf crew", ratePerWorker: 500, agreedLabourTotal: null, plannedLabourCost: 3000, workPlanned: "Lay turf" };
+    const existing = {
+      ...claim, id: "cx", dailySiteEntryId: "d1", category: "labour", lifecycle: "approved",
+      approvedTotal: 3000, submittedTotal: 3000, recipientLabel: "Alego turf crew",
+    };
+    const values = contexts({ role: "manager", claims: [existing], dailyEntries: [dailyEntry] });
+    values.costs.linesForClaim = (id) => (id === "cx"
+      ? [{ id: "lx", claimId: "cx", lineNumber: 1, description: "Planned site labour", rateType: "daily", quantity: 6, unit: "worker", unitRate: 500, lineTotal: 3000 }]
+      : []);
+    wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new?dailySiteEntryId=d1");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/already been claimed/i);
+    expect(within(alert).getByRole("link", { name: "Alego turf crew" }))
+      .toHaveAttribute("href", "/admin/site-costs/cx");
+    // Nothing is blocked: the person can still submit, deliberately.
+    expect(screen.getByRole("button", { name: "Save and submit" })).toBeEnabled();
+  });
+
+  it("stays silent on the claim form when the drafted cost is genuinely new", () => {
+    const dailyEntry = { id: "d1", projectId: "p1", workDate: "2026-07-31", disposition: "working", state: "accepted", version: 2, expectedWorkerCount: 6, crewReference: "Alego turf crew", ratePerWorker: 500, agreedLabourTotal: null, plannedLabourCost: 3000, workPlanned: "Lay turf" };
+    const existing = {
+      ...claim, id: "cx", dailySiteEntryId: "d1", category: "labour", lifecycle: "approved",
+      approvedTotal: 3000, submittedTotal: 3000,
+    };
+    const values = contexts({ role: "manager", claims: [existing], dailyEntries: [dailyEntry] });
+    // The existing claim holds a different line, so nothing overlaps.
+    values.costs.linesForClaim = (id) => (id === "cx"
+      ? [{ id: "lx", claimId: "cx", lineNumber: 1, description: "Mkokoteni cartage", rateType: "lump_sum", quantity: 1, unit: "item", unitRate: 800, lineTotal: 800 }]
+      : []);
+    wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new?dailySiteEntryId=d1");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("uses a distinct Principal direct-authority action", () => {
     const values = contexts({ role: "owner", claims: [] });
     wrap(<Routes><Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} /></Routes>, values, "/admin/site-costs/new");
@@ -90,121 +128,147 @@ describe("Project Costs admin surfaces", () => {
 // authorised, what actually moved, what was actually spent, what is unresolved.
 // ---------------------------------------------------------------------------
 
-describe("Project Costs financial position", () => {
+// ---------------------------------------------------------------------------
+// FOUNDER AMENDMENT — the Project Costs register.
+//
+// Date · Cost Ref. · Project · Status · Total · Balance · Paid · Action.
+// Funding mechanics are no longer the primary state of a cost, and where the
+// Hub holds no payment record, Paid and Balance are unknown — never zero.
+// ---------------------------------------------------------------------------
+
+describe("Project Costs register (Founder amendment)", () => {
   const ADVANCE = "operations_manager_accountable_advance";
   const DIRECT = "direct_recipient_funding";
-  const approvedClaim = { ...claim, lifecycle: "approved", approvedTotal: 20000, submittedTotal: 20000 };
+  const approvedClaim = {
+    ...claim, id: "11111111-2222-3333-4444-555555555555",
+    lifecycle: "approved", approvedTotal: 20000, submittedTotal: 20000,
+  };
 
-  const request = (overrides = {}) => ({
+  const request = (o = {}) => ({
     id: "r1", requestNumber: "BDFR-2026-0001", projectId: "p1", status: "approved",
-    intendedCustodyType: ADVANCE, totalRequestedAmount: 20000, version: 1, ...overrides,
+    intendedCustodyType: ADVANCE, totalRequestedAmount: 20000, version: 1, ...o,
   });
-  const alloc = (overrides = {}) => ({
-    id: "a1", fundRequestId: "r1", claimId: "c1", allocationOrder: 1, requestedAmount: 20000, ...overrides,
+  const alloc = (o = {}) => ({
+    id: "a1", fundRequestId: "r1", claimId: approvedClaim.id, allocationOrder: 1,
+    requestedAmount: 20000, ...o,
   });
-  const rel = (overrides = {}) => ({
+  const rel = (o = {}) => ({
     id: "rel1", fundRequestId: "r1", status: "recorded", custodyDisposition: ADVANCE,
-    releasedAmount: 10000, releasedAt: "2026-08-05T09:00:00Z", version: 1, ...overrides,
-  });
-  const acq = (overrides = {}) => ({
-    id: "acq1", fundReleaseId: "rel1", state: "accepted", releasedAmountSnapshot: 10000,
-    actualSpendTotal: 10000, returnedAmount: 0, varianceAmount: 0, version: 1, ...overrides,
+    releasedAmount: 20000, releasedAt: "2026-08-05T09:00:00Z", version: 1, ...o,
   });
 
   const withFinance = (finance) => contexts({ claims: [approvedClaim], finance });
 
-  it("says so plainly when a claim sits on no fund request", () => {
+  it("uses the amended columns and drops funding mechanics as a column", () => {
+    const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
+    const headers = [...container.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+    expect(headers).toEqual([
+      "Date", "Cost Ref.", "Project", "Status", "Total", "Balance", "Paid", "Action",
+    ]);
+    expect(headers).not.toContain("Financial position");
+  });
+
+  // The heart of the amendment. A cost the Founder paid in July has no fund
+  // request, so the Hub knows nothing — and must not claim it is unpaid.
+  it("shows Paid and Balance as unknown when the Hub holds no payment record", () => {
     wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
-    expect(screen.getAllByText("Not yet funded — no fund request").length).toBeGreaterThan(0);
-    // No banner is shown when there is nothing financial to summarise.
-    expect(screen.queryByText("Financial position of these costs")).not.toBeInTheDocument();
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    // Total is known; Balance and Paid are dashes, never KES 0.
+    expect(cells[4]).toMatch(/20,000/);
+    expect(cells[5]).toBe("—");
+    expect(cells[6]).toBe("—");
+    expect(screen.queryByText(/Not yet funded/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/no fund request/i)).not.toBeInTheDocument();
   });
 
-  it("shows authorised, released, actual and unreleased for the visible costs", () => {
-    wrap(<AdminSiteCosts />, withFinance({
-      requests: [request()], allocations: [alloc()], releases: [rel()], acquittals: [acq()],
-    }));
-    expect(screen.getByText("Financial position of these costs")).toBeInTheDocument();
-    const banner = screen.getByText("Financial position of these costs").closest("div").parentElement;
-    expect(within(banner).getByText("Authorised").parentElement).toHaveTextContent(/20,000/);
-    expect(within(banner).getByText("Released").parentElement).toHaveTextContent(/10,000/);
-    // A release is not expenditure: actual spend comes from the acquittal.
-    expect(within(banner).getByText("Actual spend").parentElement).toHaveTextContent(/10,000/);
-    expect(within(banner).getByText("Unreleased").parentElement).toHaveTextContent(/10,000/);
+  it("never fabricates a payment from an approval", () => {
+    const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
+    // Approved is a decision about authority. It is not payment, and the
+    // register must not let one imply the other.
+    expect(screen.getAllByText("Approved").length).toBeGreaterThan(0);
+    const table = container.querySelector("table");
+    expect(table.textContent).not.toMatch(/Paid in full/);
   });
 
-  it("does not count an unaccounted advance as actual expenditure", () => {
-    wrap(<AdminSiteCosts />, withFinance({
-      requests: [request()], allocations: [alloc()], releases: [rel({ releasedAmount: 20000 })],
-    }));
-    const banner = screen.getByText("Financial position of these costs").closest("div").parentElement;
-    expect(within(banner).getByText("Released").parentElement).toHaveTextContent(/20,000/);
-    expect(within(banner).getByText("Actual spend").parentElement).toHaveTextContent(/KES\s*0/);
-    expect(screen.getAllByText(/Reconciliation outstanding/).length).toBeGreaterThan(0);
-  });
-
-  it("treats a direct settled payment as actual expenditure with no acquittal", () => {
-    const { container } = wrap(<AdminSiteCosts />, withFinance({
-      requests: [request()], allocations: [alloc()],
-      releases: [rel({ custodyDisposition: DIRECT, releasedAmount: 20000, recipientLabel: "Kisumu Hardware" })],
-    }));
-    const banner = screen.getByText("Financial position of these costs").closest("div").parentElement;
-    expect(within(banner).getByText("Actual spend").parentElement).toHaveTextContent(/20,000/);
-    // The claim rows never invent a reconciliation debt for a settled payment.
-    // (The filter control naturally still offers the option as a choice.)
-    expect(within(container.querySelector("table")).queryByText(/Reconciliation outstanding/))
-      .not.toBeInTheDocument();
-    expect(screen.getAllByText("Financially settled").length).toBeGreaterThan(0);
-  });
-
-  it("aggregates several releases and reports the variance of an advance", () => {
+  it("states Paid and Balance once a payment genuinely exists for that one cost", () => {
     wrap(<AdminSiteCosts />, withFinance({
       requests: [request()], allocations: [alloc()],
-      releases: [
-        rel({ id: "rel1", releasedAmount: 12000 }),
-        rel({ id: "rel2", custodyDisposition: DIRECT, releasedAmount: 8000, recipientLabel: "Supplier" }),
-      ],
-      acquittals: [acq({
-        fundReleaseId: "rel1", releasedAmountSnapshot: 12000, actualSpendTotal: 9000,
-        returnedAmount: 1000, varianceAmount: 2000,
-      })],
+      releases: [rel({ custodyDisposition: DIRECT, recipientLabel: "Kisumu Hardware" })],
     }));
-    const banner = screen.getByText("Financial position of these costs").closest("div").parentElement;
-    expect(within(banner).getByText("Released").parentElement).toHaveTextContent(/20,000/);
-    // Advance spend 9,000 + direct payment 8,000. The release is not the spend.
-    expect(within(banner).getByText("Actual spend").parentElement).toHaveTextContent(/17,000/);
-    expect(screen.getByText(/neither spent nor returned/)).toHaveTextContent(/2,000/);
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    expect(cells[4]).toMatch(/20,000/); // Total
+    expect(cells[5]).toMatch(/KES\s*0/); // Balance
+    expect(cells[6]).toMatch(/20,000/); // Paid
   });
 
-  it("restores the unreleased remainder when a release is reversed", () => {
+  it("shows a part payment as a part payment", () => {
     wrap(<AdminSiteCosts />, withFinance({
       requests: [request()], allocations: [alloc()],
-      releases: [rel({ status: "reversed", reversalReason: "Wrong recipient" })],
+      releases: [rel({ releasedAmount: 12000 })],
     }));
-    const banner = screen.getByText("Financial position of these costs").closest("div").parentElement;
-    expect(within(banner).getByText("Released").parentElement).toHaveTextContent(/KES\s*0/);
-    expect(within(banner).getByText("Unreleased").parentElement).toHaveTextContent(/20,000/);
-    expect(screen.getAllByText("Approved — not yet funded").length).toBeGreaterThan(0);
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    expect(cells[5]).toMatch(/8,000/);  // Balance
+    expect(cells[6]).toMatch(/12,000/); // Paid
   });
 
-  it("filters to what is still unresolved and drills through to the authority", () => {
-    const values = withFinance({
-      requests: [request()], allocations: [alloc()], releases: [rel()],
-    });
-    wrap(<AdminSiteCosts />, values, "/admin/site-costs?funding=unresolved");
-    expect(screen.getAllByText(/Partly funded · Reconciliation outstanding/).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "BDFR-2026-0001" }))
-      .toHaveAttribute("href", "/admin/fund-requests/r1");
+  // A release belongs to the whole authority. Splitting it across the costs it
+  // funds would invent a figure the database does not hold.
+  it("refuses to state a per-cost paid figure when the authority funds other costs too", () => {
+    wrap(<AdminSiteCosts />, withFinance({
+      requests: [request()],
+      allocations: [alloc(), { id: "a2", fundRequestId: "r1", claimId: "other", requestedAmount: 5000 }],
+      releases: [rel()],
+    }));
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    expect(cells[5]).toBe("—");
+    expect(cells[6]).toBe("—");
   });
 
-  it("shows the Operations Manager the same position without Principal money actions", () => {
-    wrap(<AdminSiteCosts />, contexts({
-      role: "manager", claims: [approvedClaim],
-      finance: { requests: [request()], allocations: [alloc()], releases: [rel()] },
-    }));
-    expect(screen.getAllByText(/Reconciliation outstanding/).length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: /record .*release/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /revers/i })).not.toBeInTheDocument();
+  it("counts costs with no payment record separately, never as unpaid", () => {
+    wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
+    expect(screen.getByText(/1 with no payment record in the Hub/)).toBeInTheDocument();
+  });
+
+  it("shows a human-readable cost reference, never a raw id", () => {
+    const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
+    // Rendered in both the desktop table and the mobile card.
+    expect(screen.getAllByText("ICC-11111111").length).toBeGreaterThan(0);
+    expect(container.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+  });
+
+  it("offers a state- and role-aware action menu rather than every action in every row", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
+    const trigger = screen.getByRole("button", { name: /Actions for ICC-11111111/ });
+    await user.click(trigger);
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "View cost" })).toBeInTheDocument();
+    // Approved with no payment record: requesting funds is the sensible next
+    // step, and only a manager may request.
+    expect(within(menu).queryByRole("menuitem", { name: "Request funds" })).not.toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Cancel approved cost" })).toBeInTheDocument();
+  });
+
+  it("offers the Operations Manager a funds request and no Principal-only action", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, contexts({ role: "manager", claims: [approvedClaim] }));
+    await user.click(screen.getByRole("button", { name: /Actions for ICC-11111111/ }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Request funds" })).toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: "Cancel approved cost" })).not.toBeInTheDocument();
+  });
+
+  it("keeps the row compact and leaves the full purpose to the drill-through", () => {
+    const wordy = {
+      ...approvedClaim,
+      purpose: "Sixteen casual workers at KES 500 each for excavation, plus mason subcontract and mkokoteni cartage across the northern boundary run",
+    };
+    const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [wordy] }));
+    expect(container.textContent).not.toContain("mkokoteni cartage across the northern");
   });
 });
 

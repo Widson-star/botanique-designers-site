@@ -1,9 +1,10 @@
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { FundRequestsContext } from "../context/fundRequests";
-import AdminFundRequests from "./AdminFundRequests";
+import AdminAdvances from "./AdminAdvances";
 import AdminFundRequestDetail from "./AdminFundRequestDetail";
 import AdminFundRequestForm from "./AdminFundRequestForm";
 import { deriveFinancialPosition } from "../utils/fundReleaseCapabilities";
@@ -111,57 +112,72 @@ function wrap(element, values, initial = "/admin/fund-requests") {
   );
 }
 
-describe("Fund Requests admin surfaces", () => {
-  it("renders the Principal queue in desktop-table and mobile-card layouts under the canonical name", () => {
-    const { container } = wrap(<AdminFundRequests />, contexts());
-    // The canonical departmental name. "Fund requests" survives as the route only.
-    expect(screen.getByRole("heading", { name: "Funding, Payments and Reconciliation" }))
-      .toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Fund Requests" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Approval is not payment/)).toBeInTheDocument();
-    expect(screen.getAllByText("BDFR-2026-000001").length).toBeGreaterThan(1);
-    expect(screen.getAllByText(/KES\s*23,000\.00/).length).toBeGreaterThan(1);
-    // Nothing has been released, so custody is still only an intent.
-    expect(screen.getAllByText("Intended accountable advance").length).toBeGreaterThan(0);
-    expect(container.querySelector("table")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Authorise funds directly" })).toBeInTheDocument();
+// FOUNDER AMENDMENT, 11 Aug 2026. Finance has five business areas and Advances
+// is one of them. "Funding", standalone "Payments" and standalone
+// "Reconciliation" are rejected as user-facing concepts. An Advance is money
+// issued beforehand to an accountable person, and accounting for it happens
+// inside the Advance. The fund_request / fund_release / acquittal rows beneath
+// are implementation detail and keep their names; the interface must not.
+describe("Advances admin surfaces", () => {
+  // The superseded fund-request list component is deleted, not merely unrouted.
+  // It carried the rejected "Funding, Payments & Reconciliation" vocabulary, and
+  // leaving an unreachable copy of it in the tree invites the abandoned model
+  // back. The fund_request / fund_release / acquittal DATABASE objects keep
+  // their names — those are implementation, not interface.
+  it("no longer ships the superseded fund-request list component", () => {
+    expect(existsSync("src/admin/routes/AdminFundRequests.jsx")).toBe(false);
+    // The route survives; Advances is what it mounts.
+    const app = readFileSync("src/admin/AdminApp.jsx", "utf8");
+    expect(app).toMatch(/path="\/admin\/fund-requests" element=\{<AdminAdvances \/>\}/);
+    expect(app).not.toMatch(/AdminFundRequests\b/);
   });
 
-  it("states the lifecycle position of the authorities in view, approval apart from release", () => {
-    wrap(<AdminFundRequests />, contexts());
-    const panel = screen.getByText("Position of these authorities").closest("div");
-    expect(within(panel).getByText("Awaiting decision").parentElement).toHaveTextContent("1");
-    // A submitted request authorises nothing yet.
-    expect(within(panel).getByText("Authorised").parentElement).toHaveTextContent(/KES\s*0/);
-    expect(within(panel).getByText("Released").parentElement).toHaveTextContent(/KES\s*0/);
-    expect(screen.getByText(/It becomes a payment only when a release is recorded/))
-      .toBeInTheDocument();
+  it("presents Advances as the Finance area, never Funding or Reconciliation", () => {
+    wrap(<AdminAdvances />, contexts());
+    expect(screen.getByRole("heading", { name: "Advances" })).toBeInTheDocument();
+    expect(screen.getByText(/Money given before expenditure/)).toBeInTheDocument();
+    expect(screen.getByText("BDFR-2026-000001", { exact: false })).toBeInTheDocument();
+    expect(screen.getAllByText(/KES\s*23,000\.00/).length).toBeGreaterThan(0);
+    // The rejected vocabulary must not reappear anywhere on the surface.
+    const page = document.body.textContent;
+    expect(page).not.toMatch(/Funding, Payments & Reconciliation/);
+    expect(page).not.toMatch(/Reconciliation/);
+    expect(page).not.toMatch(/Fund [Rr]equest/);
   });
 
-  it("names the custody money actually took, and both halves of a mixed authority", () => {
-    const approved = { ...request, status: "approved" };
-    wrap(<AdminFundRequests />, contexts({
-      requests: [approved],
-      releases: [
-        { id: "rel1", fundRequestId: "r1", status: "recorded", custodyDisposition: "operations_manager_accountable_advance", releasedAmount: 10000, version: 1 },
-        { id: "rel2", fundRequestId: "r1", status: "recorded", custodyDisposition: "direct_recipient_funding", releasedAmount: 5000, version: 1 },
-      ],
+  it("reads as three plain jobs: requests, money issued, and accounting", () => {
+    wrap(<AdminAdvances />, contexts());
+    // The summary states the department's actual position in ordinary words.
+    expect(screen.getByText("Awaiting decision")).toBeInTheDocument();
+    expect(screen.getAllByText("Issued").length).toBeGreaterThan(0);
+    expect(screen.getByText("Still to account for")).toBeInTheDocument();
+    // A submitted request has authorised nothing and issued nothing.
+    expect(screen.getByRole("heading", { name: "Advance requests" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Issued" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Accounting" })).toBeInTheDocument();
+  });
+
+  it("shows issued advances and their accounting state, and never a direct payment", () => {
+    wrap(<AdminAdvances />, contexts({
+      requests: [{ ...request, status: "approved" }],
+      // Only the accountable advance is an Advance. The legacy direct settled
+      // payment is not one and must not be listed as though it were.
+      releases: [advanceRelease, directRelease],
     }));
-    // Intent is superseded by what actually happened, and neither custody type
-    // is allowed to hide the other.
-    expect(screen.getAllByText("Direct settled payment + Accountable advance").length)
-      .toBeGreaterThan(0);
-    expect(screen.queryByText("Intended accountable advance")).not.toBeInTheDocument();
-    const panel = screen.getByText("Position of these authorities").closest("div");
-    expect(within(panel).getByText("Released").parentElement).toHaveTextContent(/15,000/);
-    expect(within(panel).getByText("Reconciliation outstanding").parentElement)
-      .toHaveTextContent(/10,000/);
+    fireEvent.click(screen.getByRole("tab", { name: "Issued" }));
+    expect(screen.getByRole("heading", { name: "Issued advances" })).toBeInTheDocument();
+    expect(screen.getAllByText(/KES\s*10,000\.00/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/KES\s*23,000\.00/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Accounting" }));
+    // Issued, with nothing accounted for yet. That is stated, not implied.
+    expect(screen.getByText("Not yet accounted for")).toBeInTheDocument();
   });
 
   it("offers the Operations Manager a request action rather than direct authority", () => {
-    wrap(<AdminFundRequests />, contexts({ role: "manager" }));
-    expect(screen.getByRole("link", { name: "New fund request" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Authorise funds directly" })).not.toBeInTheDocument();
+    wrap(<AdminAdvances />, contexts({ role: "manager" }));
+    expect(screen.getByRole("link", { name: "Request advance" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "New advance" })).not.toBeInTheDocument();
   });
 
   it("shows the allocation breakdown, immutable timeline and Principal decisions", () => {
@@ -173,10 +189,11 @@ describe("Fund Requests admin surfaces", () => {
     expect(screen.getByText("16 Alego casual workers")).toBeInTheDocument();
     expect(screen.getByText("Mason Otieno")).toBeInTheDocument();
     expect(screen.getByText("Mkokoteni operator")).toBeInTheDocument();
-    expect(screen.getByText(/does not record a release or payment/)).toBeInTheDocument();
+    // Asking for an Advance moves nothing. The request's existence is not money.
+    expect(screen.getByText(/No money has moved merely because the request exists/)).toBeInTheDocument();
     expect(screen.getByText("Submitted for Principal decision")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Approve fund authority" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Request amendment" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Approve advance" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Request correction" })).toBeDisabled();
   });
 
   it("recovers from a stale Principal decision without implying a change", async () => {
@@ -185,7 +202,7 @@ describe("Fund Requests admin surfaces", () => {
       <Routes><Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} /></Routes>,
       contexts({ overrides: { decideRequest } }), "/admin/fund-requests/r1",
     );
-    fireEvent.click(screen.getByRole("button", { name: "Approve fund authority" }));
+    fireEvent.click(screen.getByRole("button", { name: "Approve advance" }));
     await waitFor(() => expect(screen.getByText(/changed elsewhere/)).toBeInTheDocument());
   });
 
@@ -194,9 +211,9 @@ describe("Fund Requests admin surfaces", () => {
       <Routes><Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} /></Routes>,
       contexts({ role: "manager" }), "/admin/fund-requests/r1",
     );
-    expect(screen.queryByRole("button", { name: "Approve fund authority" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Reject request" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Withdraw request" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve advance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject advance" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Withdraw advance" })).toBeInTheDocument();
   });
 
   it("warns that a draft does not reserve and surfaces per-claim availability", async () => {
@@ -204,10 +221,10 @@ describe("Fund Requests admin surfaces", () => {
       <Routes><Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} /></Routes>,
       contexts({ role: "manager", requests: [] }), "/admin/fund-requests/new",
     );
-    expect(screen.getByText(/does not reserve any approved claim value/)).toBeInTheDocument();
+    expect(screen.getByText(/does not reserve any approved Project Cost value/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Project/), { target: { value: "p1" } });
     await waitFor(() => expect(screen.getByText("Murram supplier")).toBeInTheDocument());
-    expect(screen.getAllByText("Available to request").length).toBe(2);
+    expect(screen.getAllByText("Available for advance").length).toBe(2);
     expect(screen.getAllByText(/KES\s*12,000\.00/).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
   });
@@ -225,17 +242,17 @@ describe("Fund Requests admin surfaces", () => {
     await waitFor(() => expect(screen.getByText("Murram supplier")).toBeInTheDocument());
 
     fireEvent.click(screen.getAllByRole("checkbox")[1]);
-    fireEvent.change(screen.getByLabelText(/Requested amount/), { target: { value: "9000" } });
-    expect(screen.getByText(/exceeds the amount still available to request/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Advance amount/), { target: { value: "9000" } });
+    expect(screen.getByText(/exceeds the amount still available against this approved cost/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save draft" })).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText(/Requested amount/), { target: { value: "8000" } });
+    fireEvent.change(screen.getByLabelText(/Advance amount/), { target: { value: "8000" } });
     fireEvent.change(screen.getByLabelText(/Purpose or note/), { target: { value: "Murram balance" } });
-    fireEvent.change(screen.getByLabelText(/Intended custody/), { target: { value: "direct_recipient_funding" } });
+    fireEvent.change(screen.getByLabelText(/Accountable person/), { target: { value: "m1" } });
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
 
     await waitFor(() => expect(screen.getByText(/Availability has been refreshed and nothing was saved/)).toBeInTheDocument());
-    expect(screen.getByLabelText(/Requested amount/)).toHaveValue(8000);
+    expect(screen.getByLabelText(/Advance amount/)).toHaveValue(8000);
     expect(screen.getByLabelText(/Purpose or note/)).toHaveValue("Murram balance");
   });
 
@@ -247,33 +264,32 @@ describe("Fund Requests admin surfaces", () => {
     );
   }
 
-  it("reads approved but unpaid until a release is recorded, and offers the Principal the action", () => {
+  it("reads approved but not issued until money is handed over, and offers the Principal the action", () => {
     detail(contexts({ requests: [approved] }));
-    // Funding and reconciliation are shown as separate dimensions, so an
-    // approved authority with nothing against it says exactly that.
-    expect(screen.getByText("Nothing released")).toBeInTheDocument();
-    expect(screen.getByText(/No funds have been released/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Record a release" })).toBeInTheDocument();
-    // Nothing claims money moved, and nothing claims a reconciliation is owed.
-    expect(screen.queryByText(/Reconciliation outstanding/)).not.toBeInTheDocument();
+    // Approving an Advance permits it to be issued. It does not issue it, and
+    // nothing may be described as accounted for that was never handed over.
+    expect(screen.getByText("Not issued")).toBeInTheDocument();
+    expect(screen.getAllByText(/approved but has not been issued yet/).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Issue advance" })).toBeInTheDocument();
+    expect(screen.queryByText("Not yet accounted for")).not.toBeInTheDocument();
   });
 
-  it("gives the Operations Manager no way to fabricate a release", () => {
+  it("gives the Operations Manager no way to fabricate an issued advance", () => {
     detail(contexts({ role: "manager", requests: [approved] }));
-    expect(screen.getByText("Nothing released")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Record a release" })).not.toBeInTheDocument();
+    expect(screen.getByText("Not issued")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Issue advance" })).not.toBeInTheDocument();
   });
 
-  it("records a release against the remaining authority and stops offering it once exhausted", async () => {
+  it("issues against the remaining authority and stops offering it once exhausted", async () => {
     const recordRelease = vi.fn(() => Promise.resolve({ ok: true }));
     detail(contexts({ requests: [approved], overrides: { recordRelease } }));
-    fireEvent.click(screen.getByRole("button", { name: "Record a release" }));
-    // The form opens pre-set to the intended custody and the remaining authority.
-    expect(screen.getByLabelText(/Amount released/)).toHaveValue(23000);
-    expect(screen.getByText(/must account for how it was spent/)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/Amount released/), { target: { value: "10000" } });
-    fireEvent.change(screen.getByLabelText(/Date released/), { target: { value: "2026-08-01" } });
-    fireEvent.click(screen.getByRole("button", { name: "Record release" }));
+    fireEvent.click(screen.getByRole("button", { name: "Issue advance" }));
+    // The form opens pre-set to the accountable person and the remaining authority.
+    expect(screen.getByLabelText(/Amount issued/)).toHaveValue(23000);
+    expect(screen.getByLabelText(/Accountable person/)).toHaveValue("Martine Lotom");
+    fireEvent.change(screen.getByLabelText(/Amount issued/), { target: { value: "10000" } });
+    fireEvent.change(screen.getByLabelText(/Date issued/), { target: { value: "2026-08-01" } });
+    fireEvent.click(screen.getByRole("button", { name: "Record advance issued" }));
     await waitFor(() => expect(recordRelease).toHaveBeenCalledTimes(1));
     expect(recordRelease.mock.calls[0][1]).toMatchObject({
       releasedAmount: "10000",
@@ -282,24 +298,43 @@ describe("Fund Requests admin surfaces", () => {
     });
   });
 
-  it("shows a partly funded position, the remaining amount and the outstanding advance", () => {
+  it("shows a partly issued advance, the remaining amount and that it is not yet accounted for", () => {
     detail(contexts({ requests: [approved], releases: [advanceRelease] }));
-    // Partly funded AND unreconciled at once. Neither label may conceal the
-    // other, and the unreleased remainder is stated rather than implied.
-    expect(screen.getByText("Partly released")).toBeInTheDocument();
-    expect(screen.getByText("Reconciliation outstanding")).toBeInTheDocument();
+    // Partly issued AND not yet accounted for at once. Neither label may conceal
+    // the other, and the amount still available is stated rather than implied.
+    expect(screen.getByText("Partly issued")).toBeInTheDocument();
+    expect(screen.getByText("Not yet accounted for")).toBeInTheDocument();
     expect(screen.getAllByText(/KES\s*13,000\.00/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/10,000\.00 of the KES 23,000\.00 authorised has been released/)).toBeInTheDocument();
-    expect(screen.getByText(/13,000\.00 of this authority is still unreleased/)).toBeInTheDocument();
+    expect(screen.getByText(/10,000\.00 of the approved KES 23,000\.00 has been issued/)).toBeInTheDocument();
+    expect(screen.getByText(/13,000\.00 of the approved Advance is still available to issue/)).toBeInTheDocument();
   });
 
-  it("does not demand a reconciliation, or an acknowledgement, for a direct supplier payment", () => {
+  it("names the accountable person an advance was issued to", () => {
+    detail(contexts({ requests: [approved], releases: [advanceRelease] }));
+    // An Advance is held by a person, so it is named by that person's profile.
+    expect(screen.getByRole("button", { name: /Martine Lotom/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Authorised user/)).not.toBeInTheDocument();
+  });
+
+  // A historical record that paid a supplier direct holds its payee as a label,
+  // not a profile. Showing the profile regardless printed a real supplier
+  // payment as "Authorised user", which is not what happened.
+  it("names the actual payee of a historical direct payment", () => {
     detail(contexts({ requests: [approved], releases: [directRelease] }));
-    expect(screen.getByText("Fully released")).toBeInTheDocument();
-    // A direct settled payment never acquires a reconciliation obligation.
-    expect(screen.queryByText("Reconciliation outstanding")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Siaya Hardware/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Authorised user/)).not.toBeInTheDocument();
+    // Named plainly as what it was, with no separate legacy apparatus.
+    expect(screen.getByText(/direct payment/)).toBeInTheDocument();
+  });
+
+  it("asks nobody to account for a historical direct payment", () => {
+    detail(contexts({ requests: [approved], releases: [directRelease] }));
+    expect(screen.getByText("Fully issued")).toBeInTheDocument();
+    // Money paid straight to a supplier was never held by an accountable
+    // person, so no accounting and no receipt acknowledgement is owed.
+    expect(screen.queryByText("Not yet accounted for")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Siaya Hardware/ }));
-    expect(screen.getByText(/No accountable-advance reconciliation is\s+required/)).toBeInTheDocument();
+    expect(screen.getByText(/BDRL-2026-000002/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Account for this advance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm I received this" })).not.toBeInTheDocument();
   });
@@ -314,7 +349,7 @@ describe("Fund Requests admin surfaces", () => {
     expect(screen.queryByRole("button", { name: "Reverse this release" })).not.toBeInTheDocument();
   });
 
-  it("states the outcome as the reconciliation is entered, and submits the lines", async () => {
+  it("states the outcome as the accounting is entered, and submits the lines", async () => {
     const submitAcquittal = vi.fn(() => Promise.resolve({ ok: true }));
     detail(contexts({
       role: "manager", requests: [approved], releases: [advanceRelease],
@@ -325,12 +360,12 @@ describe("Fund Requests admin surfaces", () => {
     const [description] = screen.getAllByPlaceholderText("What was bought or paid for");
     fireEvent.change(description, { target: { value: "Casual workers" } });
     fireEvent.change(screen.getAllByPlaceholderText("Amount")[0], { target: { value: "6500" } });
-    // Released 10,000 and spent 6,500 with nothing returned leaves 3,500 unaccounted for.
-    expect(screen.getByText(/3,500\.00 unaccounted for/)).toBeInTheDocument();
+    // Issued 10,000 and spent 6,500 with nothing returned leaves 3,500 still to account for.
+    expect(screen.getByText(/3,500\.00 still to account for/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Amount returned/), { target: { value: "3500" } });
-    expect(screen.getByText("this balances")).toBeInTheDocument();
+    expect(screen.getByText("fully accounted for")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Submit reconciliation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Submit accounting" }));
     await waitFor(() => expect(submitAcquittal).toHaveBeenCalledTimes(1));
     const [releaseId, version, values] = submitAcquittal.mock.calls[0];
     expect(releaseId).toBe("rel1");
@@ -339,7 +374,7 @@ describe("Fund Requests admin surfaces", () => {
     expect(values.lines[0]).toMatchObject({ description: "Casual workers", amount: "6500" });
   });
 
-  it("requires a stated reason before the Principal can close an unbalanced reconciliation", async () => {
+  it("requires a stated reason before the Principal can close unbalanced accounting", async () => {
     const decideAcquittal = vi.fn(() => Promise.resolve({ ok: true }));
     const unbalanced = {
       id: "acq1", fundReleaseId: "rel1", state: "submitted", releasedAmountSnapshot: 10000,
@@ -352,24 +387,24 @@ describe("Fund Requests admin surfaces", () => {
       overrides: { decideAcquittal },
     }));
     fireEvent.click(screen.getByRole("button", { name: /Martine/ }));
-    expect(screen.getByText("Unaccounted")).toBeInTheDocument();
+    expect(screen.getByText("Still to account for")).toBeInTheDocument();
     expect(screen.getByText(/This does not balance/)).toBeInTheDocument();
     // Accepting is blocked until the reason exists; the balance is never silently zeroed.
-    expect(screen.getByRole("button", { name: "Accept reconciliation" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Accept accounting" })).toBeDisabled();
 
     fireEvent.change(screen.getByLabelText(/This does not balance/), {
       target: { value: "Carried forward to the next advance by agreement" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Accept reconciliation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Accept accounting" }));
     await waitFor(() => expect(decideAcquittal).toHaveBeenCalledWith(
       "acq1", 1, "accepted", "Carried forward to the next advance by agreement"));
   });
 
-  it("does not offer to cancel an authority that money has already moved against", () => {
+  it("does not offer to cancel an advance that money has already moved against", () => {
     detail(contexts({ requests: [approved], releases: [advanceRelease] }));
-    expect(screen.queryByRole("button", { name: "Cancel approved request" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel approved advance" })).not.toBeInTheDocument();
     detail(contexts({ requests: [approved] }));
-    expect(screen.getByRole("button", { name: "Cancel approved request" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel approved advance" })).toBeInTheDocument();
   });
 
   it("uses a distinct Principal direct-authority form with no submit step", async () => {
@@ -377,9 +412,9 @@ describe("Fund Requests admin surfaces", () => {
       <Routes><Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} /></Routes>,
       contexts({ role: "owner", requests: [] }), "/admin/fund-requests/new",
     );
-    expect(screen.getByRole("heading", { name: "Authorise funds directly" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Authorise funds" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "New advance" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Authorise advance" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /submit/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/does not reserve any approved claim value/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/does not reserve any approved Project Cost value/)).not.toBeInTheDocument();
   });
 });

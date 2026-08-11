@@ -32,7 +32,9 @@ export default function FundRequestsSection({ section, projectId, range }) {
   return (
     <ReportSection
       title="Fund requests"
-      description="Requests for Principal authority to make money available against approved internal costs. No funds have been released, transferred or paid."
+      // Stale since PR #98: releases exist now, so this section may not assert
+      // that nothing has moved. It states what a fund request IS, and stops there.
+      description="Requests for Principal authority to make money available against approved internal costs. Authority to fund is not the same as money released."
       state={section.state}
       actions={
         <ReportDrillLink to={moduleLink("/admin/fund-requests", { projectId, status: "all", range })}>

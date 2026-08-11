@@ -74,12 +74,15 @@ describe("Operating-model navigation domains", () => {
       "Approvals",
       "Reports",
     ]);
-    // Dashboard, Finance and Approvals are direct destinations, not disclosures.
+    // Dashboard and Approvals are direct destinations. Finance now EXPANDS with
+    // its five business areas, per the Founder amendment of 11 Aug 2026;
+    // Reports is a single destination with ONE visible name.
     expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/admin");
-    expect(within(nav).getByRole("link", { name: "Finance" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Reports" })).toHaveAttribute(
       "href",
-      "/admin/finance"
+      "/admin/reports"
     );
+    expect(within(nav).getByRole("button", { name: "Finance" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Approvals" })).toHaveAttribute(
       "href",
       "/admin/approvals"
@@ -91,7 +94,12 @@ describe("Operating-model navigation domains", () => {
   it.each([
     ["Projects", ["Project Register", "Project Proposals"], ["/admin/projects", "/admin/project-intakes"]],
     ["Operations", ["Daily Site Record", "People"], ["/admin/daily-site-operations", "/admin/people"]],
-    ["Reports", ["Project Summary"], ["/admin/reports"]],
+    // Finance's five business areas. Money issued beforehand to an accountable
+    // person is an Advance; accounting for it happens inside that Advance, so
+    // there is no Funding, Payments or Reconciliation destination.
+    ["Finance", ["Project Financials", "Project Costs", "Company Expenses", "Staff Compensation", "Advances"],
+      ["/admin/finance/project-financials", "/admin/site-costs", "/admin/finance/company-expenses",
+        "/admin/finance/staff-compensation", "/admin/fund-requests"]],
   ])("maps %s to exactly its approved children, on their existing routes", async (domain, labels, hrefs) => {
     const user = userEvent.setup();
     renderLayout();
@@ -109,13 +117,13 @@ describe("Operating-model navigation domains", () => {
     const user = userEvent.setup();
     renderLayout({ role: "owner" });
     const nav = desktopNav();
-    expect(within(nav).getByRole("link", { name: "Finance" })).toBeInTheDocument();
+    expect(within(nav).getByRole("button", { name: "Finance" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Approvals" })).toBeInTheDocument();
     // One group opens at a time, so each is inspected while it is the open one.
     const expected = {
       Projects: ["Project Register", "Project Proposals"],
       Operations: ["Daily Site Record", "People"],
-      Reports: ["Project Summary"],
+      Finance: ["Project Financials", "Project Costs", "Company Expenses", "Staff Compensation", "Advances"],
     };
     for (const [domain, labels] of Object.entries(expected)) {
       await user.click(domainButton(domain));
@@ -151,6 +159,7 @@ describe("Operating-model navigation domains", () => {
     const nav = desktopNav();
     const buttonLabels = within(nav).queryAllByRole("button").map((row) => row.textContent);
     expect(buttonLabels).not.toContain("Operations");
+    expect(within(nav).queryByRole("button", { name: "Finance" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Finance" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Approvals" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "People" })).not.toBeInTheDocument();
@@ -181,7 +190,7 @@ describe("Operating-model active and expanded state", () => {
     ["/admin/daily-site-operations", "Operations", "Daily Site Record"],
     ["/admin/daily-site-operations/e1/edit", "Operations", "Daily Site Record"],
     ["/admin/people/p1", "Operations", "People"],
-    ["/admin/reports", "Reports", "Project Summary"],
+    ["/admin/site-costs", "Finance", "Project Costs"],
   ])("opens the owning domain and marks the right child on %s", (path, domain, child) => {
     renderLayout({ path });
     const nav = desktopNav();
@@ -192,8 +201,9 @@ describe("Operating-model active and expanded state", () => {
     expect(within(nav).getByRole("link", { name: child }).className).toMatch(/bg-\[#ecefe9\]/);
   });
 
-  // Finance is one shell destination: a Site Costs or Fund Requests URL still
-  // marks Finance current, because both remain part of the record it fronts.
+  // A Site Costs or Fund Requests URL still marks Finance as the owning domain,
+  // because both are now its capability children. Finance is a disclosure, so it
+  // is marked by being OPEN rather than by aria-current.
   it.each([
     ["/admin/finance", "Finance"],
     ["/admin/site-costs/c1", "Finance"],
@@ -203,7 +213,12 @@ describe("Operating-model active and expanded state", () => {
     ["/admin/approvals/a1", "Approvals"],
   ])("marks %s active on %s", (path, domain) => {
     renderLayout({ path });
-    const link = within(desktopNav()).getByRole("link", { name: domain });
+    const nav = desktopNav();
+    if (domain === "Finance") {
+      expect(within(nav).getByRole("button", { name: domain })).toHaveAttribute("aria-expanded", "true");
+      return;
+    }
+    const link = within(nav).getByRole("link", { name: domain });
     expect(link.className).toMatch(/bg-\[#ecefe9\]/);
     expect(link).toHaveAttribute("aria-current", "page");
   });
@@ -233,12 +248,12 @@ describe("Operating-model active and expanded state", () => {
     await user.click(domainButton("Projects"));
     expect(domainButton("Projects")).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(domainButton("Reports"));
+    await user.click(domainButton("Finance"));
     expect(domainButton("Projects")).toHaveAttribute("aria-expanded", "false");
-    expect(domainButton("Reports")).toHaveAttribute("aria-expanded", "true");
+    expect(domainButton("Finance")).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(domainButton("Reports"));
-    expect(domainButton("Reports")).toHaveAttribute("aria-expanded", "false");
+    await user.click(domainButton("Finance"));
+    expect(domainButton("Finance")).toHaveAttribute("aria-expanded", "false");
   });
 
   // Disclosure is local shell state. It must not touch the URL, because that
@@ -249,7 +264,7 @@ describe("Operating-model active and expanded state", () => {
     const before = window.location.href;
 
     await user.click(domainButton("Projects"));
-    await user.click(domainButton("Reports"));
+    await user.click(domainButton("Finance"));
 
     expect(window.location.href).toBe(before);
     // The route did not move: the Finance-family destination is still active.
@@ -293,10 +308,10 @@ describe("Operating-model desktop collapse (104px)", () => {
     await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
 
     const nav = desktopNav();
-    for (const label of ["Dashboard", "Finance", "Approvals"]) {
+    for (const label of ["Dashboard", "Approvals", "Reports"]) {
       expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
     }
-    for (const label of ["Projects", "Operations", "Reports"]) {
+    for (const label of ["Projects", "Operations", "Finance"]) {
       expect(within(nav).getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
@@ -340,7 +355,7 @@ describe("Operating-model mobile drawer", () => {
     await openDrawer(user);
 
     const drawer = screen.getByRole("dialog", { name: "Admin navigation" });
-    await user.click(within(drawer).getByRole("link", { name: "Finance" }));
+    await user.click(within(drawer).getByRole("link", { name: "Approvals" }));
 
     expect(screen.queryByRole("dialog", { name: "Admin navigation" })).not.toBeInTheDocument();
   });
@@ -510,7 +525,7 @@ describe("Operating-model preserved shell", () => {
   it("shows no visible waive-family wording anywhere in the shell", async () => {
     const user = userEvent.setup();
     renderLayout();
-    for (const domain of ["Projects", "Operations", "Reports"]) {
+    for (const domain of ["Projects", "Operations", "Finance"]) {
       await user.click(domainButton(domain));
     }
     expect(document.body.textContent).not.toMatch(/waive|waived|waiver/i);
@@ -518,7 +533,7 @@ describe("Operating-model preserved shell", () => {
 
   it("uses Title Case for every navigation label", () => {
     renderLayout();
-    for (const label of ["Project Register", "Project Proposals", "Daily Site Record", "Finance", "Approvals"]) {
+    for (const label of ["Project Register", "Project Proposals", "Daily Site Record", "Project Costs", "Approvals"]) {
       expect(document.body.textContent).not.toContain(label.toLowerCase());
     }
   });

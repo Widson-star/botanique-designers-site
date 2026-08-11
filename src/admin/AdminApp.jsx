@@ -26,10 +26,11 @@ import PeopleProvider from "./context/PeopleProvider";
 import AdminSiteCosts from "./routes/AdminSiteCosts";
 import AdminSiteCostForm from "./routes/AdminSiteCostForm";
 import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
-import AdminFundRequests from "./routes/AdminFundRequests";
+import AdminAdvances from "./routes/AdminAdvances";
 import AdminFundRequestForm from "./routes/AdminFundRequestForm";
 import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
 import AdminFinance from "./routes/AdminFinance";
+import AdminFinanceUnbuilt from "./routes/AdminFinanceUnbuilt";
 import AdminReports from "./routes/AdminReports";
 import AdminPeople from "./routes/AdminPeople";
 import AdminPersonDetail from "./routes/AdminPersonDetail";
@@ -64,9 +65,6 @@ export default function AdminApp() {
     const storedSession = getStoredSession();
     if (!storedSession) return;
 
-    // Storage is browser-only. Restore it after the deterministic signed-out
-    // first render, and enter the profile-validation screen before exposing any
-    // authenticated admin content.
     let cancelled = false;
     queueMicrotask(() => {
       if (cancelled) return;
@@ -158,9 +156,6 @@ export default function AdminApp() {
     setAuthStatus("idle");
   }
 
-  // Missing Supabase config fails safe, scoped to /admin only:
-  //   - production build: a clear admin-only error (never the public site, never fake data)
-  //   - development: the clearly-labelled seed preview below
   if (!supabaseConfigured && import.meta.env.PROD) {
     return <AdminConfigError />;
   }
@@ -224,10 +219,6 @@ export default function AdminApp() {
               }
             >
               <Route path="/admin" element={<AdminDashboard />} />
-              {/* BD-ALERTS-01: /admin/work-inbox is deliberately NOT routed.
-                  The full-page Work Inbox was rejected on 3 August 2026 and
-                  Alerts now live behind the header bell. Any stale link falls
-                  through to the Dashboard below rather than 404ing. */}
               <Route path="/admin/projects" element={<AdminProjects />} />
               <Route path="/admin/projects/new" element={<AdminProjectForm mode="create" />} />
               <Route path="/admin/projects/:id" element={<AdminProjectDetail />} />
@@ -244,14 +235,18 @@ export default function AdminApp() {
               <Route path="/admin/site-costs/new" element={<AdminSiteCostForm />} />
               <Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} />
               <Route path="/admin/site-costs/:claimId/edit" element={<AdminSiteCostForm />} />
-              <Route path="/admin/fund-requests" element={<AdminFundRequests />} />
+              {/* Existing fund-request/release/acquittal routes are retained as
+                  implementation paths; the user-facing Finance area is Advances. */}
+              <Route path="/admin/fund-requests" element={<AdminAdvances />} />
               <Route path="/admin/fund-requests/new" element={<AdminFundRequestForm />} />
               <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
               <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
               <Route path="/admin/finance" element={<AdminFinance />} />
+              <Route path="/admin/finance/project-financials" element={<AdminFinanceUnbuilt area="project-financials" />} />
+              <Route path="/admin/finance/company-expenses" element={<AdminFinanceUnbuilt area="company-expenses" />} />
+              <Route path="/admin/finance/staff-compensation" element={<AdminFinanceUnbuilt area="staff-compensation" />} />
               <Route path="/admin/people" element={<AdminPeople />} />
               <Route path="/admin/people/:personId" element={<AdminPersonDetail />} />
-              {/* Declared before the /admin/* catch-all, per the existing pattern. */}
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Route>

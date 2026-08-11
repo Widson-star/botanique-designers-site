@@ -1,18 +1,22 @@
-// The day's operational position, in the five counts the working authority
-// (08-daily-site-record-list-working-authority.png) puts in the first viewport.
+// The day's five status metrics, exactly as the committed authority defines them.
+//
+// AUTHORITY: 08-daily-site-record-list-working-authority.png. The image shows
+// five metric cards across the top of the page, in this order, each with an icon
+// disc, a label, a count and a sub-line naming how many sites it covers:
+//
+//   Due today · Awaiting review · Late · Accepted · Not required
+//
+// PR #102's first pass DELETED these five cards and replaced them with a single
+// invented "day banner", on the reasoning that five equal cards were generic
+// clutter. That was a design heuristic overriding a committed authority image,
+// which is exactly backwards. The cards are restored here and the heuristic is
+// discarded: where the PNG settles a question, the PNG wins.
 //
 // Every count is derived from records the reader can already see. Nothing is
-// stored, nothing is estimated, and a count of zero is a real answer rather than
-// a reason to hide the cell — "no site record is late today" is exactly the
-// thing a Principal opens this page to learn.
-//
-// Two sources, each used for what it is authoritative about:
-//   * `compliance` rows answer "was a record DUE, and did one arrive" — the
-//     database computes due-ness, weekends and not-required in EAT.
-//   * `entries` answer "what state is the record in" — accepted, awaiting
-//     review, returned.
-// They are never mixed: a due count is never inferred from entries, and a state
-// count is never inferred from a compliance status.
+// stored and nothing is estimated. Two sources, each used for what it is
+// authoritative about: `compliance` rows answer "was a record DUE, and did one
+// arrive" — the database computes due-ness, weekends and not-required in EAT;
+// `entries` answer "what state is the record in". They are never mixed.
 
 const AWAITING_REVIEW_STATES = ["submitted", "resubmitted"];
 
@@ -20,57 +24,53 @@ function countSites(rows, pick) {
   return new Set(rows.map(pick).filter(Boolean)).size;
 }
 
-// `n sites` / `n site`, or the authority's own phrasing for the not-required
-// cell, where the number of sites is not the interesting part.
+// "Across N sites", as the authority's sub-line reads.
 function acrossSites(count) {
   return count === 1 ? "Across 1 site" : `Across ${count} sites`;
 }
 
-export function summariseDay(entries = [], compliance = [], today = "") {
-  const todaysEntries = entries.filter((entry) => entry.workDate === today);
+// The five cards of the authority image, in the authority's order.
+export function dayMetrics(entries = [], compliance = [], today = "") {
+  const todays = entries.filter((entry) => entry.workDate === today);
   const due = compliance.filter((row) => row.due);
   const late = compliance.filter((row) => row.complianceStatus === "entry_late");
   const notRequired = compliance.filter((row) => row.complianceStatus === "waived");
-  const awaiting = todaysEntries.filter((entry) => AWAITING_REVIEW_STATES.includes(entry.state));
-  const accepted = todaysEntries.filter((entry) => entry.state === "accepted");
+  const awaiting = todays.filter((entry) => AWAITING_REVIEW_STATES.includes(entry.state));
+  const accepted = todays.filter((entry) => entry.state === "accepted");
 
   return [
     {
-      key: "due",
-      label: "Due today",
-      value: due.length,
-      hint: acrossSites(countSites(due, (row) => row.projectId)),
-      tone: "default",
+      key: "due", label: "Due today", icon: "calendar", tone: "neutral",
+      value: due.length, hint: acrossSites(countSites(due, (row) => row.projectId)),
     },
     {
-      key: "awaiting_review",
-      label: "Awaiting review",
-      value: awaiting.length,
-      hint: acrossSites(countSites(awaiting, (entry) => entry.projectId)),
-      tone: awaiting.length > 0 ? "waiting" : "default",
+      key: "awaiting_review", label: "Awaiting review", icon: "clock",
+      tone: awaiting.length > 0 ? "waiting" : "neutral",
+      value: awaiting.length, hint: acrossSites(countSites(awaiting, (entry) => entry.projectId)),
     },
     {
-      key: "late",
-      label: "Late",
-      value: late.length,
-      hint: acrossSites(countSites(late, (row) => row.projectId)),
-      tone: late.length > 0 ? "attention" : "default",
+      key: "late", label: "Late", icon: "alert",
+      tone: late.length > 0 ? "attention" : "neutral",
+      value: late.length, hint: acrossSites(countSites(late, (row) => row.projectId)),
     },
     {
-      key: "accepted",
-      label: "Accepted",
-      value: accepted.length,
-      hint: acrossSites(countSites(accepted, (entry) => entry.projectId)),
-      tone: accepted.length > 0 ? "settled" : "default",
+      key: "accepted", label: "Accepted", icon: "check",
+      tone: accepted.length > 0 ? "settled" : "neutral",
+      value: accepted.length, hint: acrossSites(countSites(accepted, (entry) => entry.projectId)),
     },
     {
-      key: "not_required",
-      label: "Not required",
-      value: notRequired.length,
-      hint: "No work planned",
-      tone: "default",
+      key: "not_required", label: "Not required", icon: "pause", tone: "neutral",
+      value: notRequired.length, hint: "No work planned",
     },
   ];
+}
+
+// Sites that are due today and have no record at all. The authority image has no
+// missing state in its illustrative data, so it settles no treatment for one;
+// this is real compliance truth the product must still surface, and it is shown
+// in the authority's own contextual bottom bar rather than as an invented banner.
+export function missingSites(compliance = []) {
+  return compliance.filter((row) => row.complianceStatus === "missing");
 }
 
 // The one action a row is actually waiting for. The authority puts a verb in

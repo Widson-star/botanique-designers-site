@@ -1,23 +1,30 @@
-// Daily Site Record — the day's operational position.
+// Daily Site Record — the day's list.
 //
-// Visual authority: docs/ui-authority/operations-hub/working-authority/
-// 08-daily-site-record-list-working-authority.png (frozen, Visual Authority
-// Tranche 1). The composition the authority settles, top to bottom:
+// AUTHORITY: docs/ui-authority/operations-hub/working-authority/
+// 08-daily-site-record-list-working-authority.png (frozen, committed).
 //
-//   1. the day's counts, before any record
-//   2. what still needs a record at all
-//   3. compact filtering, including which day is being read
-//   4. one row per record: site, day, plan, workforce, planned cost, status,
-//      and the single next action that row is waiting for
-//   5. the hand-off to cost claims, stated once
+// The page is built FROM that image, region by region:
 //
-// Deliberate deviations from the authority image are recorded in
-// docs/ui-authority/operations-hub/VISUAL-AUTHORITY-TRANCHE-1.md. The two that
-// matter here: the illustrative image shows no missing record, so its five cards
-// have room for "Accepted" — the real page keeps the missing-record band, which
-// is the more urgent truth; and the per-row overflow menu is not implemented,
-// because no per-row action has been settled that the row itself does not
-// already offer.
+//   1. title + subtitle, "New site record" at the right
+//   2. FIVE metric cards — Due today · Awaiting review · Late · Accepted ·
+//      Not required — each an icon disc, label, count and "Across N sites"
+//   3. filter chips (Today · Awaiting review · Late · Returned · Accepted · All)
+//      with the work-date control and filters at the right of the same row
+//   4. the record table: Project / Site · Work date · Site plan ·
+//      Planned workforce · Planned labour cost · Status · Next action
+//   5. "Showing 1 to N of N records" at the foot of the table
+//   6. a contextual bottom bar ending in a link to Cost Claims
+//
+// CORRECTION, 10 August 2026. PR #102's first pass deleted region 2 entirely and
+// replaced it with an invented "day banner", reasoning that five equal cards
+// were generic clutter. That was a design heuristic overriding a committed
+// authority image. The five cards are restored. Where the PNG settles a
+// question the PNG wins, and generic principles apply only where it is silent.
+//
+// The one thing the image does not settle is a site that is DUE but has no
+// record at all — its illustrative data has none. That is real compliance truth
+// the product must still surface, so it uses region 6, the image's own
+// contextual bottom bar, rather than a new banner of my own invention.
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
@@ -28,9 +35,12 @@ import { financialFollowUpSummary } from "../utils/dailySiteCostLink";
 import { canSeeSiteCosts } from "../utils/siteCostCapabilities";
 import { todayIso } from "../utils/dailySiteFormatters";
 import {
-  canSeeDailySiteOperations, canRecordDailySiteEntry, canReviewDailySiteEntry, summarizeCompliance,
+  canSeeDailySiteOperations, canRecordDailySiteEntry, canReviewDailySiteEntry,
 } from "../utils/dailySiteCapabilities";
-import { nextActionLabel, projectMonogram, summariseDay } from "../utils/dailySiteDaySummary";
+import {
+  dayMetrics, missingSites, nextActionLabel, projectMonogram,
+} from "../utils/dailySiteDaySummary";
+import { Chip, Disc, Glyph } from "../components/ui/Surfaces";
 import { ROLES } from "../constants/roles";
 import { describeActiveFilters, withinReportedWorkDates } from "../utils/listUrlFilters";
 import {
@@ -42,6 +52,8 @@ import {
   plannedWorkforceSummary,
 } from "../utils/dailySiteFormatters";
 
+// The authority's filter row. The image shows plain chips with no counts — the
+// counts live in the five cards above — so they carry none here either.
 const FILTERS = [
   { key: "today", label: "Today" },
   { key: "submitted", label: "Awaiting review" },
@@ -51,23 +63,14 @@ const FILTERS = [
   { key: "all", label: "All" },
 ];
 
-// Status badge tone. Restrained: colour marks what is waiting or wrong, and
-// everything settled stays quiet.
 const STATE_TONE = {
-  draft: "bg-stone-100 text-gray-700",
-  submitted: "bg-amber-100 text-amber-900",
-  resubmitted: "bg-amber-100 text-amber-900",
-  returned_for_correction: "bg-orange-100 text-orange-900",
-  accepted: "bg-emerald-100 text-emerald-800",
-  voided: "bg-stone-100 text-gray-600",
-  superseded: "bg-stone-100 text-gray-600",
-};
-
-const CARD_TONE = {
-  default: "text-botanique-charcoal",
-  waiting: "text-amber-700",
-  attention: "text-red-700",
-  settled: "text-emerald-700",
+  draft: "neutral",
+  submitted: "waiting",
+  resubmitted: "waiting",
+  returned_for_correction: "waiting",
+  accepted: "settled",
+  voided: "neutral",
+  superseded: "neutral",
 };
 
 function matchesFilter(entry, filter, today) {
@@ -88,23 +91,19 @@ function matchesFilter(entry, filter, today) {
   }
 }
 
-// The timing line under the status badge — when the record actually arrived, and
-// whether that was late. Never a deadline this product does not hold.
-function timingLine(entry) {
-  if (entry.reviewedAt && entry.state === "accepted") {
-    return `Accepted ${shortTime(entry.reviewedAt)}`;
-  }
-  if (entry.submittedAt) {
-    return `${entry.isLate ? "Submitted late" : "Submitted"} ${shortTime(entry.submittedAt)}`;
-  }
-  if (entry.state === "draft") return "Not yet submitted";
-  return "";
-}
-
 function shortTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+// The authority's status sub-line: when the record arrived, and whether that was
+// late. Never a deadline this product does not hold.
+function timingLine(entry) {
+  if (entry.reviewedAt && entry.state === "accepted") return `Accepted ${shortTime(entry.reviewedAt)}`;
+  if (entry.submittedAt) return `${entry.isLate ? "Submitted late" : "Submitted"} ${shortTime(entry.submittedAt)}`;
+  if (entry.state === "draft") return "Not yet submitted";
+  return "";
 }
 
 // Filter state lives in the URL so a Reports drill-through arrives at exactly
@@ -133,16 +132,13 @@ export default function AdminDailySiteOperations() {
     setSearchParams(next, { replace: true });
   }
 
-  // One calendar day, expressed through the from/to contract the whole product
-  // already shares, so a day chosen here and a day arrived at from Reports are
-  // the same URL.
+  // One calendar day, through the from/to contract the whole product shares, so
+  // a day chosen here and a day arrived at from Reports are the same URL.
   function setWorkDate(value) {
     const next = new URLSearchParams(searchParams);
     if (value) {
       next.set("from", value);
       next.set("to", value);
-      // A single named day answers for itself; keeping "Today" selected as well
-      // would silently return nothing on any other date.
       if (value !== today) next.set("status", "all");
     } else {
       next.delete("from");
@@ -155,12 +151,11 @@ export default function AdminDailySiteOperations() {
     () => Object.fromEntries(projects.map((project) => [project.id, project])),
     [projects]
   );
-  // A manager whose project authority has not been established yet.
   const noAuthority =
     role === ROLES.MANAGER && status === "ready" && (authorisedProjects || []).length === 0;
 
-  const summary = useMemo(() => summarizeCompliance(compliance), [compliance]);
-  const dayCards = useMemo(() => summariseDay(entries, compliance, today), [entries, compliance, today]);
+  const metrics = useMemo(() => dayMetrics(entries, compliance, today), [entries, compliance, today]);
+  const missing = useMemo(() => missingSites(compliance), [compliance]);
   const visibleEntries = useMemo(
     () => entries.filter((entry) =>
       matchesFilter(entry, filter, today) &&
@@ -174,8 +169,6 @@ export default function AdminDailySiteOperations() {
     from,
     to,
   });
-  // Projects that actually have a record in view, so the filter offers real
-  // choices rather than every project the reader can see.
   const filterableProjects = useMemo(() => {
     const ids = new Set(entries.map((entry) => entry.projectId));
     if (projectFilter !== "all") ids.add(projectFilter);
@@ -185,7 +178,7 @@ export default function AdminDailySiteOperations() {
 
   if (!canSeeDailySiteOperations(role)) {
     return (
-      <div className="rounded-lg border border-stone-200 bg-white p-8">
+      <div className="rounded-xl border border-stone-200 bg-white p-8">
         <h1 className="text-xl font-bold">Daily Site Record unavailable</h1>
         <p className="mt-2 text-sm text-gray-500">This role does not have access to daily site operations.</p>
       </div>
@@ -194,10 +187,11 @@ export default function AdminDailySiteOperations() {
 
   return (
     <div className="space-y-4">
+      {/* 1 · Title, subtitle, primary action. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">Daily Site Record</h1>
-          <p className="mt-1 max-w-2xl text-sm text-gray-600">
+          <h1 className="text-[24px] font-semibold leading-tight">Daily Site Record</h1>
+          <p className="mt-1 max-w-2xl text-[13px] text-gray-600">
             Capture and review daily progress at every site. Completed records feed directly into
             cost claims.
           </p>
@@ -205,7 +199,7 @@ export default function AdminDailySiteOperations() {
         {canRecordDailySiteEntry(role) && !noAuthority && (
           <Link
             to="/admin/daily-site-operations/new"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md bg-botanique-green px-4 text-sm font-semibold text-white transition hover:bg-botanique-dark"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-botanique-green px-4 text-[13px] font-semibold text-white transition hover:bg-botanique-dark"
           >
             New site record
           </Link>
@@ -213,7 +207,7 @@ export default function AdminDailySiteOperations() {
       </div>
 
       {noAuthority && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-5" role="status">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5" role="status">
           <h2 className="text-base font-semibold text-amber-900">No projects assigned to you yet</h2>
           <p className="mt-1 text-sm leading-6 text-amber-900">
             You are not yet the lead of, or assigned to, any project, so there is nothing to
@@ -223,63 +217,34 @@ export default function AdminDailySiteOperations() {
         </div>
       )}
 
-      {status === "loading" && (
-        <div className="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-gray-600">
-          Loading site records…
-        </div>
-      )}
       {status === "error" && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error || "Unable to load site operations."}
         </div>
       )}
 
-      {/* 1. The day's position, before any individual record. */}
-      <section aria-label="Today's site record position">
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {dayCards.map((card) => (
-            <div key={card.key} className="rounded-lg border border-stone-200 bg-white px-3.5 py-3">
-              <p className="text-xs font-medium text-gray-500">{card.label}</p>
-              <p className={`mt-1 text-2xl font-semibold tabular-nums ${CARD_TONE[card.tone]}`}>
-                {card.value}
+      {/* 2 · The authority's five metric cards. */}
+      {!noAuthority && (
+        <section aria-label="Today's site record position" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          {metrics.map((metric) => (
+            <div key={metric.key} className="rounded-xl border border-stone-200 bg-white px-4 py-3.5">
+              <div className="flex items-start gap-2.5">
+                <Disc name={metric.icon} tone={metric.tone} size="h-9 w-9" />
+                <p className="min-w-0 pt-1 text-[12.5px] font-medium leading-snug text-gray-600">
+                  {metric.label}
+                </p>
+              </div>
+              <p className="mt-2 text-[26px] font-semibold leading-none tabular-nums text-botanique-charcoal">
+                {metric.value}
               </p>
-              <p className="mt-0.5 truncate text-[11px] text-gray-500">{card.hint}</p>
+              <p className="mt-1.5 truncate text-[11.5px] text-gray-500">{metric.hint}</p>
             </div>
           ))}
-        </div>
+        </section>
+      )}
 
-        {/* 2. Attention before records: a site with no record at all outranks
-            every record that already exists. */}
-        {summary.missing > 0 && (
-          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-            <p className="text-sm font-semibold text-amber-900">
-              {summary.missing === 1
-                ? "One site still needs a morning record today"
-                : `${summary.missing} sites still need a morning record today`}
-            </p>
-            <ul className="mt-2 flex flex-wrap gap-2">
-              {summary.missingProjects.map((row) => (
-                <li key={row.projectId}>
-                  <Link
-                    to={`/admin/daily-site-operations/new?project=${row.projectId}`}
-                    className="inline-flex min-h-9 items-center rounded-full border border-amber-300 bg-white px-3 text-sm font-medium text-amber-900 hover:bg-amber-100"
-                  >
-                    {row.projectName} → record
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {status === "ready" && summary.due > 0 && summary.missing === 0 && (
-          <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-900">
-            Every active site has a morning record today, or was marked not required.
-          </p>
-        )}
-      </section>
-
-      {/* 3. Compact filtering: which records, and which day. */}
-      <section className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      {/* 3 · Filter chips, with the day and site controls on the same row. */}
+      <section className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Record filters">
           {FILTERS.map((tab) => (
             <button
@@ -288,9 +253,9 @@ export default function AdminDailySiteOperations() {
               role="tab"
               aria-selected={filter === tab.key}
               onClick={() => setParam("status", tab.key, "today")}
-              className={`min-h-9 rounded-full px-3.5 text-sm font-medium transition ${
+              className={`min-h-9 rounded-lg px-3.5 text-[12.5px] font-medium transition ${
                 filter === tab.key
-                  ? "bg-botanique-green text-white"
+                  ? "border border-botanique-green/30 bg-[#eef2ee] text-botanique-green"
                   : "border border-stone-200 bg-white text-gray-600 hover:bg-stone-50"
               }`}
             >
@@ -299,22 +264,23 @@ export default function AdminDailySiteOperations() {
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="shrink-0">Work date</span>
+          <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-stone-200 bg-white px-2.5 text-[12.5px] text-gray-600">
+            <Glyph name="calendar" className="h-3.5 w-3.5 text-gray-400" />
+            <span className="sr-only sm:not-sr-only">Work date</span>
             <input
               type="date"
               value={from && from === to ? from : ""}
               onChange={(event) => setWorkDate(event.target.value)}
-              className="min-h-9 rounded-md border border-stone-300 bg-white px-2.5 text-sm"
+              className="border-0 bg-transparent p-0 text-[12.5px] focus:outline-none"
             />
           </label>
           {filterableProjects.length > 1 && (
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+            <label className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-stone-200 bg-white px-2.5 text-[12.5px] text-gray-600">
               <span className="shrink-0">Site</span>
               <select
                 value={projectFilter}
                 onChange={(event) => setParam("project", event.target.value, "all")}
-                className="min-h-9 max-w-[12rem] rounded-md border border-stone-300 bg-white px-2.5 text-sm"
+                className="max-w-[11rem] border-0 bg-transparent p-0 text-[12.5px] focus:outline-none"
               >
                 <option value="all">All sites</option>
                 {filterableProjects.map((project) => (
@@ -327,35 +293,46 @@ export default function AdminDailySiteOperations() {
       </section>
 
       {activeFilterSummary && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-gray-600">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-[12.5px] text-gray-600">
           <span>Filtered to {activeFilterSummary}.</span>
-          <Link to="/admin/daily-site-operations" className="min-h-11 py-2 font-semibold text-botanique-green hover:underline">Clear filters</Link>
+          <Link to="/admin/daily-site-operations" className="min-h-9 py-1.5 font-semibold text-botanique-green hover:underline">Clear filters</Link>
         </div>
       )}
 
-      {/* 4. The records. */}
-      {visibleEntries.length === 0 ? (
-        <div className="rounded-lg border border-stone-200 bg-white px-5 py-6">
-          <p className="text-sm font-medium text-botanique-charcoal">No site records in this view</p>
-          <p className="mt-1 text-sm text-gray-500">
+      {/* 4 + 5 · The record table and its record count. */}
+      {status === "loading" ? (
+        <div className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-[13px] text-gray-600">
+          Loading site records…
+        </div>
+      ) : visibleEntries.length === 0 ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-stone-200 bg-white px-4 py-3.5">
+          <Disc name="pause" tone="unbuilt" size="h-8 w-8" />
+          <p className="min-w-0 flex-1 text-[12.5px] text-gray-600">
             {filter === "today"
-              ? "Nothing has been recorded for today yet under these filters."
-              : "Try another status, day or site."}
+              ? "No record has been captured for today yet under these filters."
+              : "No site record matches this status, day or site."}
           </p>
+          {filter !== "all" && (
+            <button
+              type="button"
+              onClick={() => setParam("status", "all", "today")}
+              className="min-h-9 shrink-0 text-[12.5px] font-semibold text-botanique-green hover:underline"
+            >
+              Show all records
+            </button>
+          )}
         </div>
       ) : (
         <>
-          {/* Desktop / wide tablet: structured table (auto layout so no column
-              is starved to a zero width and the date never wraps vertically). */}
-          <div className="hidden overflow-x-auto rounded-lg border border-stone-200 bg-white md:block">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-stone-200 bg-stone-50 text-xs text-gray-500">
+          <div className="hidden overflow-x-auto rounded-xl border border-stone-200 bg-white md:block">
+            <table className="w-full text-left text-[13px]">
+              <thead className="border-b border-stone-100 text-[11.5px] text-gray-500">
                 <tr>
-                  <th className="w-[26%] px-4 py-3 font-medium">Project / Site</th>
+                  <th className="w-[24%] px-4 py-3 font-medium">Project / Site</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium">Work date</th>
-                  <th className="w-[20%] px-4 py-3 font-medium">Site plan</th>
+                  <th className="w-[18%] px-4 py-3 font-medium">Site plan</th>
                   <th className="whitespace-nowrap px-4 py-3 font-medium">Planned workforce</th>
-                  <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Planned labour cost</th>
+                  <th className="whitespace-nowrap px-4 py-3 font-medium">Planned labour cost</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 text-right font-medium">Next action</th>
                 </tr>
@@ -369,11 +346,11 @@ export default function AdminDailySiteOperations() {
                   const followUp = financialFollowUpSummary(entry, claims, role, finance);
                   const timing = timingLine(entry);
                   return (
-                    <tr key={entry.id} className="align-top">
-                      <td className="px-4 py-3">
+                    <tr key={entry.id} className="align-top transition hover:bg-[#fbfbfa]">
+                      <td className="px-4 py-3.5">
                         <div className="flex items-start gap-2.5">
                           <span
-                            className="mt-0.5 hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eef2ee] text-[11px] font-semibold text-botanique-green xl:flex"
+                            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eef2ee] text-[11px] font-semibold text-botanique-green"
                             aria-hidden="true"
                           >
                             {projectMonogram(projectName)}
@@ -383,49 +360,44 @@ export default function AdminDailySiteOperations() {
                           </span>
                         </div>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                      <td className="whitespace-nowrap px-4 py-3.5 text-gray-600">
                         {formatWorkDate(entry.workDate)}
                         {entry.workDate === today && (
-                          <span className="mt-0.5 block text-xs text-gray-500">Today</span>
+                          <span className="mt-0.5 block text-[11.5px] text-gray-500">Today</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="block font-medium text-botanique-charcoal">
+                      <td className="px-4 py-3.5">
+                        <span className="block text-botanique-charcoal">
                           {DISPOSITION_LABELS[entry.disposition]}
                         </span>
-                        <span className="mt-0.5 line-clamp-2 break-words text-xs text-gray-500">
+                        <span className="mt-0.5 line-clamp-2 break-words text-[11.5px] text-gray-500">
                           {plannedActivitySummary(entry)}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                      <td className="whitespace-nowrap px-4 py-3.5 text-gray-600">
                         {plannedWorkforceSummary(entry)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-gray-700">
+                      <td className="whitespace-nowrap px-4 py-3.5 tabular-nums text-gray-700">
                         {entry.disposition === "working" ? formatKes(entry.plannedLabourCost) : "—"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3.5">
                         <span className="flex flex-wrap items-center gap-1.5">
-                          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATE_TONE[entry.state] || "bg-stone-100 text-gray-700"}`}>
+                          <Chip tone={STATE_TONE[entry.state] || "neutral"}>
                             {ENTRY_STATE_LABELS[entry.state]}
-                          </span>
-                          {isLateBadge && (
-                            <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                              Late
-                            </span>
-                          )}
+                          </Chip>
+                          {isLateBadge && <Chip tone="attention">Late</Chip>}
                         </span>
-                        {timing && <span className="mt-0.5 block text-xs text-gray-500">{timing}</span>}
+                        {timing && <span className="mt-1 block text-[11.5px] text-gray-500">{timing}</span>}
                         {/* Financial follow-up stays one compact line. Both
-                            dimensions when both say something; never a column
-                            each. */}
+                            dimensions when both say something; never a column. */}
                         {followUp && (
-                          <span className="mt-0.5 block max-w-[14rem] break-words text-xs text-gray-500">{followUp}</span>
+                          <span className="mt-0.5 block break-words text-[11.5px] text-gray-500">{followUp}</span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <td className="whitespace-nowrap px-4 py-3.5 text-right">
                         <Link
                           to={`/admin/daily-site-operations/${entry.id}`}
-                          className="inline-flex min-h-9 items-center rounded-md border border-stone-300 bg-white px-3 text-sm font-semibold text-botanique-green transition hover:bg-stone-50"
+                          className="inline-flex min-h-9 items-center rounded-lg border border-stone-300 bg-white px-3.5 text-[12.5px] font-medium text-botanique-charcoal transition hover:border-botanique-green hover:text-botanique-green"
                         >
                           {nextActionLabel(entry, canReview)}
                         </Link>
@@ -435,11 +407,15 @@ export default function AdminDailySiteOperations() {
                 })}
               </tbody>
             </table>
+            <p className="border-t border-stone-100 px-4 py-3 text-[12px] text-gray-500">
+              Showing 1 to {visibleEntries.length} of {visibleEntries.length}{" "}
+              {visibleEntries.length === 1 ? "record" : "records"}
+            </p>
           </div>
 
-          {/* Mobile / narrow tablet: stacked cards (no compressed table, no
-              horizontal overflow, large touch targets, plain-language labels). */}
-          <ul className="space-y-3 md:hidden">
+          {/* Mobile: stacked cards. No compressed table, no horizontal overflow,
+              large touch targets. */}
+          <ul className="space-y-2.5 md:hidden">
             {visibleEntries.map((entry) => {
               const project = projectsById[entry.projectId];
               const projectName = project?.projectName || "Authorised project";
@@ -451,7 +427,7 @@ export default function AdminDailySiteOperations() {
                 <li key={entry.id}>
                   <Link
                     to={`/admin/daily-site-operations/${entry.id}`}
-                    className="block rounded-lg border border-stone-200 bg-white p-4 transition hover:border-botanique-green/40 hover:bg-stone-50"
+                    className="block rounded-xl border border-stone-200 bg-white p-3.5 transition hover:border-botanique-green/40"
                   >
                     <div className="flex items-start gap-2.5">
                       <span
@@ -462,49 +438,45 @@ export default function AdminDailySiteOperations() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-semibold text-botanique-charcoal">{projectName}</p>
-                        <p className="mt-0.5 text-sm text-gray-600">
+                        <p className="mt-0.5 text-[12.5px] text-gray-600">
                           {formatWorkDate(entry.workDate)}
                           {entry.workDate === today ? " · Today" : ""}
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATE_TONE[entry.state] || "bg-stone-100 text-gray-700"}`}>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                      <Chip tone={STATE_TONE[entry.state] || "neutral"}>
                         {ENTRY_STATE_LABELS[entry.state]}
-                      </span>
-                      {isLateBadge && (
-                        <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
-                          Late
-                        </span>
-                      )}
-                      {timing && <span className="text-xs text-gray-500">{timing}</span>}
+                      </Chip>
+                      {isLateBadge && <Chip tone="attention">Late</Chip>}
+                      {timing && <span className="text-[11.5px] text-gray-500">{timing}</span>}
                     </div>
 
-                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                    <dl className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2 text-[12.5px]">
                       <CardFact label="Site plan">
-                        <span className="font-medium text-botanique-charcoal">
+                        <span className="text-botanique-charcoal">
                           {DISPOSITION_LABELS[entry.disposition]}
                         </span>
-                        <span className="mt-0.5 block break-words text-xs text-gray-500">
+                        <span className="mt-0.5 block break-words text-[11.5px] text-gray-500">
                           {plannedActivitySummary(entry)}
                         </span>
                       </CardFact>
                       <CardFact label="Planned workforce">
                         <span className="text-botanique-charcoal">{plannedWorkforceSummary(entry)}</span>
                         {entry.disposition === "working" && (
-                          <span className="mt-0.5 block break-words text-xs text-gray-500">
+                          <span className="mt-0.5 block break-words text-[11.5px] text-gray-500">
                             {formatKes(entry.plannedLabourCost)}
                           </span>
                         )}
                       </CardFact>
                     </dl>
 
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3">
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-2.5">
                       {followUp
-                        ? <span className="min-w-0 break-words text-xs text-gray-500">{followUp}</span>
+                        ? <span className="min-w-0 break-words text-[11.5px] text-gray-500">{followUp}</span>
                         : <span />}
-                      <span className="shrink-0 text-sm font-semibold text-botanique-green">
+                      <span className="shrink-0 text-[12.5px] font-semibold text-botanique-green">
                         {nextActionLabel(entry, canReview)}
                       </span>
                     </div>
@@ -513,29 +485,63 @@ export default function AdminDailySiteOperations() {
               );
             })}
           </ul>
-
-          <p className="text-xs text-gray-500">
-            Showing {visibleEntries.length} of {entries.length}{" "}
-            {entries.length === 1 ? "record" : "records"}.
-          </p>
         </>
       )}
 
-      {/* 5. The hand-off, stated once at the foot of the day's list. No claim is
-          created here; Project Costs owns the claim, its decision and its history. */}
-      {canSeeSiteCosts(role) && (
-        <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-600">
-            Once a site record is accepted, the day's known costs move into a cost claim — normally
-            by 4:00 pm. Raising a claim is always a deliberate step.
-          </p>
+      {/* 6 · The authority's contextual bottom bar. When sites are due with no
+          record at all — a state the image's illustrative data never shows — the
+          bar carries that, because recording them is what the day needs before
+          any claim. Otherwise it carries the image's own cost-claim hand-off. */}
+      {!noAuthority && missing.length > 0 ? (
+        <section className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <Disc name="alert" tone="waiting" size="h-9 w-9" />
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-botanique-charcoal">
+                {missing.length === 1
+                  ? "1 site is due today and has no record yet"
+                  : `${missing.length} sites are due today and have no record yet`}
+              </p>
+              <ul className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                {missing.map((row) => (
+                  <li key={row.projectId}>
+                    <Link
+                      to={`/admin/daily-site-operations/new?project=${row.projectId}`}
+                      className="text-[12.5px] font-medium text-botanique-green hover:underline"
+                    >
+                      {row.projectName}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          {canRecordDailySiteEntry(role) && (
+            <Link
+              to="/admin/daily-site-operations/new"
+              className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 text-[12.5px] font-semibold text-botanique-charcoal hover:border-botanique-green hover:text-botanique-green"
+            >
+              Record a site
+              <Glyph name="arrow" className="h-3.5 w-3.5" />
+            </Link>
+          )}
+        </section>
+      ) : canSeeSiteCosts(role) && (
+        <section className="flex flex-col gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <Disc name="money" tone="brand" size="h-9 w-9" />
+            <p className="min-w-0 text-[12.5px] text-gray-600">
+              Once all due site records are accepted, the next step is to raise cost claims.
+            </p>
+          </div>
           <Link
             to="/admin/site-costs"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold text-botanique-green hover:bg-stone-50"
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-300 bg-white px-4 text-[12.5px] font-semibold text-botanique-charcoal hover:border-botanique-green hover:text-botanique-green"
           >
-            Go to Project Costs
+            Go to Cost Claims
+            <Glyph name="arrow" className="h-3.5 w-3.5" />
           </Link>
-        </div>
+        </section>
       )}
     </div>
   );
@@ -544,7 +550,7 @@ export default function AdminDailySiteOperations() {
 function CardFact({ label, children }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400">{label}</dt>
+      <dt className="text-[10.5px] font-medium uppercase tracking-wide text-gray-400">{label}</dt>
       <dd className="mt-0.5">{children}</dd>
     </div>
   );
