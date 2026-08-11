@@ -4,10 +4,9 @@ import { canSeeFinance } from "../utils/financeCapabilities";
 import { FINANCE_AREAS } from "../utils/financePortfolio";
 import { Disc } from "../components/ui/Surfaces";
 
-// Company Expenses and Staff Compensation have an authorised place in Finance,
-// but no data model yet. Keep the page truthful and deliberately small: the
-// sidebar already provides navigation, so this page only needs to say that the
-// area is not available yet and return the reader to Finance.
+// Reserved Finance areas stay intentionally small until a real model exists.
+// Their job is to preserve the agreed information architecture without
+// pretending a workflow or figures already exist.
 export default function AdminFinanceUnbuilt({ area: areaId }) {
   const { role } = useAdminData();
   const area = FINANCE_AREAS.find((item) => item.id === areaId);
@@ -21,9 +20,11 @@ export default function AdminFinanceUnbuilt({ area: areaId }) {
     );
   }
 
-  const detail = areaId === "company-expenses"
-    ? "Operating expenses, subscriptions and company bills are not tracked in the Hub yet."
-    : "Staff payments, allowances and compensation are not tracked in the Hub yet.";
+  const detail = {
+    "project-financials": "Agreed project values, client payment milestones, receipts and client balances are not tracked in the Hub yet.",
+    "company-expenses": "Operating expenses, subscriptions, advertising and company bills are not tracked in the Hub yet.",
+    "staff-compensation": "Staff payments, allowances and compensation are not tracked in the Hub yet.",
+  }[areaId];
 
   return (
     <section className="space-y-4">
