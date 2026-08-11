@@ -20,15 +20,20 @@ const claims = [
 const requests = [
   {
     id: "r1", requestNumber: "BDFR-2026-0001", projectId: "p1", status: "approved",
-    totalRequestedAmount: 8000, updatedAt: "2026-08-04T09:00:00Z",
+    totalRequestedAmount: 8000, intendedCustodyType: "operations_manager_accountable_advance",
+    updatedAt: "2026-08-04T09:00:00Z",
   },
   {
     id: "r2", requestNumber: "BDFR-2026-0002", projectId: "p1", status: "submitted",
-    totalRequestedAmount: 3000, updatedAt: "2026-08-05T09:00:00Z",
+    totalRequestedAmount: 3000, intendedCustodyType: "operations_manager_accountable_advance",
+    updatedAt: "2026-08-05T09:00:00Z",
   },
 ];
 const releases = [
-  { id: "rel1", fundRequestId: "r1", status: "recorded", releasedAmount: 5000 },
+  {
+    id: "rel1", fundRequestId: "r1", status: "recorded", releasedAmount: 5000,
+    custodyDisposition: "operations_manager_accountable_advance",
+  },
 ];
 
 function renderFinance({ role = "owner", costsOverrides = {}, fundsOverrides = {} } = {}) {
@@ -49,46 +54,49 @@ function renderFinance({ role = "owner", costsOverrides = {}, fundsOverrides = {
 }
 
 describe("Finance landing — committed Finance authority plus Founder amendments", () => {
-  it("shows the four Finance areas together instead of a second five-tab navigation", () => {
+  it("shows the five settled Finance areas together without a second tab navigation", () => {
     renderFinance();
 
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
     const region = screen.getByLabelText("Finance areas");
     const names = within(region).getAllByRole("article").map((item) => item.getAttribute("aria-label"));
     expect(names).toEqual([
+      "Project Financials",
       "Project Costs",
       "Company Expenses",
       "Staff Compensation",
-      "Funding, Payments & Reconciliation",
+      "Advances",
     ]);
   });
 
-  it("links each area to the child route owned by the Finance sidebar", () => {
+  it("links each area to the route owned by the Finance sidebar", () => {
     renderFinance();
     const region = screen.getByLabelText("Finance areas");
 
+    expect(within(within(region).getByLabelText("Project Financials")).getByRole("link"))
+      .toHaveAttribute("href", "/admin/finance/project-financials");
     expect(within(within(region).getByLabelText("Project Costs")).getByRole("link"))
       .toHaveAttribute("href", "/admin/site-costs");
     expect(within(within(region).getByLabelText("Company Expenses")).getByRole("link"))
       .toHaveAttribute("href", "/admin/finance/company-expenses");
     expect(within(within(region).getByLabelText("Staff Compensation")).getByRole("link"))
       .toHaveAttribute("href", "/admin/finance/staff-compensation");
-    expect(within(within(region).getByLabelText("Funding, Payments & Reconciliation")).getByRole("link"))
+    expect(within(within(region).getByLabelText("Advances")).getByRole("link"))
       .toHaveAttribute("href", "/admin/fund-requests");
   });
 
-  it("keeps unavailable Company Expenses and Staff Compensation truthful and figure-free", () => {
+  it("keeps unavailable areas truthful and figure-free", () => {
     renderFinance();
     const region = screen.getByLabelText("Finance areas");
 
-    for (const name of ["Company Expenses", "Staff Compensation"]) {
+    for (const name of ["Project Financials", "Company Expenses", "Staff Compensation"]) {
       const card = within(region).getByLabelText(name);
       expect(card).toHaveTextContent("Not yet built");
       expect(card.textContent).not.toMatch(/KES/);
     }
   });
 
-  it("uses plain useful summaries rather than financial-position language", () => {
+  it("uses plain Project Costs and Advances summaries", () => {
     const { container } = renderFinance();
     const region = screen.getByLabelText("Finance areas");
 
@@ -97,12 +105,14 @@ describe("Finance landing — committed Finance authority plus Founder amendment
     expect(projectCosts).toHaveTextContent("KES 4,500");
     expect(projectCosts).toHaveTextContent("1 cost");
 
-    const funding = within(region).getByLabelText("Funding, Payments & Reconciliation");
-    expect(funding).toHaveTextContent("Payments recorded");
-    expect(funding).toHaveTextContent("KES 5,000");
+    const advances = within(region).getByLabelText("Advances");
+    expect(advances).toHaveTextContent("Issued");
+    expect(advances).toHaveTextContent("KES 5,000");
+    expect(advances).toHaveTextContent("1 advance");
 
     expect(container.textContent).not.toMatch(/financial position/i);
-    expect(container.textContent).not.toMatch(/not yet funded/i);
+    expect(container.textContent).not.toMatch(/funding/i);
+    expect(container.textContent).not.toMatch(/reconciliation/i);
   });
 
   it("shows Finance at a glance from facts the Hub actually holds", () => {
@@ -113,8 +123,8 @@ describe("Finance landing — committed Finance authority plus Founder amendment
     expect(panel).toHaveTextContent("1 · KES 4,500");
     expect(panel).toHaveTextContent("Approved project costs");
     expect(panel).toHaveTextContent("1 · KES 12,000");
-    expect(panel).toHaveTextContent("Funding requests awaiting decision");
-    expect(panel).toHaveTextContent("Payments recorded");
+    expect(panel).toHaveTextContent("Advance requests awaiting decision");
+    expect(panel).toHaveTextContent("Advances issued");
     expect(panel).toHaveTextContent("1 · KES 5,000");
   });
 
