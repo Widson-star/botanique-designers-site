@@ -119,21 +119,20 @@ describe("URL-addressable drill-through filters", () => {
   });
 
   // /admin/fund-requests is the route; Advances is the surface. The old
-  // fund-request list component has been deleted, so what a drill-through
-  // reaches is the Advances page.
-  //
-  // KNOWN GAP, reported to the Founder and deliberately not papered over here:
-  // AdminAdvances reads only ?view= and ignores ?project=, ?status= and the
-  // period, so a Reports or Finance-portfolio link currently lands on an
-  // unfiltered list. This test states what is true today and must be tightened
-  // to a real narrowing assertion once URL filters exist on Advances.
-  it("lands a fund-request drill-through on the Advances surface", () => {
+  // fund-request list component was deleted, so a drill-through reaches the
+  // Advances page — and it must genuinely narrow, not merely render. FR-0002
+  // is another project's request and belongs to no other custody model, so it
+  // must be absent rather than merely outranked.
+  it("narrows Advances to the project, status and period in the URL", () => {
     wrap(
       <Route path="/admin/fund-requests" element={<AdminAdvances />} />,
       `/admin/fund-requests?project=p1&status=approved&${AUGUST}`
     );
     expect(screen.getByRole("heading", { name: "Advances" })).toBeInTheDocument();
     expect(screen.getByText(/FR-0001/)).toBeInTheDocument();
+    expect(screen.queryByText(/FR-0002/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Filtered to Alego Usonga · Approved · 2026-08-01 to 2026-08-31\./)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/admin/fund-requests");
     // The rejected vocabulary must not reappear on a drill-through either.
     expect(document.body.textContent).not.toMatch(/Funding, Payments & Reconciliation/);
   });

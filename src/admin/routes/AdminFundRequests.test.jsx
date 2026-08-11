@@ -180,6 +180,130 @@ describe("Advances admin surfaces", () => {
     expect(screen.queryByRole("link", { name: "New advance" })).not.toBeInTheDocument();
   });
 
+  // ---------------------------------------------------------------------------
+  // Drill-through integrity. Reports and the Finance portfolio already emit
+  // ?project=, ?status=, ?from= and ?to= against this route. Clicking a figure
+  // must show the records behind that figure, not the whole register.
+  // ---------------------------------------------------------------------------
+  describe("URL drill-through filters", () => {
+    const twoProjects = [
+      { id: "p1", projectName: "Alego Usonga", status: "Ongoing", archived: false },
+      { id: "p2", projectName: "Karen Retreat", status: "Ongoing", archived: false },
+    ];
+    const alegoSubmitted = { ...request, id: "r1", requestNumber: "BDFR-2026-000001", projectId: "p1" };
+    const karenApproved = {
+      ...request, id: "r2", requestNumber: "BDFR-2026-000002", projectId: "p2",
+      status: "approved", totalRequestedAmount: 9000,
+      submittedAt: "2026-07-02T09:00:00Z", decidedAt: "2026-07-06T09:00:00Z",
+    };
+    const alegoIssue = { ...advanceRelease, id: "rel1", fundRequestId: "r1", releasedAt: "2026-08-01T09:00:00Z" };
+    const karenIssue = {
+      ...advanceRelease, id: "rel3", releaseNumber: "BDRL-2026-000003", fundRequestId: "r2",
+      releasedAmount: 4000, releasedAt: "2026-07-04T09:00:00Z",
+    };
+
+    function drill(url, overrides = {}) {
+      const values = contexts({
+        requests: [alegoSubmitted, karenApproved],
+        releases: [alegoIssue, karenIssue],
+        ...overrides,
+      });
+      values.admin.projects = twoProjects;
+      return wrap(<AdminAdvances />, values, url);
+    }
+
+    it("narrows to one project and says so in plain words", () => {
+      drill("/admin/fund-requests?project=p1");
+      expect(screen.getByText(/BDFR-2026-000001/)).toBeInTheDocument();
+      expect(screen.queryByText(/BDFR-2026-000002/)).not.toBeInTheDocument();
+      expect(screen.getByText("Filtered to Alego Usonga.")).toBeInTheDocument();
+      // A project id is machinery. A reader sees the project's name.
+      expect(document.body.textContent).not.toMatch(/\bp1\b/);
+    });
+
+    it("keeps the view working on its own", () => {
+      drill("/admin/fund-requests?view=issued");
+      expect(screen.getByRole("heading", { name: "Issued advances" })).toBeInTheDocument();
+      expect(screen.getAllByText(/KES\s*10,000\.00/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/KES\s*4,000\.00/).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Filtered to/)).not.toBeInTheDocument();
+    });
+
+    it("composes a view with a project filter", () => {
+      drill("/admin/fund-requests?view=issued&project=p2");
+      expect(screen.getByRole("heading", { name: "Issued advances" })).toBeInTheDocument();
+      // Karen Retreat's issued advance only. Alego's is another project's money.
+      expect(screen.getAllByText(/KES\s*4,000\.00/).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/KES\s*10,000\.00/)).not.toBeInTheDocument();
+      expect(screen.getByText("Filtered to Karen Retreat.")).toBeInTheDocument();
+    });
+
+    // financePortfolio emits ?status=submitted for "Advance requests awaiting
+    // your decision", and reportLoader emits ?project=…&status=submitted.
+    it("reveals exactly the records behind an awaiting-decision figure", () => {
+      drill("/admin/fund-requests?project=p1&status=submitted");
+      expect(screen.getByText(/BDFR-2026-000001/)).toBeInTheDocument();
+      expect(screen.queryByText(/BDFR-2026-000002/)).not.toBeInTheDocument();
+      // Plain words for the status, and never "released".
+      expect(screen.getByText("Filtered to Alego Usonga · Awaiting decision.")).toBeInTheDocument();
+    });
+
+    // financePortfolio emits ?status=approved for its five approved-advance
+    // figures. An approved request is an approved request — it is never
+    // silently restated as money issued or as a paid Project Cost.
+    it("reveals exactly the records behind an approved-advance figure", () => {
+      drill("/admin/fund-requests?status=approved");
+      expect(screen.getByText(/BDFR-2026-000002/)).toBeInTheDocument();
+      expect(screen.queryByText(/BDFR-2026-000001/)).not.toBeInTheDocument();
+      expect(screen.getByText("Filtered to Approved.")).toBeInTheDocument();
+    });
+
+    // The Reports fund-request section links with status=all and a period. A
+    // request is dated by submission or by decision, matching the rule the
+    // report itself states — never by a row's last-touched timestamp.
+    it("narrows requests to the reported period", () => {
+      drill("/admin/fund-requests?status=all&from=2026-07-01&to=2026-07-31");
+      expect(screen.getByText(/BDFR-2026-000002/)).toBeInTheDocument();
+      expect(screen.queryByText(/BDFR-2026-000001/)).not.toBeInTheDocument();
+      expect(screen.getByText("Filtered to 2026-07-01 to 2026-07-31.")).toBeInTheDocument();
+    });
+
+    it("dates an issued advance by the day the money was handed over", () => {
+      drill("/admin/fund-requests?view=issued&from=2026-07-01&to=2026-07-31");
+      expect(screen.getAllByText(/KES\s*4,000\.00/).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/KES\s*10,000\.00/)).not.toBeInTheDocument();
+    });
+
+    it("offers Clear filters, which drops the narrowing and keeps the view", () => {
+      drill("/admin/fund-requests?view=issued&project=p2");
+      expect(screen.getByRole("link", { name: "Clear filters" }))
+        .toHaveAttribute("href", "/admin/fund-requests?view=issued");
+    });
+
+    it("clears back to the whole register from the default view", () => {
+      drill("/admin/fund-requests?project=p2&status=approved&from=2026-07-01&to=2026-07-31");
+      expect(screen.getByRole("link", { name: "Clear filters" }))
+        .toHaveAttribute("href", "/admin/fund-requests");
+    });
+
+    // The whole point of the repair: an empty filtered result stays empty.
+    // Falling back to the full register would restate the reader's question.
+    it("says nothing matches rather than showing every advance", () => {
+      drill("/admin/fund-requests?project=p2&status=submitted");
+      expect(screen.getByText("No advance request matches these filters.")).toBeInTheDocument();
+      expect(screen.queryByText(/BDFR-2026-000001/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/BDFR-2026-000002/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the rejected vocabulary away from a filtered surface", () => {
+      drill("/admin/fund-requests?project=p1&status=submitted");
+      const page = document.body.textContent;
+      expect(page).not.toMatch(/Funding, Payments & Reconciliation/);
+      expect(page).not.toMatch(/Reconciliation/);
+      expect(page).not.toMatch(/Fund [Rr]equest/);
+    });
+  });
+
   it("shows the allocation breakdown, immutable timeline and Principal decisions", () => {
     wrap(
       <Routes><Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} /></Routes>,

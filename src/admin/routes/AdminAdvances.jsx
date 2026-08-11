@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useFundRequests } from "../context/fundRequests";
 import { canDirectAuthoriseFundRequest, FUND_REQUEST_STATUSES } from "../utils/fundRequestCapabilities";
+import { describeActiveFilters, withinReportedPeriod } from "../utils/listUrlFilters";
 import { Chip } from "../components/ui/Surfaces";
 
 // Advances is the user-facing Finance concept. The existing fund-request,
@@ -21,6 +22,31 @@ const SECTIONS = [
   { id: "accounting", label: "Accounting" },
 ];
 
+// BD-REPORTS-01A drill-through, repaired 12 Aug 2026.
+//
+// Reports and the Finance portfolio already emit ?project=, ?status=, ?from=
+// and ?to= against this route. Advances read only ?view=, so a reader who
+// clicked "3 advance requests awaiting decision" could land on the whole
+// register. A drill-through must show the records behind the number it came
+// from, so the same URL contract the other three lists honour applies here.
+//
+// `status` is the fund request's own status, which is exactly what every
+// existing emitter means by it. An approved request is not reinterpreted as
+// money issued or as a paid Project Cost — the Requests, Issued and Accounting
+// views keep their meaning, and a filter only narrows within them.
+//
+// Plain words for the filter summary. The status names below never say
+// "released": what a reader sees is a decision about an Advance.
+const STATUS_FILTER_LABELS = {
+  draft: "Draft",
+  submitted: "Awaiting decision",
+  amendment_requested: "Returned for correction",
+  approved: "Approved",
+  rejected: "Rejected",
+  withdrawn: "Withdrawn",
+  cancelled: "Cancelled",
+};
+
 const money = (amount) => new Intl.NumberFormat("en-KE", {
   style: "currency", currency: "KES", currencyDisplay: "code", maximumFractionDigits: 2,
 }).format(Number(amount || 0));
@@ -34,19 +60,46 @@ export default function AdminAdvances() {
   const { requests, releases, acquittals, status, error } = useFundRequests();
   const [searchParams, setSearchParams] = useSearchParams();
   const section = searchParams.get("view") || "requests";
+  const projectId = searchParams.get("project") || "all";
+  const requestStatus = searchParams.get("status") || "all";
+  const from = searchParams.get("from") || "";
+  const to = searchParams.get("to") || "";
   const isPrincipal = canDirectAuthoriseFundRequest(role);
 
   const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
-  const advanceRequests = requests.filter((request) => request.intendedCustodyType === ADVANCE_CUSTODY);
-  const requestIds = new Set(advanceRequests.map((request) => request.id));
+
+  // An advance request matches when its project, its status and its dates all
+  // agree with the link. Dates follow the Reports rule the other lists use: a
+  // submitted figure is dated by submission and an approved one by decision.
+  const matchesRequest = (request) =>
+    (projectId === "all" || request.projectId === projectId) &&
+    (requestStatus === "all" || request.status === requestStatus) &&
+    withinReportedPeriod(request.submittedAt, request.decidedAt, from, to);
+
+  const allAdvanceRequests = requests.filter((request) => request.intendedCustodyType === ADVANCE_CUSTODY);
+  const advanceRequests = allAdvanceRequests.filter(matchesRequest);
+  const requestById = new Map(allAdvanceRequests.map((request) => [request.id, request]));
+
+  // An issued advance is filtered by the authority it came from, and by the day
+  // the money was actually handed over — not by a row's last-touched timestamp.
+  const matchesIssued = (release) => {
+    const parent = requestById.get(release.fundRequestId);
+    if (!parent || !matchesParentScope(parent)) return false;
+    return withinReportedPeriod(release.releasedAt, "", from, to);
+  };
+  function matchesParentScope(parent) {
+    return (projectId === "all" || parent.projectId === projectId) &&
+      (requestStatus === "all" || parent.status === requestStatus);
+  }
+
   const issued = releases
     .filter((release) =>
       release.status !== "reversed" &&
       release.custodyDisposition === ADVANCE_CUSTODY &&
-      requestIds.has(release.fundRequestId)
+      requestById.has(release.fundRequestId) &&
+      matchesIssued(release)
     )
     .sort((left, right) => String(right.releasedAt || "").localeCompare(String(left.releasedAt || "")));
-  const requestById = new Map(advanceRequests.map((request) => [request.id, request]));
   const acquittalByRelease = new Map((acquittals || []).map((item) => [item.fundReleaseId, item]));
 
   const requestedAmount = advanceRequests
@@ -54,6 +107,19 @@ export default function AdminAdvances() {
     .reduce((sum, request) => sum + Number(request.totalRequestedAmount || 0), 0);
   const issuedAmount = issued.reduce((sum, release) => sum + Number(release.releasedAmount || 0), 0);
   const awaitingAccounting = issued.filter((release) => acquittalByRelease.get(release.id)?.state !== "accepted");
+
+  const activeFilterSummary = describeActiveFilters({
+    projectName: projectId !== "all"
+      ? projectMap.get(projectId)?.projectName || "one project"
+      : "",
+    statusLabel: requestStatus !== "all" ? STATUS_FILTER_LABELS[requestStatus] || "" : "",
+    from, to,
+  });
+  // Clearing narrowing leaves the reader where they are. The view is a place in
+  // Advances, not a filter over it.
+  const clearFiltersTo = section === "requests"
+    ? "/admin/fund-requests"
+    : `/admin/fund-requests?view=${section}`;
 
   function selectSection(next) {
     const params = new URLSearchParams(searchParams);
@@ -105,6 +171,13 @@ export default function AdminAdvances() {
         ))}
       </div>
 
+      {activeFilterSummary && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-[12.5px] text-gray-600">
+          <span>Filtered to {activeFilterSummary}.</span>
+          <Link to={clearFiltersTo} className="min-h-9 py-1.5 font-semibold text-botanique-green hover:underline">Clear filters</Link>
+        </div>
+      )}
+
       {status === "loading" && <p className="text-[13px] text-gray-600">Loading advances…</p>}
       {error && <p className="rounded-xl border border-red-200 bg-red-50 p-4 text-[13px] text-red-800">{error}</p>}
 
@@ -119,7 +192,7 @@ export default function AdminAdvances() {
               status={<Chip tone={request.status === "approved" ? "settled" : request.status === "submitted" ? "waiting" : "neutral"}>{FUND_REQUEST_STATUSES[request.status] || plain(request.status)}</Chip>}
               to={`/admin/fund-requests/${request.id}`}
             />
-          )) : <Empty>No advance request has been recorded yet.</Empty>}
+          )) : <Empty>{activeFilterSummary ? "No advance request matches these filters." : "No advance request has been recorded yet."}</Empty>}
         </ListPanel>
       )}
 
@@ -137,7 +210,7 @@ export default function AdminAdvances() {
                 to={`/admin/fund-requests/${release.fundRequestId}`}
               />
             );
-          }) : <Empty>No advance has been issued yet.</Empty>}
+          }) : <Empty>{activeFilterSummary ? "No issued advance matches these filters." : "No advance has been issued yet."}</Empty>}
         </ListPanel>
       )}
 
@@ -157,7 +230,7 @@ export default function AdminAdvances() {
                 to={`/admin/fund-requests/${release.fundRequestId}`}
               />
             );
-          }) : <Empty>There is no issued advance to account for.</Empty>}
+          }) : <Empty>{activeFilterSummary ? "No advance accounting matches these filters." : "There is no issued advance to account for."}</Empty>}
         </ListPanel>
       )}
     </section>
