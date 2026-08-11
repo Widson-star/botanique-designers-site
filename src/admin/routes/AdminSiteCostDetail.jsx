@@ -46,9 +46,13 @@ export default function AdminSiteCostDetail() {
   const sourceEntry = claim?.dailySiteEntryId
     ? dailyEntries.find((item) => item.id === claim.dailySiteEntryId) || null
     : null;
+  // claimId and claims fully determine the claim, so the memo derives it rather
+  // than depending on the outer binding.
   const possibleDuplicates = useMemo(
-    () => claimId ? possibleDuplicateClaims(claim, claims, linesForClaim) : [],
-    [claimId, claim, claims, linesForClaim]
+    () => claimId
+      ? possibleDuplicateClaims(claims.find((item) => item.id === claimId), claims, linesForClaim)
+      : [],
+    [claimId, claims, linesForClaim]
   );
   const project = projects.find((item) => item.id === claim?.projectId);
   const profileMap = useMemo(() => new Map(profiles.map((profile) => [profile.id, profile])), [profiles]);

@@ -291,7 +291,8 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
     ? Promise.resolve((() => {
       const claim = demoClaimsRef.current.find((item) => item.id === claimId);
       if (!claim) return { ok: false, error: "Project Cost not found." };
-      const position = demoPaymentPositionsRef.current.find((item) => item.claimId === claimId);
+      // Confirming completeness recomputes from the payments actually held, so
+      // any earlier partial position is deliberately not consulted.
       const livePayments = demoPaymentsRef.current.filter((payment) => payment.claimId === claimId && payment.status === "recorded");
       const paidAmount = livePayments.reduce((sum, payment) => sum + payment.amount, 0);
       const next = {
