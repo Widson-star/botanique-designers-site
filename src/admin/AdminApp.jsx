@@ -250,9 +250,9 @@ export default function AdminApp() {
               <Route path="/admin/fund-requests/:requestId" element={<AdminFundRequestDetail />} />
               <Route path="/admin/fund-requests/:requestId/edit" element={<AdminFundRequestForm />} />
               <Route path="/admin/finance" element={<AdminFinance />} />
-              {/* Image 13 gives Company Expenses and Staff Compensation a place
-                  in the department. They have no model, so their pages say so
-                  truthfully rather than being hidden or given invented data. */}
+              {/* Reserved Finance areas are routed so the sidebar remains truthful
+                  without inventing records or figures before their models exist. */}
+              <Route path="/admin/finance/project-financials" element={<AdminFinanceUnbuilt area="project-financials" />} />
               <Route path="/admin/finance/company-expenses" element={<AdminFinanceUnbuilt area="company-expenses" />} />
               <Route path="/admin/finance/staff-compensation" element={<AdminFinanceUnbuilt area="staff-compensation" />} />
               <Route path="/admin/people" element={<AdminPeople />} />
