@@ -75,7 +75,7 @@ describe("Operating-model navigation domains", () => {
       "Reports",
     ]);
     // Dashboard and Approvals are direct destinations. Finance now EXPANDS with
-    // its four capability children, per the Founder amendment of 10 Aug 2026;
+    // its five business areas, per the Founder amendment of 11 Aug 2026;
     // Reports is a single destination with ONE visible name.
     expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/admin");
     expect(within(nav).getByRole("link", { name: "Reports" })).toHaveAttribute(
@@ -94,8 +94,12 @@ describe("Operating-model navigation domains", () => {
   it.each([
     ["Projects", ["Project Register", "Project Proposals"], ["/admin/projects", "/admin/project-intakes"]],
     ["Operations", ["Daily Site Record", "People"], ["/admin/daily-site-operations", "/admin/people"]],
-    ["Finance", ["Project Costs", "Company Expenses", "Staff Compensation", "Funding, Payments & Reconciliation"],
-      ["/admin/site-costs", "/admin/finance/company-expenses", "/admin/finance/staff-compensation", "/admin/fund-requests"]],
+    // Finance's five business areas. Money issued beforehand to an accountable
+    // person is an Advance; accounting for it happens inside that Advance, so
+    // there is no Funding, Payments or Reconciliation destination.
+    ["Finance", ["Project Financials", "Project Costs", "Company Expenses", "Staff Compensation", "Advances"],
+      ["/admin/finance/project-financials", "/admin/site-costs", "/admin/finance/company-expenses",
+        "/admin/finance/staff-compensation", "/admin/fund-requests"]],
   ])("maps %s to exactly its approved children, on their existing routes", async (domain, labels, hrefs) => {
     const user = userEvent.setup();
     renderLayout();
@@ -119,7 +123,7 @@ describe("Operating-model navigation domains", () => {
     const expected = {
       Projects: ["Project Register", "Project Proposals"],
       Operations: ["Daily Site Record", "People"],
-      Finance: ["Project Costs", "Company Expenses", "Staff Compensation", "Funding, Payments & Reconciliation"],
+      Finance: ["Project Financials", "Project Costs", "Company Expenses", "Staff Compensation", "Advances"],
     };
     for (const [domain, labels] of Object.entries(expected)) {
       await user.click(domainButton(domain));
