@@ -14,18 +14,21 @@ describe("NAV_DOMAINS shape", () => {
     ]);
   });
 
-  // FOUNDER AMENDMENT, 10 August 2026: Finance expands with its four capability
-  // children, as image 13 draws it. Approvals and Reports stay direct
-  // destinations, and Reports has ONE visible name.
-  it("expands Finance into its four capability children", () => {
+  it("expands Finance into the five settled business areas", () => {
     const finance = NAV_DOMAINS.find((domain) => domain.id === "finance");
     expect(finance.children.map((child) => child.label)).toEqual([
-      "Project Costs", "Company Expenses", "Staff Compensation",
-      "Funding, Payments & Reconciliation",
+      "Project Financials",
+      "Project Costs",
+      "Company Expenses",
+      "Staff Compensation",
+      "Advances",
     ]);
     expect(finance.children.map((child) => child.to)).toEqual([
-      "/admin/site-costs", "/admin/finance/company-expenses",
-      "/admin/finance/staff-compensation", "/admin/fund-requests",
+      "/admin/finance/project-financials",
+      "/admin/site-costs",
+      "/admin/finance/company-expenses",
+      "/admin/finance/staff-compensation",
+      "/admin/fund-requests",
     ]);
   });
 
@@ -34,7 +37,6 @@ describe("NAV_DOMAINS shape", () => {
     const reports = NAV_DOMAINS.find((domain) => domain.id === "reports");
     expect(approvals.children).toBeUndefined();
     expect(approvals.to).toBe("/admin/approvals");
-    // "Reports → Project Summary" showed two names for one destination.
     expect(reports.children).toBeUndefined();
     expect(reports.to).toBe("/admin/reports");
     expect(reports.label).toBe("Reports");
@@ -63,10 +65,11 @@ describe("visibleDomains", () => {
 });
 
 describe("resolveActive", () => {
-  it("resolves Finance for its own landing and for each capability child", () => {
-    // The landing belongs to Finance but is not one of its children, so the
-    // domain opens with no child marked current.
+  it("resolves Finance for its landing and each Finance area", () => {
     expect(resolveActive("/admin/finance")).toEqual({ domainId: "finance", to: null });
+    expect(resolveActive("/admin/finance/project-financials")).toEqual({
+      domainId: "finance", to: "/admin/finance/project-financials",
+    });
     expect(resolveActive("/admin/site-costs/c1")).toEqual({ domainId: "finance", to: "/admin/site-costs" });
     expect(resolveActive("/admin/finance/company-expenses")).toEqual({
       domainId: "finance", to: "/admin/finance/company-expenses",
