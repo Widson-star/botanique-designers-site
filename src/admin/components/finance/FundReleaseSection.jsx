@@ -30,6 +30,7 @@ const CATEGORIES = {
   other: "Other",
 };
 
+const DIRECT_RECIPIENT = "direct_recipient_funding";
 const emptyLine = () => ({ description: "", category: "labour", amount: "", spentOn: "" });
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -75,6 +76,15 @@ export default function FundReleaseSection({
     return profile ? profilePresentationName(profile, { formal: true }) : "Authorised user";
   };
   const canRecord = canRecordFundRelease(request, role, releases);
+
+  // An Advance is issued to an accountable person, so it is named by profile.
+  // Some historical records predate that model and paid a recipient directly —
+  // a supplier, say. Those hold the payee as a label rather than a profile, and
+  // the truthful payee is what must be shown. Reading the profile regardless
+  // rendered a real supplier payment as "Authorised user".
+  const payeeName = (release) => release.custodyDisposition === DIRECT_RECIPIENT
+    ? (release.recipientLabel || "Direct payee")
+    : actorName(release.recipientProfileId);
 
   function startIssuing() {
     setForm({
@@ -280,10 +290,11 @@ export default function FundReleaseSection({
                   >
                     <span className="min-w-0">
                       <span className={`block text-sm font-medium ${reversed ? "text-gray-400 line-through" : ""}`}>
-                        {money(release.releasedAmount)} · {actorName(release.recipientProfileId)}
+                        {money(release.releasedAmount)} · {payeeName(release)}
                       </span>
                       <span className="mt-0.5 block truncate text-xs text-gray-500">
                         {day(release.releasedAt)} · {PAYMENT_CHANNELS[release.paymentChannel]}
+                        {release.custodyDisposition === DIRECT_RECIPIENT && " · direct payment"}
                         {reversed && " · reversed"}
                       </span>
                     </span>
