@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -118,6 +119,19 @@ function wrap(element, values, initial = "/admin/fund-requests") {
 // inside the Advance. The fund_request / fund_release / acquittal rows beneath
 // are implementation detail and keep their names; the interface must not.
 describe("Advances admin surfaces", () => {
+  // The superseded fund-request list component is deleted, not merely unrouted.
+  // It carried the rejected "Funding, Payments & Reconciliation" vocabulary, and
+  // leaving an unreachable copy of it in the tree invites the abandoned model
+  // back. The fund_request / fund_release / acquittal DATABASE objects keep
+  // their names — those are implementation, not interface.
+  it("no longer ships the superseded fund-request list component", () => {
+    expect(existsSync("src/admin/routes/AdminFundRequests.jsx")).toBe(false);
+    // The route survives; Advances is what it mounts.
+    const app = readFileSync("src/admin/AdminApp.jsx", "utf8");
+    expect(app).toMatch(/path="\/admin\/fund-requests" element=\{<AdminAdvances \/>\}/);
+    expect(app).not.toMatch(/AdminFundRequests\b/);
+  });
+
   it("presents Advances as the Finance area, never Funding or Reconciliation", () => {
     wrap(<AdminAdvances />, contexts());
     expect(screen.getByRole("heading", { name: "Advances" })).toBeInTheDocument();
@@ -295,13 +309,31 @@ describe("Advances admin surfaces", () => {
     expect(screen.getByText(/13,000\.00 of the approved Advance is still available to issue/)).toBeInTheDocument();
   });
 
-  it("asks nobody to account for a legacy direct settled payment", () => {
+  it("names the accountable person an advance was issued to", () => {
+    detail(contexts({ requests: [approved], releases: [advanceRelease] }));
+    // An Advance is held by a person, so it is named by that person's profile.
+    expect(screen.getByRole("button", { name: /Martine Lotom/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Authorised user/)).not.toBeInTheDocument();
+  });
+
+  // A historical record that paid a supplier direct holds its payee as a label,
+  // not a profile. Showing the profile regardless printed a real supplier
+  // payment as "Authorised user", which is not what happened.
+  it("names the actual payee of a historical direct payment", () => {
+    detail(contexts({ requests: [approved], releases: [directRelease] }));
+    expect(screen.getByRole("button", { name: /Siaya Hardware/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Authorised user/)).not.toBeInTheDocument();
+    // Named plainly as what it was, with no separate legacy apparatus.
+    expect(screen.getByText(/direct payment/)).toBeInTheDocument();
+  });
+
+  it("asks nobody to account for a historical direct payment", () => {
     detail(contexts({ requests: [approved], releases: [directRelease] }));
     expect(screen.getByText("Fully issued")).toBeInTheDocument();
     // Money paid straight to a supplier was never held by an accountable
     // person, so no accounting and no receipt acknowledgement is owed.
     expect(screen.queryByText("Not yet accounted for")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /KES\s*23,000\.00/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Siaya Hardware/ }));
     expect(screen.getByText(/BDRL-2026-000002/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Account for this advance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm I received this" })).not.toBeInTheDocument();
