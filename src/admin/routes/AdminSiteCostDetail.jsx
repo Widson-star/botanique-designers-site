@@ -19,8 +19,7 @@ const money = (amount) => new Intl.NumberFormat("en-KE", {
 const when = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
   : "—";
-// A Project Cost is identified by what it was for. The recipient/crew field is
-// often raw site arithmetic and is not an identity; it stays in the summary.
+
 function costHeadline(claim) {
   const purpose = String(claim?.purpose || "").split("\n").map((part) => part.trim()).filter(Boolean);
   if (purpose.length) return purpose.join(" — ");
@@ -41,7 +40,7 @@ export default function AdminSiteCostDetail() {
   const {
     claims, linesForClaim, eventsByClaim, loadEvents, submitClaim, withdrawClaim,
     decideClaim, cancelClaim, refresh, status, paymentsForClaim, paymentPositionForClaim,
-    recordPayment,
+    recordPayment, completePaymentHistory, reversePayment,
   } = useSiteCosts();
   const { entries: dailyEntries = [] } = useDailySiteOperations();
 
@@ -54,8 +53,6 @@ export default function AdminSiteCostDetail() {
   const sourceEntry = claim?.dailySiteEntryId
     ? dailyEntries.find((item) => item.id === claim.dailySiteEntryId) || null
     : null;
-  // claimId and claims fully determine the claim, so the memo derives it rather
-  // than depending on the outer binding.
   const possibleDuplicates = useMemo(
     () => claimId
       ? possibleDuplicateClaims(claims.find((item) => item.id === claimId), claims, linesForClaim)
@@ -72,6 +69,8 @@ export default function AdminSiteCostDetail() {
     amount: "", paidAt: new Date().toISOString().slice(0, 10), paymentChannel: "mpesa",
     paymentReference: "", note: "", historyComplete: false,
   });
+  const [reversalPaymentId, setReversalPaymentId] = useState("");
+  const [reversalReason, setReversalReason] = useState("");
 
   useEffect(() => { if (claimId) loadEvents(claimId).catch(() => {}); }, [claimId, loadEvents]);
 
@@ -115,8 +114,32 @@ export default function AdminSiteCostDetail() {
     await refresh();
   }
 
-  // Draft means not yet submitted, not zero cost: a draft states its structured
-  // line total. A decided amount still wins.
+  async function confirmPaymentHistory() {
+    if (working) return;
+    setWorking(true); setError("");
+    const result = await completePaymentHistory(claim.id);
+    setWorking(false);
+    if (!result.ok) {
+      setError(result.error || "Payment history could not be confirmed.");
+      return;
+    }
+    await refresh();
+  }
+
+  async function confirmReversal(payment) {
+    if (working || !reversalReason.trim()) return;
+    setWorking(true); setError("");
+    const result = await reversePayment(payment.id, payment.version, reversalReason.trim());
+    setWorking(false);
+    if (!result.ok) {
+      setError(result.error || "Payment could not be reversed.");
+      return;
+    }
+    setReversalPaymentId("");
+    setReversalReason("");
+    await refresh();
+  }
+
   const authoritativeAmount = costTotal(claim, lines);
 
   return (
@@ -156,16 +179,61 @@ export default function AdminSiteCostDetail() {
             <h3 className="text-[12px] font-semibold">Payments</h3>
             <ul className="mt-2 divide-y divide-stone-100">
               {payments.map((payment) => (
-                <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-[12.5px]">
-                  <span>
-                    <strong>{payment.paymentNumber}</strong>
-                    <span className="ml-2 text-gray-500">{payment.paidAt} · {payment.paymentChannel.replaceAll("_", " ")}</span>
-                    {payment.paymentReference && <span className="ml-2 text-gray-500">· {payment.paymentReference}</span>}
-                  </span>
-                  <span className={`font-semibold tabular-nums ${payment.status === "reversed" ? "text-gray-400 line-through" : ""}`}>{money(payment.amount)}</span>
+                <li key={payment.id} className="py-2.5 text-[12.5px]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>
+                      <strong>{payment.paymentNumber}</strong>
+                      <span className="ml-2 text-gray-500">{payment.paidAt} · {payment.paymentChannel.replaceAll("_", " ")}</span>
+                      {payment.paymentReference && <span className="ml-2 text-gray-500">· {payment.paymentReference}</span>}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-semibold tabular-nums ${payment.status === "reversed" ? "text-gray-400 line-through" : ""}`}>{money(payment.amount)}</span>
+                      {role === "owner" && payment.status === "recorded" && (
+                        <button
+                          type="button"
+                          onClick={() => { setReversalPaymentId(payment.id); setReversalReason(""); }}
+                          className="min-h-9 rounded-lg border border-red-200 px-2.5 text-[11.5px] font-semibold text-red-700 hover:bg-red-50"
+                        >
+                          Reverse payment
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {payment.status === "reversed" && payment.reversalReason && (
+                    <p className="mt-1 text-[11px] text-gray-500">Reversed: {payment.reversalReason}</p>
+                  )}
+                  {reversalPaymentId === payment.id && payment.status === "recorded" && (
+                    <div className="mt-2 rounded-lg border border-red-100 bg-red-50 p-3">
+                      <label className="block text-[12px] font-medium text-red-900">
+                        Why is this payment being reversed?
+                        <textarea
+                          rows={2}
+                          value={reversalReason}
+                          onChange={(event) => setReversalReason(event.target.value)}
+                          className="mt-1 w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-botanique-charcoal"
+                        />
+                      </label>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button type="button" disabled={working || !reversalReason.trim()} onClick={() => confirmReversal(payment)} className="min-h-9 rounded-lg bg-red-700 px-3 text-[11.5px] font-semibold text-white disabled:opacity-50">Confirm reversal</button>
+                        <button type="button" disabled={working} onClick={() => { setReversalPaymentId(""); setReversalReason(""); }} className="min-h-9 rounded-lg border border-stone-300 px-3 text-[11.5px] font-medium">Keep payment</button>
+                      </div>
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {role === "owner" && claim.lifecycle === "approved" && paymentTruth.paid == null && (
+          <div className="mt-4 border-t border-stone-100 pt-4">
+            <h3 className="text-[13px] font-semibold">Confirm historical payment record</h3>
+            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-gray-600">
+              Use this after checking the complete history for this Project Cost. If no payments were ever made, confirming it records that truth as Paid KES 0 without inventing a payment.
+            </p>
+            <button type="button" disabled={working} onClick={confirmPaymentHistory} className="mt-3 min-h-10 rounded-lg border border-botanique-green px-4 text-[12.5px] font-semibold text-botanique-green hover:bg-emerald-50 disabled:opacity-50">
+              Confirm payment history
+            </button>
           </div>
         )}
 
@@ -174,26 +242,26 @@ export default function AdminSiteCostDetail() {
             <h3 className="text-[13px] font-semibold">Record payment</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Field label="Amount">
-                <input required type="number" min="0.01" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm((v) => ({ ...v, amount: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" placeholder="KES" />
+                <input required type="number" min="0.01" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm((value) => ({ ...value, amount: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" placeholder="KES" />
               </Field>
               <Field label="Date paid">
-                <input required type="date" value={paymentForm.paidAt} onChange={(e) => setPaymentForm((v) => ({ ...v, paidAt: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" />
+                <input required type="date" value={paymentForm.paidAt} onChange={(e) => setPaymentForm((value) => ({ ...value, paidAt: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" />
               </Field>
               <Field label="Method">
-                <select value={paymentForm.paymentChannel} onChange={(e) => setPaymentForm((v) => ({ ...v, paymentChannel: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3">
+                <select value={paymentForm.paymentChannel} onChange={(e) => setPaymentForm((value) => ({ ...value, paymentChannel: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3">
                   <option value="mpesa">M-Pesa</option><option value="bank_transfer">Bank transfer</option><option value="cash">Cash</option><option value="other">Other</option>
                 </select>
               </Field>
               <Field label="Reference">
-                <input value={paymentForm.paymentReference} onChange={(e) => setPaymentForm((v) => ({ ...v, paymentReference: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" placeholder="Optional" />
+                <input value={paymentForm.paymentReference} onChange={(e) => setPaymentForm((value) => ({ ...value, paymentReference: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" placeholder="Optional" />
               </Field>
             </div>
             <Field label="Note" className="mt-3">
-              <input value={paymentForm.note} onChange={(e) => setPaymentForm((v) => ({ ...v, note: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" placeholder="Optional" />
+              <input value={paymentForm.note} onChange={(e) => setPaymentForm((value) => ({ ...value, note: e.target.value }))} className="min-h-10 w-full rounded-lg border border-stone-300 px-3" placeholder="Optional" />
             </Field>
             {paymentTruth.paid == null && (
               <label className="mt-3 flex items-start gap-2 rounded-lg bg-stone-50 p-3 text-[12px] text-gray-700">
-                <input type="checkbox" checked={paymentForm.historyComplete} onChange={(e) => setPaymentForm((v) => ({ ...v, historyComplete: e.target.checked }))} className="mt-0.5" />
+                <input type="checkbox" checked={paymentForm.historyComplete} onChange={(e) => setPaymentForm((value) => ({ ...value, historyComplete: e.target.checked }))} className="mt-0.5" />
                 <span><strong>This completes the payment history for this cost.</strong><br />Use this only after all earlier payments for this cost have been entered. Once confirmed, Paid and Balance become authoritative.</span>
               </label>
             )}
@@ -262,7 +330,7 @@ export default function AdminSiteCostDetail() {
           {(canDecideSiteCost(claim, role) || canCancelSiteCost(claim, role)) && (
             <section className="rounded-xl border border-stone-200 bg-white p-5">
               <h2 className="font-semibold">Principal action</h2>
-              <label className="mt-3 block text-sm font-medium">Reason or instructions<textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5" /></label>
+              <label className="mt-3 block text-sm font-medium">Reason or instructions<textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={4} className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5" /></label>
               {canDecideSiteCost(claim, role) && (
                 <div className="mt-3 grid gap-2">
                   <button disabled={working} onClick={() => act(() => decideClaim(claim.id, claim.version, "approved", reason))} className="min-h-11 rounded-lg bg-botanique-green px-3 text-sm font-semibold text-white">Approve Project Cost</button>
