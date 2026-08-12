@@ -52,7 +52,7 @@ describe("summariseFinancialFollowUp", () => {
   it("reports no claim yet, and offers the create path, on a submitted record", () => {
     const position = summariseFinancialFollowUp(entry, [], "manager");
     expect(position.code).toBe("none_yet");
-    expect(position.label).toBe("No cost claim yet");
+    expect(position.label).toBe("No Project Cost yet");
     expect(position.canCreate).toBe(true);
     expect(position.claims).toEqual([]);
   });
@@ -66,7 +66,7 @@ describe("summariseFinancialFollowUp", () => {
   it("expects no claim at all from a no-work day", () => {
     const noWork = { ...entry, disposition: "no_work" };
     const position = summariseFinancialFollowUp(noWork, [], "manager");
-    expect(position.label).toBe("No cost claim expected");
+    expect(position.label).toBe("No Project Cost expected");
     expect(position.canCreate).toBe(false);
   });
 
@@ -98,7 +98,7 @@ describe("summariseFinancialFollowUp", () => {
       claim({ id: "c2", lifecycle: "amendment_requested", createdAt: "2026-08-05T16:00:00Z" }),
     ], "manager");
     expect(position.code).toBe("amendment_requested");
-    expect(position.label).toBe("2 related cost claims");
+    expect(position.label).toBe("2 related Project Costs");
     expect(position.claims).toHaveLength(2);
   });
 
@@ -110,10 +110,10 @@ describe("summariseFinancialFollowUp", () => {
 
 describe("financialFollowUpSummary", () => {
   it("is a single short phrase per state", () => {
-    expect(financialFollowUpSummary(entry, [], "manager")).toBe("No cost claim yet");
-    expect(financialFollowUpSummary(entry, [claim()], "manager")).toBe("Cost claim: Awaiting review");
+    expect(financialFollowUpSummary(entry, [], "manager")).toBe("No Project Cost yet");
+    expect(financialFollowUpSummary(entry, [claim()], "manager")).toBe("Project Cost: Awaiting review");
     expect(financialFollowUpSummary(entry, [claim(), claim({ id: "c2" })], "manager"))
-      .toBe("2 cost claims");
+      .toBe("2 Project Costs");
   });
 
   it("is silent where no hand-off is possible", () => {
@@ -249,6 +249,6 @@ describe("financialFollowUpSummary — one line, both dimensions", () => {
   it("falls back to the claim position when no money has been authorised", () => {
     expect(financialFollowUpSummary(entry, [claim()], "manager",
       { requests: [], allocations: [], releases: [], acquittals: [] }))
-      .toBe("Cost claim: Awaiting review");
+      .toBe("Project Cost: Awaiting review");
   });
 });

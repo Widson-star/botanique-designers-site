@@ -10,7 +10,7 @@ import {
 } from "../utils/siteCostCapabilities";
 import { profilePresentationName } from "../utils/personName";
 import { possibleDuplicateClaims } from "../utils/duplicateCostClaim";
-import { costPaymentTruth } from "../utils/costPaymentTruth";
+import { costPaymentTruth, costTotal } from "../utils/costPaymentTruth";
 import { costReference } from "../utils/costReference";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", {
@@ -19,8 +19,16 @@ const money = (amount) => new Intl.NumberFormat("en-KE", {
 const when = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
   : "—";
+// A Project Cost is identified by what it was for. The recipient/crew field is
+// often raw site arithmetic and is not an identity; it stays in the summary.
+function costHeadline(claim) {
+  const purpose = String(claim?.purpose || "").split("\n").map((part) => part.trim()).filter(Boolean);
+  if (purpose.length) return purpose.join(" — ");
+  return claim?.recipientLabel || costReference(claim);
+}
+
 const EVENT_LABELS = {
-  created: "Draft created", amended: "Cost amended", submitted: "Submitted for review",
+  created: "Draft created", amended: "Project Cost amended", submitted: "Submitted for review",
   amendment_requested: "Amendment requested", resubmitted: "Resubmitted", approved: "Approved",
   rejected: "Rejected", withdrawn: "Withdrawn", cancelled: "Cancelled",
   principal_authorised: "Principal authorised directly",
@@ -67,10 +75,10 @@ export default function AdminSiteCostDetail() {
 
   useEffect(() => { if (claimId) loadEvents(claimId).catch(() => {}); }, [claimId, loadEvents]);
 
-  if (status === "loading" && !claim) return <p className="text-sm text-gray-600">Loading project cost…</p>;
+  if (status === "loading" && !claim) return <p className="text-sm text-gray-600">Loading Project Cost…</p>;
   if (!claim) return (
     <section>
-      <h1 className="text-2xl font-semibold">Project cost unavailable</h1>
+      <h1 className="text-2xl font-semibold">Project Cost unavailable</h1>
       <p className="mt-2 text-sm text-gray-600">It may not exist or you may not have project authority.</p>
       <Link to="/admin/site-costs" className="mt-4 inline-block text-sm font-medium text-botanique-green">Back to Project Costs</Link>
     </section>
@@ -85,7 +93,7 @@ export default function AdminSiteCostDetail() {
     setWorking(true); setError("");
     const result = await operation();
     setWorking(false);
-    if (!result.ok) setError(result.stale ? "This cost changed elsewhere. The latest version has been reloaded." : result.error);
+    if (!result.ok) setError(result.stale ? "This Project Cost changed elsewhere. The latest version has been reloaded." : result.error);
     await refresh();
     await loadEvents(claim.id, true).catch(() => {});
   }
@@ -107,7 +115,9 @@ export default function AdminSiteCostDetail() {
     await refresh();
   }
 
-  const authoritativeAmount = Number(claim.approvedTotal ?? claim.submittedTotal ?? lines.reduce((sum, line) => sum + line.lineTotal, 0));
+  // Draft means not yet submitted, not zero cost: a draft states its structured
+  // line total. A decided amount still wins.
+  const authoritativeAmount = costTotal(claim, lines);
 
   return (
     <section className="mx-auto max-w-6xl space-y-4">
@@ -115,9 +125,10 @@ export default function AdminSiteCostDetail() {
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-[12px] font-semibold tabular-nums text-botanique-green">{costReference(claim)}</p>
-          <h1 className="mt-1 text-2xl font-semibold">{project?.projectName || "Project"}</h1>
-          <p className="mt-1 text-sm text-gray-600">{claim.recipientLabel} · {claim.category.replaceAll("_", " ")} · {claim.serviceDate}</p>
+          <h1 className="text-2xl font-semibold">{costHeadline(claim)}</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            {project?.projectName || "Project"} · {costReference(claim)} · {SITE_COST_LIFECYCLES[claim.lifecycle]}
+          </p>
         </div>
         <span className="w-fit rounded-full bg-stone-100 px-3 py-1.5 text-sm font-semibold">{SITE_COST_LIFECYCLES[claim.lifecycle]}</span>
       </header>
@@ -128,7 +139,7 @@ export default function AdminSiteCostDetail() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="cost-money-title" className="font-semibold">Cost and payment</h2>
-            <p className="mt-1 text-[12px] text-gray-500">Approval and payment are separate facts.</p>
+            <p className="mt-1 text-[12px] text-gray-500">Approval does not mean paid. Payment is recorded separately against the Project Cost.</p>
           </div>
           {paymentTruth.paid == null && claim.lifecycle === "approved" && (
             <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800">Payment history not yet confirmed</span>
@@ -201,16 +212,20 @@ export default function AdminSiteCostDetail() {
 
       {possibleDuplicates.length > 0 && (
         <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-semibold">Check similar cost</p>
-          <p className="mt-1">Another cost from this Daily Site Record contains an identical line. Review it before deciding whether this is genuinely additional.</p>
-          <ul className="mt-2 space-y-1">{possibleDuplicates.map((other) => <li key={other.id}><Link to={`/admin/site-costs/${other.id}`} className="font-semibold text-botanique-green">{other.recipientLabel} · {money(other.approvedTotal ?? other.submittedTotal)}</Link></li>)}</ul>
+          <p className="font-semibold">Possible duplicate</p>
+          <p className="mt-1">
+            {possibleDuplicates.length === 1 ? "Another Project Cost" : `${possibleDuplicates.length} other Project Costs`} from
+            this Daily Site Record {possibleDuplicates.length === 1 ? "contains" : "contain"} an identical cost line.
+            Check before deciding — this may be a genuinely additional cost, or the same cost entered twice.
+          </p>
+          <ul className="mt-2 space-y-1">{possibleDuplicates.map((other) => <li key={other.id}><Link to={`/admin/site-costs/${other.id}`} className="font-semibold text-botanique-green">{costHeadline(other)} · {money(other.approvedTotal ?? other.submittedTotal)}</Link></li>)}</ul>
         </section>
       )}
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-4">
           <section className="rounded-xl border border-stone-200 bg-white p-5">
-            <h2 className="font-semibold">Cost details</h2>
+            <h2 className="font-semibold">Project Cost summary</h2>
             <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
               <Fact label="Purpose" value={claim.purpose} />
               <Fact label="Service date" value={claim.serviceDate} />
@@ -222,7 +237,7 @@ export default function AdminSiteCostDetail() {
           </section>
 
           <section className="overflow-hidden rounded-xl border border-stone-200 bg-white">
-            <div className="px-5 py-4"><h2 className="font-semibold">Cost lines</h2></div>
+            <div className="px-5 py-4"><h2 className="font-semibold">Cost breakdown</h2></div>
             <div className="divide-y divide-stone-100">{lines.map((line) => (
               <div key={line.id} className="grid gap-1 px-5 py-4 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
                 <div><p className="font-medium">{line.description}</p><p className="text-xs text-gray-500">{line.quantity} {line.unit} × {money(line.unitRate)}</p></div>
@@ -250,12 +265,12 @@ export default function AdminSiteCostDetail() {
               <label className="mt-3 block text-sm font-medium">Reason or instructions<textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={4} className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5" /></label>
               {canDecideSiteCost(claim, role) && (
                 <div className="mt-3 grid gap-2">
-                  <button disabled={working} onClick={() => act(() => decideClaim(claim.id, claim.version, "approved", reason))} className="min-h-11 rounded-lg bg-botanique-green px-3 text-sm font-semibold text-white">Approve cost</button>
-                  <button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "amendment_requested", reason))} className="min-h-11 rounded-lg border border-amber-300 px-3 text-sm font-semibold text-amber-900 disabled:opacity-50">Request correction</button>
-                  <button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "rejected", reason))} className="min-h-11 rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Reject cost</button>
+                  <button disabled={working} onClick={() => act(() => decideClaim(claim.id, claim.version, "approved", reason))} className="min-h-11 rounded-lg bg-botanique-green px-3 text-sm font-semibold text-white">Approve Project Cost</button>
+                  <button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "amendment_requested", reason))} className="min-h-11 rounded-lg border border-amber-300 px-3 text-sm font-semibold text-amber-900 disabled:opacity-50">Request amendment</button>
+                  <button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "rejected", reason))} className="min-h-11 rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Reject Project Cost</button>
                 </div>
               )}
-              {canCancelSiteCost(claim, role) && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelClaim(claim.id, claim.version, reason))} className="mt-3 min-h-11 w-full rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved cost</button>}
+              {canCancelSiteCost(claim, role) && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelClaim(claim.id, claim.version, reason))} className="mt-3 min-h-11 w-full rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved Project Cost</button>}
             </section>
           )}
 
@@ -263,11 +278,11 @@ export default function AdminSiteCostDetail() {
             <section className="rounded-xl border border-stone-200 bg-white p-5">
               <h2 className="font-semibold">Manager action</h2>
               <div className="mt-3 grid gap-2">
-                {canEditSiteCost(claim, role, currentUserId) && <button onClick={() => navigate(`/admin/site-costs/${claim.id}/edit`)} className="min-h-11 rounded-lg border border-stone-300 px-3 text-sm font-semibold">Edit cost</button>}
+                {canEditSiteCost(claim, role, currentUserId) && <button onClick={() => navigate(`/admin/site-costs/${claim.id}/edit`)} className="min-h-11 rounded-lg border border-stone-300 px-3 text-sm font-semibold">Edit Project Cost</button>}
                 {canSubmitSiteCost(claim, role, currentUserId) && (sourceEntry && !canSubmitCostFromDailySite(sourceEntry)
                   ? <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950">{costSubmissionBlockedReason(sourceEntry)}</p>
                   : <button disabled={working} onClick={() => act(() => submitClaim(claim.id, claim.version))} className="min-h-11 rounded-lg bg-botanique-green px-3 text-sm font-semibold text-white">{claim.lifecycle === "draft" ? "Submit for review" : "Resubmit for review"}</button>)}
-                {canWithdrawSiteCost(claim, role, currentUserId) && <button disabled={working} onClick={() => act(() => withdrawClaim(claim.id, claim.version, reason))} className="min-h-11 rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700">Withdraw cost</button>}
+                {canWithdrawSiteCost(claim, role, currentUserId) && <button disabled={working} onClick={() => act(() => withdrawClaim(claim.id, claim.version, reason))} className="min-h-11 rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700">Withdraw Project Cost</button>}
               </div>
             </section>
           )}

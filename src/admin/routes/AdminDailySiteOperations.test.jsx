@@ -315,7 +315,7 @@ describe("Daily Site Record list — financial follow-up stays compact", () => {
 
   it("says no claim exists when none does, rather than implying an unpaid one", () => {
     renderRoute({ role: "owner", entries: [entry], claims: [] });
-    expect(screen.getAllByText("No cost claim yet").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No Project Cost yet").length).toBeGreaterThan(0);
   });
 
   // The whole point of PR #99, carried into the list: one label must never
@@ -355,7 +355,7 @@ describe("Daily Site Record list — financial follow-up stays compact", () => {
       role: "owner", entries: [entry],
       claims: [claims[0], { ...claims[0], id: "c2", lifecycle: "awaiting_review", dailySiteEntryId: "" }],
     });
-    expect(screen.getAllByText("2 cost claims").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2 Project Costs").length).toBeGreaterThan(0);
   });
 
   it("renders both the desktop table and the mobile card list, with no fixed-width table on mobile", () => {

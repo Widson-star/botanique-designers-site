@@ -409,11 +409,14 @@ export function AdminDataProvider({ session, role, profile, profileLabel, isDemo
         }
 
         const updated = await apiUpdateProject(accessToken, projectId, patch);
+        // No authoritative row means nothing was written. Saying otherwise once
+        // let an edit vanish while the Principal was told "Changes saved."
+        if (!updated) {
+          throw new Error("The project was not updated. Refresh and try again.");
+        }
         // Reflect the returned representation immediately so the detail/list
         // views stay correct even if the reconciling refresh fails.
-        if (updated) {
-          upsertProject(mapDatabaseProject(updated, profilesById));
-        }
+        upsertProject(mapDatabaseProject(updated, profilesById));
         const refresh = await refetchProjects();
         if (refresh.ok) {
           setSaveFeedback({ type: "success", message: "Changes saved." });

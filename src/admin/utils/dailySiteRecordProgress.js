@@ -11,8 +11,8 @@
 // So the rail states the three transitions that genuinely exist:
 //
 //   1. the site record itself      (daily_site_entries lifecycle)
-//   2. the cost claim              (internal_cost_claims, deliberately raised)
-//   3. funding, payment and reconciliation  (fund_requests → releases → acquittals)
+//   2. the Project Cost            (internal_cost_claims, deliberately raised)
+//   3. payment / advance           (fund_requests → releases → acquittals)
 //
 // Every stage reads from a record. Nothing here is stored, and stage 3 is
 // silent — not "pending" — when no claim exists, because a day with no cost is
@@ -53,7 +53,7 @@ function claimStage(entry, position) {
   if (!position || position.claims.length === 0) {
     return {
       status: entry.state === "accepted" ? CURRENT : WAITING,
-      detail: "No cost claim raised yet",
+      detail: "No Project Cost raised yet",
     };
   }
   const count = position.claims.length;
@@ -61,14 +61,14 @@ function claimStage(entry, position) {
   if (approved === count) {
     return {
       status: DONE,
-      detail: count === 1 ? "Claim approved" : `All ${count} claims approved`,
+      detail: count === 1 ? "Approved" : `All ${count} Project Costs approved`,
     };
   }
   return {
     status: ["draft", "awaiting_review", "amendment_requested"].includes(position.code)
       ? CURRENT
       : WAITING,
-    detail: count === 1 ? position.label : `${approved} of ${count} claims approved`,
+    detail: count === 1 ? position.label : `${approved} of ${count} Project Costs approved`,
   };
 }
 
@@ -76,7 +76,7 @@ function claimStage(entry, position) {
 // two deliberately use different wording, so a reader never has to work out
 // whether they are looking at one fact twice or two facts that agree.
 const RAIL_FUNDING_DETAIL = {
-  not_requested: "No fund request yet",
+  not_requested: "Not yet recorded",
   awaiting_authority: "Awaiting the Principal's decision",
   unpaid: "Authorised, nothing released",
   partially_funded: "Part of the authority released",
@@ -89,7 +89,7 @@ function moneyStage(position) {
     return {
       status: WAITING,
       detail: position?.claims?.length
-        ? "No fund request raised against this cost"
+        ? "Not yet recorded"
         : "",
     };
   }
@@ -109,10 +109,10 @@ export function recordProgressSteps(entry, position) {
   if (!entry) return [];
   return [
     { key: "record", label: "Site record", ...recordStage(entry) },
-    { key: "claim", label: "Cost claim", ...claimStage(entry, position) },
+    { key: "claim", label: "Project Cost", ...claimStage(entry, position) },
     {
       key: "money",
-      label: "Funding, payment and reconciliation",
+      label: "Payment / Advance",
       ...moneyStage(position),
     },
   ];
@@ -135,7 +135,7 @@ export function recordNextStep(entry, position) {
   if (!position) return null;
   if (position.claims.length === 0) {
     return position.canCreate
-      ? "The record is accepted. The day's known costs normally move into a cost claim by 4:00 pm."
+      ? "The record is accepted. The day's known costs normally move into a Project Cost by 4:00 pm."
       : null;
   }
   return null;

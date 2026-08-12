@@ -46,8 +46,10 @@ const PAYMENT_FILTERS = {
 
 export default function AdminSiteCosts() {
   const { role, projects } = useAdminData();
+  // Payment truth comes from the first-class Project Cost payment position.
+  // `linesForClaim` lets a draft state its structured line total.
   const {
-    claims, status, error, paymentPositionForClaim,
+    claims, status, error, paymentPositionForClaim, linesForClaim,
   } = useSiteCosts();
   const [searchParams, setSearchParams] = useSearchParams();
   const lifecycle = searchParams.get("status") || "all";
@@ -91,7 +93,7 @@ export default function AdminSiteCosts() {
     matchesPayment(claim) &&
     withinReportedPeriod(claim.submittedAt, claim.decidedAt, from, to));
 
-  const summary = summarisePaymentTruth(visible, paymentPositionForClaim);
+  const summary = summarisePaymentTruth(visible, paymentPositionForClaim, linesForClaim);
 
   const activeFilterSummary = [
     describeActiveFilters({
@@ -189,13 +191,33 @@ export default function AdminSiteCosts() {
                         <Link to={`/admin/site-costs/${claim.id}`} className="font-semibold tabular-nums text-botanique-green hover:underline">{costReference(claim)}</Link>
                       </td>
                       <td className="px-3.5 py-2.5">
-                        <span className="block max-w-[16rem] truncate font-medium text-botanique-charcoal">{projectMap.get(claim.projectId)?.projectName || "Project"}</span>
-                        <span className="block max-w-[16rem] truncate text-[11px] text-gray-500">{claim.recipientLabel}</span>
+                        <span className="block max-w-[16rem] truncate font-medium text-botanique-charcoal">
+                          {projectMap.get(claim.projectId)?.projectName || "Project"}
+                        </span>
+                        {/* Compact secondary context only. The full purpose and
+                            the labour breakdown live in the drill-through. */}
+                        <span className="block max-w-[16rem] truncate text-[11px] text-gray-500">
+                          {claim.recipientLabel}
+                        </span>
                       </td>
-                      <td className="px-3.5 py-2.5"><Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>{SITE_COST_LIFECYCLES[claim.lifecycle]}</Chip></td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right font-semibold tabular-nums">{money(costTotal(claim))}</td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums"><span className={truth.balance > 0 ? "font-semibold text-amber-800" : "text-gray-600"}>{balanceDisplay(truth, money)}</span></td>
-                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums"><span className={truth.paid > 0 ? "font-semibold text-emerald-800" : "text-gray-600"}>{paidDisplay(truth, money)}</span></td>
+                      <td className="px-3.5 py-2.5">
+                        <Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>
+                          {SITE_COST_LIFECYCLES[claim.lifecycle]}
+                        </Chip>
+                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right font-semibold tabular-nums">
+                        {money(costTotal(claim, linesForClaim?.(claim.id)))}
+                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums">
+                        <span className={truth.balance > 0 ? "font-semibold text-amber-800" : "text-gray-600"}>
+                          {balanceDisplay(truth, money)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums">
+                        <span className={truth.paid > 0 ? "font-semibold text-emerald-800" : "text-gray-600"}>
+                          {paidDisplay(truth, money)}
+                        </span>
+                      </td>
                       <td className="px-3.5 py-2.5 text-right">
                         <ActionMenu claim={claim} truth={truth} role={role} open={openMenu === claim.id} onToggle={() => setOpenMenu(openMenu === claim.id ? null : claim.id)} />
                       </td>
@@ -219,10 +241,10 @@ export default function AdminSiteCosts() {
                     </div>
                     <Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>{SITE_COST_LIFECYCLES[claim.lifecycle]}</Chip>
                   </div>
-                  <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[11px]">
-                    <div><dt className="text-gray-500">Total</dt><dd className="mt-0.5 font-semibold tabular-nums">{money(costTotal(claim))}</dd></div>
-                    <div><dt className="text-gray-500">Paid</dt><dd className="mt-0.5 font-semibold tabular-nums">{paidDisplay(truth, money)}</dd></div>
-                    <div><dt className="text-gray-500">Balance</dt><dd className="mt-0.5 font-semibold tabular-nums">{balanceDisplay(truth, money)}</dd></div>
+                  <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[12px]">
+                    <div><dt className="text-gray-500">Total</dt><dd className="font-semibold tabular-nums">{money(costTotal(claim, linesForClaim?.(claim.id)))}</dd></div>
+                    <div><dt className="text-gray-500">Paid</dt><dd className="tabular-nums">{paidDisplay(truth, money)}</dd></div>
+                    <div><dt className="text-gray-500">Balance</dt><dd className="tabular-nums">{balanceDisplay(truth, money)}</dd></div>
                   </dl>
                   <div className="mt-2.5 flex justify-end"><ActionMenu claim={claim} truth={truth} role={role} open={openMenu === claim.id} onToggle={() => setOpenMenu(openMenu === claim.id ? null : claim.id)} /></div>
                 </li>

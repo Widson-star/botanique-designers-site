@@ -19,12 +19,25 @@ function round(value) {
   return Number.isFinite(amount) ? Math.round(amount * 100) / 100 : 0;
 }
 
-export function costTotal(claim) {
-  return round(claim?.approvedTotal ?? claim?.submittedTotal ?? 0);
+// FOUNDER RULING, 12 Aug 2026. Draft means NOT YET SUBMITTED. It does not mean
+// zero cost. A draft has no submittedTotal yet, but it already owns structured
+// cost lines, and showing KES 0.00 for a draft holding KES 5,350 of lines is
+// simply untrue. Where a decided amount exists it still wins — a line total
+// never overrides what was submitted or approved.
+export function costTotal(claim, lines = null) {
+  const decided = claim?.approvedTotal ?? claim?.submittedTotal;
+  if (decided != null) return round(decided);
+  if (Array.isArray(lines) && lines.length > 0) {
+    return round(lines.reduce((sum, line) => sum + Number(line.lineTotal || 0), 0));
+  }
+  return 0;
 }
 
-export function costPaymentTruth(claim, position = null) {
-  const total = costTotal(claim);
+// The payment position of ONE cost, from its first-class payment position.
+// `lines` lets a draft state its structured line total, which is a question
+// about the cost, not about payment.
+export function costPaymentTruth(claim, position = null, lines = null) {
+  const total = costTotal(claim, lines);
 
   if (!claim || claim.lifecycle !== "approved") {
     return {
@@ -70,7 +83,9 @@ export function balanceDisplay(truth, money) {
   return truth.balance == null ? "—" : money(truth.balance);
 }
 
-export function summarisePaymentTruth(claims = [], positionForClaim = () => null) {
+// The register's portfolio line. Costs whose payment truth is unknown are
+// counted separately rather than silently folded into "unpaid".
+export function summarisePaymentTruth(claims = [], positionForClaim = () => null, linesForClaim = null) {
   let total = 0;
   let paid = 0;
   let balance = 0;
@@ -78,7 +93,8 @@ export function summarisePaymentTruth(claims = [], positionForClaim = () => null
   let known = 0;
 
   claims.forEach((claim) => {
-    const truth = costPaymentTruth(claim, positionForClaim(claim.id));
+    const truth = costPaymentTruth(
+      claim, positionForClaim(claim.id), linesForClaim ? linesForClaim(claim.id) : null);
     total = round(total + truth.total);
     if (truth.paid == null) {
       if (truth.knowledge !== PAYMENT_KNOWLEDGE.not_payable) unrecorded += 1;
