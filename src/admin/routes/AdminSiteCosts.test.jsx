@@ -55,14 +55,14 @@ describe("Project Costs admin surfaces", () => {
     expect(screen.getByRole("link", { name: "Authorise project cost" })).toBeInTheDocument();
   });
 
-  it("shows whole-claim Principal decisions, immutable history and stale recovery", async () => {
+  it("shows whole-cost Principal decisions, history and stale recovery", async () => {
     const decideClaim = vi.fn(() => Promise.resolve({ ok: false, stale: true, error: "stale" }));
     const values = contexts({ decideClaim });
     wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>, values, "/admin/site-costs/c1");
-    expect(screen.getByRole("button", { name: "Approve whole claim" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve Project Cost" })).toBeInTheDocument();
     expect(screen.getByText("Submitted for review")).toBeInTheDocument();
-    expect(screen.getByText(/Approval is authority to incur/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Approve whole claim" }));
+    expect(screen.getByText("Approval does not mean paid. Payment is recorded separately against the Project Cost.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Approve Project Cost" }));
     await waitFor(() => expect(screen.getByText(/changed elsewhere/)).toBeInTheDocument());
   });
 
@@ -388,9 +388,9 @@ describe("Project Costs possible-duplicate warning", () => {
       [earlier, later]
     ));
     // Warned, not blocked: every decision remains available.
-    expect(screen.getByRole("button", { name: "Approve whole claim" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Approve Project Cost" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Request amendment" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reject claim" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject Project Cost" })).toBeInTheDocument();
   });
 
   it("stays silent when the lines are genuinely different", () => {

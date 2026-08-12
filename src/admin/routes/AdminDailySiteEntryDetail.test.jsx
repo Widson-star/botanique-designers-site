@@ -269,6 +269,48 @@ describe("AdminDailySiteEntryDetail financial follow-up", () => {
     expect(submitClaim.mock.calls[0][0]).toBe("c1");
   });
 
+  // Codex review r3769126755. A same-day Project Cost can appear on this record
+  // through the project/date relation without having been sourced from it. The
+  // record on screen must only govern the costs that actually came from it.
+  it("refuses to submit a Project Cost sourced from a different site record", () => {
+    // The old record raised the draft, was superseded, and the accepted
+    // replacement now shows the same-day cost by project and date.
+    const fromOldRecord = { ...draftClaim, dailySiteEntryId: "e0" };
+    handoff({ claims: [fromOldRecord] });
+    expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ }))
+      .not.toBeInTheDocument();
+    expect(within(followUp()).getByText(/came from another site record/))
+      .toBeInTheDocument();
+    // And it is not misdescribed as blocked by THIS record's state.
+    expect(within(followUp()).queryByText(/has to be accepted before/)).not.toBeInTheDocument();
+  });
+
+  it("does not let an unaccepted record govern another record's Project Cost", () => {
+    // Same mismatch, but the record on screen is not accepted either. The
+    // mismatch is what decides, so the answer is unchanged.
+    handoff({ entries: [baseEntry], claims: [{ ...draftClaim, dailySiteEntryId: "e0" }] });
+    expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ }))
+      .not.toBeInTheDocument();
+    expect(within(followUp()).getByText(/came from another site record/)).toBeInTheDocument();
+  });
+
+  // A Project Cost created directly in Finance has no Daily Site Record source,
+  // so this record's acceptance gate simply does not apply to it.
+  it("leaves a directly created Project Cost outside this record's gate", () => {
+    handoff({ claims: [{ ...draftClaim, dailySiteEntryId: "" }] });
+    expect(within(followUp()).getByRole("button", { name: "Submit Project Cost for review" }))
+      .toBeInTheDocument();
+    expect(within(followUp()).queryByText(/came from another site record/)).not.toBeInTheDocument();
+    expect(within(followUp()).queryByText(/has to be accepted before/)).not.toBeInTheDocument();
+  });
+
+  it("does not block a directly created Project Cost on an unaccepted record", () => {
+    handoff({ entries: [baseEntry], claims: [{ ...draftClaim, dailySiteEntryId: "" }] });
+    expect(within(followUp()).getByRole("button", { name: "Submit Project Cost for review" }))
+      .toBeInTheDocument();
+    expect(within(followUp()).queryByText(/has to be accepted before/)).not.toBeInTheDocument();
+  });
+
   it("withholds submission until the source record is accepted", () => {
     handoff({ entries: [baseEntry] });
     expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ }))
