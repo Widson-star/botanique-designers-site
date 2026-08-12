@@ -70,7 +70,7 @@ const PAYMENT_FILTERS = {
 
 export default function AdminSiteCosts() {
   const { role, projects } = useAdminData();
-  const { claims, status, error } = useSiteCosts();
+  const { claims, status, error, linesForClaim } = useSiteCosts();
   // Read only. Every figure below is derived; this page records no payment.
   const { requests, allocations, releases, acquittals } = useFundRequests();
   const finance = useMemo(() => ({ requests, allocations, releases, acquittals }),
@@ -116,7 +116,7 @@ export default function AdminSiteCosts() {
     matchesPayment(claim) &&
     withinReportedPeriod(claim.submittedAt, claim.decidedAt, from, to));
 
-  const summary = summarisePaymentTruth(visible, finance);
+  const summary = summarisePaymentTruth(visible, finance, linesForClaim);
 
   const activeFilterSummary = [
     describeActiveFilters({
@@ -234,7 +234,7 @@ export default function AdminSiteCosts() {
                         </Chip>
                       </td>
                       <td className="whitespace-nowrap px-3.5 py-2.5 text-right font-semibold tabular-nums">
-                        {money(costTotal(claim))}
+                        {money(costTotal(claim, linesForClaim?.(claim.id)))}
                       </td>
                       <td className="whitespace-nowrap px-3.5 py-2.5 text-right tabular-nums">
                         <span className={truth.balance > 0 ? "font-semibold text-amber-800" : "text-gray-600"}>
@@ -285,7 +285,7 @@ export default function AdminSiteCosts() {
                     </Chip>
                   </div>
                   <dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[12px]">
-                    <div><dt className="text-gray-500">Total</dt><dd className="font-semibold tabular-nums">{money(costTotal(claim))}</dd></div>
+                    <div><dt className="text-gray-500">Total</dt><dd className="font-semibold tabular-nums">{money(costTotal(claim, linesForClaim?.(claim.id)))}</dd></div>
                     <div><dt className="text-gray-500">Paid</dt><dd className="tabular-nums">{paidDisplay(truth, money)}</dd></div>
                     <div><dt className="text-gray-500">Balance</dt><dd className="tabular-nums">{balanceDisplay(truth, money)}</dd></div>
                   </dl>

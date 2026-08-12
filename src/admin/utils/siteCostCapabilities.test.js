@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateSiteCostTotal, canCancelSiteCost, canCopyDailySiteToCost,
   canDecideSiteCost, canEditSiteCost, canSeeSiteCosts, canSubmitSiteCost,
+  canSubmitCostFromDailySite, costSubmissionBlockedReason,
 } from "./siteCostCapabilities";
 
 describe("site cost capabilities", () => {
@@ -39,5 +40,28 @@ describe("site cost capabilities", () => {
       expect(canCopyDailySiteToCost({ state, disposition: "working" }, "manager")).toBe(false);
     }
     expect(canCopyDailySiteToCost({ state: "accepted", disposition: "no_work" }, "owner")).toBe(false);
+  });
+});
+
+// FOUNDER ORDERING, unchanged: a DSR-derived Project Cost may not go for a
+// financial decision before its source record has been accepted.
+describe("Project Cost submission follows Daily Site Record acceptance", () => {
+  const draft = { id: "c1", lifecycle: "draft", requesterId: "m1" };
+
+  it("refuses submission while the source record is still awaiting review", () => {
+    expect(canSubmitSiteCost(draft, "manager", "m1")).toBe(true);
+    expect(canSubmitCostFromDailySite({ state: "submitted" })).toBe(false);
+    expect(costSubmissionBlockedReason({ state: "submitted" })).toMatch(/has to be accepted/);
+  });
+
+  it("allows the requesting manager to submit once the record is accepted", () => {
+    expect(canSubmitSiteCost(draft, "manager", "m1")).toBe(true);
+    expect(canSubmitCostFromDailySite({ state: "accepted" })).toBe(true);
+    expect(costSubmissionBlockedReason({ state: "accepted" })).toBe("");
+  });
+
+  it("keeps submission with the requester, not the Principal or another manager", () => {
+    expect(canSubmitSiteCost(draft, "owner", "o1")).toBe(false);
+    expect(canSubmitSiteCost(draft, "manager", "m2")).toBe(false);
   });
 });

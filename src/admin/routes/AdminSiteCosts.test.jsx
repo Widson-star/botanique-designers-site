@@ -55,15 +55,44 @@ describe("Project Costs admin surfaces", () => {
     expect(screen.getByRole("link", { name: "Authorise project cost" })).toBeInTheDocument();
   });
 
-  it("shows whole-claim Principal decisions, immutable history and stale recovery", async () => {
+  it("shows whole-cost Principal decisions, history and stale recovery", async () => {
     const decideClaim = vi.fn(() => Promise.resolve({ ok: false, stale: true, error: "stale" }));
     const values = contexts({ decideClaim });
     wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>, values, "/admin/site-costs/c1");
-    expect(screen.getByRole("button", { name: "Approve whole claim" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Approve Project Cost" })).toBeInTheDocument();
     expect(screen.getByText("Submitted for review")).toBeInTheDocument();
-    expect(screen.getByText(/Approval is authority to incur/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Approve whole claim" }));
+    expect(screen.getByText("Approval does not mean paid. Payment is recorded separately against the Project Cost.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Approve Project Cost" }));
     await waitFor(() => expect(screen.getByText(/changed elsewhere/)).toBeInTheDocument());
+  });
+
+  // The recipient/crew field carries raw site arithmetic. It is context, not the
+  // identity of a Project Cost.
+  it("titles a Project Cost by its purpose, not by raw recipient arithmetic", () => {
+    const messy = {
+      ...claim, id: "9206ae9b-0d65-4f30-bd2f-8528548f9796",
+      purpose: "Cabro arrangement\nLandscape prep",
+      recipientLabel: "(Mason 1200 and 2 casuals @500} Ksh 2200, Waweru {1000}",
+    };
+    const values = contexts({ claims: [messy] });
+    wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>, values, `/admin/site-costs/${messy.id}`);
+    const heading = screen.getByRole("heading", { level: 1 });
+    expect(heading).toHaveTextContent("Cabro arrangement — Landscape prep");
+    expect(heading).not.toHaveTextContent(/Ksh 2200/);
+    // Compact context, and no request-round machinery in the headline.
+    expect(document.body.textContent).toMatch(/Alego Usonga · ICC-[0-9A-Z]+ · Awaiting review/);
+    expect(document.body.textContent).not.toMatch(/request round/i);
+  });
+
+  it("uses plain section names and keeps the history reachable", () => {
+    wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>, contexts(), "/admin/site-costs/c1");
+    expect(screen.getByRole("heading", { name: "Project Cost summary" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cost breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Claim summary" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Structured cost lines" })).not.toBeInTheDocument();
+    // The audit trail itself is untouched.
+    expect(screen.getByText("Submitted for review")).toBeInTheDocument();
   });
 
   it("copies eligible Daily Site planning into a deliberate manager claim draft", () => {
@@ -135,6 +164,42 @@ describe("Project Costs admin surfaces", () => {
 // Funding mechanics are no longer the primary state of a cost, and where the
 // Hub holds no payment record, Paid and Balance are unknown — never zero.
 // ---------------------------------------------------------------------------
+
+// A draft has no submittedTotal yet but already owns cost lines. Showing KES 0
+// for a draft holding KES 5,350 is simply untrue.
+describe("Project Costs register — draft totals", () => {
+  const draft = {
+    ...claim, id: "d1a2b3c4-0000-0000-0000-000000000001", lifecycle: "draft",
+    submittedTotal: null, approvedTotal: null, purpose: "Cabro arrangement",
+  };
+  const draftLines = [
+    { id: "dl1", claimId: draft.id, lineNumber: 1, description: "Mason", rateType: "fixed", quantity: 1, unit: "job", unitRate: 5000, lineTotal: 5000 },
+    { id: "dl2", claimId: draft.id, lineNumber: 2, description: "Cartage", rateType: "fixed", quantity: 1, unit: "trip", unitRate: 350, lineTotal: 350 },
+  ];
+
+  function registerWithDraft() {
+    const values = contexts({ claims: [draft] });
+    values.costs.linesForClaim = (id) => (id === draft.id ? draftLines : []);
+    return wrap(<AdminSiteCosts />, values);
+  }
+
+  it("shows the draft's structured line total, not KES 0", () => {
+    registerWithDraft();
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    expect(cells[4]).toMatch(/5,350/);
+    expect(cells[4]).not.toMatch(/KES\s*0\.00/);
+  });
+
+  it("does not turn a draft total into Paid or Balance", () => {
+    registerWithDraft();
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    // Draft is not payable. Payment truth stays unknown.
+    expect(cells[5]).toBe("—");
+    expect(cells[6]).toBe("—");
+  });
+});
 
 describe("Project Costs register (Founder amendment)", () => {
   const ADVANCE = "operations_manager_accountable_advance";
@@ -311,8 +376,9 @@ describe("Project Costs possible-duplicate warning", () => {
     ));
     expect(screen.getByText("Possible duplicate")).toBeInTheDocument();
     expect(screen.getByText(/identical cost line/i)).toBeInTheDocument();
-    // Drill-through to the claim it overlaps.
-    expect(screen.getByRole("link", { name: /Alego turf crew/ }))
+    // Drill-through to the cost it overlaps, named by what it was for rather
+    // than by the raw recipient/crew string.
+    expect(screen.getByRole("link", { name: /Lay turf/ }))
       .toHaveAttribute("href", "/admin/site-costs/c1");
   });
 
@@ -322,9 +388,9 @@ describe("Project Costs possible-duplicate warning", () => {
       [earlier, later]
     ));
     // Warned, not blocked: every decision remains available.
-    expect(screen.getByRole("button", { name: "Approve whole claim" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Approve Project Cost" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Request amendment" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reject claim" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject Project Cost" })).toBeInTheDocument();
   });
 
   it("stays silent when the lines are genuinely different", () => {

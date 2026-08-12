@@ -93,7 +93,7 @@ describe("AdminDailySiteEntryDetail", () => {
     expect(screen.getByRole("button", { name: "Accept site record" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Return site record" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Void site record" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Create cost claim" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Create Project Cost" })).toHaveAttribute(
       "href", "/admin/site-costs/new?dailySiteEntryId=e1"
     );
   });
@@ -103,12 +103,12 @@ describe("AdminDailySiteEntryDetail", () => {
     expect(screen.queryByRole("button", { name: "Accept site record" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Return site record" })).not.toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: "Record actions" }))
-      .getByRole("link", { name: "Create cost claim" })).toBeInTheDocument();
+      .getByRole("link", { name: "Create Project Cost" })).toBeInTheDocument();
   });
 
   it("does not offer a cost claim from returned or no-work planning", () => {
     renderDetail({ role: "manager", currentUserId: "m1", entries: [{ ...baseEntry, state: "returned_for_correction" }] });
-    expect(screen.queryByRole("link", { name: "Create cost claim" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Create Project Cost" })).not.toBeInTheDocument();
   });
 
   it("treats accepted entries as immutable — offers supersession, not edit", () => {
@@ -147,10 +147,10 @@ describe("AdminDailySiteEntryDetail financial follow-up", () => {
 
   it("states that no claim exists, and never creates one on its own", () => {
     renderDetail({ role: "manager", currentUserId: "m1" });
-    expect(within(followUp()).getByText("No cost claim yet")).toBeInTheDocument();
+    expect(within(followUp()).getByText("No Project Cost yet")).toBeInTheDocument();
     // The create action lives in the page header, as the authority image puts it.
     expect(within(screen.getByRole("group", { name: "Record actions" }))
-      .getByRole("link", { name: "Create cost claim" }))
+      .getByRole("link", { name: "Create Project Cost" }))
       .toHaveAttribute("href", "/admin/site-costs/new?dailySiteEntryId=e1");
     // The hand-off is a link the reader must follow: nothing is submitted for them.
     expect(within(followUp()).queryByRole("button")).not.toBeInTheDocument();
@@ -158,13 +158,13 @@ describe("AdminDailySiteEntryDetail financial follow-up", () => {
 
   it("explains that a draft record cannot raise a claim yet", () => {
     renderDetail({ role: "manager", currentUserId: "m1", entries: [{ ...baseEntry, state: "draft" }] });
-    expect(within(followUp()).queryByRole("link", { name: "Create cost claim" })).not.toBeInTheDocument();
+    expect(within(followUp()).queryByRole("link", { name: "Create Project Cost" })).not.toBeInTheDocument();
     expect(within(followUp()).getByText(/once this record has been submitted/)).toBeInTheDocument();
   });
 
   it("expects no claim from a no-work day", () => {
     renderDetail({ role: "manager", currentUserId: "m1", entries: [{ ...baseEntry, disposition: "no_work", noWorkReason: "rain" }] });
-    expect(within(followUp()).getByText("No cost claim expected")).toBeInTheDocument();
+    expect(within(followUp()).getByText("No Project Cost expected")).toBeInTheDocument();
   });
 
   it("shows an awaiting-review claim and drills through to it", () => {
@@ -190,18 +190,188 @@ describe("AdminDailySiteEntryDetail financial follow-up", () => {
       { ...baseClaim, lifecycle: "approved" },
       { ...baseClaim, id: "c2", dailySiteEntryId: "", recipientLabel: "Cart transport", createdAt: "2026-07-28T16:00:00Z" },
     ] });
-    expect(within(followUp()).getByText("2 related cost claims")).toBeInTheDocument();
+    expect(within(followUp()).getByText("2 related Project Costs")).toBeInTheDocument();
     expect(within(followUp()).getByRole("link", { name: /Turf crew/ })).toBeInTheDocument();
     expect(within(followUp()).getByRole("link", { name: /Cart transport/ })).toBeInTheDocument();
     expect(within(screen.getByRole("group", { name: "Record actions" }))
-      .getByRole("link", { name: "Raise additional cost claim" })).toBeInTheDocument();
+      .getByRole("link", { name: "Add another Project Cost" })).toBeInTheDocument();
   });
 
   it("never asserts a payment, release or reconciliation position", () => {
     const { container } = renderDetail({ role: "owner", claims: [{ ...baseClaim, lifecycle: "approved" }] });
-    expect(container.textContent).not.toMatch(/\b(paid|released|reconciled|settled)\b/i);
-    // The record reports the claim's position and nothing about money moving.
+    // The follow-up section is where a money position would be asserted.
+    expect(followUp().textContent).not.toMatch(/\b(paid|released|reconciled|settled)\b/i);
+    // Page-wide nothing claims money moved. The standing note is allowed to DENY
+    // payment — "Approval does not mean paid" is the opposite of an assertion —
+    // so only words that would assert movement are forbidden outright.
+    expect(container.textContent).not.toMatch(/\b(released|reconciled|settled)\b/i);
+    expect(container.textContent).toMatch(/Approval does not mean paid/);
+    // The record reports the Project Cost's position and nothing about money moving.
     expect(within(followUp()).getByText("Approved")).toBeInTheDocument();
+  });
+
+  // ---------------------------------------------------------------------------
+  // The hand-off. An accepted record with a draft Project Cost had no way
+  // forward: the manager who raised it saw no submit action here, and the page
+  // led with "Raise additional cost claim" as though a second cost were the
+  // point. The Founder's ordering is unchanged — the record must be accepted
+  // first — but after acceptance the existing cost owns the next move.
+  // ---------------------------------------------------------------------------
+  const acceptedEntry = {
+    ...baseEntry, state: "accepted", reviewedBy: "o1", reviewedAt: "2026-07-28T06:00:00Z",
+  };
+  const draftClaim = { ...baseClaim, lifecycle: "draft", submittedTotal: null, approvedTotal: null };
+
+  function handoff({ role = "manager", currentUserId = "m1", entries = [acceptedEntry], claims = [draftClaim], submitClaim = vi.fn(() => Promise.resolve({ ok: true })), lines = [] } = {}) {
+    const adminValue = { role, projects, profilesById: { m1: { full_name: "Martine Lotom" } }, currentUserId };
+    const dailyValue = {
+      entries,
+      loadEvents: vi.fn(() => Promise.resolve([])),
+      submitEntry: vi.fn(() => Promise.resolve({ ok: true })),
+      returnEntry: vi.fn(() => Promise.resolve({ ok: true })),
+      acceptEntry: vi.fn(() => Promise.resolve({ ok: true })),
+      voidEntry: vi.fn(() => Promise.resolve({ ok: true })),
+      correctEntry: vi.fn(() => Promise.resolve({ ok: true })),
+      supersedeEntry: vi.fn(() => Promise.resolve({ ok: true })),
+    };
+    const result = render(
+      <MemoryRouter initialEntries={["/admin/daily-site-operations/e1"]}>
+        <AdminDataContext.Provider value={adminValue}>
+          <DailySiteOperationsContext.Provider value={dailyValue}>
+            <SiteCostsContext.Provider value={{
+              claims, status: "ready", error: "", submitClaim,
+              linesForClaim: (id) => lines.filter((line) => line.claimId === id),
+            }}>
+              <FundRequestsContext.Provider value={{ requests: [], allocations: [], releases: [], acquittals: [] }}>
+                <Routes>
+                  <Route path="/admin/daily-site-operations/:entryId" element={<AdminDailySiteEntryDetail />} />
+                </Routes>
+              </FundRequestsContext.Provider>
+            </SiteCostsContext.Provider>
+          </DailySiteOperationsContext.Provider>
+        </AdminDataContext.Provider>
+      </MemoryRouter>
+    );
+    return { ...result, submitClaim };
+  }
+
+  it("offers the requesting manager the submit action once the record is accepted", () => {
+    handoff();
+    expect(within(followUp()).getByRole("button", { name: "Submit Project Cost for review" }))
+      .toBeInTheDocument();
+  });
+
+  it("submits the existing Project Cost and never creates another", async () => {
+    const { submitClaim } = handoff();
+    within(followUp()).getByRole("button", { name: "Submit Project Cost for review" }).click();
+    await Promise.resolve();
+    expect(submitClaim).toHaveBeenCalledTimes(1);
+    expect(submitClaim.mock.calls[0][0]).toBe("c1");
+  });
+
+  // Codex review r3769126755. A same-day Project Cost can appear on this record
+  // through the project/date relation without having been sourced from it. The
+  // record on screen must only govern the costs that actually came from it.
+  it("refuses to submit a Project Cost sourced from a different site record", () => {
+    // The old record raised the draft, was superseded, and the accepted
+    // replacement now shows the same-day cost by project and date.
+    const fromOldRecord = { ...draftClaim, dailySiteEntryId: "e0" };
+    handoff({ claims: [fromOldRecord] });
+    expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ }))
+      .not.toBeInTheDocument();
+    expect(within(followUp()).getByText(/came from another site record/))
+      .toBeInTheDocument();
+    // And it is not misdescribed as blocked by THIS record's state.
+    expect(within(followUp()).queryByText(/has to be accepted before/)).not.toBeInTheDocument();
+  });
+
+  it("does not let an unaccepted record govern another record's Project Cost", () => {
+    // Same mismatch, but the record on screen is not accepted either. The
+    // mismatch is what decides, so the answer is unchanged.
+    handoff({ entries: [baseEntry], claims: [{ ...draftClaim, dailySiteEntryId: "e0" }] });
+    expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ }))
+      .not.toBeInTheDocument();
+    expect(within(followUp()).getByText(/came from another site record/)).toBeInTheDocument();
+  });
+
+  // A Project Cost created directly in Finance has no Daily Site Record source,
+  // so this record's acceptance gate simply does not apply to it.
+  it("leaves a directly created Project Cost outside this record's gate", () => {
+    handoff({ claims: [{ ...draftClaim, dailySiteEntryId: "" }] });
+    expect(within(followUp()).getByRole("button", { name: "Submit Project Cost for review" }))
+      .toBeInTheDocument();
+    expect(within(followUp()).queryByText(/came from another site record/)).not.toBeInTheDocument();
+    expect(within(followUp()).queryByText(/has to be accepted before/)).not.toBeInTheDocument();
+  });
+
+  it("does not block a directly created Project Cost on an unaccepted record", () => {
+    handoff({ entries: [baseEntry], claims: [{ ...draftClaim, dailySiteEntryId: "" }] });
+    expect(within(followUp()).getByRole("button", { name: "Submit Project Cost for review" }))
+      .toBeInTheDocument();
+    expect(within(followUp()).queryByText(/has to be accepted before/)).not.toBeInTheDocument();
+  });
+
+  it("withholds submission until the source record is accepted", () => {
+    handoff({ entries: [baseEntry] });
+    expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ }))
+      .not.toBeInTheDocument();
+    expect(within(followUp()).getByText(/has to be accepted before this cost can go to the Principal/))
+      .toBeInTheDocument();
+  });
+
+  it("tells the Principal a draft is waiting on its requester, and offers no approval", () => {
+    handoff({ role: "owner", currentUserId: "o1" });
+    expect(within(followUp()).getByText(/awaiting submission by Martine Lotom/)).toBeInTheDocument();
+    expect(within(followUp()).getByRole("link", { name: "View Project Cost" })).toBeInTheDocument();
+    expect(within(followUp()).queryByRole("button", { name: /Approve/ })).not.toBeInTheDocument();
+    expect(within(followUp()).queryByRole("button", { name: /Submit Project Cost/ })).not.toBeInTheDocument();
+  });
+
+  it("gives the Principal a review route once the cost is awaiting review", () => {
+    handoff({ role: "owner", currentUserId: "o1", claims: [{ ...draftClaim, lifecycle: "awaiting_review" }] });
+    expect(within(followUp()).getByRole("link", { name: "Review Project Cost" }))
+      .toHaveAttribute("href", "/admin/site-costs/c1");
+  });
+
+  it("demotes adding another Project Cost while one is still live, without removing it", () => {
+    handoff();
+    const actions = screen.getByRole("group", { name: "Record actions" });
+    const add = within(actions).getByRole("link", { name: "Add another Project Cost" });
+    // Still available — a genuinely additional same-day cost is legitimate — but
+    // no longer the filled primary action.
+    expect(add).toBeInTheDocument();
+    expect(add.className).not.toMatch(/bg-botanique-green/);
+  });
+
+  it("shows a draft's structured line total rather than KES 0", () => {
+    handoff({
+      lines: [
+        { id: "l1", claimId: "c1", lineTotal: 5000 },
+        { id: "l2", claimId: "c1", lineTotal: 350 },
+      ],
+    });
+    expect(within(followUp()).getByText(/5,350/)).toBeInTheDocument();
+    expect(within(followUp()).queryByText(/KES 0\b/)).not.toBeInTheDocument();
+  });
+
+  it("names the Project Cost by what it was for, never by raw recipient arithmetic", () => {
+    handoff({
+      claims: [{
+        ...draftClaim,
+        purpose: "Cabro arrangement\nLandscape prep",
+        recipientLabel: "(Mason 1200 and 2 casuals @500} Ksh 2200",
+      }],
+    });
+    expect(within(followUp()).getByRole("link", { name: /Cabro arrangement/ })).toBeInTheDocument();
+    expect(within(followUp()).queryByText(/Ksh 2200/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the rejected Finance vocabulary off the record", () => {
+    const { container } = handoff({ role: "owner", currentUserId: "o1" });
+    expect(container.textContent).not.toMatch(/Funding, payment and reconciliation/);
+    expect(container.textContent).not.toMatch(/No fund request raised against this cost/);
+    expect(container.textContent).not.toMatch(/Cost claim/);
+    expect(container.textContent).toMatch(/Project Cost/);
   });
 
   it("keeps the Principal's access without making them the ordinary originator", () => {
@@ -359,7 +529,7 @@ describe("AdminDailySiteEntryDetail duplicate cost-claim control", () => {
     renderWithLines({ claims: [] });
     // The create action lives in the page header, where the authority puts it.
     const header = screen.getByRole("group", { name: "Record actions" });
-    expect(within(header).getByRole("link", { name: "Create cost claim" }))
+    expect(within(header).getByRole("link", { name: "Create Project Cost" }))
       .toHaveAttribute("href", "/admin/site-costs/new?dailySiteEntryId=e1");
     expect(screen.queryByText(/already been claimed/i)).not.toBeInTheDocument();
   });
@@ -393,21 +563,21 @@ describe("AdminDailySiteEntryDetail duplicate cost-claim control", () => {
   it("CASE C: keeps an explicit additional-cost path, marked as additional", () => {
     renderWithLines({ claims: [covering], lines: { c1: [planningLine] } });
     const header = screen.getByRole("group", { name: "Record actions" });
-    expect(within(header).getByRole("link", { name: "Raise additional cost claim" }))
+    expect(within(header).getByRole("link", { name: "Add another Project Cost" }))
       .toHaveAttribute("href", "/admin/site-costs/new?dailySiteEntryId=e1&additional=1");
   });
 
   it("does not falsely block a different category on the same day", () => {
     const materials = { ...baseClaim, id: "c2", category: "materials", lifecycle: "approved" };
     renderWithLines({ claims: [materials], lines: { c2: [otherLine] } });
-    expect(screen.getByRole("link", { name: "Raise additional cost claim" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add another Project Cost" })).toBeInTheDocument();
     expect(screen.queryByText(/already been claimed/i)).not.toBeInTheDocument();
   });
 
   it("lets a rejected claim be re-raised through the ordinary path", () => {
     renderWithLines({ claims: [{ ...covering, lifecycle: "rejected" }], lines: { c1: [planningLine] } });
     expect(screen.queryByText(/already been claimed/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Raise additional cost claim" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Add another Project Cost" })).toBeInTheDocument();
   });
 
   it("shows the Principal the same protection and mutates nothing", () => {
@@ -434,8 +604,8 @@ describe("Daily Site Record detail — composition (authority image 09)", () => 
     renderDetail({ entries: [accepted] });
     const rail = screen.getByRole("region", { name: "Record progress" });
     expect(within(rail).getByText(/1\. Site record/)).toBeInTheDocument();
-    expect(within(rail).getByText(/2\. Cost claim/)).toBeInTheDocument();
-    expect(within(rail).getByText(/3\. Funding, payment and reconciliation/)).toBeInTheDocument();
+    expect(within(rail).getByText(/2\. Project Cost/)).toBeInTheDocument();
+    expect(within(rail).getByText(/3\. Payment \/ Advance/)).toBeInTheDocument();
     // Settled decision: operational close and financial settlement are distinct,
     // and no day-close action, state or record exists. The authority image's
     // fourth box must not become one.

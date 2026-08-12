@@ -79,7 +79,7 @@ function unavailableReason(entry) {
   if (["voided", "superseded"].includes(entry?.state)) {
     return "This record is no longer the live record for the day.";
   }
-  return "A cost claim can be raised once this record has been submitted for review.";
+  return "A Project Cost can be raised once this record has been submitted for review.";
 }
 
 // The truthful financial-follow-up position for one Daily Site Record.
@@ -96,9 +96,9 @@ export function summariseFinancialFollowUp(entry, claims, role, finance = null, 
   if (related.length === 0) {
     return {
       code: canCreate ? "none_yet" : "not_available",
-      label: entry.disposition === "no_work" ? "No cost claim expected" : "No cost claim yet",
+      label: entry.disposition === "no_work" ? "No Project Cost expected" : "No Project Cost yet",
       detail: canCreate
-        ? "No project cost has been claimed for this day. Raising a claim is a separate, deliberate step."
+        ? "No Project Cost has been raised for this day. Raising one is a separate, deliberate step."
         : unavailableReason(entry),
       needsAttention: false,
       canCreate,
@@ -124,9 +124,9 @@ export function summariseFinancialFollowUp(entry, claims, role, finance = null, 
   return {
     code: headline.lifecycle,
     label: related.length > 1
-      ? `${related.length} related cost claims`
-      : SITE_COST_LIFECYCLES[headline.lifecycle] || "Cost claim",
-    detail: CLAIM_POSITION_DETAIL[headline.lifecycle] || "A related cost claim exists.",
+      ? `${related.length} related Project Costs`
+      : SITE_COST_LIFECYCLES[headline.lifecycle] || "Project Cost",
+    detail: CLAIM_POSITION_DETAIL[headline.lifecycle] || "A related Project Cost exists.",
     needsAttention: ["draft", "awaiting_review", "amendment_requested"].includes(headline.lifecycle)
       || (showsFunding && funding.needsAttention),
     canCreate,
@@ -149,9 +149,9 @@ export function financialFollowUpSummary(entry, claims, role, finance = null) {
   if (!position) return "";
   const fundingPhrase = fundingSummaryPhrase(position.funding);
   if (fundingPhrase) return fundingPhrase;
-  if (position.claims.length > 1) return `${position.claims.length} cost claims`;
+  if (position.claims.length > 1) return `${position.claims.length} Project Costs`;
   if (position.claims.length === 1) {
-    return `Cost claim: ${SITE_COST_LIFECYCLES[position.claims[0].lifecycle] || "raised"}`;
+    return `Project Cost: ${SITE_COST_LIFECYCLES[position.claims[0].lifecycle] || "raised"}`;
   }
-  return position.code === "none_yet" ? "No cost claim yet" : "";
+  return position.code === "none_yet" ? "No Project Cost yet" : "";
 }
