@@ -150,6 +150,37 @@ describe("buildUpdatePatch", () => {
     expect(patch).toEqual({ portfolio_permission_status: "Approved For Portfolio" });
     for (const col of AUDIT_COLUMNS) expect(patch).not.toHaveProperty(col);
   });
+
+  it("carries the version the edit form loaded without sending updated_at as a database field", () => {
+    const versionedOriginal = {
+      ...original,
+      updatedAt: "2026-07-29T09:36:21Z",
+    };
+    const form = {
+      ...projectToFormState(versionedOriginal),
+      projectName: "Karen Hills House 19",
+    };
+    const patch = buildUpdatePatch(form, versionedOriginal, "owner");
+
+    expect(patch).toEqual({
+      project_name: "Karen Hills House 19",
+      __expected_updated_at: "2026-07-29T09:36:21Z",
+    });
+    expect(patch).not.toHaveProperty("updated_at");
+  });
+
+  it("does not manufacture a save just to carry a version when nothing changed", () => {
+    const versionedOriginal = {
+      ...original,
+      updatedAt: "2026-07-29T09:36:21Z",
+    };
+    const patch = buildUpdatePatch(
+      projectToFormState(versionedOriginal),
+      versionedOriginal,
+      "owner"
+    );
+    expect(patch).toEqual({});
+  });
 });
 
 describe("buildMarkCompletedPatch", () => {
