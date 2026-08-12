@@ -18,6 +18,7 @@ import {
   summarisePaymentTruth,
 } from "../utils/costPaymentTruth";
 import { costReference } from "../utils/costReference";
+import { costSecondaryDescription } from "../utils/costPresentation";
 import { Chip, Disc, Glyph } from "../components/ui/Surfaces";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", {
@@ -197,7 +198,7 @@ export default function AdminSiteCosts() {
                         {/* Compact secondary context only. The full purpose and
                             the labour breakdown live in the drill-through. */}
                         <span className="block max-w-[16rem] truncate text-[11px] text-gray-500">
-                          {claim.recipientLabel}
+                          {costSecondaryDescription(claim)}
                         </span>
                       </td>
                       <td className="px-3.5 py-2.5">
@@ -237,7 +238,7 @@ export default function AdminSiteCosts() {
                     <div className="min-w-0">
                       <Link to={`/admin/site-costs/${claim.id}`} className="block break-words font-semibold text-botanique-green hover:underline">{costReference(claim)}</Link>
                       <p className="mt-0.5 break-words text-[12.5px] text-botanique-charcoal">{projectMap.get(claim.projectId)?.projectName || "Project"}</p>
-                      <p className="text-[11px] text-gray-500">{shortDate(`${claim.serviceDate}T00:00:00`)} · {claim.recipientLabel}</p>
+                      <p className="text-[11px] text-gray-500">{shortDate(`${claim.serviceDate}T00:00:00`)} · {costSecondaryDescription(claim)}</p>
                     </div>
                     <Chip tone={STATUS_TONE[claim.lifecycle] || "neutral"}>{SITE_COST_LIFECYCLES[claim.lifecycle]}</Chip>
                   </div>
