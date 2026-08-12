@@ -215,6 +215,16 @@ export function buildUpdatePatch(form, originalProject, role) {
       patch[col] = next[col];
     }
   }
+
+  // Carry the authoritative version the form was opened against, but only when
+  // there is a real change to save. This is deliberately a client-only key: the
+  // Supabase adapter removes it from the PATCH body and uses it as an
+  // `updated_at` match condition. A stale full edit therefore cannot replay old
+  // project name/status/lead values over a newer save.
+  if (Object.keys(patch).length > 0 && originalProject?.updatedAt) {
+    patch.__expected_updated_at = originalProject.updatedAt;
+  }
+
   return patch;
 }
 
