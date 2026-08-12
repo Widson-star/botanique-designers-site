@@ -19,10 +19,20 @@
     "HOW TO UPDATE. Only after the migration is genuinely applied to production:",
     "add its entry here, in apply order, with the version Supabase reports for it.",
     "Editing this file does not apply anything — it only records what someone",
-    "already did. See docs/ui-authority/operations-hub/MIGRATION-DEPLOYMENT.md."
+    "already did. See docs/ui-authority/operations-hub/MIGRATION-DEPLOYMENT.md.",
+    "",
+    "SPLIT APPLICATION, 12 Aug 2026. project_cost_payments was applied in five",
+    "transactions (versions 20260812055224, 055304, 055338, 055357, 055413) because",
+    "the whole file in one call exceeded the deployment tool's request timeout. The",
+    "first attempt timed out and rolled back cleanly, creating nothing — verified",
+    "before retrying. The parts were applied in file order, each boundary chosen so",
+    "an interrupted run would fail closed: tables and RLS first with no policies or",
+    "grants, then functions, then triggers, then policies and grants last. The final",
+    "schema was verified object by object and equals the single-file migration.",
+    "productionVersion below records the FIRST of those versions."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-09",
+  "verifiedAt": "2026-08-12",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -37,6 +47,8 @@
     { "name": "work_inbox_read_state", "productionVersion": "20260802205443" },
     { "name": "people_and_project_engagements", "productionVersion": "20260803133840" },
     { "name": "people_engagement_lifecycle_correction", "productionVersion": "20260803194000" },
-    { "name": "fund_release_and_reconciliation", "productionVersion": "20260809191358" }
+    { "name": "fund_release_and_reconciliation", "productionVersion": "20260809191358" },
+    { "name": "project_cost_payments", "productionVersion": "20260812055224" },
+    { "name": "project_cost_payment_integrity_guards", "productionVersion": "20260812055541" }
   ]
 }
