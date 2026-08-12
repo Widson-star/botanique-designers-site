@@ -49,6 +49,7 @@
     { "name": "people_engagement_lifecycle_correction", "productionVersion": "20260803194000" },
     { "name": "fund_release_and_reconciliation", "productionVersion": "20260809191358" },
     { "name": "project_cost_payments", "productionVersion": "20260812055224" },
-    { "name": "project_cost_payment_integrity_guards", "productionVersion": "20260812055541" }
+    { "name": "project_cost_payment_integrity_guards", "productionVersion": "20260812055541" },
+    { "name": "project_cost_payment_authority_corrections", "productionVersion": "20260812191226" }
   ]
 }
