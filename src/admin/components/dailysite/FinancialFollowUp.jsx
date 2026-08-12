@@ -16,7 +16,7 @@ function costTitle(claim) {
 }
 
 export default function FinancialFollowUp({
-  position, entry = null, entries = [], role = "", currentUserId = "",
+  position, entry = null, role = "", currentUserId = "",
   linesForClaim = null, onSubmitClaim = null, submitting = false, profilesById = null,
 }) {
   if (!position) return null;
@@ -39,22 +39,20 @@ export default function FinancialFollowUp({
       ) : (
         <ul className="mt-2 space-y-3">
           {claims.map((claim) => {
-            // The DSR ordering gate follows THIS Project Cost's own source record.
-            // Same-day costs can appear on another record by project/date, but that
-            // must never grant submission authority. Direct Project Costs have no
-            // DSR source and are therefore not subject to the DSR acceptance gate.
-            const sourceEntry = claim.dailySiteEntryId
-              ? entries.find((candidate) => candidate.id === claim.dailySiteEntryId) || null
-              : null;
+            // Submission follows this Project Cost's own source record. A same-day
+            // cost can appear here by project/date without being sourced from this
+            // DSR; in that case this page must not grant a submit action. Direct
+            // Project Costs have no DSR source and are not subject to this gate.
+            const isOwnSource = Boolean(claim.dailySiteEntryId && claim.dailySiteEntryId === entry?.id);
             const maySubmitByRole = canSubmitSiteCost(claim, role, currentUserId);
-            const sourceAllowsSubmission = claim.dailySiteEntryId
-              ? Boolean(sourceEntry && canSubmitCostFromDailySite(sourceEntry))
-              : true;
+            const sourceAllowsSubmission = !claim.dailySiteEntryId
+              ? true
+              : isOwnSource && canSubmitCostFromDailySite(entry);
             const maySubmit = maySubmitByRole && sourceAllowsSubmission;
-            const blockedReason = maySubmitByRole && claim.dailySiteEntryId && sourceEntry
-              ? costSubmissionBlockedReason(sourceEntry)
+            const blockedReason = maySubmitByRole && isOwnSource
+              ? costSubmissionBlockedReason(entry)
               : "";
-            const sourceUnavailable = maySubmitByRole && claim.dailySiteEntryId && !sourceEntry;
+            const sourceIsElsewhere = maySubmitByRole && claim.dailySiteEntryId && !isOwnSource;
             const awaitingSubmission = role === "owner" && claim.lifecycle === "draft";
 
             return (
@@ -79,9 +77,9 @@ export default function FinancialFollowUp({
                 )}
 
                 {blockedReason && <p className="mt-1.5 text-[11.5px] leading-snug text-gray-500">{blockedReason}</p>}
-                {sourceUnavailable && (
+                {sourceIsElsewhere && (
                   <p className="mt-1.5 text-[11.5px] leading-snug text-gray-500">
-                    This Project Cost's source site record is not available here. Open the Project Cost before submitting it.
+                    This Project Cost came from another site record. Open the Project Cost to continue it.
                   </p>
                 )}
 
