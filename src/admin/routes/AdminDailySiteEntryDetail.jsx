@@ -144,7 +144,7 @@ export default function AdminDailySiteEntryDetail() {
     entries, loadEvents, submitEntry, returnEntry, acceptEntry,
     voidEntry, correctEntry, supersedeEntry,
   } = useDailySiteOperations();
-  const { claims, linesForClaim } = useSiteCosts();
+  const { claims, linesForClaim, submitClaim } = useSiteCosts();
   // Read-only fund-request context. The operational record reaches the money
   // records to REPORT them; it never records, reconciles or decides anything.
   const { requests, allocations, releases, acquittals } = useFundRequests();
@@ -227,6 +227,11 @@ export default function AdminDailySiteEntryDetail() {
   const isWorking = entry.disposition !== "no_work";
   const canCreateClaim = Boolean(financialPosition?.canCreate);
   const hasClaims = Boolean(financialPosition?.claims?.length);
+  // A Project Cost that still has a move to make owns the next action. Adding
+  // another same-day cost stays legitimate, but it stops being the thing the
+  // page leads with, and the duplicate check on the cost form is unchanged.
+  const hasLiveClaim = Boolean(financialPosition?.claims?.some((claim) =>
+    ["draft", "awaiting_review", "amendment_requested"].includes(claim.lifecycle)));
 
   return (
     <div className="space-y-3">
@@ -261,10 +266,12 @@ export default function AdminDailySiteEntryDetail() {
               {canCreateClaim && (
                 <Link
                   to={`/admin/site-costs/new?dailySiteEntryId=${encodeURIComponent(entry.id)}${hasClaims ? "&additional=1" : ""}`}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-botanique-green px-4 text-[12.5px] font-semibold text-white hover:bg-botanique-dark"
+                  className={hasLiveClaim
+                    ? "inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-300 px-4 text-[12.5px] font-medium text-botanique-charcoal hover:bg-stone-50"
+                    : "inline-flex min-h-10 items-center gap-2 rounded-lg bg-botanique-green px-4 text-[12.5px] font-semibold text-white hover:bg-botanique-dark"}
                 >
                   <Glyph name="money" className="h-4 w-4" />
-                  {hasClaims ? "Raise additional cost claim" : "Create cost claim"}
+                  {hasClaims ? "Add another Project Cost" : "Create Project Cost"}
                 </Link>
               )}
               {canEditDailyDraft(role, entry, currentUserId) && (
@@ -374,7 +381,7 @@ export default function AdminDailySiteEntryDetail() {
           {/* 3 · The authority's standing note. */}
           <p className="flex items-start gap-2.5 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 text-[12px] text-gray-600">
             <Glyph name="doc" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-            Approval is authority to incur. Payment outcome still needs to be recorded after release.
+            Approval does not mean paid. Payment is recorded separately against the Project Cost.
           </p>
 
           {/* 4 · Grid row 1. */}
@@ -488,7 +495,16 @@ export default function AdminDailySiteEntryDetail() {
                   Planning signals only. No payment, fund release or approval is created here.
                 </p>
               </div>
-              <FinancialFollowUp position={financialPosition} />
+              <FinancialFollowUp
+                position={financialPosition}
+                entry={entry}
+                role={role}
+                currentUserId={currentUserId}
+                linesForClaim={linesForClaim}
+                profilesById={profilesById}
+                submitting={busy}
+                onSubmitClaim={(claim) => run(() => submitClaim(claim.id, claim.version))}
+              />
             </section>
           </div>
 
@@ -568,7 +584,7 @@ export default function AdminDailySiteEntryDetail() {
       <ConfirmDialog
         open={dialog === "void"}
         title="Void this site record"
-        description="Voiding keeps the site record for the audit trail but removes it from active compliance. Cost claims already raised from it are not affected."
+        description="Voiding keeps the site record for the audit trail but removes it from active compliance. Project Costs already raised from it are not affected."
         confirmLabel="Void site record"
         confirmTone="danger"
         confirmDisabled={!reason.trim()}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  costPaymentTruth, PAYMENT_KNOWLEDGE, summarisePaymentTruth,
+  costPaymentTruth, costTotal, PAYMENT_KNOWLEDGE, summarisePaymentTruth,
 } from "./costPaymentTruth";
 import { costReference } from "./costReference";
 
@@ -87,5 +87,38 @@ describe("cost reference", () => {
   it("never exposes a raw id when no usable reference exists", () => {
     expect(costReference({ id: "demo-cost-123" })).toBe("—");
     expect(costReference(null)).toBe("—");
+  });
+});
+
+// FOUNDER RULING, 12 Aug 2026. Draft means not yet submitted. It does not mean
+// zero cost: a draft already owns structured cost lines.
+describe("draft totals", () => {
+  const draftLines = [
+    { id: "l1", lineTotal: 5000 },
+    { id: "l2", lineTotal: 350 },
+  ];
+  const draft = { id: "c1", lifecycle: "draft", submittedTotal: null, approvedTotal: null };
+
+  it("reads a draft total from its structured cost lines", () => {
+    expect(costTotal(draft, draftLines)).toBe(5350);
+  });
+
+  it("still shows zero when a draft genuinely holds no lines", () => {
+    expect(costTotal(draft, [])).toBe(0);
+    expect(costTotal(draft, null)).toBe(0);
+  });
+
+  it("never lets a line total override a submitted or approved amount", () => {
+    expect(costTotal({ ...draft, submittedTotal: 4000 }, draftLines)).toBe(4000);
+    expect(costTotal({ ...draft, submittedTotal: 4000, approvedTotal: 3800 }, draftLines)).toBe(3800);
+  });
+
+  it("does not turn a draft total into a payment position", () => {
+    const truth = costPaymentTruth(draft, null, draftLines);
+    expect(truth.total).toBe(5350);
+    // A draft is not payable, so Paid and Balance stay unknown — never KES 0.
+    expect(truth.paid).toBeNull();
+    expect(truth.balance).toBeNull();
+    expect(truth.knowledge).toBe(PAYMENT_KNOWLEDGE.not_payable);
   });
 });
