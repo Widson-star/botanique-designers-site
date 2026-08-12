@@ -123,6 +123,50 @@ describe("Project Costs admin surfaces", () => {
     expect(screen.getByText("Submitted for review")).toBeInTheDocument();
   });
 
+  // Post-live: the register's secondary line says what the cost was FOR. The
+  // recipient/crew field is raw site arithmetic and stays on the detail page.
+  it("describes a register row by its purpose, not by recipient arithmetic", () => {
+    const messy = {
+      ...claim, id: "9206ae9b-0d65-4f30-bd2f-8528548f9796",
+      purpose: "Cabro arrangement\nLandscape prep",
+      recipientLabel: "(Mason 1200 and 2 casuals @500} Ksh 2200, Waweru {1000} and 3 casuals @ 500 Ksh 2500",
+    };
+    const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [messy] }));
+    // Desktop table and mobile card both read the same way. The mobile card
+    // prefixes the service date in the same line, so match on the description.
+    expect(screen.getAllByText(/Cabro arrangement — Landscape prep/).length).toBeGreaterThan(1);
+    expect(container.textContent).not.toMatch(/Ksh 2200/);
+    expect(container.textContent).not.toMatch(/Waweru/);
+  });
+
+  it("falls back to a compact recipient when a cost has no purpose", () => {
+    const noPurpose = {
+      ...claim, id: "9206ae9b-0d65-4f30-bd2f-8528548f9796",
+      purpose: "", recipientLabel: "3 (Casuals)",
+    };
+    wrap(<AdminSiteCosts />, contexts({ claims: [noPurpose] }));
+    expect(screen.getAllByText(/3 \(Casuals\)/).length).toBeGreaterThan(1);
+  });
+
+  // The amount label must never claim a decision that has not happened.
+  it.each([
+    ["draft", "Current amount"],
+    ["awaiting_review", "Submitted amount"],
+    ["approved", "Approved amount"],
+  ])("labels a %s cost's amount as %s", (lifecycle, label) => {
+    const staged = {
+      ...claim, id: "9206ae9b-0d65-4f30-bd2f-8528548f9796", lifecycle,
+      submittedTotal: lifecycle === "draft" ? null : 3350,
+      approvedTotal: lifecycle === "approved" ? 3350 : null,
+    };
+    const values = contexts({ claims: [staged] });
+    wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>, values, `/admin/site-costs/${staged.id}`);
+    expect(screen.getByText(label)).toBeInTheDocument();
+    if (lifecycle !== "approved") {
+      expect(screen.queryByText("Approved amount")).not.toBeInTheDocument();
+    }
+  });
+
   it("copies eligible Daily Site planning into a deliberate manager claim draft", () => {
     const dailyEntry = { id: "d1", projectId: "p1", workDate: "2026-07-31", disposition: "working", state: "accepted", version: 2, expectedWorkerCount: 6, crewReference: "Alego turf crew", ratePerWorker: 500, agreedLabourTotal: null, plannedLabourCost: 3000, workPlanned: "Lay turf" };
     const values = contexts({ role: "manager", claims: [], dailyEntries: [dailyEntry] });

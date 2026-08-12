@@ -12,6 +12,7 @@ import { profilePresentationName } from "../utils/personName";
 import { possibleDuplicateClaims } from "../utils/duplicateCostClaim";
 import { costPaymentTruth, costTotal } from "../utils/costPaymentTruth";
 import { costReference } from "../utils/costReference";
+import { costAmountLabel, paymentChannelLabel } from "../utils/costPresentation";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", {
   style: "currency", currency: "KES", currencyDisplay: "code", maximumFractionDigits: 2,
@@ -141,6 +142,9 @@ export default function AdminSiteCostDetail() {
   }
 
   const authoritativeAmount = costTotal(claim, lines);
+  // Approved, payment truth known, nothing left owing.
+  const settledAndPaid = claim.lifecycle === "approved"
+    && paymentTruth.paid != null && paymentTruth.balance === 0;
 
   return (
     <section className="mx-auto max-w-6xl space-y-4">
@@ -183,7 +187,7 @@ export default function AdminSiteCostDetail() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span>
                       <strong>{payment.paymentNumber}</strong>
-                      <span className="ml-2 text-gray-500">{payment.paidAt} · {payment.paymentChannel.replaceAll("_", " ")}</span>
+                      <span className="ml-2 text-gray-500">{payment.paidAt} · {paymentChannelLabel(payment.paymentChannel)}</span>
                       {payment.paymentReference && <span className="ml-2 text-gray-500">· {payment.paymentReference}</span>}
                     </span>
                     <div className="flex items-center gap-2">
@@ -300,7 +304,7 @@ export default function AdminSiteCostDetail() {
               <Fact label="Recipient" value={claim.recipientLabel} />
               <Fact label="Requested by" value={actorName(claim.requesterId)} />
               {claim.deciderId && <Fact label="Approved by" value={actorName(claim.deciderId)} />}
-              <Fact label="Approved amount" value={money(authoritativeAmount)} strong />
+              <Fact label={costAmountLabel(claim)} value={money(authoritativeAmount)} strong />
             </dl>
           </section>
 
@@ -327,7 +331,7 @@ export default function AdminSiteCostDetail() {
         </div>
 
         <aside className="space-y-4">
-          {(canDecideSiteCost(claim, role) || canCancelSiteCost(claim, role)) && (
+          {(canDecideSiteCost(claim, role) || (canCancelSiteCost(claim, role) && !settledAndPaid)) && (
             <section className="rounded-xl border border-stone-200 bg-white p-5">
               <h2 className="font-semibold">Principal action</h2>
               <label className="mt-3 block text-sm font-medium">Reason or instructions<textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={4} className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2.5" /></label>
@@ -338,8 +342,32 @@ export default function AdminSiteCostDetail() {
                   <button disabled={working || !reason.trim()} onClick={() => act(() => decideClaim(claim.id, claim.version, "rejected", reason))} className="min-h-11 rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Reject Project Cost</button>
                 </div>
               )}
-              {canCancelSiteCost(claim, role) && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelClaim(claim.id, claim.version, reason))} className="mt-3 min-h-11 w-full rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved Project Cost</button>}
+              {canCancelSiteCost(claim, role) && !settledAndPaid && <button disabled={working || !reason.trim()} onClick={() => act(() => cancelClaim(claim.id, claim.version, reason))} className="mt-3 min-h-11 w-full rounded-lg border border-red-300 px-3 text-sm font-semibold text-red-700 disabled:opacity-50">Cancel approved Project Cost</button>}
             </section>
+          )}
+
+          {/* A Project Cost that is approved and paid in full has nothing
+              outstanding, so cancellation stops being an ordinary next action.
+              It stays reachable, and still needs a reason and the same database
+              guards — only its prominence changes. */}
+          {canCancelSiteCost(claim, role) && settledAndPaid && (
+            <details className="rounded-xl border border-stone-200 bg-white p-4">
+              <summary className="cursor-pointer text-[13px] font-medium text-gray-600">More actions</summary>
+              <p className="mt-2 text-[12px] leading-snug text-gray-500">
+                This Project Cost is approved and paid in full. Cancelling it is an exceptional correction.
+              </p>
+              <label className="mt-3 block text-[12.5px] font-medium">Reason for cancelling
+                <textarea value={reason} onChange={(event) => setReason(event.target.value)} rows={3} className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2" />
+              </label>
+              <button
+                type="button"
+                disabled={working || !reason.trim()}
+                onClick={() => act(() => cancelClaim(claim.id, claim.version, reason))}
+                className="mt-3 min-h-10 rounded-lg border border-red-300 px-3 text-[12.5px] font-semibold text-red-700 disabled:opacity-50"
+              >
+                Cancel approved Project Cost
+              </button>
+            </details>
           )}
 
           {(canEditSiteCost(claim, role, currentUserId) || canSubmitSiteCost(claim, role, currentUserId) || canWithdrawSiteCost(claim, role, currentUserId)) && (

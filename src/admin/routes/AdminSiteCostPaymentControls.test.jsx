@@ -105,3 +105,87 @@ describe("Project Cost payment controls", () => {
     expect(screen.queryByRole("button", { name: "Reverse payment" })).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Post-live presentation corrections, 12 Aug 2026.
+// ---------------------------------------------------------------------------
+describe("Project Cost detail — post-live presentation", () => {
+  const paid = {
+    id: "pay1", claimId: "c1", paymentNumber: "BDPAY-2026-000001", status: "recorded",
+    currency: "KES", amount: 5350, paidAt: "2026-08-12", paymentChannel: "mpesa",
+    paymentReference: "QGH7X2LMNP", note: "", recordedBy: "o1",
+    recordedAt: "2026-08-12T17:00:00Z", version: 1,
+  };
+  const settled = { claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 5350, balanceAmount: 0 };
+
+  it("names the amount by the lifecycle it is actually in", () => {
+    renderDetail({ role: "owner" });
+    // The seeded claim is approved.
+    expect(screen.getByText("Approved amount")).toBeInTheDocument();
+    expect(screen.queryByText("Current amount")).not.toBeInTheDocument();
+  });
+
+  it("renders a human payment method, never the stored enum", () => {
+    renderDetail({ role: "owner", payments: [paid], position: settled });
+    expect(screen.getByText(/M-Pesa/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/\bmpesa\b/);
+  });
+
+  it("reads bank transfer, cash and other in plain words", () => {
+    renderDetail({
+      role: "owner",
+      payments: [
+        { ...paid, id: "pay2", paymentChannel: "bank_transfer", amount: 3000 },
+        { ...paid, id: "pay3", paymentChannel: "cash", amount: 1000 },
+        { ...paid, id: "pay4", paymentChannel: "other", amount: 1350 },
+      ],
+      position: settled,
+    });
+    expect(screen.getByText(/Bank transfer/)).toBeInTheDocument();
+    expect(screen.getByText(/Cash/)).toBeInTheDocument();
+    expect(screen.getByText(/Other/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/bank_transfer/);
+  });
+
+  it("keeps the stored channel value untouched when recording", async () => {
+    const user = userEvent.setup();
+    const { costs } = renderDetail({ role: "owner" });
+    await user.type(screen.getByLabelText("Amount"), "100");
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await waitFor(() => expect(costs.recordPayment).toHaveBeenCalledTimes(1));
+    // The database enum is sent, not the label.
+    expect(costs.recordPayment.mock.calls[0][1].paymentChannel).toBe("mpesa");
+  });
+
+  it("stops leading with cancellation once the cost is approved and paid in full", () => {
+    renderDetail({ role: "owner", payments: [paid], position: settled });
+    // No standing Principal action panel exists solely to offer cancellation.
+    expect(screen.queryByRole("heading", { name: "Principal action" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Reason or instructions")).not.toBeInTheDocument();
+  });
+
+  it("keeps cancellation reachable as a subordinate exceptional action", async () => {
+    const user = userEvent.setup();
+    const { costs } = renderDetail({ role: "owner", payments: [paid], position: settled });
+    await user.click(screen.getByText("More actions"));
+    const cancel = screen.getByRole("button", { name: "Cancel approved Project Cost" });
+    expect(cancel).toBeInTheDocument();
+    // Still refuses without a stated reason.
+    expect(cancel).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/Reason for cancelling/), "Duplicate of BDPAY-2026-000002");
+    expect(cancel).toBeEnabled();
+    await user.click(cancel);
+    await waitFor(() => expect(costs.cancelClaim).toHaveBeenCalledTimes(1));
+    expect(costs.cancelClaim.mock.calls[0][2]).toBe("Duplicate of BDPAY-2026-000002");
+  });
+
+  it("keeps the standing Principal panel while a balance remains", () => {
+    renderDetail({
+      role: "owner", payments: [{ ...paid, amount: 3000 }],
+      position: { claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 3000, balanceAmount: 2350 },
+    });
+    expect(screen.getByRole("heading", { name: "Principal action" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel approved Project Cost" })).toBeInTheDocument();
+  });
+});
