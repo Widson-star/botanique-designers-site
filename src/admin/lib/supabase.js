@@ -227,7 +227,20 @@ export async function updateProject(accessToken, projectId, patch) {
   );
 
   const rows = await readJsonResponse(response);
-  return Array.isArray(rows) ? rows[0] : rows;
+  if (!Array.isArray(rows)) return rows;
+
+  // A PATCH that matched nothing is not a save. PostgREST answers 200 with an
+  // empty array when row level security filters the row out or the row has
+  // gone, and reading rows[0] off that turned a silent no-op into "Changes
+  // saved." for the Principal. An update is only a save when exactly one
+  // authoritative row comes back.
+  if (rows.length === 0) {
+    throw new Error("The project was not updated. Refresh and try again.");
+  }
+  if (rows.length > 1) {
+    throw new Error("The update matched more than one project and was not applied cleanly. Refresh and check the project.");
+  }
+  return rows[0];
 }
 
 export async function fetchFinancialReferences(accessToken, projectIds) {

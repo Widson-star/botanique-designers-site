@@ -309,6 +309,24 @@ describe("AdminDataProvider mutation reconciliation", () => {
     expect(api.fetchProjects).toHaveBeenCalledTimes(1);
   });
 
+  // The Principal must never be told a project saved when no row was written.
+  it("reports a failure, not success, when no authoritative row comes back", async () => {
+    api.updateProject.mockResolvedValue(undefined);
+    renderProvider();
+    await waitForInitialLoad();
+
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+    await waitFor(() =>
+      expect(screen.getByLabelText("feedback-type")).toHaveTextContent("error")
+    );
+    expect(screen.getByLabelText("feedback-message")).toHaveTextContent(
+      "The project was not updated. Refresh and try again."
+    );
+    expect(window.__lastMutationResult.ok).toBe(false);
+    // The stale local name is left alone rather than being optimistically changed.
+    expect(screen.getByLabelText("projects")).toHaveTextContent("existing:Existing");
+  });
+
   it("returns ok false for a genuine create failure", async () => {
     api.createProject.mockRejectedValue(new Error("create rejected"));
     renderProvider();
