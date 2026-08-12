@@ -95,7 +95,9 @@ describe("project update honesty", () => {
     });
 
     const [url, init] = fetchMock.mock.calls[0];
-    const parsed = new URL(url);
+    // VITE_SUPABASE_URL is unset under test, so the request path is relative
+    // and needs a base to parse.
+    const parsed = new URL(url, "http://supabase.test");
     expect(parsed.searchParams.get("id")).toBe("eq.p1");
     expect(parsed.searchParams.get("updated_at")).toBe(`eq.${loadedAt}`);
     expect(JSON.parse(init.body)).toEqual({ project_name: "Renamed" });
