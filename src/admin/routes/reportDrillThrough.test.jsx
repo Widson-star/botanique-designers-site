@@ -92,7 +92,19 @@ function wrap(element, initial) {
           <DailySiteOperationsContext.Provider
             value={{ entries, compliance: [], authorisedProjects: projects, status: "ready", error: "" }}
           >
-            <SiteCostsContext.Provider value={{ claims, status: "ready", error: "" }}>
+            {/* A drill-through reports the Project Cost payment position the Hub
+                actually holds. It never infers payment from a fund request or a
+                fund release, and it never pro-rates one across costs. No cost
+                here has a confirmed payment history, so Paid and Balance stay
+                unknown rather than being reported as nil. */}
+            <SiteCostsContext.Provider
+              value={{
+                claims, status: "ready", error: "",
+                payments: [], paymentPositions: [],
+                paymentsForClaim: () => [],
+                paymentPositionForClaim: () => null,
+              }}
+            >
               <FundRequestsContext.Provider value={{ requests: fundRequests, releases: [], acquittals: [], status: "ready", error: "" }}>
                 <Routes>{element}</Routes>
               </FundRequestsContext.Provider>
@@ -116,6 +128,12 @@ describe("URL-addressable drill-through filters", () => {
     expect(screen.queryByText("Karen crew")).not.toBeInTheDocument();
     expect(screen.getByText(/Filtered to Alego Usonga · Approved · 2026-08-01 to 2026-08-31\./)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Clear filters" })).toHaveAttribute("href", "/admin/site-costs");
+    // Narrowing a report never manufactures payment knowledge. These approved
+    // costs have no confirmed payment history, so Paid and Balance stay unknown.
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("Alego turf crew"));
+    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    expect(cells[5]).toBe("—");
+    expect(cells[6]).toBe("—");
   });
 
   // /admin/fund-requests is the route; Advances is the surface. The old

@@ -26,15 +26,39 @@ const claim = {
 const lines = [{ id: "l1", claimId: "c1", lineNumber: 1, description: "Crew labour", rateType: "daily", quantity: 6, unit: "worker", unitRate: 500, lineTotal: 3000 }];
 const events = [{ id: "e1", claimId: "c1", actorId: "m1", eventType: "submitted", requestRound: 1, reason: "", occurredAt: "2026-07-31T09:00:00Z" }];
 
-function contexts({ role = "owner", claims = [claim], decideClaim = vi.fn(), dailyEntries = [], finance = {} } = {}) {
+// FOUNDER RULING, 11 Aug 2026. A Project Cost payment is money actually paid
+// against that one approved Project Cost. It never requires a Fund Request or an
+// Advance, and payment truth is never reconstructed from requests, allocations,
+// fund releases or acquittals. A cost the Hub holds no complete payment history
+// for reads as unknown — never as KES 0 paid.
+//
+// paymentPositionForClaim returns null for a cost whose history is unknown, and
+// { historyComplete: true, paidAmount, balanceAmount } once the Hub knows it all.
+function positionFor(claimId, { paid, total, count = paid > 0 ? 1 : 0 } = {}) {
+  return {
+    claimId, historyComplete: true, paymentCount: count,
+    paidAmount: paid, balanceAmount: Math.max(total - paid, 0),
+  };
+}
+
+function contexts({
+  role = "owner", claims = [claim], decideClaim = vi.fn(), dailyEntries = [],
+  finance = {}, positions = [], payments = [],
+} = {}) {
   return {
     admin: { role, currentUserId: role === "owner" ? "o1" : "m1", projects, profiles },
     daily: { entries: dailyEntries },
     costs: {
       claims, lines, eventsByClaim: { c1: events }, authorisedProjects: projects, status: "ready", error: "",
+      payments, paymentPositions: positions,
       linesForClaim: (id) => lines.filter((line) => line.claimId === id), loadEvents: vi.fn(() => Promise.resolve(events)),
+      paymentsForClaim: (id) => payments.filter((payment) => payment.claimId === id),
+      paymentPositionForClaim: (id) => positions.find((position) => position.claimId === id) || null,
       refresh: vi.fn(() => Promise.resolve({ ok: true })), createDraft: vi.fn(), authoriseDirect: vi.fn(),
       updateClaim: vi.fn(), submitClaim: vi.fn(), withdrawClaim: vi.fn(), decideClaim, cancelClaim: vi.fn(),
+      recordPayment: vi.fn(() => Promise.resolve({ ok: true })),
+      completePaymentHistory: vi.fn(() => Promise.resolve({ ok: true })),
+      reversePayment: vi.fn(() => Promise.resolve({ ok: true })),
     },
     finance: { requests: [], allocations: [], releases: [], acquittals: [], ...finance },
   };
@@ -88,9 +112,13 @@ describe("Project Costs admin surfaces", () => {
     wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>, contexts(), "/admin/site-costs/c1");
     expect(screen.getByRole("heading", { name: "Project Cost summary" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Cost breakdown" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Claim summary" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Structured cost lines" })).not.toBeInTheDocument();
+    // History is labelled "History" and stays reachable. PR #103 makes it a
+    // collapsible section rather than a heading, which keeps it subordinate to
+    // the money — the rename and the reachability are what matter.
+    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.queryByText("Claim summary")).not.toBeInTheDocument();
+    expect(screen.queryByText("Immutable history")).not.toBeInTheDocument();
+    expect(screen.queryByText("Structured cost lines")).not.toBeInTheDocument();
     // The audit trail itself is untouched.
     expect(screen.getByText("Submitted for review")).toBeInTheDocument();
   });
@@ -202,27 +230,22 @@ describe("Project Costs register — draft totals", () => {
 });
 
 describe("Project Costs register (Founder amendment)", () => {
-  const ADVANCE = "operations_manager_accountable_advance";
-  const DIRECT = "direct_recipient_funding";
   const approvedClaim = {
     ...claim, id: "11111111-2222-3333-4444-555555555555",
-    lifecycle: "approved", approvedTotal: 20000, submittedTotal: 20000,
+    lifecycle: "approved", approvedTotal: 5950, submittedTotal: 5950,
   };
+  const TOTAL = 5950;
 
-  const request = (o = {}) => ({
-    id: "r1", requestNumber: "BDFR-2026-0001", projectId: "p1", status: "approved",
-    intendedCustodyType: ADVANCE, totalRequestedAmount: 20000, version: 1, ...o,
+  // Payment truth arrives as a first-class Project Cost payment position, never
+  // from an Advance. `withPaid` states what the Hub actually knows.
+  const withPaid = (paid) => contexts({
+    claims: [approvedClaim],
+    positions: [positionFor(approvedClaim.id, { paid, total: TOTAL })],
   });
-  const alloc = (o = {}) => ({
-    id: "a1", fundRequestId: "r1", claimId: approvedClaim.id, allocationOrder: 1,
-    requestedAmount: 20000, ...o,
-  });
-  const rel = (o = {}) => ({
-    id: "rel1", fundRequestId: "r1", status: "recorded", custodyDisposition: ADVANCE,
-    releasedAmount: 20000, releasedAt: "2026-08-05T09:00:00Z", version: 1, ...o,
-  });
-
-  const withFinance = (finance) => contexts({ claims: [approvedClaim], finance });
+  const cellsOf = () => {
+    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
+    return [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+  };
 
   it("uses the amended columns and drops funding mechanics as a column", () => {
     const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
@@ -233,69 +256,63 @@ describe("Project Costs register (Founder amendment)", () => {
     expect(headers).not.toContain("Financial position");
   });
 
-  // The heart of the amendment. A cost the Founder paid in July has no fund
-  // request, so the Hub knows nothing — and must not claim it is unpaid.
-  it("shows Paid and Balance as unknown when the Hub holds no payment record", () => {
+  // CASE A. The heart of the amendment. A cost the Founder paid in July was
+  // never entered here, so the Hub knows nothing — and must not claim it unpaid.
+  it("shows Paid and Balance as unknown when the Hub holds no payment history", () => {
     wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
-    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
-    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
+    const cells = cellsOf();
     // Total is known; Balance and Paid are dashes, never KES 0.
-    expect(cells[4]).toMatch(/20,000/);
+    expect(cells[4]).toMatch(/5,950/);
     expect(cells[5]).toBe("—");
     expect(cells[6]).toBe("—");
+    // Unknown means the Hub does not know. It does not mean money is owed, and
+    // it must not be described through Advances or fund requests.
     expect(screen.queryByText(/Not yet funded/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/no fund request/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fund request/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/advance/i)).not.toBeInTheDocument();
   });
 
+  // CASE E. Approval decides authority. It never decides that money moved.
   it("never fabricates a payment from an approval", () => {
     const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
-    // Approved is a decision about authority. It is not payment, and the
-    // register must not let one imply the other.
     expect(screen.getAllByText("Approved").length).toBeGreaterThan(0);
     const table = container.querySelector("table");
     expect(table.textContent).not.toMatch(/Paid in full/);
+    // An approved cost with unknown history stays unknown, not zero-paid.
+    expect(cellsOf()[6]).toBe("—");
   });
 
-  it("states Paid and Balance once a payment genuinely exists for that one cost", () => {
-    wrap(<AdminSiteCosts />, withFinance({
-      requests: [request()], allocations: [alloc()],
-      releases: [rel({ custodyDisposition: DIRECT, recipientLabel: "Kisumu Hardware" })],
-    }));
-    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
-    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
-    expect(cells[4]).toMatch(/20,000/); // Total
-    expect(cells[5]).toMatch(/KES\s*0/); // Balance
-    expect(cells[6]).toMatch(/20,000/); // Paid
+  // CASE B. Knowing the whole history and finding nothing paid is a real answer,
+  // and the only circumstance in which KES 0 may be stated.
+  it("states KES 0 paid only when the Hub knows the complete payment history", () => {
+    wrap(<AdminSiteCosts />, withPaid(0));
+    const cells = cellsOf();
+    expect(cells[4]).toMatch(/5,950/);          // Total
+    expect(cells[5]).toMatch(/5,950/);          // Balance
+    expect(cells[6]).toMatch(/KES\s*0\.00/);    // Paid
   });
 
+  // CASE C.
   it("shows a part payment as a part payment", () => {
-    wrap(<AdminSiteCosts />, withFinance({
-      requests: [request()], allocations: [alloc()],
-      releases: [rel({ releasedAmount: 12000 })],
-    }));
-    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
-    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
-    expect(cells[5]).toMatch(/8,000/);  // Balance
-    expect(cells[6]).toMatch(/12,000/); // Paid
+    wrap(<AdminSiteCosts />, withPaid(3000));
+    const cells = cellsOf();
+    expect(cells[4]).toMatch(/5,950/); // Total
+    expect(cells[5]).toMatch(/2,950/); // Balance
+    expect(cells[6]).toMatch(/3,000/); // Paid
   });
 
-  // A release belongs to the whole authority. Splitting it across the costs it
-  // funds would invent a figure the database does not hold.
-  it("refuses to state a per-cost paid figure when the authority funds other costs too", () => {
-    wrap(<AdminSiteCosts />, withFinance({
-      requests: [request()],
-      allocations: [alloc(), { id: "a2", fundRequestId: "r1", claimId: "other", requestedAmount: 5000 }],
-      releases: [rel()],
-    }));
-    const row = screen.getAllByRole("row").find((r) => r.textContent.includes("ICC-"));
-    const cells = [...row.querySelectorAll("td")].map((td) => td.textContent.trim());
-    expect(cells[5]).toBe("—");
-    expect(cells[6]).toBe("—");
+  // CASE D.
+  it("shows a fully paid cost as settled, with nothing left owing", () => {
+    wrap(<AdminSiteCosts />, withPaid(TOTAL));
+    const cells = cellsOf();
+    expect(cells[4]).toMatch(/5,950/);       // Total
+    expect(cells[5]).toMatch(/KES\s*0\.00/); // Balance
+    expect(cells[6]).toMatch(/5,950/);       // Paid
   });
 
-  it("counts costs with no payment record separately, never as unpaid", () => {
+  it("counts costs with no payment history separately, never as unpaid", () => {
     wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
-    expect(screen.getByText(/1 with no payment record in the Hub/)).toBeInTheDocument();
+    expect(screen.getByText(/1 with payment history not yet confirmed/)).toBeInTheDocument();
   });
 
   it("shows a human-readable cost reference, never a raw id", () => {
@@ -308,23 +325,39 @@ describe("Project Costs register (Founder amendment)", () => {
   it("offers a state- and role-aware action menu rather than every action in every row", async () => {
     const user = userEvent.setup();
     wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
-    const trigger = screen.getByRole("button", { name: /Actions for ICC-11111111/ });
+    const trigger = screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0];
     await user.click(trigger);
-    const menu = screen.getByRole("menu");
+    const menu = screen.getAllByRole("menu")[0];
     expect(within(menu).getByRole("menuitem", { name: "View cost" })).toBeInTheDocument();
-    // Approved with no payment record: requesting funds is the sensible next
-    // step, and only a manager may request.
+    // Approved and still owing something, so the Principal may record what was
+    // actually paid. A Project Cost payment needs no Advance and no fund
+    // request, so neither is ever offered here.
+    expect(within(menu).getByRole("menuitem", { name: "Record payment" })).toBeInTheDocument();
     expect(within(menu).queryByRole("menuitem", { name: "Request funds" })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: /advance/i })).not.toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Cancel approved cost" })).toBeInTheDocument();
   });
 
-  it("offers the Operations Manager a funds request and no Principal-only action", async () => {
+  // Unknown payment history means the Hub does not know. It does not mean money
+  // is required, so it must not summon a funding action for anyone.
+  it("offers the Operations Manager no payment or funding action at all", async () => {
     const user = userEvent.setup();
     wrap(<AdminSiteCosts />, contexts({ role: "manager", claims: [approvedClaim] }));
-    await user.click(screen.getByRole("button", { name: /Actions for ICC-11111111/ }));
-    const menu = screen.getByRole("menu");
-    expect(within(menu).getByRole("menuitem", { name: "Request funds" })).toBeInTheDocument();
+    await user.click(screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0]);
+    const menu = screen.getAllByRole("menu")[0];
+    expect(within(menu).getByRole("menuitem", { name: "View cost" })).toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: "Request funds" })).not.toBeInTheDocument();
+    expect(within(menu).queryByRole("menuitem", { name: "Record payment" })).not.toBeInTheDocument();
     expect(within(menu).queryByRole("menuitem", { name: "Cancel approved cost" })).not.toBeInTheDocument();
+  });
+
+  it("stops offering to record a payment once the cost is fully paid", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, withPaid(TOTAL));
+    await user.click(screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0]);
+    const menu = screen.getAllByRole("menu")[0];
+    expect(within(menu).queryByRole("menuitem", { name: "Record payment" })).not.toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "View payments" })).toBeInTheDocument();
   });
 
   it("keeps the row compact and leaves the full purpose to the drill-through", () => {
@@ -398,7 +431,7 @@ describe("Project Costs possible-duplicate warning", () => {
       { c1: [planningLine], c2: [{ ...planningLine, claimId: "c2", description: "Cart transport", unitRate: 800 }] },
       [earlier, later]
     ));
-    expect(screen.queryByText("Possible duplicate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Check similar cost")).not.toBeInTheDocument();
   });
 
   it("stays silent when the earlier claim was rejected", () => {
@@ -406,6 +439,6 @@ describe("Project Costs possible-duplicate warning", () => {
       { c1: [planningLine], c2: [{ ...planningLine, claimId: "c2" }] },
       [{ ...earlier, lifecycle: "rejected" }, later]
     ));
-    expect(screen.queryByText("Possible duplicate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Check similar cost")).not.toBeInTheDocument();
   });
 });

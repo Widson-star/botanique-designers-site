@@ -63,6 +63,42 @@ export function fetchInternalCostClaimProjects(accessToken) {
   return rpc(accessToken, "internal_cost_claim_authorised_projects", {});
 }
 
+export async function fetchProjectCostPayments(accessToken) {
+  const params = new URLSearchParams({
+    select: "id,payment_number,claim_id,status,currency,amount,paid_at,payment_channel,payment_reference,note,recorded_by,recorded_at,reversed_by,reversed_at,reversal_reason,version",
+    order: "paid_at.desc,created_at.desc",
+  });
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/project_cost_payments?${params}`, { headers: headers(accessToken) }));
+}
+
+export function fetchProjectCostPaymentPositions(accessToken) {
+  return rpc(accessToken, "project_cost_payment_positions", {});
+}
+
+export function recordProjectCostPayment(accessToken, claimId, values) {
+  return rpc(accessToken, "record_project_cost_payment", {
+    target_claim_id: claimId,
+    target_amount: Number(values.amount),
+    target_paid_at: values.paidAt,
+    target_payment_channel: values.paymentChannel,
+    target_payment_reference: values.paymentReference || null,
+    target_note: values.note || null,
+    target_history_complete: Boolean(values.historyComplete),
+  });
+}
+
+export function completeProjectCostPaymentHistory(accessToken, claimId) {
+  return rpc(accessToken, "complete_project_cost_payment_history", { target_claim_id: claimId });
+}
+
+export function reverseProjectCostPayment(accessToken, paymentId, expectedVersion, reason) {
+  return rpc(accessToken, "reverse_project_cost_payment", {
+    target_payment_id: paymentId,
+    target_expected_version: expectedVersion,
+    target_reason: reason,
+  });
+}
+
 function linePayload(lines) {
   return lines.map(({ description, rateType, quantity, unit, unitRate }) => ({
     description, rate_type: rateType, quantity: Number(quantity), unit, unit_rate: Number(unitRate),
