@@ -84,4 +84,35 @@ describe("project update honesty", () => {
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body)).toEqual({ project_name: "Renamed" });
   });
+
+  it("uses the loaded updated_at as an optimistic concurrency condition", async () => {
+    respondWith([{ id: "p1", project_name: "Renamed", updated_at: "2026-08-12T07:05:00Z" }]);
+    const loadedAt = "2026-08-12T06:00:00Z";
+
+    await updateProject("token", "p1", {
+      project_name: "Renamed",
+      __expected_updated_at: loadedAt,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0];
+    // VITE_SUPABASE_URL is unset under test, so the request path is relative
+    // and needs a base to parse.
+    const parsed = new URL(url, "http://supabase.test");
+    expect(parsed.searchParams.get("id")).toBe("eq.p1");
+    expect(parsed.searchParams.get("updated_at")).toBe(`eq.${loadedAt}`);
+    expect(JSON.parse(init.body)).toEqual({ project_name: "Renamed" });
+    expect(init.body).not.toContain("__expected_updated_at");
+  });
+
+  it("rejects a stale form instead of overwriting a newer project save", async () => {
+    respondWith([]);
+    await expect(
+      updateProject("token", "p1", {
+        project_name: "Old form name",
+        status: "Ongoing",
+        lead_person_id: "old-lead",
+        __expected_updated_at: "2026-07-29T09:00:00Z",
+      })
+    ).rejects.toThrow(/changed after you opened it/i);
+  });
 });

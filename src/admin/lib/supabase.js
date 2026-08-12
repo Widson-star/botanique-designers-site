@@ -210,10 +210,22 @@ export async function createProject(accessToken, payload) {
   return Array.isArray(rows) ? rows[0] : rows;
 }
 
-// Patch only genuinely changed operational fields for one project. PostgREST /
-// database errors surface through readJsonResponse.
+// Patch only genuinely changed operational fields for one project. The edit
+// form may attach `__expected_updated_at`, which is a client-side concurrency
+// token rather than a database column. When present, PostgREST must match both
+// the project id and the version the editor originally loaded. A newer save then
+// produces zero rows instead of silently being overwritten by a stale form.
 export async function updateProject(accessToken, projectId, patch) {
+  const {
+    __expected_updated_at: expectedUpdatedAt,
+    ...databasePatch
+  } = patch || {};
+
   const params = new URLSearchParams({ id: `eq.${projectId}` });
+  if (expectedUpdatedAt) {
+    params.set("updated_at", `eq.${expectedUpdatedAt}`);
+  }
+
   const response = await fetch(
     `${SUPABASE_URL}/rest/v1/projects?${params.toString()}`,
     {
@@ -222,19 +234,22 @@ export async function updateProject(accessToken, projectId, patch) {
         ...getHeaders(accessToken),
         Prefer: "return=representation",
       },
-      body: JSON.stringify(patch),
+      body: JSON.stringify(databasePatch),
     }
   );
 
   const rows = await readJsonResponse(response);
   if (!Array.isArray(rows)) return rows;
 
-  // A PATCH that matched nothing is not a save. PostgREST answers 200 with an
-  // empty array when row level security filters the row out or the row has
-  // gone, and reading rows[0] off that turned a silent no-op into "Changes
-  // saved." for the Principal. An update is only a save when exactly one
-  // authoritative row comes back.
+  // A PATCH that matched nothing is not a save. With an expected timestamp it
+  // means the project changed after this edit form was loaded; without one it
+  // retains the generic RLS/deleted-row failure introduced by PR #105.
   if (rows.length === 0) {
+    if (expectedUpdatedAt) {
+      throw new Error(
+        "This project changed after you opened it. Refresh the project before saving again."
+      );
+    }
     throw new Error("The project was not updated. Refresh and try again.");
   }
   if (rows.length > 1) {
