@@ -41,7 +41,7 @@ export default function AdminSiteCostDetail() {
   const {
     claims, linesForClaim, eventsByClaim, loadEvents, submitClaim, withdrawClaim,
     decideClaim, cancelClaim, refresh, status, paymentsForClaim, paymentPositionForClaim,
-    recordPayment, completePaymentHistory, reversePayment,
+    recordPayment, completePaymentHistory, reversePayment, markPaid, correctHistoricalSettlement,
   } = useSiteCosts();
   const { entries: dailyEntries = [] } = useDailySiteOperations();
 
@@ -72,6 +72,10 @@ export default function AdminSiteCostDetail() {
   });
   const [reversalPaymentId, setReversalPaymentId] = useState("");
   const [reversalReason, setReversalReason] = useState("");
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidNote, setMarkPaidNote] = useState("");
+  const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [correctionReason, setCorrectionReason] = useState("");
 
   useEffect(() => { if (claimId) loadEvents(claimId).catch(() => {}); }, [claimId, loadEvents]);
 
@@ -127,6 +131,34 @@ export default function AdminSiteCostDetail() {
     await refresh();
   }
 
+  async function confirmMarkPaid() {
+    if (working) return;
+    setWorking(true); setError("");
+    const result = await markPaid(claim.id, markPaidNote.trim());
+    setWorking(false);
+    if (!result.ok) {
+      setError(result.error || "This Project Cost could not be marked paid.");
+      return;
+    }
+    setMarkPaidOpen(false);
+    setMarkPaidNote("");
+    await refresh();
+  }
+
+  async function confirmSettlementCorrection() {
+    if (working || !correctionReason.trim()) return;
+    setWorking(true); setError("");
+    const result = await correctHistoricalSettlement(claim.id, correctionReason.trim());
+    setWorking(false);
+    if (!result.ok) {
+      setError(result.error || "The historical settlement could not be corrected.");
+      return;
+    }
+    setCorrectionOpen(false);
+    setCorrectionReason("");
+    await refresh();
+  }
+
   async function confirmReversal(payment) {
     if (working || !reversalReason.trim()) return;
     setWorking(true); setError("");
@@ -145,6 +177,14 @@ export default function AdminSiteCostDetail() {
   // Approved, payment truth known, nothing left owing.
   const settledAndPaid = claim.lifecycle === "approved"
     && paymentTruth.paid != null && paymentTruth.balance === 0;
+  // FOUNDER RULING, 12 Aug 2026. Three separate statements, never blurred:
+  //   Mark paid              — it was settled; the transaction detail is unknown.
+  //   Confirm payment history — the history was checked and nothing was ever paid.
+  //   Record payment          — an actual transaction, with its real date and method.
+  const historicalSettlement = paymentTruth.historicalSettlement || 0;
+  const historyUnknown = claim.lifecycle === "approved" && paymentTruth.paid == null;
+  const somethingOutstanding = claim.lifecycle === "approved"
+    && (paymentTruth.balance == null || paymentTruth.balance > 0);
 
   return (
     <section className="mx-auto max-w-6xl space-y-4">
@@ -229,11 +269,111 @@ export default function AdminSiteCostDetail() {
           </div>
         )}
 
+        {historicalSettlement > 0 && (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3.5">
+            <p className="text-[12.5px] font-semibold text-emerald-900">
+              Settled historically · {money(historicalSettlement)}
+            </p>
+            <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-emerald-900">
+              The Principal confirmed that this Project Cost was fully settled before the Hub
+              began tracking payments. No payment date, method or reference is claimed, because
+              none was recorded at the time.
+            </p>
+            {role === "owner" && (correctionOpen ? (
+              <div className="mt-3">
+                <label className="block text-[12px] font-medium text-emerald-900">
+                  Why is this confirmation being withdrawn?
+                  <textarea
+                    rows={2}
+                    value={correctionReason}
+                    onChange={(event) => setCorrectionReason(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-botanique-charcoal"
+                  />
+                </label>
+                <p className="mt-1.5 text-[11px] text-emerald-900">
+                  This returns the cost to unconfirmed payment history. Recorded payments are kept.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" disabled={working || !correctionReason.trim()} onClick={confirmSettlementCorrection} className="min-h-9 rounded-lg bg-emerald-800 px-3 text-[11.5px] font-semibold text-white disabled:opacity-50">Withdraw confirmation</button>
+                  <button type="button" disabled={working} onClick={() => { setCorrectionOpen(false); setCorrectionReason(""); }} className="min-h-9 rounded-lg border border-emerald-300 px-3 text-[11.5px] font-medium text-emerald-900">Keep it</button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setCorrectionOpen(true)} className="mt-2.5 min-h-9 rounded-lg border border-emerald-300 px-3 text-[11.5px] font-semibold text-emerald-900 hover:bg-emerald-100">
+                Correct this confirmation
+              </button>
+            ))}
+          </div>
+        )}
+
+        {role === "owner" && somethingOutstanding && (
+          <div id="settlement" className="mt-4 border-t border-stone-100 pt-4">
+            <h3 className="text-[13px] font-semibold">Mark paid</h3>
+            {historyUnknown ? (
+              <>
+                <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-gray-600">
+                  Use this when this Project Cost was settled but the Hub never held the payment
+                  detail. Paid becomes {money(authoritativeAmount)} and Balance becomes KES 0.
+                  No payment date, method or reference is invented, and the confirmation can be
+                  withdrawn later.
+                </p>
+                {markPaidOpen ? (
+                  <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                    <label className="block text-[12px] font-medium text-gray-700">
+                      Note (optional)
+                      <input
+                        value={markPaidNote}
+                        onChange={(event) => setMarkPaidNote(event.target.value)}
+                        className="mt-1 min-h-10 w-full rounded-lg border border-stone-300 bg-white px-3"
+                        placeholder="Anything worth recording about this settlement"
+                      />
+                    </label>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <button type="button" disabled={working} onClick={confirmMarkPaid} className="min-h-10 rounded-lg bg-botanique-green px-4 text-[12.5px] font-semibold text-white disabled:opacity-50">Confirm settled in full</button>
+                      <button type="button" disabled={working} onClick={() => { setMarkPaidOpen(false); setMarkPaidNote(""); }} className="min-h-10 rounded-lg border border-stone-300 px-3 text-[12.5px] font-medium">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" disabled={working} onClick={() => setMarkPaidOpen(true)} className="mt-3 min-h-10 rounded-lg border border-botanique-green px-4 text-[12.5px] font-semibold text-botanique-green hover:bg-emerald-50 disabled:opacity-50">
+                    Mark paid
+                  </button>
+                )}
+              </>
+            ) : (
+              // The Hub already knows this cost's payment history, so whatever
+              // settles the rest of it is a real transaction. Prefill the amount;
+              // the date and method still have to be true.
+              <>
+                <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-gray-600">
+                  The Hub already holds this cost's payment history, so settling the remaining{" "}
+                  {money(paymentTruth.balance)} is a real payment. Its date and method are
+                  required and will not be assumed.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentForm((value) => ({ ...value, amount: String(paymentTruth.balance) }));
+                    const form = document.getElementById("payments");
+                    // Not every environment implements scrolling.
+                    if (typeof form?.scrollIntoView === "function") form.scrollIntoView({ block: "center" });
+                  }}
+                  className="mt-3 min-h-10 rounded-lg border border-botanique-green px-4 text-[12.5px] font-semibold text-botanique-green hover:bg-emerald-50"
+                >
+                  Mark paid — settle {money(paymentTruth.balance)}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {role === "owner" && claim.lifecycle === "approved" && paymentTruth.paid == null && (
           <div className="mt-4 border-t border-stone-100 pt-4">
-            <h3 className="text-[13px] font-semibold">Confirm historical payment record</h3>
+            <h3 className="text-[13px] font-semibold">Confirm payment history</h3>
             <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-gray-600">
-              Use this after checking the complete history for this Project Cost. If no payments were ever made, confirming it records that truth as Paid KES 0 without inventing a payment.
+              A different statement from Mark paid. Use this once you have checked the history and
+              nothing was ever paid against this cost: it records Paid KES 0 and leaves the full
+              balance outstanding, without inventing a payment. If it was in fact settled, use
+              Mark paid instead.
             </p>
             <button type="button" disabled={working} onClick={confirmPaymentHistory} className="mt-3 min-h-10 rounded-lg border border-botanique-green px-4 text-[12.5px] font-semibold text-botanique-green hover:bg-emerald-50 disabled:opacity-50">
               Confirm payment history

@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminData } from "./adminData";
 import { SiteCostsContext } from "./siteCosts";
 import {
-  cancelInternalCostClaim, completeProjectCostPaymentHistory, createInternalCostClaimDraft,
+  cancelInternalCostClaim, completeProjectCostPaymentHistory,
+  correctProjectCostHistoricalSettlement, createInternalCostClaimDraft,
   decideInternalCostClaim, fetchInternalCostClaimEvents, fetchInternalCostClaimLines,
   fetchInternalCostClaimProjects, fetchInternalCostClaims, fetchProjectCostPaymentPositions,
-  fetchProjectCostPayments, principalAuthoriseInternalCostClaim, recordProjectCostPayment,
-  reverseProjectCostPayment, submitInternalCostClaim, updateInternalCostClaim,
-  withdrawInternalCostClaim,
+  fetchProjectCostPayments, markProjectCostPaid, principalAuthoriseInternalCostClaim,
+  recordProjectCostPayment, reverseProjectCostPayment, submitInternalCostClaim,
+  updateInternalCostClaim, withdrawInternalCostClaim,
 } from "../lib/siteCosts";
 import { calculateSiteCostTotal } from "../utils/siteCostCapabilities";
 
@@ -64,6 +65,7 @@ function mapPaymentPosition(row) {
     paymentCount: Number(row.payment_count || 0),
     paidAmount: row.paid_amount == null ? null : Number(row.paid_amount),
     balanceAmount: row.balance_amount == null ? null : Number(row.balance_amount),
+    historicalSettlementAmount: Number(row.historical_settlement_amount || 0),
   };
 }
 
@@ -155,7 +157,10 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
     if (demoPaymentPositionsRef.current.some((position) => position.claimId === claim.id)) return;
     writeDemoPaymentPositions([
       ...demoPaymentPositionsRef.current,
-      { claimId: claim.id, historyComplete: true, paymentCount: 0, paidAmount: 0, balanceAmount: Number(claim.approvedTotal || 0) },
+      {
+        claimId: claim.id, historyComplete: true, paymentCount: 0, paidAmount: 0,
+        balanceAmount: Number(claim.approvedTotal || 0), historicalSettlementAmount: 0,
+      },
     ]);
   }, [writeDemoPaymentPositions]);
 
@@ -257,6 +262,12 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
     const claim = demoClaimsRef.current.find((item) => item.id === claimId);
     if (!claim || claim.lifecycle !== "approved") return { ok: false, error: "Only an approved Project Cost can receive a payment." };
     const position = demoPaymentPositionsRef.current.find((item) => item.claimId === claimId);
+    if (Number(position?.historicalSettlementAmount || 0) > 0) {
+      return {
+        ok: false,
+        error: "This Project Cost is confirmed as historically settled. Correct that confirmation before recording a payment against it.",
+      };
+    }
     const knownPaid = position?.paidAmount || 0;
     const amount = Number(values.amount || 0);
     if (amount <= 0 || knownPaid + amount > Number(claim.approvedTotal || 0)) {
@@ -275,6 +286,7 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       claimId, historyComplete, paymentCount: (position?.paymentCount || 0) + 1,
       paidAmount: historyComplete ? paidAmount : null,
       balanceAmount: historyComplete ? Math.max(Number(claim.approvedTotal || 0) - paidAmount, 0) : null,
+      historicalSettlementAmount: 0,
     };
     writeDemoPaymentPositions([
       ...demoPaymentPositionsRef.current.filter((item) => item.claimId !== claimId), next,
@@ -298,12 +310,69 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
       const next = {
         claimId, historyComplete: true, paymentCount: livePayments.length, paidAmount,
         balanceAmount: Math.max(Number(claim.approvedTotal || 0) - paidAmount, 0),
+        historicalSettlementAmount: 0,
       };
       writeDemoPaymentPositions([...demoPaymentPositionsRef.current.filter((item) => item.claimId !== claimId), next]);
       return { ok: true, result: next };
     })())
     : run(() => completeProjectCostPaymentHistory(accessToken, claimId)),
   [accessToken, isDemo, run, writeDemoPaymentPositions]);
+
+  // "Mark paid". Only reachable while the payment history is unknown, so the
+  // settled amount is exactly what recorded payments leave outstanding — the
+  // same shilling is never counted twice.
+  const demoMarkPaid = useCallback((claimId, note = "") => {
+    const claim = demoClaimsRef.current.find((item) => item.id === claimId);
+    if (!claim || claim.lifecycle !== "approved") {
+      return { ok: false, error: "Only an approved Project Cost can be marked paid." };
+    }
+    const position = demoPaymentPositionsRef.current.find((item) => item.claimId === claimId);
+    if (position?.historyComplete) {
+      return {
+        ok: false,
+        error: "This Project Cost already has a confirmed payment history. Record the remaining payment with its actual date and method instead.",
+      };
+    }
+    const recorded = demoPaymentsRef.current
+      .filter((payment) => payment.claimId === claimId && payment.status === "recorded")
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    const outstanding = Number(claim.approvedTotal || 0) - recorded;
+    if (outstanding <= 0) return { ok: false, error: "This Project Cost is already fully paid." };
+    const next = {
+      claimId, historyComplete: true, paymentCount: position?.paymentCount || 0,
+      paidAmount: recorded + outstanding, balanceAmount: 0,
+      historicalSettlementAmount: outstanding, historicalSettlementNote: note || "",
+    };
+    writeDemoPaymentPositions([...demoPaymentPositionsRef.current.filter((item) => item.claimId !== claimId), next]);
+    return { ok: true, result: next };
+  }, [writeDemoPaymentPositions]);
+
+  const markPaid = useCallback((claimId, note = "") => isDemo
+    ? Promise.resolve(demoMarkPaid(claimId, note))
+    : run(() => markProjectCostPaid(accessToken, claimId, note)),
+  [accessToken, demoMarkPaid, isDemo, run]);
+
+  // Withdrawing the confirmation returns the cost to the truthful unknown state
+  // it came from. It deletes no payment.
+  const demoCorrectSettlement = useCallback((claimId) => {
+    const position = demoPaymentPositionsRef.current.find((item) => item.claimId === claimId);
+    if (!position || Number(position.historicalSettlementAmount || 0) <= 0) {
+      return { ok: false, error: "This Project Cost has no historical settlement to correct." };
+    }
+    const recorded = demoPaymentsRef.current.filter(
+      (payment) => payment.claimId === claimId && payment.status === "recorded");
+    const next = {
+      claimId, historyComplete: false, paymentCount: recorded.length,
+      paidAmount: null, balanceAmount: null, historicalSettlementAmount: 0,
+    };
+    writeDemoPaymentPositions([...demoPaymentPositionsRef.current.filter((item) => item.claimId !== claimId), next]);
+    return { ok: true, result: next };
+  }, [writeDemoPaymentPositions]);
+
+  const correctHistoricalSettlement = useCallback((claimId, reason) => isDemo
+    ? Promise.resolve(demoCorrectSettlement(claimId, reason))
+    : run(() => correctProjectCostHistoricalSettlement(accessToken, claimId, reason)),
+  [accessToken, demoCorrectSettlement, isDemo, run]);
 
   const reversePayment = useCallback((paymentId, expectedVersion, reason) => isDemo
     ? Promise.resolve({ ok: false, error: "Demo payment reversal is not persisted." })
@@ -315,12 +384,14 @@ export default function SiteCostsProvider({ children, session, role, isDemo }) {
     payments, paymentPositions,
     refresh, loadEvents, createDraft, authoriseDirect, updateClaim, submitClaim,
     withdrawClaim, decideClaim, cancelClaim, recordPayment, completePaymentHistory, reversePayment,
+    markPaid, correctHistoricalSettlement,
     linesForClaim: (claimId) => lines.filter((line) => line.claimId === claimId),
     paymentsForClaim: (claimId) => payments.filter((payment) => payment.claimId === claimId),
     paymentPositionForClaim: (claimId) => paymentPositions.find((position) => position.claimId === claimId) || null,
   }), [claims, lines, eventsByClaim, authorisedProjects, status, error, profiles, payments,
     paymentPositions, refresh, loadEvents, createDraft, authoriseDirect, updateClaim, submitClaim,
-    withdrawClaim, decideClaim, cancelClaim, recordPayment, completePaymentHistory, reversePayment]);
+    withdrawClaim, decideClaim, cancelClaim, recordPayment, completePaymentHistory, reversePayment,
+    markPaid, correctHistoricalSettlement]);
 
   return <SiteCostsContext.Provider value={value}>{children}</SiteCostsContext.Provider>;
 }

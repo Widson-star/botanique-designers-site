@@ -91,6 +91,23 @@ export function completeProjectCostPaymentHistory(accessToken, claimId) {
   return rpc(accessToken, "complete_project_cost_payment_history", { target_claim_id: claimId });
 }
 
+// "Mark paid": the Principal confirms full historical settlement of a cost whose
+// payment history the Hub never held. It deliberately carries no date, method or
+// reference, because none is known and none may be invented.
+export function markProjectCostPaid(accessToken, claimId, note = "") {
+  return rpc(accessToken, "mark_project_cost_paid", {
+    target_claim_id: claimId,
+    target_note: note || null,
+  });
+}
+
+export function correctProjectCostHistoricalSettlement(accessToken, claimId, reason) {
+  return rpc(accessToken, "correct_project_cost_historical_settlement", {
+    target_claim_id: claimId,
+    target_reason: reason,
+  });
+}
+
 export function reverseProjectCostPayment(accessToken, paymentId, expectedVersion, reason) {
   return rpc(accessToken, "reverse_project_cost_payment", {
     target_payment_id: paymentId,

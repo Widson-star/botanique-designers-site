@@ -404,6 +404,49 @@ describe("Project Costs register (Founder amendment)", () => {
     expect(within(menu).getByRole("menuitem", { name: "View payments" })).toBeInTheDocument();
   });
 
+  // FOUNDER RULING, 12 Aug 2026. Settling a cost and recording a transaction are
+  // two different acts, so the menu offers both and never merges them.
+  it("offers Mark paid alongside Record payment while payment history is unknown", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
+    await user.click(screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0]);
+    const menu = screen.getAllByRole("menu")[0];
+    expect(within(menu).getByRole("menuitem", { name: "Mark paid" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Record payment" })).toBeInTheDocument();
+  });
+
+  it("still offers Mark paid on a known part-paid cost", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, withPaid(TOTAL / 2));
+    await user.click(screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0]);
+    expect(within(screen.getAllByRole("menu")[0]).getByRole("menuitem", { name: "Mark paid" })).toBeInTheDocument();
+  });
+
+  it("stops offering Mark paid once the balance is nil", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, withPaid(TOTAL));
+    await user.click(screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0]);
+    expect(within(screen.getAllByRole("menu")[0]).queryByRole("menuitem", { name: "Mark paid" })).not.toBeInTheDocument();
+  });
+
+  it("keeps Mark paid out of the Operations Manager's menu", async () => {
+    const user = userEvent.setup();
+    wrap(<AdminSiteCosts />, contexts({ role: "manager", claims: [approvedClaim] }));
+    await user.click(screen.getAllByRole("button", { name: /Actions for ICC-11111111/ })[0]);
+    expect(within(screen.getAllByRole("menu")[0]).queryByRole("menuitem", { name: "Mark paid" })).not.toBeInTheDocument();
+  });
+
+  it("clears the unconfirmed-history footer once the cost is settled historically", () => {
+    wrap(<AdminSiteCosts />, contexts({
+      claims: [approvedClaim],
+      positions: [{
+        claimId: approvedClaim.id, historyComplete: true, paymentCount: 0,
+        paidAmount: TOTAL, balanceAmount: 0, historicalSettlementAmount: TOTAL,
+      }],
+    }));
+    expect(screen.queryByText(/with payment history not yet confirmed/)).not.toBeInTheDocument();
+  });
+
   it("keeps the row compact and leaves the full purpose to the drill-through", () => {
     const wordy = {
       ...approvedClaim,

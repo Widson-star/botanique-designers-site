@@ -29,6 +29,16 @@
     "an interrupted run would fail closed: tables and RLS first with no policies or",
     "grants, then functions, then triggers, then policies and grants last. The final",
     "schema was verified object by object and equals the single-file migration.",
+    "productionVersion below records the FIRST of those versions.",
+    "",
+    "SPLIT APPLICATION, 12 Aug 2026 (second). project_cost_historical_settlement",
+    "was applied in four transactions (versions 20260812203621, 203658, 203729,",
+    "203758) for the same reason. The boundaries fail closed: columns, the audit",
+    "table and RLS first with no policies or grants; then the settlement functions;",
+    "then the payment and cancellation guards; then the read model together with",
+    "every policy, revoke and grant. The read model is dropped and recreated to add",
+    "a column, so it was deliberately kept in the same transaction as its grant,",
+    "leaving no window in which the live register could read an ungranted function.",
     "productionVersion below records the FIRST of those versions."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
@@ -50,6 +60,7 @@
     { "name": "fund_release_and_reconciliation", "productionVersion": "20260809191358" },
     { "name": "project_cost_payments", "productionVersion": "20260812055224" },
     { "name": "project_cost_payment_integrity_guards", "productionVersion": "20260812055541" },
-    { "name": "project_cost_payment_authority_corrections", "productionVersion": "20260812191226" }
+    { "name": "project_cost_payment_authority_corrections", "productionVersion": "20260812191226" },
+    { "name": "project_cost_historical_settlement", "productionVersion": "20260812203621" }
   ]
 }

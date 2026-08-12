@@ -147,3 +147,59 @@ describe("draft totals", () => {
     expect(truth.knowledge).toBe(PAYMENT_KNOWLEDGE.not_payable);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Historical settlement ("Mark paid"). Founder ruling, 12 Aug 2026.
+// ---------------------------------------------------------------------------
+describe("Project Cost historical settlement", () => {
+  const settled = (overrides = {}) => ({
+    claimId: claim().id,
+    historyComplete: true,
+    paymentCount: 0,
+    paidAmount: 5950,
+    balanceAmount: 0,
+    historicalSettlementAmount: 5950,
+    ...overrides,
+  });
+
+  it("reads a historically settled cost as paid in full", () => {
+    const truth = costPaymentTruth(claim(), settled());
+    expect(truth.knowledge).toBe(PAYMENT_KNOWLEDGE.known);
+    expect(truth.paid).toBe(5950);
+    expect(truth.balance).toBe(0);
+  });
+
+  it("says it was settled historically rather than claiming a transaction", () => {
+    expect(costPaymentTruth(claim(), settled()).note)
+      .toBe("Settled historically, confirmed by the Principal.");
+    // A cost paid by real recorded payments says something different.
+    expect(costPaymentTruth(claim(), settled({ historicalSettlementAmount: 0, paymentCount: 1 })).note)
+      .toBe("Paid in full.");
+  });
+
+  it("adds a genuine part payment to the settled remainder without double counting", () => {
+    // KES 2,000 was really paid; Mark paid settled only the KES 3,950 left.
+    const truth = costPaymentTruth(claim(), settled({
+      paymentCount: 1, paidAmount: 5950, historicalSettlementAmount: 3950,
+    }));
+    expect(truth.paid).toBe(5950);
+    expect(truth.balance).toBe(0);
+    expect(truth.historicalSettlement).toBe(3950);
+  });
+
+  it("reports no settlement while the payment history is still unknown", () => {
+    expect(costPaymentTruth(claim(), null).historicalSettlement).toBe(0);
+  });
+
+  it("clears the register footer once every unknown cost is settled", () => {
+    const claims = [claim({ id: "c1" }), claim({ id: "c2" })];
+    const positions = new Map([
+      ["c1", settled({ claimId: "c1" })],
+      ["c2", settled({ claimId: "c2" })],
+    ]);
+    const summary = summarisePaymentTruth(claims, (id) => positions.get(id) || null);
+    expect(summary.unrecordedCount).toBe(0);
+    expect(summary.paid).toBe(11900);
+    expect(summary.balance).toBe(0);
+  });
+});
