@@ -7,6 +7,7 @@
 import { canSeeApprovals } from "./utils/approvalCapabilities";
 import { canManageStaff } from "./utils/permissions";
 import { canSeeDailySiteOperations } from "./utils/dailySiteCapabilities";
+import { canSeeMaintenance } from "./utils/maintenanceCapabilities";
 import { canSeeFinance } from "./utils/financeCapabilities";
 import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
 import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
@@ -41,6 +42,11 @@ export const NAV_DOMAINS = [
         capability: canSeeDailySiteOperations,
       },
       { to: "/admin/people", label: "People", capability: canSeePeople },
+      { to: "/admin/maintenance", label: "Maintenance", capability: canSeeMaintenance },
+      // Tools & Equipment remains its own, later, Operations destination —
+      // it is a distinct capability from Maintenance (settled 9 Aug 2026,
+      // docs/ui-authority/operations-hub/operating-model-authority/decision-record.md)
+      // and stays absent from navigation until it is genuinely functional.
     ],
   },
   {
