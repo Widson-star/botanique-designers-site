@@ -6,6 +6,7 @@ import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import { SiteCostsContext } from "../context/siteCosts";
 import { FundRequestsContext } from "../context/fundRequests";
+import { costReference } from "../utils/costReference";
 import AdminSiteCosts from "./AdminSiteCosts";
 import AdminSiteCostDetail from "./AdminSiteCostDetail";
 import AdminSiteCostForm from "./AdminSiteCostForm";
@@ -527,5 +528,128 @@ describe("Project Costs possible-duplicate warning", () => {
       [{ ...earlier, lifecycle: "rejected" }, later]
     ));
     expect(screen.queryByText("Check similar cost")).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FOUNDER RULING, 13 Aug 2026. Cancelled Project Costs are historical
+// correction records, not working ones. The ordinary day-to-day register must
+// not show them by default — but they stay in the data model, stay auditable,
+// and remain reachable the moment the Principal deliberately asks for them.
+// ---------------------------------------------------------------------------
+describe("Project Costs register — Cancelled hidden by default", () => {
+  const draftCost = {
+    ...claim, id: "aaaaaaaa-0000-0000-0000-000000000001", lifecycle: "draft",
+    submittedTotal: null, approvedTotal: null,
+  };
+  const awaitingCost = {
+    ...claim, id: "bbbbbbbb-0000-0000-0000-000000000002", lifecycle: "awaiting_review",
+    submittedTotal: 4000, approvedTotal: null,
+  };
+  const approvedCost = {
+    ...claim, id: "cccccccc-0000-0000-0000-000000000003", lifecycle: "approved",
+    submittedTotal: 6000, approvedTotal: 6000,
+  };
+  const cancelledCost = {
+    ...claim, id: "dddddddd-0000-0000-0000-000000000004", lifecycle: "cancelled",
+    submittedTotal: 9999, approvedTotal: 9999,
+  };
+  const draftLines = { [draftCost.id]: [{ id: "dl1", claimId: draftCost.id, lineNumber: 1, description: "Mason", rateType: "fixed", quantity: 1, unit: "job", unitRate: 1500, lineTotal: 1500 }] };
+  const mixedClaims = [draftCost, awaitingCost, approvedCost, cancelledCost];
+
+  function register(initial = "/admin/site-costs") {
+    const values = contexts({ claims: mixedClaims });
+    values.costs.linesForClaim = (id) => draftLines[id] || [];
+    return wrap(<AdminSiteCosts />, values, initial);
+  }
+
+  it("excludes Cancelled from the default register", () => {
+    const { container } = register();
+    expect(container.textContent).not.toContain(costReference(cancelledCost));
+  });
+
+  it("still shows Draft in the default register", () => {
+    const { container } = register();
+    expect(container.textContent).toContain(costReference(draftCost));
+  });
+
+  it("still shows Awaiting review in the default register", () => {
+    const { container } = register();
+    expect(container.textContent).toContain(costReference(awaitingCost));
+  });
+
+  it("still shows Approved in the default register", () => {
+    const { container } = register();
+    expect(container.textContent).toContain(costReference(approvedCost));
+  });
+
+  it("shows Cancelled when the Principal explicitly selects the Cancelled filter", async () => {
+    const user = userEvent.setup();
+    const { container } = register();
+    await user.selectOptions(screen.getByLabelText("Status"), "cancelled");
+    expect(container.textContent).toContain(costReference(cancelledCost));
+    // A deliberate Cancelled filter is exclusive — the working statuses drop out.
+    expect(container.textContent).not.toContain(costReference(draftCost));
+    expect(container.textContent).not.toContain(costReference(approvedCost));
+  });
+
+  it("shows Cancelled records when the URL states ?status=cancelled directly", () => {
+    const { container } = register("/admin/site-costs?status=cancelled");
+    expect(container.textContent).toContain(costReference(cancelledCost));
+    expect(container.textContent).not.toContain(costReference(draftCost));
+  });
+
+  it("excludes Cancelled from the default count", () => {
+    register();
+    // Three working costs (draft, awaiting review, approved) out of four total
+    // ever raised — the fourth, cancelled, is deliberately not counted here.
+    expect(screen.getByText("3 of 4 costs")).toBeInTheDocument();
+  });
+
+  it("excludes Cancelled from the default financial totals", () => {
+    register();
+    // Total = draft's structured line total (1,500) + awaiting review's
+    // submitted total (4,000) + approved's approved total (6,000) = 11,500.
+    // Cancelled's 9,999 must not be folded in.
+    expect(screen.getByText(/KES\s*11,500\.00/)).toBeInTheDocument();
+  });
+
+  it("counts only the cancelled records once Cancelled is explicitly selected", () => {
+    const { container } = register("/admin/site-costs?status=cancelled");
+    expect(container.textContent).toContain("1 of 4 cost");
+  });
+
+  it("applies the identical default/filter behaviour to the mobile cards", () => {
+    const { container } = register();
+    const mobileList = container.querySelector("ul.md\\:hidden");
+    expect(mobileList.textContent).not.toContain(costReference(cancelledCost));
+    expect(mobileList.textContent).toContain(costReference(draftCost));
+    expect(mobileList.textContent).toContain(costReference(approvedCost));
+  });
+
+  it("shows Cancelled on mobile once explicitly filtered — no separate mobile semantics", () => {
+    const { container } = register("/admin/site-costs?status=cancelled");
+    const mobileList = container.querySelector("ul.md\\:hidden");
+    expect(mobileList.textContent).toContain(costReference(cancelledCost));
+  });
+
+  it("leaves the project filter working unchanged alongside the Cancelled default", () => {
+    const otherProjectCost = { ...approvedCost, id: "eeeeeeee-0000-0000-0000-000000000005", projectId: "p2" };
+    const values = contexts({ claims: [...mixedClaims, otherProjectCost] });
+    values.costs.linesForClaim = (id) => draftLines[id] || [];
+    const { container } = wrap(<AdminSiteCosts />, values, "/admin/site-costs?project=p1");
+    expect(container.textContent).toContain(costReference(approvedCost));
+    expect(container.textContent).not.toContain(costReference(otherProjectCost));
+    expect(container.textContent).not.toContain(costReference(cancelledCost));
+  });
+
+  it("never mutates or cancels a claim just by loading the default or Cancelled view", () => {
+    const values = contexts({ claims: mixedClaims });
+    values.costs.linesForClaim = (id) => draftLines[id] || [];
+    wrap(<AdminSiteCosts />, values, "/admin/site-costs?status=cancelled");
+    expect(values.costs.cancelClaim).not.toHaveBeenCalled();
+    // The cancelled record is still the exact same row from the data model —
+    // reachable, not deleted, not rewritten.
+    expect(values.costs.claims.find((c) => c.id === cancelledCost.id)).toEqual(cancelledCost);
   });
 });
