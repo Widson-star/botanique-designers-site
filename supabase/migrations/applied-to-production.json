@@ -39,10 +39,15 @@
     "every policy, revoke and grant. The read model is dropped and recreated to add",
     "a column, so it was deliberately kept in the same transaction as its grant,",
     "leaving no window in which the live register could read an ungranted function.",
-    "productionVersion below records the FIRST of those versions."
+    "productionVersion below records the FIRST of those versions.",
+    "",
+    "LOCK ORDER CORRECTION, 13 Aug 2026. project_cost_payment_truth_lock_order",
+    "applied cleanly in one transaction (version 20260813105102). It replaces one",
+    "function and changes no data: the project_cost_payments content hash, the",
+    "settled total and the settlement-event count were identical before and after."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-12",
+  "verifiedAt": "2026-08-13",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -61,6 +66,7 @@
     { "name": "project_cost_payments", "productionVersion": "20260812055224" },
     { "name": "project_cost_payment_integrity_guards", "productionVersion": "20260812055541" },
     { "name": "project_cost_payment_authority_corrections", "productionVersion": "20260812191226" },
-    { "name": "project_cost_historical_settlement", "productionVersion": "20260812203621" }
+    { "name": "project_cost_historical_settlement", "productionVersion": "20260812203621" },
+    { "name": "project_cost_payment_truth_lock_order", "productionVersion": "20260813105102" }
   ]
 }

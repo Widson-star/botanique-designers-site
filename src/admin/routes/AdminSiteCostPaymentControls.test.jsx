@@ -195,6 +195,45 @@ describe("Project Cost historical settlement", () => {
     await waitFor(() => expect(correctHistoricalSettlement).toHaveBeenCalledWith("c1", "Wrong cost"));
   });
 
+  // Concurrency correction, 13 Aug 2026 (review finding discussion_r3770345279).
+  // The settled amount is derived from the payments recorded at the time, so a
+  // recorded payment cannot be pulled out from under a standing confirmation.
+  // The database refuses it; the UI must not offer it either.
+  it("withdraws the reversal control while a confirmed settlement stands", () => {
+    const recorded = {
+      id: "pay1", claimId: "c1", paymentNumber: "BDPAY-2026-000001", status: "recorded",
+      currency: "KES", amount: 2000, paidAt: "2026-08-10", paymentChannel: "mpesa",
+      paymentReference: "ABC123", note: "", recordedBy: "o1", recordedAt: "2026-08-10T09:00:00Z", version: 1,
+    };
+    renderDetail({
+      role: "owner", payments: [recorded],
+      position: {
+        claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 5350,
+        balanceAmount: 0, historicalSettlementAmount: 3350,
+      },
+    });
+    expect(screen.queryByRole("button", { name: "Reverse payment" })).not.toBeInTheDocument();
+    expect(screen.getByText(/cannot be reversed while this confirmation stands/)).toBeInTheDocument();
+    // The correction route out is still offered, so nothing is a dead end.
+    expect(screen.getByRole("button", { name: "Correct this confirmation" })).toBeInTheDocument();
+  });
+
+  it("restores the reversal control once the confirmation is withdrawn", () => {
+    const recorded = {
+      id: "pay1", claimId: "c1", paymentNumber: "BDPAY-2026-000001", status: "recorded",
+      currency: "KES", amount: 2000, paidAt: "2026-08-10", paymentChannel: "mpesa",
+      paymentReference: "ABC123", note: "", recordedBy: "o1", recordedAt: "2026-08-10T09:00:00Z", version: 1,
+    };
+    renderDetail({
+      role: "owner", payments: [recorded],
+      position: {
+        claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 2000,
+        balanceAmount: 3350, historicalSettlementAmount: 0,
+      },
+    });
+    expect(screen.getByRole("button", { name: "Reverse payment" })).toBeInTheDocument();
+  });
+
   it("keeps Mark paid out of a manager's view entirely", () => {
     renderDetail({ role: "manager", position: unknownHistory });
     expect(screen.queryByRole("button", { name: "Mark paid" })).not.toBeInTheDocument();

@@ -232,7 +232,11 @@ export default function AdminSiteCostDetail() {
                     </span>
                     <div className="flex items-center gap-2">
                       <span className={`font-semibold tabular-nums ${payment.status === "reversed" ? "text-gray-400 line-through" : ""}`}>{money(payment.amount)}</span>
-                      {role === "owner" && payment.status === "recorded" && (
+                      {/* A confirmed historical settlement was derived from the
+                          payments recorded at the time, so a payment cannot be
+                          pulled out from under it. Withdraw the confirmation
+                          first — the database refuses this too. */}
+                      {role === "owner" && payment.status === "recorded" && historicalSettlement === 0 && (
                         <button
                           type="button"
                           onClick={() => { setReversalPaymentId(payment.id); setReversalReason(""); }}
@@ -279,6 +283,12 @@ export default function AdminSiteCostDetail() {
               began tracking payments. No payment date, method or reference is claimed, because
               none was recorded at the time.
             </p>
+            {payments.some((payment) => payment.status === "recorded") && (
+              <p className="mt-1.5 max-w-2xl text-[12px] leading-relaxed text-emerald-900">
+                The settled amount was worked out from the payments already recorded here, so those
+                payments cannot be reversed while this confirmation stands. Withdraw it first.
+              </p>
+            )}
             {role === "owner" && (correctionOpen ? (
               <div className="mt-3">
                 <label className="block text-[12px] font-medium text-emerald-900">
