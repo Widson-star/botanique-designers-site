@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
@@ -25,16 +25,30 @@ const lines = [
   { id: "l2", claimId: "c1", lineNumber: 2, description: "Cartage", rateType: "fixed", quantity: 1, unit: "trip", unitRate: 350, lineTotal: 350 },
 ];
 
-function renderDetail({ role = "owner", payments = [], position = null, completePaymentHistory = vi.fn(() => Promise.resolve({ ok: true })), reversePayment = vi.fn(() => Promise.resolve({ ok: true })) } = {}) {
+function renderDetail({
+  role = "owner", payments = [], position = null, claimOverrides = {},
+  completePaymentHistory = vi.fn(() => Promise.resolve({ ok: true })),
+  reversePayment = vi.fn(() => Promise.resolve({ ok: true })),
+  markPaid = vi.fn(() => Promise.resolve({ ok: true })),
+  correctHistoricalSettlement = vi.fn(() => Promise.resolve({ ok: true })),
+} = {}) {
+  const detailClaim = { ...claim, ...claimOverrides };
   const admin = { role, currentUserId: role === "owner" ? "o1" : "m1", projects, profiles };
   const costs = {
-    claims: [claim], lines, eventsByClaim: { c1: [] }, authorisedProjects: projects,
+    claims: [detailClaim], lines, eventsByClaim: { c1: [] }, authorisedProjects: projects,
     status: "ready", error: "", refresh: vi.fn(() => Promise.resolve({ ok: true })),
     loadEvents: vi.fn(() => Promise.resolve([])), linesForClaim: (id) => lines.filter((line) => line.claimId === id),
     paymentsForClaim: (id) => payments.filter((payment) => payment.claimId === id),
     paymentPositionForClaim: () => position,
-    submitClaim: vi.fn(), withdrawClaim: vi.fn(), decideClaim: vi.fn(), cancelClaim: vi.fn(),
+    // These stubs stand in for provider actions, which always resolve to a
+    // { ok } result. Returning undefined makes act() throw an unhandled
+    // rejection that the suite reports but no test fails on.
+    submitClaim: vi.fn(() => Promise.resolve({ ok: true })),
+    withdrawClaim: vi.fn(() => Promise.resolve({ ok: true })),
+    decideClaim: vi.fn(() => Promise.resolve({ ok: true })),
+    cancelClaim: vi.fn(() => Promise.resolve({ ok: true })),
     recordPayment: vi.fn(() => Promise.resolve({ ok: true })), completePaymentHistory, reversePayment,
+    markPaid, correctHistoricalSettlement,
   };
   render(
     <MemoryRouter initialEntries={["/admin/site-costs/c1"]}>
@@ -47,7 +61,7 @@ function renderDetail({ role = "owner", payments = [], position = null, complete
       </AdminDataContext.Provider>
     </MemoryRouter>
   );
-  return { completePaymentHistory, reversePayment, costs };
+  return { completePaymentHistory, reversePayment, markPaid, correctHistoricalSettlement, costs };
 }
 
 describe("Project Cost payment controls", () => {
@@ -58,7 +72,7 @@ describe("Project Cost payment controls", () => {
 
     expect(screen.getByText("Payment history not yet confirmed")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirm payment history" })).toBeInTheDocument();
-    expect(screen.getByText(/If no payments were ever made/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing was ever paid against this cost/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Confirm payment history" }));
     await waitFor(() => expect(completePaymentHistory).toHaveBeenCalledWith("c1"));
@@ -103,6 +117,161 @@ describe("Project Cost payment controls", () => {
     renderDetail({ payments: [payment], position: { claimId: "c1", historyComplete: true, paymentCount: 0, paidAmount: 0, balanceAmount: 5350 } });
     expect(screen.getByText("Reversed: Duplicate entry")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Reverse payment" })).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Historical settlement — "Mark paid". Founder ruling, 12 Aug 2026.
+// Mark paid, Confirm payment history and Record payment are three different
+// statements, and the detail page must never let them read as one.
+// ---------------------------------------------------------------------------
+describe("Project Cost historical settlement", () => {
+  const unknownHistory = null;
+  const settledHistorically = {
+    claimId: "c1", historyComplete: true, paymentCount: 0, paidAmount: 5350,
+    balanceAmount: 0, historicalSettlementAmount: 5350,
+  };
+
+  it("offers all three payment statements, distinctly, while the history is unknown", () => {
+    renderDetail({ role: "owner", position: unknownHistory });
+    expect(screen.getByRole("button", { name: "Mark paid" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Confirm payment history" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Record payment" })).toBeInTheDocument();
+  });
+
+  it("marks a legacy cost paid without collecting a date, method or reference", async () => {
+    const user = userEvent.setup();
+    const markPaid = vi.fn(() => Promise.resolve({ ok: true }));
+    renderDetail({ role: "owner", position: unknownHistory, markPaid });
+
+    await user.click(screen.getByRole("button", { name: "Mark paid" }));
+    const confirm = screen.getByRole("button", { name: "Confirm settled in full" });
+    // The confirmation asks for nothing that would have to be invented. The
+    // Record payment form still collects all of it, further down the page.
+    const panel = within(confirm.closest("div"));
+    expect(panel.queryByLabelText("Date paid")).not.toBeInTheDocument();
+    expect(panel.queryByLabelText("Method")).not.toBeInTheDocument();
+    expect(panel.queryByLabelText("Reference")).not.toBeInTheDocument();
+
+    await user.click(confirm);
+    await waitFor(() => expect(markPaid).toHaveBeenCalledWith("c1", ""));
+  });
+
+  it("carries an optional note through to the audited settlement", async () => {
+    const user = userEvent.setup();
+    const markPaid = vi.fn(() => Promise.resolve({ ok: true }));
+    renderDetail({ role: "owner", position: unknownHistory, markPaid });
+
+    await user.click(screen.getByRole("button", { name: "Mark paid" }));
+    await user.type(screen.getByLabelText(/Note \(optional\)/), "Settled on site in August");
+    await user.click(screen.getByRole("button", { name: "Confirm settled in full" }));
+    await waitFor(() => expect(markPaid).toHaveBeenCalledWith("c1", "Settled on site in August"));
+  });
+
+  it("says plainly that no transaction detail is claimed once it is settled", () => {
+    renderDetail({ role: "owner", position: settledHistorically });
+    expect(screen.getByText(/Settled historically · KES 5,350.00/)).toBeInTheDocument();
+    expect(screen.getByText(/No payment date, method or reference is claimed/)).toBeInTheDocument();
+  });
+
+  it("stops offering Mark paid once nothing is outstanding", () => {
+    renderDetail({ role: "owner", position: settledHistorically });
+    expect(screen.queryByRole("button", { name: "Mark paid" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm payment history" })).not.toBeInTheDocument();
+  });
+
+  it("lets the Principal withdraw the confirmation with a required reason", async () => {
+    const user = userEvent.setup();
+    const correctHistoricalSettlement = vi.fn(() => Promise.resolve({ ok: true }));
+    renderDetail({ role: "owner", position: settledHistorically, correctHistoricalSettlement });
+
+    await user.click(screen.getByRole("button", { name: "Correct this confirmation" }));
+    const withdraw = screen.getByRole("button", { name: "Withdraw confirmation" });
+    expect(withdraw).toBeDisabled();
+
+    await user.type(screen.getByLabelText(/Why is this confirmation being withdrawn/), "Wrong cost");
+    expect(withdraw).toBeEnabled();
+    await user.click(withdraw);
+    await waitFor(() => expect(correctHistoricalSettlement).toHaveBeenCalledWith("c1", "Wrong cost"));
+  });
+
+  // Concurrency correction, 13 Aug 2026 (review finding discussion_r3770345279).
+  // The settled amount is derived from the payments recorded at the time, so a
+  // recorded payment cannot be pulled out from under a standing confirmation.
+  // The database refuses it; the UI must not offer it either.
+  it("withdraws the reversal control while a confirmed settlement stands", () => {
+    const recorded = {
+      id: "pay1", claimId: "c1", paymentNumber: "BDPAY-2026-000001", status: "recorded",
+      currency: "KES", amount: 2000, paidAt: "2026-08-10", paymentChannel: "mpesa",
+      paymentReference: "ABC123", note: "", recordedBy: "o1", recordedAt: "2026-08-10T09:00:00Z", version: 1,
+    };
+    renderDetail({
+      role: "owner", payments: [recorded],
+      position: {
+        claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 5350,
+        balanceAmount: 0, historicalSettlementAmount: 3350,
+      },
+    });
+    expect(screen.queryByRole("button", { name: "Reverse payment" })).not.toBeInTheDocument();
+    expect(screen.getByText(/cannot be reversed while this confirmation stands/)).toBeInTheDocument();
+    // The correction route out is still offered, so nothing is a dead end.
+    expect(screen.getByRole("button", { name: "Correct this confirmation" })).toBeInTheDocument();
+  });
+
+  it("restores the reversal control once the confirmation is withdrawn", () => {
+    const recorded = {
+      id: "pay1", claimId: "c1", paymentNumber: "BDPAY-2026-000001", status: "recorded",
+      currency: "KES", amount: 2000, paidAt: "2026-08-10", paymentChannel: "mpesa",
+      paymentReference: "ABC123", note: "", recordedBy: "o1", recordedAt: "2026-08-10T09:00:00Z", version: 1,
+    };
+    renderDetail({
+      role: "owner", payments: [recorded],
+      position: {
+        claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 2000,
+        balanceAmount: 3350, historicalSettlementAmount: 0,
+      },
+    });
+    expect(screen.getByRole("button", { name: "Reverse payment" })).toBeInTheDocument();
+  });
+
+  it("keeps Mark paid out of a manager's view entirely", () => {
+    renderDetail({ role: "manager", position: unknownHistory });
+    expect(screen.queryByRole("button", { name: "Mark paid" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Correct this confirmation" })).not.toBeInTheDocument();
+  });
+
+  it("offers no Mark paid on a cost that is not approved", () => {
+    renderDetail({ role: "owner", position: unknownHistory, claimOverrides: { lifecycle: "draft" } });
+    expect(screen.queryByRole("button", { name: "Mark paid" })).not.toBeInTheDocument();
+    renderDetail({ role: "owner", position: unknownHistory, claimOverrides: { lifecycle: "awaiting_review" } });
+    expect(screen.queryByRole("button", { name: "Mark paid" })).not.toBeInTheDocument();
+  });
+
+  it("routes Mark paid through a real payment once the history is already known", async () => {
+    const user = userEvent.setup();
+    const markPaid = vi.fn(() => Promise.resolve({ ok: true }));
+    const { costs } = renderDetail({
+      role: "owner", markPaid,
+      payments: [{
+        id: "pay1", claimId: "c1", paymentNumber: "BDPAY-2026-000001", status: "recorded",
+        currency: "KES", amount: 3000, paidAt: "2026-08-10", paymentChannel: "mpesa",
+        paymentReference: "ABC123", note: "", recordedBy: "o1", recordedAt: "2026-08-10T09:00:00Z", version: 1,
+      }],
+      position: {
+        claimId: "c1", historyComplete: true, paymentCount: 1, paidAmount: 3000,
+        balanceAmount: 2350, historicalSettlementAmount: 0,
+      },
+    });
+
+    await user.click(screen.getByRole("button", { name: /Mark paid — settle/ }));
+    // No settlement is asserted; the remaining amount is prefilled and the real
+    // date and method are still required.
+    expect(markPaid).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Amount")).toHaveValue(2350);
+
+    await user.click(screen.getByRole("button", { name: "Record payment" }));
+    await waitFor(() => expect(costs.recordPayment).toHaveBeenCalledTimes(1));
+    expect(costs.recordPayment.mock.calls[0][1]).toMatchObject({ amount: "2350", paymentChannel: "mpesa" });
   });
 });
 

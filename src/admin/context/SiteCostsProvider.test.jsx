@@ -86,3 +86,60 @@ describe("SiteCostsProvider demo contract parity", () => {
     expect(result.stale).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Historical settlement parity. Founder ruling, 12 Aug 2026.
+// Demo approvals are tracked from the moment they are authorised, so their
+// payment history is never unknown — and Mark paid must refuse them for exactly
+// the reason the database gives.
+// ---------------------------------------------------------------------------
+describe("SiteCostsProvider historical settlement parity", () => {
+  function ownerHarness() {
+    const captured = {};
+    function Probe() {
+      captured.costs = useSiteCosts();
+      return null;
+    }
+    render(
+      <AdminDataContext.Provider value={{ currentUserId: "o1", projects, profiles: [] }}>
+        <SiteCostsProvider session={null} role="owner" isDemo>
+          <Probe />
+        </SiteCostsProvider>
+      </AdminDataContext.Provider>
+    );
+    return captured;
+  }
+
+  it("refuses Mark paid on a cost whose payment history is already known", async () => {
+    const captured = ownerHarness();
+    let result;
+    await act(async () => {
+      const created = await captured.costs.authoriseDirect(values);
+      result = await captured.costs.markPaid(created.claim.id);
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/already has a confirmed payment history/);
+  });
+
+  it("refuses Mark paid on a cost that is not approved", async () => {
+    const captured = ownerHarness();
+    let result;
+    await act(async () => {
+      const created = await captured.costs.createDraft(values);
+      result = await captured.costs.markPaid(created.claim.id);
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/Only an approved Project Cost/);
+  });
+
+  it("refuses to correct a settlement that does not exist", async () => {
+    const captured = ownerHarness();
+    let result;
+    await act(async () => {
+      const created = await captured.costs.authoriseDirect(values);
+      result = await captured.costs.correctHistoricalSettlement(created.claim.id, "Wrong cost");
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/no historical settlement to correct/);
+  });
+});

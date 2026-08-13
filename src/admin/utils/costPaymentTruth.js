@@ -46,6 +46,7 @@ export function costPaymentTruth(claim, position = null, lines = null) {
       paid: null,
       balance: null,
       paymentCount: 0,
+      historicalSettlement: 0,
       note: claim?.lifecycle === "cancelled"
         ? "Cancelled after approval."
         : "Not approved, so nothing is payable yet.",
@@ -59,19 +60,26 @@ export function costPaymentTruth(claim, position = null, lines = null) {
       paid: null,
       balance: null,
       paymentCount: Number(position?.paymentCount || 0),
+      historicalSettlement: 0,
       note: "Payment history has not yet been confirmed in the Hub.",
     };
   }
 
   const paid = round(position.paidAmount || 0);
   const balance = round(position.balanceAmount ?? Math.max(total - paid, 0));
+  // FOUNDER RULING, 12 Aug 2026. A historically settled cost is paid, but the
+  // Hub holds no transaction detail for it and must not imply that it does.
+  const historicalSettlement = round(position.historicalSettlementAmount || 0);
   return {
     knowledge: PAYMENT_KNOWLEDGE.known,
     total,
     paid,
     balance,
     paymentCount: Number(position.paymentCount || 0),
-    note: balance === 0 ? "Paid in full." : paid > 0 ? "Part paid." : "Nothing paid yet.",
+    historicalSettlement,
+    note: historicalSettlement > 0
+      ? "Settled historically, confirmed by the Principal."
+      : balance === 0 ? "Paid in full." : paid > 0 ? "Part paid." : "Nothing paid yet.",
   };
 }
 

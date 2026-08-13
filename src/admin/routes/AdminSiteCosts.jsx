@@ -272,7 +272,12 @@ function ActionMenu({ claim, truth, role, open, onToggle }) {
   const items = [{ label: "View cost", to: `/admin/site-costs/${claim.id}` }];
   if (claim.dailySiteEntryId) items.push({ label: "View source site record", to: `/admin/daily-site-operations/${claim.dailySiteEntryId}` });
   if (canDecideSiteCost(claim, role)) items.push({ label: "Review and decide", to: `/admin/site-costs/${claim.id}` });
+  // An approved cost with anything still outstanding — or with payment history the
+  // Hub has never held — can be settled two ways, and they are not the same thing.
+  // Mark paid states that it was settled; Record payment states a transaction.
+  // A cost with Balance KES 0 offers neither.
   if (claim.lifecycle === "approved" && role === "owner" && (truth.balance == null || truth.balance > 0)) {
+    items.push({ label: "Mark paid", to: `/admin/site-costs/${claim.id}#settlement` });
     items.push({ label: "Record payment", to: `/admin/site-costs/${claim.id}#payments` });
   }
   if (truth.paymentCount > 0) items.push({ label: "View payments", to: `/admin/site-costs/${claim.id}#payments` });
