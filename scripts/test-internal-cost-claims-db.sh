@@ -24,3 +24,4 @@ psql_cmd=("$pg_bin/psql" -X -v ON_ERROR_STOP=1 -h "$socket_dir" -p "$port" -d po
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/local_auth_bootstrap.sql" >/dev/null
 for migration in "$repo_dir"/supabase/migrations/*.sql; do "${psql_cmd[@]}" -f "$migration" >/dev/null; done
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/internal_cost_claims_test.sql"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/internal_cost_claim_correction_test.sql"

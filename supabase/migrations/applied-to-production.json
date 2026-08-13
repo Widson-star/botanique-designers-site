@@ -44,7 +44,19 @@
     "LOCK ORDER CORRECTION, 13 Aug 2026. project_cost_payment_truth_lock_order",
     "applied cleanly in one transaction (version 20260813105102). It replaces one",
     "function and changes no data: the project_cost_payments content hash, the",
-    "settled total and the settlement-event count were identical before and after."
+    "settled total and the settlement-event count were identical before and after.",
+    "",
+    "CORRECTION-AUTHORITY FIX, 13 Aug 2026.",
+    "internal_cost_claim_correction_authority applied cleanly (version",
+    "20260813113103). It lets cancel_internal_cost_claim correct an existing",
+    "approved Project Cost on a Completed project (a dedicated",
+    "private_assert_internal_cost_claim_correction helper, minus the",
+    "Ongoing-status requirement) while creation, submission, decision and direct",
+    "authorisation stay Ongoing-gated as before. Verified against a local",
+    "isolated-Postgres replay of every migration (scripts/test-internal-cost-",
+    "claims-db.sh) before being applied to production. Payment/settlement",
+    "totals and the cancelled/approved claim counts were identical before and",
+    "after deployment."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-13",
@@ -67,6 +79,7 @@
     { "name": "project_cost_payment_integrity_guards", "productionVersion": "20260812055541" },
     { "name": "project_cost_payment_authority_corrections", "productionVersion": "20260812191226" },
     { "name": "project_cost_historical_settlement", "productionVersion": "20260812203621" },
-    { "name": "project_cost_payment_truth_lock_order", "productionVersion": "20260813105102" }
+    { "name": "project_cost_payment_truth_lock_order", "productionVersion": "20260813105102" },
+    { "name": "internal_cost_claim_correction_authority", "productionVersion": "20260813113103" }
   ]
 }
