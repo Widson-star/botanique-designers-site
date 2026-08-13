@@ -1,6 +1,18 @@
 -- =====================================================================
 -- BD-OPERATIONS-HUB-01 — Maintenance V1 (Operations > Maintenance)
 -- =====================================================================
+-- CORRECTED before its first hosted application (still unapplied to
+-- production at the time of this edit — see supabase/migrations/
+-- applied-to-production.json and docs/ui-authority/operations-hub/
+-- MIGRATION-DEPLOYMENT.md; no fake hosted history was created). A control
+-- review found the original draft let a Maintenance relationship end while
+-- open assignments and Scheduled visits remained, and let an ended
+-- assignment be silently rewritten. Both are fixed in place below —
+-- end_maintenance_relationship, the new maintenance_assignments terminal
+-- guard, and the new end_maintenance_assignment() RPC — rather than shipped
+-- as a second migration, so production receives one coherent initial
+-- Maintenance authority. Everything else in this file is unchanged.
+--
 -- Authorised implementation tranche, 14 August 2026. Builds ONLY the
 -- Maintenance domain confirmed MISSING by the read-only Operations audit
 -- (docs/ui-authority/operations-hub/working-authority/README.md tension #3;
@@ -629,8 +641,10 @@ begin
         using errcode = '22023';
     end if;
   else
-    -- Identity and the original start are frozen; ordinary authority may
-    -- still correct the role or close the assignment (end_date).
+    -- Identity and the original start are frozen. Ordinary authority may
+    -- still correct the role of an OPEN assignment; closing one (end_date)
+    -- is a one-way transition and is gated by the terminal guard below, not
+    -- by this function.
     new.maintenance_relationship_id := old.maintenance_relationship_id;
     new.person_id := old.person_id;
     new.start_date := old.start_date;
@@ -647,6 +661,95 @@ $$;
 create trigger maintenance_assignments_audit
 before insert or update on public.maintenance_assignments
 for each row execute function public.tg_audit_maintenance_assignments();
+
+-- LIFECYCLE CORRECTION (pre-hosted-apply): an ended assignment is historical
+-- and terminal. Without a dedicated assignment-event ledger (a deliberate V1
+-- choice — see the file header), the row itself IS the history, so nothing
+-- may rewrite it once closed: no reopening, no role/person/relationship/
+-- start_date change, no re-closing to a different date. Closing an OPEN
+-- assignment (end_date null -> not null) is itself a one-way transition and
+-- may only happen through the controlled path this transaction-local marker
+-- gates — set by end_maintenance_assignment() below for a single assignment,
+-- and by end_maintenance_relationship()'s atomic bulk close for every
+-- assignment still open when a relationship ends. An ordinary PATCH (e.g. a
+-- role correction on a still-open assignment) is unaffected.
+create or replace function public.tg_maintenance_assignment_terminal_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  controlled boolean := coalesce(
+    nullif(current_setting('app.maintenance_assignment_controlled_close', true), ''),
+    'false'
+  )::boolean;
+begin
+  if old.end_date is not null then
+    raise exception 'This Maintenance assignment has ended and is historical; it cannot be changed'
+      using errcode = '22023';
+  end if;
+  if new.end_date is distinct from old.end_date and not controlled then
+    raise exception 'Use the end assignment action to close this Maintenance assignment'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger maintenance_assignments_terminal_guard
+before update on public.maintenance_assignments
+for each row execute function public.tg_maintenance_assignment_terminal_guard();
+
+-- Controlled, version-safe single-assignment close. Rejects a stale version,
+-- rejects an already-ended assignment (no double-close), and — because the
+-- terminal guard above blocks it structurally — cannot reopen one either.
+create or replace function public.end_maintenance_assignment(
+  target_assignment_id uuid, expected_version integer
+)
+returns public.maintenance_assignments
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  existing public.maintenance_assignments;
+  relationship public.maintenance_relationships;
+begin
+  select * into existing from public.maintenance_assignments where id = target_assignment_id for update;
+  if not found then
+    raise exception 'Maintenance assignment not found' using errcode = 'P0002';
+  end if;
+
+  select * into relationship from public.maintenance_relationships where id = existing.maintenance_relationship_id;
+  if not public.can_manage_maintenance_project(relationship.project_id) then
+    raise exception 'You are not authorised to manage this Maintenance assignment' using errcode = '42501';
+  end if;
+  if existing.version <> expected_version then
+    raise exception 'This assignment was changed elsewhere. Reload and try again.' using errcode = '40001';
+  end if;
+  if existing.end_date is not null then
+    raise exception 'This assignment has already ended' using errcode = '22023';
+  end if;
+
+  perform set_config('app.maintenance_assignment_controlled_close', 'true', true);
+
+  -- greatest(): an assignment whose start_date has not arrived yet cannot
+  -- close before it started (maintenance_assignment_period would refuse
+  -- end_date < start_date) — it closes on its own start date instead,
+  -- recording a valid, zero-length assignment rather than blocking the close.
+  update public.maintenance_assignments set end_date = greatest(current_date, start_date)
+  where id = existing.id and version = expected_version
+  returning * into existing;
+
+  if not found then
+    raise exception 'This assignment was changed elsewhere. Reload and try again.' using errcode = '40001';
+  end if;
+
+  perform set_config('app.maintenance_assignment_controlled_close', 'false', true);
+  return existing;
+end;
+$$;
 
 -- =====================================================================
 -- 4. Derived reads — register + Project-detail summary.
@@ -929,6 +1032,24 @@ begin
 end;
 $$;
 
+-- LIFECYCLE CORRECTION (pre-hosted-apply): ending a Maintenance relationship
+-- is the real closure of Botanique's service relationship with the site, so
+-- three things are now enforced that the first draft of this migration
+-- missed:
+--   1. A reason is REQUIRED (not optional — Pause stays optional; only End
+--      changes here), because "why did the relationship end" is exactly the
+--      kind of fact a closed relationship must not be silent about.
+--   2. Ending is REFUSED while any visit for this relationship is still
+--      'scheduled'. A Scheduled visit may simply not yet be recorded as
+--      Completed, so auto-cancelling it on End would write false history.
+--      The caller must explicitly Complete or Cancel every such visit first.
+--   3. Once the above two gates pass, every currently OPEN assignment
+--      (end_date is null) for this relationship is closed atomically in the
+--      SAME transaction, end_date set from the trusted database clock
+--      (current_date) — never client-supplied. If any step raises, nothing
+--      here is written: a single PL/pgSQL function body is one transaction,
+--      so a failed reason/visit/version check leaves the relationship AND
+--      every assignment exactly as they were.
 create or replace function public.end_maintenance_relationship(
   target_relationship_id uuid, expected_version integer, reason text default null
 )
@@ -940,7 +1061,12 @@ as $$
 declare
   existing public.maintenance_relationships;
   clean_reason text := nullif(trim(coalesce(reason, '')), '');
+  open_scheduled_visits integer;
 begin
+  if clean_reason is null then
+    raise exception 'A reason is required to end this Maintenance relationship' using errcode = '22023';
+  end if;
+
   select * into existing from public.maintenance_relationships where id = target_relationship_id for update;
   if not found then
     raise exception 'Maintenance relationship not found' using errcode = 'P0002';
@@ -955,8 +1081,15 @@ begin
     raise exception 'This Maintenance relationship has already ended' using errcode = '22023';
   end if;
 
+  select count(*) into open_scheduled_visits
+  from public.maintenance_visits
+  where maintenance_relationship_id = existing.id and status = 'scheduled';
+  if open_scheduled_visits > 0 then
+    raise exception 'Resolve all scheduled Maintenance visits before ending this relationship' using errcode = '22023';
+  end if;
+
   perform set_config('app.maintenance_relationship_controlled_transition', 'true', true);
-  perform set_config('app.maintenance_relationship_transition_reason', coalesce(clean_reason, ''), true);
+  perform set_config('app.maintenance_relationship_transition_reason', clean_reason, true);
 
   update public.maintenance_relationships set status = 'ended'
   where id = existing.id and version = expected_version
@@ -968,6 +1101,17 @@ begin
 
   perform set_config('app.maintenance_relationship_controlled_transition', 'false', true);
   perform set_config('app.maintenance_relationship_transition_reason', '', true);
+
+  -- Atomic open-assignment closure — same transaction, server-derived date.
+  -- greatest(): an assignment whose start_date has not arrived yet closes on
+  -- its own start date rather than before it (see end_maintenance_assignment
+  -- for the identical reasoning) — it never blocks the relationship's End.
+  perform set_config('app.maintenance_assignment_controlled_close', 'true', true);
+  update public.maintenance_assignments
+  set end_date = greatest(current_date, start_date)
+  where maintenance_relationship_id = existing.id and end_date is null;
+  perform set_config('app.maintenance_assignment_controlled_close', 'false', true);
+
   return existing;
 end;
 $$;
@@ -1141,6 +1285,7 @@ revoke execute on function public.tg_maintenance_visit_transition_guard() from p
 revoke execute on function public.tg_record_maintenance_visit_event() from public, anon, authenticated;
 revoke execute on function public.tg_maintenance_visit_events_immutable() from public, anon, authenticated;
 revoke execute on function public.tg_audit_maintenance_assignments() from public, anon, authenticated;
+revoke execute on function public.tg_maintenance_assignment_terminal_guard() from public, anon, authenticated;
 
 revoke execute on function public.can_manage_maintenance_project(uuid) from public, anon;
 revoke execute on function public.maintenance_authorised_projects() from public, anon;
@@ -1152,6 +1297,7 @@ revoke execute on function public.end_maintenance_relationship(uuid, integer, te
 revoke execute on function public.reschedule_maintenance_visit(uuid, integer, date) from public, anon;
 revoke execute on function public.complete_maintenance_visit(uuid, integer, text) from public, anon;
 revoke execute on function public.cancel_maintenance_visit(uuid, integer, text) from public, anon;
+revoke execute on function public.end_maintenance_assignment(uuid, integer) from public, anon;
 
 grant execute on function public.can_manage_maintenance_project(uuid) to authenticated;
 grant execute on function public.maintenance_authorised_projects() to authenticated;
@@ -1163,3 +1309,4 @@ grant execute on function public.end_maintenance_relationship(uuid, integer, tex
 grant execute on function public.reschedule_maintenance_visit(uuid, integer, date) to authenticated;
 grant execute on function public.complete_maintenance_visit(uuid, integer, text) to authenticated;
 grant execute on function public.cancel_maintenance_visit(uuid, integer, text) to authenticated;
+grant execute on function public.end_maintenance_assignment(uuid, integer) to authenticated;

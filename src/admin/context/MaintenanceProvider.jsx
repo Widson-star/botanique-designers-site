@@ -252,21 +252,48 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
     );
   }, [accessToken, isDemo, run]);
 
+  // Mirrors the database's own End gate in demo mode, so the dev preview
+  // never demonstrates a state the real RPC would refuse: a non-blank
+  // reason is required, every visit must already be Completed/Cancelled,
+  // and every currently open assignment closes atomically (client-side, in
+  // the same state update) with the server-derived date.
   const endRelationship = useCallback((relationshipId, expectedVersion, reason) => {
+    const cleanReason = (reason || "").trim();
+    if (!cleanReason) {
+      return Promise.resolve({ ok: false, error: "A reason is required to end this Maintenance relationship." });
+    }
     if (isDemo) {
+      const hasScheduledVisit = visits.some(
+        (visit) => visit.relationshipId === relationshipId && visit.status === "scheduled"
+      );
+      if (hasScheduledVisit) {
+        return Promise.resolve({ ok: false, error: "Resolve all scheduled Maintenance visits before ending this relationship." });
+      }
       let changed = null;
       setRelationships((current) => current.map((relationship) => {
         if (relationship.id !== relationshipId) return relationship;
         changed = { ...relationship, status: "ended", version: relationship.version + 1 };
         return changed;
       }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Relationship not found." });
+      if (!changed) {
+        return Promise.resolve({ ok: false, error: "Relationship not found." });
+      }
+      const closeDate = today();
+      setAssignments((current) => current.map((assignment) => {
+        if (assignment.relationshipId !== relationshipId || assignment.endDate) return assignment;
+        return {
+          ...assignment,
+          endDate: closeDate > assignment.startDate ? closeDate : assignment.startDate,
+          version: assignment.version + 1,
+        };
+      }));
+      return Promise.resolve({ ok: true, record: changed });
     }
     return run(
-      () => endMaintenanceRelationship(accessToken, relationshipId, expectedVersion, reason),
+      () => endMaintenanceRelationship(accessToken, relationshipId, expectedVersion, cleanReason),
       "This Maintenance relationship was changed elsewhere. Reload and try again."
     );
-  }, [accessToken, isDemo, run]);
+  }, [accessToken, isDemo, run, visits]);
 
   // ---- Visit actions --------------------------------------------------------
   const addVisit = useCallback((values) => {
@@ -342,18 +369,27 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
     return run(() => assignMaintenancePerson(accessToken, values), "This assignment could not be recorded.");
   }, [accessToken, isDemo, run]);
 
-  const endAssignment = useCallback((assignmentId, expectedVersion, endDate) => {
+  const endAssignment = useCallback((assignmentId, expectedVersion) => {
     if (isDemo) {
       let changed = null;
+      const closeDate = today();
       setAssignments((current) => current.map((assignment) => {
         if (assignment.id !== assignmentId) return assignment;
-        changed = { ...assignment, endDate, version: assignment.version + 1 };
+        if (assignment.endDate) {
+          return assignment;
+        }
+        // Never before its own start, matching the database's clamp.
+        changed = {
+          ...assignment,
+          endDate: closeDate > assignment.startDate ? closeDate : assignment.startDate,
+          version: assignment.version + 1,
+        };
         return changed;
       }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Assignment not found." });
+      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "This assignment has already ended." });
     }
     return run(
-      () => endMaintenanceAssignment(accessToken, assignmentId, expectedVersion, endDate),
+      () => endMaintenanceAssignment(accessToken, assignmentId, expectedVersion),
       "This assignment was changed elsewhere. Reload and try again."
     );
   }, [accessToken, isDemo, run]);

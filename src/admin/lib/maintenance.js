@@ -180,12 +180,14 @@ export async function assignMaintenancePerson(accessToken, values) {
 
 // Ending an assignment closes it. The row stays, so who covered a
 // relationship and when stays readable, exactly like people_engagements.
-export async function endMaintenanceAssignment(accessToken, assignmentId, expectedVersion, endDate) {
-  const params = new URLSearchParams({ id: `eq.${assignmentId}`, version: `eq.${expectedVersion}` });
-  const rows = await read(await fetch(`${SUPABASE_URL}/rest/v1/maintenance_assignments?${params}`, {
-    method: "PATCH",
-    headers: { ...headers(accessToken), Prefer: "return=representation" },
-    body: JSON.stringify({ end_date: endDate }),
+// Ending an assignment is a one-way, database-guarded closure — once
+// end_date is set the row is historical and terminal, so this goes through
+// the controlled RPC rather than a plain PATCH. The end date is derived by
+// the database from its own trusted clock; the client never supplies one.
+export async function endMaintenanceAssignment(accessToken, assignmentId, expectedVersion) {
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/end_maintenance_assignment`, {
+    method: "POST",
+    headers: headers(accessToken),
+    body: JSON.stringify({ target_assignment_id: assignmentId, expected_version: expectedVersion }),
   }));
-  return Array.isArray(rows) ? rows[0] : rows;
 }

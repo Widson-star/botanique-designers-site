@@ -22,15 +22,24 @@ const register = [
     lastVisitDate: "", nextVisitDate: "",
     assignedTeam: [],
   },
+  {
+    id: "rel-3", projectId: "p4", projectName: "Malava Retreat", clientSiteName: "Malava Retreat",
+    projectStatus: "Completed", status: "ended", scope: "Discontinued maintenance",
+    frequency: "monthly", startDate: "2026-01-01", version: 3,
+    lastVisitDate: "2026-02-01", nextVisitDate: "",
+    assignedTeam: [],
+  },
 ];
 
 const visits = [
   { id: "visit-1", relationshipId: "rel-1", scheduledDate: "2026-08-05", status: "completed", purpose: "Routine upkeep", completedAt: "2026-08-05T09:00:00Z", completionNote: "Lawn mowed, borders trimmed.", cancellationReason: "", version: 2 },
   { id: "visit-2", relationshipId: "rel-1", scheduledDate: "2026-08-20", status: "scheduled", purpose: "Next scheduled visit", completedAt: "", completionNote: "", cancellationReason: "", version: 1 },
+  { id: "visit-3", relationshipId: "rel-3", scheduledDate: "2026-02-01", status: "completed", purpose: "Final visit", completedAt: "2026-02-01T09:00:00Z", completionNote: "Last visit before the relationship ended.", cancellationReason: "", version: 2 },
 ];
 
 const assignments = [
   { id: "assign-1", relationshipId: "rel-1", personId: "person-1", personName: "Lincoln Waweru", role: "maintenance_lead", startDate: "2026-08-01", endDate: "", version: 1 },
+  { id: "assign-2", relationshipId: "rel-3", personId: "person-1", personName: "Lincoln Waweru", role: "maintenance_lead", startDate: "2026-01-01", endDate: "2026-02-15", version: 2 },
 ];
 
 const people = [
@@ -101,9 +110,9 @@ describe("Maintenance register", () => {
 
   it("shows the truthful empty state for last/next visit rather than an invented date", () => {
     wrap(contexts(), "/admin/maintenance?status=all");
-    expect(screen.getByText(/Not scheduled/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Not scheduled/).length).toBeGreaterThan(0);
     expect(screen.getByText(/None yet/)).toBeInTheDocument();
-    expect(screen.getByText(/Unassigned/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Unassigned/).length).toBeGreaterThan(0);
   });
 
   it("computes KPI tiles from real loaded records, not illustrative figures", () => {
@@ -225,6 +234,29 @@ describe("Maintenance relationship detail", () => {
     expect(values.maintenance.endRelationship).not.toHaveBeenCalled();
   });
 
+  it("ends a Maintenance relationship with a reason, never touching the Project", async () => {
+    const values = contexts();
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "End Maintenance" }));
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: "Client discontinued service" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(values.maintenance.endRelationship).toHaveBeenCalledWith("rel-1", 2, "Client discontinued service"));
+  });
+
+  it("surfaces the database's scheduled-visit gate as a plain error, not a silent failure", async () => {
+    const values = contexts({
+      endRelationship: vi.fn(() => Promise.resolve({
+        ok: false,
+        error: "Resolve all scheduled Maintenance visits before ending this relationship.",
+      })),
+    });
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "End Maintenance" }));
+    fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: "Client discontinued service" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByText(/Resolve all scheduled Maintenance visits/)).toBeInTheDocument();
+  });
+
   it("resumes a Paused relationship directly", async () => {
     const values = contexts();
     wrap(values, "/admin/maintenance/rel-2");
@@ -260,6 +292,32 @@ describe("Maintenance relationship detail", () => {
   it("reports a Maintenance relationship that does not exist", () => {
     wrap(contexts(), "/admin/maintenance/missing");
     expect(screen.getByRole("heading", { name: "Maintenance relationship not found" })).toBeInTheDocument();
+  });
+
+  it("shows an Ended relationship as historical: no operational controls, history stays visible", () => {
+    wrap(contexts(), "/admin/maintenance/rel-3");
+    expect(screen.getByRole("heading", { level: 1, name: "Malava Retreat" })).toBeInTheDocument();
+
+    // No path to create new operational state.
+    expect(screen.queryByRole("button", { name: "Schedule visit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Assign person" })).not.toBeInTheDocument();
+    // No Pause/Resume/End — the relationship is already closed.
+    expect(screen.queryByRole("button", { name: "Pause Maintenance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Resume Maintenance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "End Maintenance" })).not.toBeInTheDocument();
+    // No per-visit action controls (this relationship has none Scheduled,
+    // matching the database rule, but the check is explicit and fail-safe).
+    expect(screen.queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
+
+    // History remains fully readable.
+    expect(screen.getByText("Visit history")).toBeInTheDocument();
+    expect(screen.getByText(/Last visit before the relationship ended/)).toBeInTheDocument();
+    expect(screen.getByText("Lincoln Waweru")).toBeInTheDocument();
+    expect(screen.getByText(/maintenance lead/i)).toBeInTheDocument();
+    // The historical assignment has no "End" action — it already ended.
+    expect(screen.queryByRole("button", { name: "End" })).not.toBeInTheDocument();
   });
 
   it("denies the detail view to a staff reader", () => {

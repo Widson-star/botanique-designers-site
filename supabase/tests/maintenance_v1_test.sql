@@ -455,9 +455,17 @@ begin
   exception when invalid_parameter_value then null;
   end;
 
-  -- Ending an assignment, then reassigning the same person, is allowed —
-  -- history is closed, never rewritten.
-  update public.maintenance_assignments set end_date = date '2026-08-15' where id = a1.id;
+  -- A direct PATCH can no longer close an assignment — only the controlled
+  -- end_maintenance_assignment() RPC may.
+  begin
+    update public.maintenance_assignments set end_date = date '2026-08-15' where id = a1.id;
+    raise exception 'ASSERTION FAILED: a direct close of an assignment must be refused';
+  exception when insufficient_privilege then null;
+  end;
+
+  -- Ending an assignment through the controlled RPC, then reassigning the
+  -- same person, is allowed — history is closed, never rewritten.
+  perform public.end_maintenance_assignment(a1.id, a1.version);
   insert into public.maintenance_assignments (maintenance_relationship_id, person_id, role, start_date)
   values (relationship_id, '00000000-0000-0000-0000-00000030101a', 'supervisor', date '2026-08-16');
 
@@ -475,6 +483,111 @@ begin
   select id into relationship_id from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
   select jsonb_array_length(assigned_team) into team_size from public.maintenance_register() where id = relationship_id;
   perform pg_temp.assert_true(team_size = 2, 'the register lists exactly the currently-assigned team');
+end;
+$$;
+
+-- =====================================================================
+-- 4b. Assignment terminality and concurrency (lifecycle correction)
+-- =====================================================================
+do $$
+declare relationship_id uuid; original public.maintenance_assignments; open_assignment public.maintenance_assignments;
+begin
+  select id into relationship_id from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+
+  -- Person 0102a's first assignment (from the block above) is still open;
+  -- close it through the controlled RPC before opening a second, later one,
+  -- so this insert is a legitimate re-assignment, not a duplicate-open
+  -- violation of the one-open-per-relationship constraint.
+  select * into original from public.maintenance_assignments
+  where maintenance_relationship_id = relationship_id
+    and person_id = '00000000-0000-0000-0000-00000030102a' and end_date is null;
+  perform public.end_maintenance_assignment(original.id, original.version);
+
+  insert into public.maintenance_assignments (maintenance_relationship_id, person_id, role, start_date)
+  -- Deliberately in the past relative to any real system clock this suite
+  -- runs on, so closing it with the server-derived current_date can never
+  -- collide with the maintenance_assignment_period check.
+  values (relationship_id, '00000000-0000-0000-0000-00000030102a', 'inspector', date '2020-01-01')
+  returning * into open_assignment;
+end;
+$$;
+
+-- Stale expected_version is rejected before anything closes.
+do $$
+declare target public.maintenance_assignments;
+begin
+  select * into target from public.maintenance_assignments
+  where person_id = '00000000-0000-0000-0000-00000030102a' and end_date is null
+  order by start_date desc limit 1;
+
+  begin
+    perform public.end_maintenance_assignment(target.id, target.version + 1);
+    raise exception 'ASSERTION FAILED: ending an assignment with a stale version must be refused';
+  exception when serialization_failure then null;
+  end;
+
+  perform pg_temp.assert_true(
+    (select end_date from public.maintenance_assignments where id = target.id) is null,
+    'the assignment remains open after a refused stale-version close'
+  );
+end;
+$$;
+
+-- Ending it for real, through the controlled RPC, produces a historical,
+-- terminal row that cannot reopen, be re-closed, or be rewritten in any way.
+do $$
+declare target public.maintenance_assignments; closed public.maintenance_assignments;
+begin
+  select * into target from public.maintenance_assignments
+  where person_id = '00000000-0000-0000-0000-00000030102a' and end_date is null
+  order by start_date desc limit 1;
+
+  select * into closed from public.end_maintenance_assignment(target.id, target.version);
+  perform pg_temp.assert_true(closed.end_date = current_date, 'the assignment closes with the server-derived date');
+  perform pg_temp.assert_true(closed.updated_by = auth.uid(), 'the close is attributed to the real caller');
+
+  -- Ending it a second time is refused outright.
+  begin
+    perform public.end_maintenance_assignment(closed.id, closed.version);
+    raise exception 'ASSERTION FAILED: an already-ended assignment must not be endable twice';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- Reopening (clearing end_date) is refused.
+  begin
+    update public.maintenance_assignments set end_date = null where id = closed.id;
+    raise exception 'ASSERTION FAILED: an ended assignment must not be reopenable';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- Changing the role of a terminal assignment is refused — not just the
+  -- end_date column; the row is wholly historical.
+  begin
+    update public.maintenance_assignments set role = 'supervisor' where id = closed.id;
+    raise exception 'ASSERTION FAILED: an ended assignment''s role must not be rewritable';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- Changing start_date of a terminal assignment is refused.
+  begin
+    update public.maintenance_assignments set start_date = date '2026-01-01' where id = closed.id;
+    raise exception 'ASSERTION FAILED: an ended assignment''s start_date must not be rewritable';
+  exception when invalid_parameter_value then null;
+  end;
+end;
+$$;
+
+-- An OPEN assignment may still have its role corrected by ordinary
+-- authority, with no controlled marker required.
+do $$
+declare open_assignment public.maintenance_assignments; corrected public.maintenance_assignments;
+begin
+  select * into open_assignment from public.maintenance_assignments
+  where person_id = '00000000-0000-0000-0000-00000030101a' and end_date is null;
+
+  update public.maintenance_assignments set role = 'inspector' where id = open_assignment.id
+  returning * into corrected;
+  perform pg_temp.assert_true(corrected.role = 'inspector', 'an open assignment''s role may still be corrected by ordinary authority');
 end;
 $$;
 
@@ -609,6 +722,179 @@ begin
     'updated_by is always the real caller, never a client-supplied value'
   );
   perform pg_temp.assert_true(created.version = 2, 'an ordinary field edit still bumps the version exactly once');
+end;
+$$;
+
+-- =====================================================================
+-- 7. End-Maintenance lifecycle gate (lifecycle correction)
+-- =====================================================================
+-- Reuses the project a2 relationship from section 3: it currently has one
+-- Scheduled visit (the rescheduled visit2) and one open assignment (person
+-- 0101a, reassigned in section 4b), which is exactly the contradictory
+-- state the correction closes off.
+
+-- A. A blank/whitespace-only reason is refused outright, before any other
+-- check runs.
+do $$
+declare rel public.maintenance_relationships;
+begin
+  select * into rel from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+  begin
+    perform public.end_maintenance_relationship(rel.id, rel.version, null);
+    raise exception 'ASSERTION FAILED: ending with a null reason must be refused';
+  exception when invalid_parameter_value then null;
+  end;
+  begin
+    perform public.end_maintenance_relationship(rel.id, rel.version, '   ');
+    raise exception 'ASSERTION FAILED: ending with a whitespace-only reason must be refused';
+  exception when invalid_parameter_value then null;
+  end;
+end;
+$$;
+
+-- B/C. End is refused while a Scheduled visit remains, and the refusal
+-- leaves the relationship, its assignments and its visits completely
+-- unchanged — nothing partially applied.
+do $$
+declare
+  rel_before public.maintenance_relationships; rel_after public.maintenance_relationships;
+  open_assignments_before integer; open_assignments_after integer;
+  scheduled_visits_before integer; scheduled_visits_after integer;
+begin
+  select * into rel_before from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+  select count(*) into open_assignments_before from public.maintenance_assignments
+    where maintenance_relationship_id = rel_before.id and end_date is null;
+  select count(*) into scheduled_visits_before from public.maintenance_visits
+    where maintenance_relationship_id = rel_before.id and status = 'scheduled';
+
+  perform pg_temp.assert_true(scheduled_visits_before = 1, 'the fixture relationship has exactly one Scheduled visit going in');
+  perform pg_temp.assert_true(open_assignments_before = 1, 'the fixture relationship has exactly one open assignment going in');
+
+  begin
+    perform public.end_maintenance_relationship(rel_before.id, rel_before.version, 'Client discontinued service');
+    raise exception 'ASSERTION FAILED: ending must be refused while a Scheduled visit remains';
+  exception when invalid_parameter_value then null;
+  end;
+
+  select * into rel_after from public.maintenance_relationships where id = rel_before.id;
+  select count(*) into open_assignments_after from public.maintenance_assignments
+    where maintenance_relationship_id = rel_before.id and end_date is null;
+  select count(*) into scheduled_visits_after from public.maintenance_visits
+    where maintenance_relationship_id = rel_before.id and status = 'scheduled';
+
+  perform pg_temp.assert_true(rel_after.status = 'active', 'the relationship status is unchanged after a refused End');
+  perform pg_temp.assert_true(rel_after.version = rel_before.version, 'the relationship version is unchanged after a refused End');
+  perform pg_temp.assert_true(open_assignments_after = open_assignments_before, 'no assignment was closed by a refused End');
+  perform pg_temp.assert_true(scheduled_visits_after = scheduled_visits_before, 'no visit was touched by a refused End');
+end;
+$$;
+
+-- D/E. Resolving the last Scheduled visit, then ending, succeeds and is
+-- atomic: the relationship becomes Ended, every open assignment closes with
+-- the server-derived date in the SAME transaction, and the linked Project
+-- is completely untouched.
+do $$
+declare
+  rel public.maintenance_relationships; ended public.maintenance_relationships;
+  last_visit public.maintenance_visits;
+  project_status_before text; project_status_after text;
+  still_open_assignments integer;
+begin
+  select * into rel from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+  select status into project_status_before from public.projects where id = rel.project_id;
+
+  select * into last_visit from public.maintenance_visits
+  where maintenance_relationship_id = rel.id and status = 'scheduled';
+  perform public.complete_maintenance_visit(last_visit.id, last_visit.version, 'Final visit completed before closing the relationship');
+
+  -- The reason is still required, and a whitespace-padded one is trimmed
+  -- and stored, not silently blanked.
+  select * into ended from public.end_maintenance_relationship(rel.id, rel.version, '  Client discontinued service  ');
+  perform pg_temp.assert_true(ended.status = 'ended', 'End succeeds once every Scheduled visit is resolved');
+  perform pg_temp.assert_true(
+    exists (
+      select 1 from public.maintenance_relationship_events
+      where maintenance_relationship_id = rel.id and event_type = 'ended' and reason = 'Client discontinued service'
+    ),
+    'the End event carries the trimmed reason'
+  );
+
+  select count(*) into still_open_assignments from public.maintenance_assignments
+  where maintenance_relationship_id = rel.id and end_date is null;
+  perform pg_temp.assert_true(still_open_assignments = 0, 'every assignment open at End time is closed server-side, atomically');
+  -- Server-derived: current_date, unless the assignment's own start_date
+  -- (fixture: 2026-08-16) has not arrived yet, in which case it closes on
+  -- its own start date rather than before it.
+  perform pg_temp.assert_true(
+    (select end_date from public.maintenance_assignments
+       where maintenance_relationship_id = rel.id and person_id = '00000000-0000-0000-0000-00000030101a'
+       order by start_date desc limit 1) = greatest(current_date, date '2026-08-16'),
+    'the auto-closed assignment carries the server-derived end date, never before its own start'
+  );
+
+  -- Previously-ended assignments (closed in section 4b, before this
+  -- relationship ended) are untouched by this bulk close.
+  perform pg_temp.assert_true(
+    (select end_date from public.maintenance_assignments
+       where maintenance_relationship_id = rel.id and person_id = '00000000-0000-0000-0000-00000030102a'
+       and start_date = date '2020-01-01') = current_date,
+    'an assignment already closed before End keeps its own original close date'
+  );
+
+  select status into project_status_after from public.projects where id = rel.project_id;
+  perform pg_temp.assert_true(project_status_after = project_status_before, 'the linked Project status is completely untouched by ending Maintenance');
+end;
+$$;
+
+-- I. An Ended relationship accepts no new visit and no new assignment.
+do $$
+declare rel public.maintenance_relationships;
+begin
+  select * into rel from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+  perform pg_temp.assert_true(rel.status = 'ended', 'the relationship is Ended going into this check');
+
+  begin
+    insert into public.maintenance_visits (maintenance_relationship_id, scheduled_date, purpose)
+    values (rel.id, current_date + 30, 'Should be rejected');
+    raise exception 'ASSERTION FAILED: an Ended relationship must not accept a new visit';
+  exception when invalid_parameter_value then null;
+  end;
+
+  begin
+    insert into public.maintenance_assignments (maintenance_relationship_id, person_id, role, start_date)
+    values (rel.id, '00000000-0000-0000-0000-00000030101a', 'support', current_date);
+    raise exception 'ASSERTION FAILED: an Ended relationship must not accept a new assignment';
+  exception when invalid_parameter_value then null;
+  end;
+end;
+$$;
+
+-- J. Completed/Cancelled visit history recorded before End remains fully
+-- readable afterwards.
+do $$
+declare rel public.maintenance_relationships; completed_count integer; cancelled_count integer;
+begin
+  select * into rel from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+  select count(*) into completed_count from public.maintenance_visits
+    where maintenance_relationship_id = rel.id and status = 'completed';
+  select count(*) into cancelled_count from public.maintenance_visits
+    where maintenance_relationship_id = rel.id and status = 'cancelled';
+  perform pg_temp.assert_true(completed_count = 2, 'both Completed visits (the original and the final one) remain readable after End');
+  perform pg_temp.assert_true(cancelled_count = 1, 'the Cancelled visit remains readable after End');
+end;
+$$;
+
+-- Ending an already-Ended relationship a second time is refused, same as
+-- before this correction.
+do $$
+declare rel public.maintenance_relationships;
+begin
+  select * into rel from public.maintenance_relationships where project_id = '00000000-0000-0000-0000-0000002010a2';
+  begin
+    perform public.end_maintenance_relationship(rel.id, rel.version, 'Again');
+    raise exception 'ASSERTION FAILED: an already-Ended relationship must not be endable twice';
+  exception when invalid_parameter_value then null;
+  end;
 end;
 $$;
 

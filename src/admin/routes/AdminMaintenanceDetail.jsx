@@ -70,6 +70,11 @@ export default function AdminMaintenanceDetail() {
     [assignmentsForRelationship, relationshipId]
   );
   const currentTeam = assignments.filter((assignment) => !assignment.endDate);
+  // Ended assignments are historical and terminal (the database refuses to
+  // rewrite them), so they stay readable here rather than disappearing —
+  // this is the assignment side of the same "history remains visible" rule
+  // Visit history already follows.
+  const pastTeam = assignments.filter((assignment) => assignment.endDate);
   const scheduledVisits = visits.filter((visit) => visit.status === "scheduled");
   const pastVisits = visits.filter((visit) => visit.status !== "scheduled");
 
@@ -275,7 +280,12 @@ export default function AdminMaintenanceDetail() {
                       <span className="block truncate text-sm font-medium">{showDate(visit.scheduledDate)}</span>
                       <span className="block truncate text-xs text-gray-500">{visit.purpose}</span>
                     </span>
-                    {canManageMaintenance(role) && (
+                    {/* Fail-safe: under the corrected database rule an Ended
+                        relationship has zero Scheduled visits, so this branch
+                        should be unreachable in practice — the explicit
+                        status check keeps it that way even against stale or
+                        otherwise inconsistent data. */}
+                    {canManageMaintenance(role) && relationship.status !== "ended" && (
                       <span className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
                         <button type="button" onClick={() => startVisitAction(visit, "complete")} className="min-h-11 py-2 text-botanique-green hover:underline">Complete</button>
                         <button type="button" onClick={() => startVisitAction(visit, "reschedule")} className="min-h-11 py-2 text-gray-600 hover:text-botanique-charcoal hover:underline">Reschedule</button>
@@ -477,11 +487,16 @@ export default function AdminMaintenanceDetail() {
                       {assignmentRoleLabel(assignment.role)} · since {showDate(assignment.startDate)}
                     </span>
                   </span>
-                  {canManageMaintenance(role) && (
+                  {/* Fail-safe: ending a relationship atomically closes every
+                      open assignment server-side, so currentTeam should
+                      already be empty for an Ended relationship — this
+                      status check keeps the button from reappearing against
+                      stale or otherwise inconsistent data. */}
+                  {canManageMaintenance(role) && relationship.status !== "ended" && (
                     <button
                       type="button"
                       onClick={() => report(
-                        endAssignment(assignment.id, assignment.version, today()),
+                        endAssignment(assignment.id, assignment.version),
                         "Assignment ended."
                       )}
                       className="min-h-11 shrink-0 py-2 text-xs font-semibold text-gray-600 hover:text-botanique-charcoal hover:underline"
@@ -492,6 +507,22 @@ export default function AdminMaintenanceDetail() {
                 </li>
               ))}
             </ul>
+
+            {pastTeam.length > 0 && (
+              <div className="mt-4 border-t border-stone-100 pt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Past assignments</p>
+                <ul className="mt-2 divide-y divide-stone-100">
+                  {pastTeam.map((assignment) => (
+                    <li key={assignment.id} className="py-2">
+                      <span className="block truncate text-sm font-medium text-gray-700">{assignment.personName}</span>
+                      <span className="block truncate text-xs text-gray-500">
+                        {assignmentRoleLabel(assignment.role)} · {showDate(assignment.startDate)} – {showDate(assignment.endDate)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </Panel>
         </div>
       </div>
