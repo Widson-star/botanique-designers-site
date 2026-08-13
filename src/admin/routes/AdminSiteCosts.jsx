@@ -88,8 +88,18 @@ export default function AdminSiteCosts() {
     return true;
   };
 
+  // FOUNDER RULING, 13 Aug 2026. Cancelled Project Costs are historical
+  // correction records, not working ones. They stay in the data model and
+  // stay auditable, but the ordinary day-to-day register must not show them
+  // by default. "All statuses" therefore means all normal working statuses
+  // EXCLUDING Cancelled; a Principal who wants to see cancelled costs selects
+  // Cancelled explicitly (in the filter, or via ?status=cancelled).
+  const matchesLifecycle = (claim) => (lifecycle === "all"
+    ? claim.lifecycle !== "cancelled"
+    : claim.lifecycle === lifecycle);
+
   const visible = claims.filter((claim) =>
-    (lifecycle === "all" || claim.lifecycle === lifecycle) &&
+    matchesLifecycle(claim) &&
     (projectId === "all" || claim.projectId === projectId) &&
     matchesPayment(claim) &&
     withinReportedPeriod(claim.submittedAt, claim.decidedAt, from, to));
