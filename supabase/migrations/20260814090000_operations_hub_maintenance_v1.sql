@@ -11,7 +11,20 @@
 -- end_maintenance_relationship, the new maintenance_assignments terminal
 -- guard, and the new end_maintenance_assignment() RPC — rather than shipped
 -- as a second migration, so production receives one coherent initial
--- Maintenance authority. Everything else in this file is unchanged.
+-- Maintenance authority.
+--
+-- SECOND CORRECTION, same review cycle, still pre-hosted-apply: the fixes
+-- above closed the sequential case (ending against an already-Ended
+-- relationship, or scheduling against one) but not the CONCURRENT one — a
+-- visit or assignment INSERT racing a simultaneous End on the same
+-- relationship, each reading the other's not-yet-committed state. Fixed by
+-- taking a FOR SHARE lock on the parent maintenance_relationships row inside
+-- tg_audit_maintenance_visits() and tg_audit_maintenance_assignments()'
+-- INSERT branches, which now genuinely serializes against
+-- end_maintenance_relationship()'s FOR UPDATE on that same row — see the
+-- comments at each call site. No advisory lock, no SERIALIZABLE isolation
+-- change, nothing outside Maintenance V1. Everything else in this file is
+-- unchanged.
 --
 -- Authorised implementation tranche, 14 August 2026. Builds ONLY the
 -- Maintenance domain confirmed MISSING by the read-only Operations audit
@@ -473,7 +486,21 @@ begin
     new.completion_note := null;
     new.cancellation_reason := null;
 
-    select * into relationship from public.maintenance_relationships where id = new.maintenance_relationship_id;
+    -- CONCURRENCY CORRECTION (pre-hosted-apply): FOR SHARE, not a plain
+    -- SELECT. end_maintenance_relationship() locks the parent row FOR
+    -- UPDATE for its whole transaction; a plain read here would not block
+    -- on that lock (only see the last COMMITTED status), letting a visit be
+    -- inserted concurrently with an End that already checked zero Scheduled
+    -- visits exist. FOR SHARE conflicts with FOR UPDATE (but not with
+    -- another FOR SHARE, so concurrent visit/assignment inserts against the
+    -- same still-Active relationship do not block each other): whichever of
+    -- this insert or End reaches the row first now genuinely excludes the
+    -- other until it commits, so the final state is always one of
+    -- {Active relationship + new Scheduled visit} or
+    -- {Ended relationship + insert rejected} — never both an Ended
+    -- relationship and a Scheduled visit.
+    select * into relationship from public.maintenance_relationships
+    where id = new.maintenance_relationship_id for share;
     if not found then
       raise exception 'Maintenance relationship not found' using errcode = 'P0002';
     end if;
@@ -623,7 +650,18 @@ begin
     new.updated_at := now();
     new.version := 1;
 
-    select * into relationship from public.maintenance_relationships where id = new.maintenance_relationship_id;
+    -- CONCURRENCY CORRECTION (pre-hosted-apply): FOR SHARE for the identical
+    -- reason as tg_audit_maintenance_visits — this must serialize against
+    -- end_maintenance_relationship()'s FOR UPDATE on the same parent row, so
+    -- a new assignment can never be created against a relationship that
+    -- concurrently finishes ending. Whichever reaches the row first
+    -- excludes the other until commit: either the assignment is inserted
+    -- into a still-Active relationship (and End's later atomic close sweeps
+    -- it up), or the relationship has already ended and this insert is
+    -- rejected outright — never an Ended relationship with a newly-created
+    -- open assignment.
+    select * into relationship from public.maintenance_relationships
+    where id = new.maintenance_relationship_id for share;
     if not found then
       raise exception 'Maintenance relationship not found' using errcode = 'P0002';
     end if;
