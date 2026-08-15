@@ -13,6 +13,7 @@ import { compactPersonName } from "../utils/personName";
 import { portfolioPublicationLabel } from "../constants/projectStatus";
 import ProjectApprovalActions from "../components/approvals/ProjectApprovalActions";
 import ProjectDailySiteSection from "../components/dailysite/ProjectDailySiteSection";
+import ProjectMaintenanceIndicator from "../components/maintenance/ProjectMaintenanceIndicator";
 
 function DetailCard({ title, children }) {
   return (
@@ -209,6 +210,7 @@ export default function AdminProjectDetail() {
           </section>
           <ProjectApprovalActions project={project} />
           <ProjectDailySiteSection project={project} role={role} />
+          <ProjectMaintenanceIndicator project={project} role={role} />
         </div>
       ) : (
         <div role="tabpanel">

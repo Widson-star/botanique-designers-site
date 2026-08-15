@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { AdminApprovalsContext } from "../context/adminApprovals";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
+import { MaintenanceContext } from "../context/maintenance";
 import AdminProjectDetail from "./AdminProjectDetail";
 import AdminProjectForm from "./AdminProjectForm";
 
@@ -51,11 +52,13 @@ function renderRoute(role, entry, element, projectRows = [project]) {
           value={{ requests: [], submit: vi.fn() }}
         >
           <DailySiteOperationsContext.Provider value={{ entries: [] }}>
-            <Routes>
-              <Route path="/admin/projects/:id" element={element} />
-              <Route path="/admin/projects/:id/edit" element={element} />
-              <Route path="/admin/projects/new" element={element} />
-            </Routes>
+            <MaintenanceContext.Provider value={{ summaryForProject: () => null }}>
+              <Routes>
+                <Route path="/admin/projects/:id" element={element} />
+                <Route path="/admin/projects/:id/edit" element={element} />
+                <Route path="/admin/projects/new" element={element} />
+              </Routes>
+            </MaintenanceContext.Provider>
           </DailySiteOperationsContext.Provider>
         </AdminApprovalsContext.Provider>
       </AdminDataContext.Provider>
