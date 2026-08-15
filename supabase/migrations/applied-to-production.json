@@ -56,10 +56,28 @@
     "isolated-Postgres replay of every migration (scripts/test-internal-cost-",
     "claims-db.sh) before being applied to production. Payment/settlement",
     "totals and the cancelled/approved claim counts were identical before and",
-    "after deployment."
+    "after deployment.",
+    "",
+    "MAINTENANCE V1, 15 Aug 2026. operations_hub_maintenance_v1 (repository",
+    "filename prefix 20260814090000; production version 20260815192636 —",
+    "reconciled by name, not by timestamp, as this file's header explains)",
+    "applied cleanly in a single transaction via PR #112 (merge",
+    "434482afaa5aebdb389b05b323505c348e137843), byte-identical to the merged-",
+    "main file (SHA-256",
+    "9c3cdd42317ba5514dd1067f21a08992110791588f48ac3cbed02ebfb6eae95a),",
+    "purely additive: five new tables (maintenance_relationships,",
+    "maintenance_relationship_events, maintenance_visits,",
+    "maintenance_visit_events, maintenance_assignments), their RLS, indexes,",
+    "constraints, triggers and eleven RPCs/helpers. No column was added to",
+    "public.projects or public.people, and no existing table, policy, function",
+    "or trigger was touched. Post-apply verification confirmed zero rows in",
+    "every new table and that Lugulu Residential Home, Kitusuru Residence",
+    "House 0.8A and Zizu investments Ltd were unchanged (identical status,",
+    "stage, project_type, archived, actual_completion_date and updated_at to",
+    "an immediately-pre-apply snapshot)."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-13",
+  "verifiedAt": "2026-08-15",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -80,6 +98,7 @@
     { "name": "project_cost_payment_authority_corrections", "productionVersion": "20260812191226" },
     { "name": "project_cost_historical_settlement", "productionVersion": "20260812203621" },
     { "name": "project_cost_payment_truth_lock_order", "productionVersion": "20260813105102" },
-    { "name": "internal_cost_claim_correction_authority", "productionVersion": "20260813113103" }
+    { "name": "internal_cost_claim_correction_authority", "productionVersion": "20260813113103" },
+    { "name": "operations_hub_maintenance_v1", "productionVersion": "20260815192636" }
   ]
 }
