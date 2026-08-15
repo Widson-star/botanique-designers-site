@@ -69,6 +69,8 @@ function contexts(overrides = {}) {
       cancelVisit: vi.fn(() => Promise.resolve({ ok: true })),
       addAssignment: vi.fn(() => Promise.resolve({ ok: true })),
       endAssignment: vi.fn(() => Promise.resolve({ ok: true })),
+      editRelationship: vi.fn(() => Promise.resolve({ ok: true })),
+      correctAssignment: vi.fn(() => Promise.resolve({ ok: true })),
       summaryForProject: (projectId) => {
         const relationship = register.find((row) => row.projectId === projectId && row.status !== "ended");
         return relationship ? { id: relationship.id, status: relationship.status, nextVisitDate: relationship.nextVisitDate } : null;
@@ -318,6 +320,147 @@ describe("Maintenance relationship detail", () => {
     expect(screen.getByText(/maintenance lead/i)).toBeInTheDocument();
     // The historical assignment has no "End" action — it already ended.
     expect(screen.queryByRole("button", { name: "End" })).not.toBeInTheDocument();
+  });
+
+  // ---- Relationship details edit -------------------------------------------
+
+  it("edits scope, start date and frequency with the loaded version", async () => {
+    const values = contexts();
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText(/Maintenance scope/), { target: { value: "Weeding, watering and pruning" } });
+    fireEvent.change(screen.getByLabelText(/^Start date/), { target: { value: "2026-08-05" } });
+    fireEvent.change(screen.getByLabelText(/^Frequency/), { target: { value: "fortnightly" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+
+    await waitFor(() => expect(values.maintenance.editRelationship).toHaveBeenCalled());
+    const [id, version, payload] = values.maintenance.editRelationship.mock.calls[0];
+    expect(id).toBe("rel-1");
+    expect(version).toBe(2);
+    expect(payload).toEqual({
+      scope: "Weeding, watering and pruning",
+      startDate: "2026-08-05",
+      frequency: "fortnightly",
+    });
+    // An ordinary edit never carries lifecycle or project identity.
+    expect(payload).not.toHaveProperty("status");
+    expect(payload).not.toHaveProperty("projectId");
+  });
+
+  it("offers no details edit on an Ended relationship", () => {
+    wrap(contexts(), "/admin/maintenance/rel-3");
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  });
+
+  it("states plainly that a details edit leaves the Project untouched", () => {
+    wrap(contexts(), "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByText(/linked Project and its status are unchanged/i)).toBeInTheDocument();
+    expect(screen.getByText(/moves only through Pause, Resume or End/i)).toBeInTheDocument();
+  });
+
+  it("surfaces a stale details edit instead of a false success", async () => {
+    const values = contexts({
+      editRelationship: vi.fn(() => Promise.resolve({
+        ok: false, stale: true,
+        error: "This Maintenance relationship was changed elsewhere. Reload and try again.",
+      })),
+    });
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+    expect(await screen.findByText(/changed elsewhere/i)).toBeInTheDocument();
+    expect(screen.queryByText("Maintenance details updated.")).not.toBeInTheDocument();
+  });
+
+  // ---- Principal-only assignment correction ---------------------------------
+
+  it("corrects an open assignment's role and start date, with a reason", async () => {
+    const values = contexts();
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "Correct assignment" }));
+
+    // The person is shown but is not editable — identity never moves.
+    expect(screen.getByText("Person")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Person$/)).not.toBeInTheDocument();
+    expect(screen.getByText("Current responsibility")).toBeInTheDocument();
+    expect(screen.getByText("Current start date")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Corrected responsibility/), { target: { value: "site_technician" } });
+    fireEvent.change(screen.getByLabelText(/Corrected start date/), { target: { value: "2026-08-05" } });
+    fireEvent.change(screen.getByLabelText(/Why is this assignment being corrected\?/), {
+      target: { value: "Work began 5 Aug; he is the technician, not the lead" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
+
+    await waitFor(() => expect(values.maintenance.correctAssignment).toHaveBeenCalledWith({
+      assignmentId: "assign-1",
+      expectedVersion: 1,
+      role: "site_technician",
+      startDate: "2026-08-05",
+      correctionReason: "Work began 5 Aug; he is the technician, not the lead",
+    }));
+  });
+
+  it("requires a correction reason before calling the controlled action", () => {
+    const values = contexts();
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "Correct assignment" }));
+    fireEvent.submit(screen.getByRole("button", { name: "Save correction" }).closest("form"));
+    expect(screen.getByText("Explain why this Maintenance assignment is being corrected.")).toBeInTheDocument();
+    expect(values.maintenance.correctAssignment).toHaveBeenCalledTimes(0);
+  });
+
+  it("keeps correction visually separate from ordinary End", () => {
+    wrap(contexts(), "/admin/maintenance/rel-1");
+    // Both exist, but they are distinct controls — correction is not the
+    // ordinary next step for an assignment.
+    expect(screen.getByRole("button", { name: "End" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Correct assignment" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Correct assignment" }));
+    expect(screen.getByText(/Correcting a recorded assignment/i)).toBeInTheDocument();
+    expect(screen.getByText(/original values and your reason are kept/i)).toBeInTheDocument();
+  });
+
+  it("does not offer correction to an Operations Manager", () => {
+    wrap(contexts({ role: "manager" }), "/admin/maintenance/rel-1");
+    expect(screen.queryByRole("button", { name: "Correct assignment" })).not.toBeInTheDocument();
+    // Ordinary resourcing authority is untouched.
+    expect(screen.getByRole("button", { name: "End" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Assign person" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  });
+
+  it("offers no correction on an Ended relationship's historical assignments", () => {
+    wrap(contexts(), "/admin/maintenance/rel-3");
+    expect(screen.queryByRole("button", { name: "Correct assignment" })).not.toBeInTheDocument();
+  });
+
+  it("surfaces the database refusal to correct an ended assignment", async () => {
+    const values = contexts({
+      correctAssignment: vi.fn(() => Promise.resolve({
+        ok: false,
+        error: "This Maintenance assignment has ended and is historical; it cannot be corrected.",
+      })),
+    });
+    wrap(values, "/admin/maintenance/rel-1");
+    fireEvent.click(screen.getByRole("button", { name: "Correct assignment" }));
+    fireEvent.change(screen.getByLabelText(/Why is this assignment being corrected\?/), {
+      target: { value: "Recording error" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save correction" }));
+    expect(await screen.findByText(/ended and is historical/i)).toBeInTheDocument();
+  });
+
+  // ---- Non-scope ------------------------------------------------------------
+
+  it("introduces no Finance, visit-backfill or Tools & Equipment surface", () => {
+    wrap(contexts(), "/admin/maintenance/rel-1");
+    expect(screen.queryByText(/KES/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/[Cc]ost/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/[Pp]ayment/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tools|Equipment/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /[Bb]ackfill|[Ii]mport/ })).not.toBeInTheDocument();
   });
 
   it("denies the detail view to a staff reader", () => {

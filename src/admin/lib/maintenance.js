@@ -68,16 +68,13 @@ export async function fetchMaintenanceAssignments(accessToken) {
   return read(await fetch(`${SUPABASE_URL}/rest/v1/maintenance_assignments?${params}`, { headers: headers(accessToken) }));
 }
 
-// The compact, read-only Project-detail indicator. Returns [] (not an error)
-// when the project has no live Maintenance relationship — a truthful absence.
-export async function fetchMaintenanceProjectSummary(accessToken, projectId) {
-  const rows = await read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/maintenance_project_summary`, {
-    method: "POST",
-    headers: headers(accessToken),
-    body: JSON.stringify({ target_project_id: projectId }),
-  }));
-  return Array.isArray(rows) ? rows[0] || null : rows;
-}
+// There is deliberately no fetchMaintenanceProjectSummary() here. The
+// Project-detail indicator derives from the already-loaded register, which
+// carries the same relationship id, status and derived next visit — so a
+// dedicated per-project read would be a duplicate round trip for data the
+// provider already holds. The maintenance_project_summary() database function
+// remains in place as the authoritative single-project read for any future
+// consumer that genuinely needs it without loading the whole register.
 
 export async function createMaintenanceRelationship(accessToken, values) {
   const rows = await read(await fetch(`${SUPABASE_URL}/rest/v1/maintenance_relationships`, {
@@ -85,6 +82,26 @@ export async function createMaintenanceRelationship(accessToken, values) {
     headers: { ...headers(accessToken), Prefer: "return=representation" },
     body: JSON.stringify({
       project_id: values.projectId,
+      scope: values.scope,
+      start_date: values.startDate,
+      frequency: values.frequency,
+    }),
+  }));
+  return Array.isArray(rows) ? rows[0] : rows;
+}
+
+// Ordinary correction of the relationship's own descriptive fields. Optimistic
+// concurrency without an RPC: the version the reader loaded is part of the
+// filter, so a relationship edited elsewhere in the meantime matches no row and
+// comes back as a stale write rather than silently overwriting. project_id is
+// never sent — the database freezes it on update regardless — and status is
+// never sent, because lifecycle moves only through pause/resume/end.
+export async function updateMaintenanceRelationship(accessToken, relationshipId, expectedVersion, values) {
+  const params = new URLSearchParams({ id: `eq.${relationshipId}`, version: `eq.${expectedVersion}` });
+  const rows = await read(await fetch(`${SUPABASE_URL}/rest/v1/maintenance_relationships?${params}`, {
+    method: "PATCH",
+    headers: { ...headers(accessToken), Prefer: "return=representation" },
+    body: JSON.stringify({
       scope: values.scope,
       start_date: values.startDate,
       frequency: values.frequency,
@@ -189,5 +206,24 @@ export async function endMaintenanceAssignment(accessToken, assignmentId, expect
     method: "POST",
     headers: headers(accessToken),
     body: JSON.stringify({ target_assignment_id: assignmentId, expected_version: expectedVersion }),
+  }));
+}
+
+// Correcting a recorded assignment is deliberately an RPC rather than a broad
+// table PATCH: the database verifies Principal authority, checks the loaded
+// version, refuses an ended assignment, requires a stated reason, and writes
+// the immutable before/after event — all in one transaction. Only role and
+// start_date may move; person, relationship and closure are never sent.
+export async function correctMaintenanceAssignment(accessToken, values) {
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/correct_maintenance_assignment`, {
+    method: "POST",
+    headers: headers(accessToken),
+    body: JSON.stringify({
+      target_assignment_id: values.assignmentId,
+      expected_version: values.expectedVersion,
+      target_role: values.role,
+      target_start_date: values.startDate,
+      correction_reason: values.correctionReason,
+    }),
   }));
 }

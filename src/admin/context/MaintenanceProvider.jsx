@@ -3,10 +3,11 @@ import { useAdminData } from "./adminData";
 import { MaintenanceContext } from "./maintenance";
 import {
   assignMaintenancePerson, cancelMaintenanceVisit, completeMaintenanceVisit,
-  createMaintenanceRelationship, endMaintenanceAssignment, endMaintenanceRelationship,
-  fetchMaintenanceAssignments, fetchMaintenanceAuthorisedProjects, fetchMaintenanceRegister,
-  fetchMaintenanceVisits, pauseMaintenanceRelationship, rescheduleMaintenanceVisit,
-  resumeMaintenanceRelationship, scheduleMaintenanceVisit,
+  correctMaintenanceAssignment, createMaintenanceRelationship, endMaintenanceAssignment,
+  endMaintenanceRelationship, fetchMaintenanceAssignments, fetchMaintenanceAuthorisedProjects,
+  fetchMaintenanceRegister, fetchMaintenanceVisits, pauseMaintenanceRelationship,
+  rescheduleMaintenanceVisit, resumeMaintenanceRelationship, scheduleMaintenanceVisit,
+  updateMaintenanceRelationship,
 } from "../lib/maintenance";
 
 const now = () => new Date().toISOString();
@@ -145,8 +146,17 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
   const [error, setError] = useState("");
 
+  // `relationships` already holds mapped rows: the authenticated path maps the
+  // maintenance_register() response once in refresh(), and demo mode seeds
+  // already-shaped objects. Mapping again here re-read snake_case keys off
+  // camelCase objects and silently returned undefined for projectId,
+  // projectName, clientSiteName, projectStatus, startDate, last/nextVisitDate
+  // and assignedTeam — which is exactly how the first live record rendered
+  // with a blank site heading, "Project status: —" and "Start date: —" while
+  // status/scope/frequency (identically named on both sides) survived. Demo
+  // mode still composes its register from the demo visit/assignment stores.
   const register = useMemo(
-    () => (isDemo ? buildDemoRegister(relationships, visits, assignments, projects) : relationships.map(mapRegisterRow)),
+    () => (isDemo ? buildDemoRegister(relationships, visits, assignments, projects) : relationships),
     [isDemo, relationships, visits, assignments, projects]
   );
 
@@ -218,6 +228,39 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
       return Promise.resolve({ ok: true, record: relationship });
     }
     return run(() => createMaintenanceRelationship(accessToken, values), "This Maintenance relationship could not be started.");
+  }, [accessToken, isDemo, run]);
+
+  // Ordinary correction of the relationship's descriptive fields. Lifecycle
+  // status is deliberately absent: it moves only through pause/resume/end.
+  const editRelationship = useCallback((relationshipId, expectedVersion, values) => {
+    const cleanScope = (values.scope || "").trim();
+    if (!cleanScope) {
+      return Promise.resolve({ ok: false, error: "Describe the maintenance scope." });
+    }
+    if (!values.startDate) {
+      return Promise.resolve({ ok: false, error: "A start date is required." });
+    }
+    if (isDemo) {
+      let changed = null;
+      setRelationships((current) => current.map((relationship) => {
+        if (relationship.id !== relationshipId) return relationship;
+        changed = {
+          ...relationship,
+          scope: cleanScope,
+          startDate: values.startDate,
+          frequency: values.frequency,
+          version: relationship.version + 1,
+        };
+        return changed;
+      }));
+      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Relationship not found." });
+    }
+    return run(
+      () => updateMaintenanceRelationship(accessToken, relationshipId, expectedVersion, {
+        ...values, scope: cleanScope,
+      }),
+      "This Maintenance relationship was changed elsewhere. Reload and try again."
+    );
   }, [accessToken, isDemo, run]);
 
   const pauseRelationship = useCallback((relationshipId, expectedVersion, reason) => {
@@ -394,6 +437,44 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
     );
   }, [accessToken, isDemo, run]);
 
+  // Principal-only correction of a recorded assignment. Mirrors the database
+  // rules here so the demo preview can never demonstrate a correction the real
+  // RPC would refuse: an open assignment only, a stated reason, and only role
+  // and start date moving — never the person, the relationship or the closure.
+  const correctAssignment = useCallback((values) => {
+    const cleanReason = (values.correctionReason || "").trim();
+    if (cleanReason.length < 3) {
+      return Promise.resolve({ ok: false, error: "Explain why this Maintenance assignment is being corrected." });
+    }
+    if (!values.startDate) {
+      return Promise.resolve({ ok: false, error: "A corrected start date is required." });
+    }
+    if (isDemo) {
+      let changed = null;
+      let refused = "";
+      setAssignments((current) => current.map((assignment) => {
+        if (assignment.id !== values.assignmentId) return assignment;
+        if (assignment.endDate) {
+          refused = "This Maintenance assignment has ended and is historical; it cannot be corrected.";
+          return assignment;
+        }
+        changed = {
+          ...assignment,
+          role: values.role,
+          startDate: values.startDate,
+          version: assignment.version + 1,
+        };
+        return changed;
+      }));
+      if (refused) return Promise.resolve({ ok: false, error: refused });
+      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Assignment not found." });
+    }
+    return run(
+      () => correctMaintenanceAssignment(accessToken, { ...values, correctionReason: cleanReason }),
+      "This assignment was changed elsewhere. Reload and try again."
+    );
+  }, [accessToken, isDemo, run]);
+
   // The compact Project-detail indicator: at most one live relationship per
   // project, matching the database's own one-live-per-project constraint.
   const summaryForProject = useCallback((projectId) => {
@@ -404,16 +485,16 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
 
   const value = useMemo(() => ({
     register, visits, assignments, eligibleProjects, status, error,
-    refresh, addRelationship, pauseRelationship, resumeRelationship, endRelationship,
+    refresh, addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
     addVisit, rescheduleVisit, completeVisit, cancelVisit,
-    addAssignment, endAssignment, summaryForProject,
+    addAssignment, endAssignment, correctAssignment, summaryForProject,
     visitsForRelationship: (relationshipId) => visits.filter((visit) => visit.relationshipId === relationshipId),
     assignmentsForRelationship: (relationshipId) => assignments.filter((assignment) => assignment.relationshipId === relationshipId),
   }), [
     register, visits, assignments, eligibleProjects, status, error, refresh,
-    addRelationship, pauseRelationship, resumeRelationship, endRelationship,
+    addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
     addVisit, rescheduleVisit, completeVisit, cancelVisit,
-    addAssignment, endAssignment, summaryForProject,
+    addAssignment, endAssignment, correctAssignment, summaryForProject,
   ]);
 
   return <MaintenanceContext.Provider value={value}>{children}</MaintenanceContext.Provider>;

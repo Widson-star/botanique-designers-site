@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignmentRoleLabel, canManageMaintenance, canSeeMaintenance, frequencyLabel,
-  relationshipStatusLabel, visitStatusLabel,
+  assignmentRoleLabel, canCorrectMaintenanceAssignment, canManageMaintenance, canSeeMaintenance,
+  frequencyLabel, relationshipStatusLabel, visitStatusLabel,
 } from "./maintenanceCapabilities";
 
 describe("maintenance capabilities", () => {
@@ -17,6 +17,17 @@ describe("maintenance capabilities", () => {
     expect(canManageMaintenance("owner")).toBe(true);
     expect(canManageMaintenance("manager")).toBe(true);
     expect(canManageMaintenance("staff")).toBe(false);
+  });
+
+  // Correcting a recorded assignment rewrites history, so it is narrower than
+  // ordinary management — the Operations Manager keeps every day-to-day power
+  // but cannot restate when an assignment started or what it was.
+  it("restricts assignment correction to the Principal alone", () => {
+    expect(canCorrectMaintenanceAssignment("owner")).toBe(true);
+    expect(canCorrectMaintenanceAssignment("manager")).toBe(false);
+    expect(canCorrectMaintenanceAssignment("staff")).toBe(false);
+    expect(canCorrectMaintenanceAssignment("viewer")).toBe(false);
+    expect(canCorrectMaintenanceAssignment(undefined)).toBe(false);
   });
 
   it("labels every relationship status", () => {
