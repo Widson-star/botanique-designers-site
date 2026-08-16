@@ -45,6 +45,27 @@ export async function fetchApprovalRequests(accessToken) {
   }));
 }
 
+// Staff Compensation remains Finance-owned. Approvals reads submitted Finance
+// records directly and never mirrors them into approval_requests or invents a
+// Project relationship. request_round > 0 means the draft has entered the
+// decision lifecycle at least once; drafts that were never submitted stay out
+// of the Approvals centre.
+export async function fetchStaffCompensationApprovalRequests(accessToken) {
+  const params = new URLSearchParams({
+    select: [
+      "id", "person_id", "project_id", "service_date", "compensation_type",
+      "description", "lifecycle", "request_round", "submitted_amount",
+      "approved_amount", "requester_id", "decider_id", "version", "submitted_at",
+      "decided_at", "withdrawn_at", "cancelled_at", "updated_at",
+    ].join(","),
+    request_round: "gt.0",
+    order: "submitted_at.desc.nullslast,updated_at.desc",
+  });
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/staff_compensations?${params}`, {
+    headers: headers(accessToken),
+  }));
+}
+
 export async function fetchApprovalEvents(accessToken, approvalRequestId) {
   const params = new URLSearchParams({
     select: [
@@ -55,6 +76,20 @@ export async function fetchApprovalEvents(accessToken, approvalRequestId) {
     order: "occurred_at.asc",
   });
   return read(await fetch(`${SUPABASE_URL}/rest/v1/approval_events?${params}`, {
+    headers: headers(accessToken),
+  }));
+}
+
+export async function fetchStaffCompensationApprovalEvents(accessToken, compensationId) {
+  const params = new URLSearchParams({
+    select: [
+      "id", "compensation_id", "actor_id", "event_type", "previous_lifecycle",
+      "next_lifecycle", "request_round", "reason", "occurred_at",
+    ].join(","),
+    compensation_id: `eq.${compensationId}`,
+    order: "occurred_at.asc",
+  });
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/staff_compensation_events?${params}`, {
     headers: headers(accessToken),
   }));
 }
@@ -98,5 +133,20 @@ export function decideProjectApproval(accessToken, requestId, decision, notes = 
     target_approval_request_id: requestId,
     target_decision: decision,
     target_decision_notes: notes || null,
+  });
+}
+
+export function decideStaffCompensationApproval(
+  accessToken,
+  compensationId,
+  expectedVersion,
+  decision,
+  notes = ""
+) {
+  return rpc(accessToken, "decide_staff_compensation", {
+    target_compensation_id: compensationId,
+    target_expected_version: expectedVersion,
+    target_decision: decision,
+    target_reason: notes || null,
   });
 }

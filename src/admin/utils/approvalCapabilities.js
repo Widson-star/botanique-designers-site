@@ -15,6 +15,7 @@ export function canDecideApproval(role, request) {
 }
 
 export function canWithdrawApproval(role, request, currentUserId) {
+  if (request?.source === "staff_compensation") return false;
   return (
     [ROLES.OWNER, ROLES.MANAGER].includes(role) &&
     request?.requesterId === currentUserId &&
@@ -24,6 +25,7 @@ export function canWithdrawApproval(role, request, currentUserId) {
 }
 
 export function canAmendApproval(role, request, currentUserId) {
+  if (request?.source === "staff_compensation") return false;
   return (
     [ROLES.OWNER, ROLES.MANAGER].includes(role) &&
     request?.requesterId === currentUserId &&

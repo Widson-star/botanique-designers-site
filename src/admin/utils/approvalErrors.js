@@ -1,5 +1,5 @@
 export const STALE_APPROVAL_MESSAGE =
-  "This request is no longer current because the project changed after it was submitted. Review the latest project values and submit a new request.";
+  "This request is no longer current because its source record changed after it was loaded. Review the latest values and try again.";
 
 const DEFAULT_APPROVAL_ERROR = "The approval action did not complete.";
 
@@ -21,7 +21,7 @@ export function isStaleApprovalFailure(value) {
   const message = errorMessage(value);
   return value?.stale === true
     || errorCode(value) === "40001"
-    || /stale|no longer current|changed after (it was )?submitted/i.test(message);
+    || /stale|no longer current|changed after (it was )?(submitted|loaded)/i.test(message);
 }
 
 export function normalizeApprovalFailure(value, fallback = DEFAULT_APPROVAL_ERROR) {
