@@ -10,9 +10,10 @@ function headers(accessToken) {
 }
 
 async function read(response) {
-  const text = await response.text();
+  const resolved = await response;
+  const text = await resolved.text();
   const data = text ? JSON.parse(text) : null;
-  if (!response.ok) {
+  if (!resolved.ok) {
     const error = new Error(data?.message || data?.hint || "Staff Compensation request failed.");
     error.code = data?.code || "";
     throw error;
@@ -21,7 +22,7 @@ async function read(response) {
 }
 
 async function rpc(accessToken, name, body = {}) {
-  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
+  return read(fetch(`${SUPABASE_URL}/rest/v1/rpc/${name}`, {
     method: "POST",
     headers: headers(accessToken),
     body: JSON.stringify(body),
