@@ -100,6 +100,7 @@
     { "name": "project_cost_payment_truth_lock_order", "productionVersion": "20260813105102" },
     { "name": "internal_cost_claim_correction_authority", "productionVersion": "20260813113103" },
     { "name": "operations_hub_maintenance_v1", "productionVersion": "20260815192636" },
-    { "name": "maintenance_assignment_correction_authority", "productionVersion": "20260816123248" }
+    { "name": "maintenance_assignment_correction_authority", "productionVersion": "20260816123248" },
+    { "name": "internal_cost_claim_superseded_dsr_submission", "productionVersion": "20260816124120" }
   ]
 }
