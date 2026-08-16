@@ -17,21 +17,21 @@ export default function AdminStaffCompensationForm() {
   const navigate = useNavigate();
   const { role, currentUserId, projects } = useAdminData();
   const { people } = usePeople();
-  const { compensations, createDraft, updateRecord, status } = useStaffCompensation();
+  const { compensations, createDraft, authoriseDirect, updateRecord, status } = useStaffCompensation();
   const record = compensationId ? compensations.find((item) => item.id === compensationId) : null;
   const editing = Boolean(compensationId);
-  const allowed = role === "manager" && (!editing || (record?.requesterId === currentUserId && ["draft", "amendment_requested"].includes(record?.lifecycle)));
+  const canCreate = !editing && ["manager", "owner"].includes(role);
+  const canEdit = editing && role === "manager" && record?.requesterId === currentUserId && ["draft", "amendment_requested"].includes(record?.lifecycle);
+  const allowed = canCreate || canEdit;
   const [values, setValues] = useState(blankValues);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (record) setValues(valuesFor(record));
-  }, [record]);
+  useEffect(() => { if (record) setValues(valuesFor(record)); }, [record]);
 
   if (editing && status === "loading" && !record) return <p className="text-sm text-gray-600">Loading Staff Compensation…</p>;
   if (editing && !record) return <section><h1 className="text-xl font-semibold">Staff Compensation unavailable</h1><Link to="/admin/finance/staff-compensation" className="mt-3 inline-block text-sm font-semibold text-botanique-green">Back to Staff Compensation</Link></section>;
-  if (!allowed) return <section className="rounded-xl border border-stone-200 bg-white p-5"><h1 className="text-xl font-semibold">This record cannot be edited here</h1><p className="mt-1 text-[13px] text-gray-600">Only the requester may create or amend a draft returned for correction.</p><Link to={editing ? `/admin/finance/staff-compensation/${compensationId}` : "/admin/finance/staff-compensation"} className="mt-3 inline-block text-sm font-semibold text-botanique-green">Back</Link></section>;
+  if (!allowed) return <section className="rounded-xl border border-stone-200 bg-white p-5"><h1 className="text-xl font-semibold">This record cannot be edited here</h1><p className="mt-1 text-[13px] text-gray-600">Only the Manager who requested a draft may amend it after it is returned for correction.</p><Link to={editing ? `/admin/finance/staff-compensation/${compensationId}` : "/admin/finance/staff-compensation"} className="mt-3 inline-block text-sm font-semibold text-botanique-green">Back</Link></section>;
 
   function change(key, value) { setValues((current) => ({ ...current, [key]: value })); }
   async function submit(event) {
@@ -39,16 +39,22 @@ export default function AdminStaffCompensationForm() {
     if (working) return;
     if (!values.personId || !values.serviceDate || !values.description.trim() || !Number(values.amount)) { setError("Choose a person, date, purpose and amount."); return; }
     setWorking(true); setError("");
-    const result = editing ? await updateRecord(record.id, record.version, values) : await createDraft(values);
+    const result = editing
+      ? await updateRecord(record.id, record.version, values)
+      : role === "owner"
+        ? await authoriseDirect(values)
+        : await createDraft(values);
     setWorking(false);
     if (!result.ok) { setError(result.stale ? "This compensation changed elsewhere. Return to the latest record and try again." : result.error); return; }
     const id = editing ? record.id : result.result?.id;
     navigate(id ? `/admin/finance/staff-compensation/${id}` : "/admin/finance/staff-compensation");
   }
 
+  const principalCreate = !editing && role === "owner";
   return <section className="mx-auto max-w-3xl space-y-4">
     <Link to={editing ? `/admin/finance/staff-compensation/${record.id}` : "/admin/finance/staff-compensation"} className="text-sm font-semibold text-botanique-green hover:underline">← Staff Compensation</Link>
     <header><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-botanique-green">Finance</p><h1 className="mt-1 text-2xl font-semibold">{editing ? "Amend compensation" : "New compensation"}</h1><p className="mt-1 text-[13px] text-gray-600">Record the obligation against a person. Add a Project only when it genuinely provides context.</p></header>
+    {principalCreate && <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-[12.5px] text-emerald-900"><strong>Principal authorisation.</strong> Saving this record authorises the compensation obligation directly. It does not record a payment.</div>}
     {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-[13px] text-red-800">{error}</p>}
     <form onSubmit={submit} className="space-y-4 rounded-xl border border-stone-200 bg-white p-4 sm:p-5">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -59,7 +65,7 @@ export default function AdminStaffCompensationForm() {
         <Field label="Amount (KES)"><input inputMode="decimal" type="number" min="0.01" step="0.01" value={values.amount} onChange={(e)=>change("amount",e.target.value)} className={input} placeholder="0.00"/></Field>
       </div>
       <Field label="Purpose / description"><textarea rows={4} maxLength={2000} value={values.description} onChange={(e)=>change("description",e.target.value)} className={input} placeholder="What is this compensation for?"/></Field>
-      <div className="flex flex-wrap justify-end gap-2 border-t border-stone-100 pt-4"><Link to={editing ? `/admin/finance/staff-compensation/${record.id}` : "/admin/finance/staff-compensation"} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-4 text-[13px] font-semibold">Cancel</Link><button disabled={working} className="min-h-10 rounded-lg bg-botanique-green px-4 text-[13px] font-semibold text-white disabled:opacity-50">{working ? "Saving…" : editing ? "Save amendment" : "Save draft"}</button></div>
+      <div className="flex flex-wrap justify-end gap-2 border-t border-stone-100 pt-4"><Link to={editing ? `/admin/finance/staff-compensation/${record.id}` : "/admin/finance/staff-compensation"} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-4 text-[13px] font-semibold">Cancel</Link><button disabled={working} className="min-h-10 rounded-lg bg-botanique-green px-4 text-[13px] font-semibold text-white disabled:opacity-50">{working ? "Saving…" : editing ? "Save amendment" : principalCreate ? "Authorise compensation" : "Save draft"}</button></div>
     </form>
   </section>;
 }

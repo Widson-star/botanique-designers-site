@@ -34,69 +34,60 @@ export function fetchStaffCompensations(accessToken) {
     select: [
       "id", "person_id", "project_id", "service_date", "compensation_type", "currency",
       "description", "lifecycle", "request_round", "submitted_amount", "approved_amount",
-      "requester_id", "decider_id", "version", "created_at", "updated_at", "submitted_at",
+      "requester_id", "decider_id", "direct_authority_actor_id", "legacy_source_claim_id",
+      "payment_history_known", "version", "created_at", "updated_at", "submitted_at",
       "decided_at", "withdrawn_at", "cancelled_at",
     ].join(","),
     order: "service_date.desc,updated_at.desc",
   });
-  return read(fetch(`${SUPABASE_URL}/rest/v1/staff_compensations?${params}`, {
-    headers: headers(accessToken),
-  }));
+  return read(fetch(`${SUPABASE_URL}/rest/v1/staff_compensations?${params}`, { headers: headers(accessToken) }));
 }
 
 export function fetchStaffCompensationEvents(accessToken, compensationId) {
   const params = new URLSearchParams({
-    select: [
-      "id", "compensation_id", "actor_id", "event_type", "previous_lifecycle",
-      "next_lifecycle", "request_round", "reason", "occurred_at",
-    ].join(","),
+    select: "id,compensation_id,actor_id,event_type,previous_lifecycle,next_lifecycle,request_round,reason,occurred_at",
     compensation_id: `eq.${compensationId}`,
     order: "occurred_at.asc,id.asc",
   });
-  return read(fetch(`${SUPABASE_URL}/rest/v1/staff_compensation_events?${params}`, {
-    headers: headers(accessToken),
-  }));
+  return read(fetch(`${SUPABASE_URL}/rest/v1/staff_compensation_events?${params}`, { headers: headers(accessToken) }));
 }
 
 export function fetchStaffCompensationPayments(accessToken) {
   const params = new URLSearchParams({
-    select: [
-      "id", "payment_number", "compensation_id", "status", "currency", "amount", "paid_at",
-      "payment_channel", "payment_reference", "note", "recorded_by", "recorded_at",
-      "reversed_by", "reversed_at", "reversal_reason", "version", "created_at", "updated_at",
-    ].join(","),
+    select: "id,payment_number,compensation_id,status,currency,amount,paid_at,payment_channel,payment_reference,note,recorded_by,recorded_at,reversed_by,reversed_at,reversal_reason,version,created_at,updated_at",
     order: "paid_at.desc,created_at.desc",
   });
-  return read(fetch(`${SUPABASE_URL}/rest/v1/staff_compensation_payments?${params}`, {
-    headers: headers(accessToken),
-  }));
+  return read(fetch(`${SUPABASE_URL}/rest/v1/staff_compensation_payments?${params}`, { headers: headers(accessToken) }));
 }
 
 export function fetchStaffCompensationPaymentPositions(accessToken) {
   return rpc(accessToken, "staff_compensation_payment_positions");
 }
 
-export function createStaffCompensationDraft(accessToken, values) {
-  return rpc(accessToken, "create_staff_compensation_draft", {
+function payload(values) {
+  return {
     target_person_id: values.personId,
     target_project_id: values.projectId || null,
     target_service_date: values.serviceDate,
     target_compensation_type: values.compensationType,
     target_description: values.description,
     target_amount: Number(values.amount),
-  });
+  };
+}
+
+export function createStaffCompensationDraft(accessToken, values) {
+  return rpc(accessToken, "create_staff_compensation_draft", payload(values));
+}
+
+export function principalAuthoriseStaffCompensation(accessToken, values) {
+  return rpc(accessToken, "principal_authorise_staff_compensation", payload(values));
 }
 
 export function updateStaffCompensation(accessToken, compensationId, expectedVersion, values) {
   return rpc(accessToken, "update_staff_compensation", {
     target_compensation_id: compensationId,
     target_expected_version: expectedVersion,
-    target_person_id: values.personId,
-    target_project_id: values.projectId || null,
-    target_service_date: values.serviceDate,
-    target_compensation_type: values.compensationType,
-    target_description: values.description,
-    target_amount: Number(values.amount),
+    ...payload(values),
   });
 }
 
@@ -117,6 +108,14 @@ export function withdrawStaffCompensation(accessToken, compensationId, expectedV
 
 export function cancelStaffCompensation(accessToken, compensationId, expectedVersion, reason) {
   return rpc(accessToken, "cancel_staff_compensation", {
+    target_compensation_id: compensationId,
+    target_expected_version: expectedVersion,
+    target_reason: reason,
+  });
+}
+
+export function confirmStaffCompensationPaymentHistory(accessToken, compensationId, expectedVersion, reason) {
+  return rpc(accessToken, "confirm_staff_compensation_payment_history", {
     target_compensation_id: compensationId,
     target_expected_version: expectedVersion,
     target_reason: reason,

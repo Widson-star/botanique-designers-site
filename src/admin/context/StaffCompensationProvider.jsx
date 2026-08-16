@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffCompensationContext } from "./staffCompensation";
 import {
-  cancelStaffCompensation, createStaffCompensationDraft, fetchStaffCompensationEvents,
-  fetchStaffCompensationPaymentPositions, fetchStaffCompensationPayments, fetchStaffCompensations,
-  recordStaffCompensationPayment, reverseStaffCompensationPayment, submitStaffCompensation,
-  updateStaffCompensation, withdrawStaffCompensation,
+  cancelStaffCompensation, confirmStaffCompensationPaymentHistory, createStaffCompensationDraft,
+  fetchStaffCompensationEvents, fetchStaffCompensationPaymentPositions, fetchStaffCompensationPayments,
+  fetchStaffCompensations, principalAuthoriseStaffCompensation, recordStaffCompensationPayment,
+  reverseStaffCompensationPayment, submitStaffCompensation, updateStaffCompensation,
+  withdrawStaffCompensation,
 } from "../lib/staffCompensation";
 
 function mapCompensation(row) {
@@ -22,6 +23,9 @@ function mapCompensation(row) {
     approvedAmount: row.approved_amount == null ? null : Number(row.approved_amount),
     requesterId: row.requester_id,
     deciderId: row.decider_id || "",
+    directAuthorityActorId: row.direct_authority_actor_id || "",
+    legacySourceClaimId: row.legacy_source_claim_id || "",
+    paymentHistoryKnown: Boolean(row.payment_history_known),
     version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -34,36 +38,21 @@ function mapCompensation(row) {
 
 function mapEvent(row) {
   return {
-    id: row.id,
-    compensationId: row.compensation_id,
-    actorId: row.actor_id,
-    eventType: row.event_type,
-    previousLifecycle: row.previous_lifecycle || "",
-    nextLifecycle: row.next_lifecycle,
-    requestRound: row.request_round,
-    reason: row.reason || "",
-    occurredAt: row.occurred_at,
+    id: row.id, compensationId: row.compensation_id, actorId: row.actor_id,
+    eventType: row.event_type, previousLifecycle: row.previous_lifecycle || "",
+    nextLifecycle: row.next_lifecycle, requestRound: row.request_round,
+    reason: row.reason || "", occurredAt: row.occurred_at,
   };
 }
 
 function mapPayment(row) {
   return {
-    id: row.id,
-    paymentNumber: row.payment_number,
-    compensationId: row.compensation_id,
-    status: row.status,
-    currency: row.currency,
-    amount: Number(row.amount),
-    paidAt: row.paid_at,
-    paymentChannel: row.payment_channel,
-    paymentReference: row.payment_reference || "",
-    note: row.note || "",
-    recordedBy: row.recorded_by,
-    recordedAt: row.recorded_at,
-    reversedBy: row.reversed_by || "",
-    reversedAt: row.reversed_at || "",
-    reversalReason: row.reversal_reason || "",
-    version: row.version,
+    id: row.id, paymentNumber: row.payment_number, compensationId: row.compensation_id,
+    status: row.status, currency: row.currency, amount: Number(row.amount), paidAt: row.paid_at,
+    paymentChannel: row.payment_channel, paymentReference: row.payment_reference || "",
+    note: row.note || "", recordedBy: row.recorded_by, recordedAt: row.recorded_at,
+    reversedBy: row.reversed_by || "", reversedAt: row.reversed_at || "",
+    reversalReason: row.reversal_reason || "", version: row.version,
   };
 }
 
@@ -135,44 +124,28 @@ export default function StaffCompensationProvider({ children, session, role, isD
   }, [isDemo, refresh]);
 
   const createDraft = useCallback((values) => run(() => createStaffCompensationDraft(accessToken, values)), [accessToken, run]);
+  const authoriseDirect = useCallback((values) => run(() => principalAuthoriseStaffCompensation(accessToken, values)), [accessToken, run]);
   const updateRecord = useCallback((id, version, values) => run(() => updateStaffCompensation(accessToken, id, version, values)), [accessToken, run]);
   const submitRecord = useCallback((id, version) => run(() => submitStaffCompensation(accessToken, id, version)), [accessToken, run]);
   const withdrawRecord = useCallback((id, version, reason = "") => run(() => withdrawStaffCompensation(accessToken, id, version, reason)), [accessToken, run]);
   const cancelRecord = useCallback((id, version, reason) => run(() => cancelStaffCompensation(accessToken, id, version, reason)), [accessToken, run]);
+  const confirmPaymentHistory = useCallback((id, version, reason) => run(() => confirmStaffCompensationPaymentHistory(accessToken, id, version, reason)), [accessToken, run]);
   const recordPayment = useCallback((id, values) => run(() => recordStaffCompensationPayment(accessToken, id, values)), [accessToken, run]);
   const reversePayment = useCallback((paymentId, version, reason) => run(() => reverseStaffCompensationPayment(accessToken, paymentId, version, reason)), [accessToken, run]);
 
-  const paymentsForCompensation = useCallback(
-    (id) => payments.filter((payment) => payment.compensationId === id),
-    [payments]
-  );
-  const paymentPositionForCompensation = useCallback(
-    (id) => paymentPositions.find((position) => position.compensationId === id) || null,
-    [paymentPositions]
-  );
+  const paymentsForCompensation = useCallback((id) => payments.filter((payment) => payment.compensationId === id), [payments]);
+  const paymentPositionForCompensation = useCallback((id) => paymentPositions.find((position) => position.compensationId === id) || null, [paymentPositions]);
 
   const value = useMemo(() => ({
-    compensations,
-    payments,
-    paymentPositions,
-    eventsByCompensation,
-    status,
-    error,
-    refresh,
-    loadEvents,
-    createDraft,
-    updateRecord,
-    submitRecord,
-    withdrawRecord,
-    cancelRecord,
-    recordPayment,
-    reversePayment,
-    paymentsForCompensation,
-    paymentPositionForCompensation,
+    compensations, payments, paymentPositions, eventsByCompensation, status, error,
+    refresh, loadEvents, createDraft, authoriseDirect, updateRecord, submitRecord,
+    withdrawRecord, cancelRecord, confirmPaymentHistory, recordPayment, reversePayment,
+    paymentsForCompensation, paymentPositionForCompensation,
   }), [
-    cancelRecord, compensations, createDraft, error, eventsByCompensation, loadEvents,
-    paymentPositionForCompensation, paymentPositions, payments, paymentsForCompensation,
-    recordPayment, refresh, reversePayment, status, submitRecord, updateRecord, withdrawRecord,
+    authoriseDirect, cancelRecord, compensations, confirmPaymentHistory, createDraft, error,
+    eventsByCompensation, loadEvents, paymentPositionForCompensation, paymentPositions,
+    payments, paymentsForCompensation, recordPayment, refresh, reversePayment, status,
+    submitRecord, updateRecord, withdrawRecord,
   ]);
 
   return <StaffCompensationContext.Provider value={value}>{children}</StaffCompensationContext.Provider>;

@@ -95,7 +95,18 @@
     "confirmed RLS, no authenticated direct writes, and zero payment/event/position",
     "rows because Staff Compensation itself was still empty. The follow-up",
     "staff_compensation_payment_event_index applied cleanly (production version",
-    "20260816184731), adding only the covering payment_id foreign-key index."
+    "20260816184731), adding only the covering payment_id foreign-key index.",
+    "",
+    "STAFF COMPENSATION AUTHORITY + LEGACY TRUTH, 16 Aug 2026.",
+    "staff_compensation_authority_and_legacy_truth applied cleanly in one transaction",
+    "(production version 20260816201136). It adds Principal direct authorisation",
+    "without conflating authorisation with payment, source-claim provenance for",
+    "verified legacy imports, and an explicit payment_history_known boundary so",
+    "historical approved compensation cannot be displayed as unpaid or accept a new",
+    "payment until its old payment position has been reviewed. Three Founder-verified",
+    "Martine Lotom legacy staff claims were then imported as canonical Staff",
+    "Compensation records with their original Project Costs retained for audit; no",
+    "Staff Compensation payment transactions were fabricated."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-16",
@@ -126,6 +137,7 @@
     { "name": "staff_compensation_v1", "productionVersion": "20260816183349" },
     { "name": "staff_compensation_v1_indexes", "productionVersion": "20260816183600" },
     { "name": "staff_compensation_payments_v1", "productionVersion": "20260816184658" },
-    { "name": "staff_compensation_payment_event_index", "productionVersion": "20260816184731" }
+    { "name": "staff_compensation_payment_event_index", "productionVersion": "20260816184731" },
+    { "name": "staff_compensation_authority_and_legacy_truth", "productionVersion": "20260816201136" }
   ]
 }
