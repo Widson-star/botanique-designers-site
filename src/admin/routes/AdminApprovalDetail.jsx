@@ -7,6 +7,7 @@ import ApprovalTimeline from "../components/approvals/ApprovalTimeline";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useAdminData } from "../context/adminData";
 import { useAdminApprovals } from "../context/adminApprovals";
+import { usePeople } from "../context/people";
 import {
   canAmendApproval,
   canDecideApproval,
@@ -21,9 +22,27 @@ import { formatDateTime } from "../utils/activityFormat";
 import { profilePresentationName } from "../utils/personName";
 import { normalizeApprovalFailure } from "../utils/approvalErrors";
 
+function formatMoney(amount) {
+  if (amount === null || amount === undefined || amount === "") return "Not set";
+  return `KES ${new Intl.NumberFormat("en-KE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount))}`;
+}
+
+function compensationTypeLabel(value) {
+  return {
+    compensation: "Compensation",
+    allowance: "Allowance",
+    bonus: "Bonus",
+    other: "Other",
+  }[value] || "Compensation";
+}
+
 export default function AdminApprovalDetail() {
   const { approvalId } = useParams();
   const { role, currentUserId, projects, profilesById } = useAdminData();
+  const { peopleById } = usePeople();
   const {
     requests, loadEvents, decide, requestAmendment, amendAndResubmit, withdraw,
   } = useAdminApprovals();
@@ -35,8 +54,15 @@ export default function AdminApprovalDetail() {
   const [actionError, setActionError] = useState("");
   const actionInFlight = useRef(false);
   const request = requests.find((item) => item.id === approvalId);
-  const project = projects.find((item) => item.id === request?.projectId);
+  const isStaffCompensation = request?.source === "staff_compensation";
+  const project = request?.projectId ? projects.find((item) => item.id === request.projectId) : null;
   const requester = profilesById[request?.requesterId];
+  const person = request?.personId ? peopleById.get(request.personId) : null;
+  const latestDecisionEvent = [...events].reverse().find((event) =>
+    ["approved", "rejected", "amendment_requested"].includes(event.eventType));
+  const reviewNotes = isStaffCompensation
+    ? latestDecisionEvent?.eventNotes || ""
+    : request?.decisionNotes || "";
 
   useEffect(() => {
     if (!request) return;
@@ -44,7 +70,10 @@ export default function AdminApprovalDetail() {
     async function run() {
       try {
         const loaded = await loadEvents(request.id);
-        if (!cancelled) setEvents(loaded);
+        if (!cancelled) {
+          setEvents(loaded);
+          setEventError("");
+        }
       } catch (error) {
         if (!cancelled) setEventError(error.message || "Unable to load approval history.");
       }
@@ -59,12 +88,12 @@ export default function AdminApprovalDetail() {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
         <h1 className="text-xl font-bold">Approvals unavailable</h1>
-        <p className="mt-2 text-sm text-gray-500">This role does not have access to project approvals.</p>
+        <p className="mt-2 text-sm text-gray-500">This role does not have access to approvals.</p>
       </div>
     );
   }
 
-  if (!request || !project) {
+  if (!request || (!isStaffCompensation && !project)) {
     return (
       <div className="rounded-lg border border-stone-200 bg-white p-8">
         <h1 className="text-xl font-bold">Approval unavailable</h1>
@@ -112,6 +141,11 @@ export default function AdminApprovalDetail() {
     }
   }
 
+  const title = APPROVAL_TYPE_LABELS[request.approvalType] || "Approval";
+  const subtitle = isStaffCompensation
+    ? person?.fullName || "Staff member"
+    : project.projectName;
+
   return (
     <div className="space-y-5">
       <div>
@@ -120,11 +154,11 @@ export default function AdminApprovalDetail() {
         </Link>
         <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{APPROVAL_TYPE_LABELS[request.approvalType]}</h1>
-            <p className="mt-1 text-sm text-gray-500">{project.projectName}</p>
+            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
           </div>
           <span className="self-start rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-gray-700">
-            {APPROVAL_STATE_LABELS[request.state]}
+            {APPROVAL_STATE_LABELS[request.state] || request.state}
           </span>
         </div>
       </div>
@@ -132,29 +166,50 @@ export default function AdminApprovalDetail() {
       <div className="grid gap-5 lg:grid-cols-[1.35fr_1fr]">
         <section className="rounded-lg border border-stone-200 bg-white p-5">
           <h2 className="text-base font-semibold">Request</h2>
-          <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div><dt className="text-xs text-gray-500">Requester</dt><dd className="mt-1 text-sm font-medium">{requester ? profilePresentationName(requester, "Authorised requester") : "Authorised requester"}</dd></div>
-            <div><dt className="text-xs text-gray-500">Requested</dt><dd className="mt-1 text-sm">{formatDateTime(request.requestedAt)}</dd></div>
-            <div><dt className="text-xs text-gray-500">Round</dt><dd className="mt-1 text-sm">{request.requestRound}</dd></div>
-            <div><dt className="text-xs text-gray-500">Project</dt><dd className="mt-1 text-sm">{project.projectName}</dd></div>
-          </dl>
-          <div className="mt-5">
-            <ApprovalComparison request={request} profilesById={profilesById} project={project} />
-          </div>
-          <div className="mt-5">
-            <h3 className="text-xs font-medium text-gray-500">Reason</h3>
-            <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.reason}</p>
-          </div>
-          {request.requesterNotes && (
-            <div className="mt-4">
-              <h3 className="text-xs font-medium text-gray-500">Requester notes</h3>
-              <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.requesterNotes}</p>
-            </div>
+          {isStaffCompensation ? (
+            <>
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div><dt className="text-xs text-gray-500">Beneficiary</dt><dd className="mt-1 text-sm font-medium">{person?.fullName || "Staff member"}</dd></div>
+                <div><dt className="text-xs text-gray-500">Requested by</dt><dd className="mt-1 text-sm font-medium">{requester ? profilePresentationName(requester, "Authorised requester") : "Authorised requester"}</dd></div>
+                <div><dt className="text-xs text-gray-500">Submitted</dt><dd className="mt-1 text-sm">{formatDateTime(request.requestedAt)}</dd></div>
+                <div><dt className="text-xs text-gray-500">Round</dt><dd className="mt-1 text-sm">{request.requestRound}</dd></div>
+                <div><dt className="text-xs text-gray-500">Service date</dt><dd className="mt-1 text-sm">{request.serviceDate}</dd></div>
+                <div><dt className="text-xs text-gray-500">Type</dt><dd className="mt-1 text-sm">{compensationTypeLabel(request.compensationType)}</dd></div>
+                <div><dt className="text-xs text-gray-500">Amount</dt><dd className="mt-1 text-sm font-semibold">{formatMoney(request.submittedAmount)}</dd></div>
+                <div><dt className="text-xs text-gray-500">Project context</dt><dd className="mt-1 text-sm">{project?.projectName || "No project context"}</dd></div>
+              </dl>
+              <div className="mt-5">
+                <h3 className="text-xs font-medium text-gray-500">Description</h3>
+                <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.description}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div><dt className="text-xs text-gray-500">Requester</dt><dd className="mt-1 text-sm font-medium">{requester ? profilePresentationName(requester, "Authorised requester") : "Authorised requester"}</dd></div>
+                <div><dt className="text-xs text-gray-500">Requested</dt><dd className="mt-1 text-sm">{formatDateTime(request.requestedAt)}</dd></div>
+                <div><dt className="text-xs text-gray-500">Round</dt><dd className="mt-1 text-sm">{request.requestRound}</dd></div>
+                <div><dt className="text-xs text-gray-500">Project</dt><dd className="mt-1 text-sm">{project.projectName}</dd></div>
+              </dl>
+              <div className="mt-5">
+                <ApprovalComparison request={request} profilesById={profilesById} project={project} />
+              </div>
+              <div className="mt-5">
+                <h3 className="text-xs font-medium text-gray-500">Reason</h3>
+                <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.reason}</p>
+              </div>
+              {request.requesterNotes && (
+                <div className="mt-4">
+                  <h3 className="text-xs font-medium text-gray-500">Requester notes</h3>
+                  <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.requesterNotes}</p>
+                </div>
+              )}
+            </>
           )}
-          {request.decisionNotes && (
+          {reviewNotes && (
             <div className="mt-4 rounded-md bg-stone-50 p-3">
               <h3 className="text-xs font-medium text-gray-500">Review notes</h3>
-              <p className="mt-1 whitespace-pre-line text-sm leading-6">{request.decisionNotes}</p>
+              <p className="mt-1 whitespace-pre-line text-sm leading-6">{reviewNotes}</p>
             </div>
           )}
 
@@ -188,7 +243,7 @@ export default function AdminApprovalDetail() {
           onSubmit={(values) => runAction(() => amendAndResubmit(request.id, values))}
         />
       )}
-      {action === "edit" && request.approvalType !== "project_material_change" && (
+      {action === "edit" && request.approvalType !== "project_material_change" && !isStaffCompensation && (
         <ApprovalRequestDialog
           open
           project={project}
@@ -203,22 +258,26 @@ export default function AdminApprovalDetail() {
         <ConfirmDialog
           open
           title={{
-            approve: "Approve request",
-            reject: "Reject request",
+            approve: isStaffCompensation ? "Approve compensation" : "Approve request",
+            reject: isStaffCompensation ? "Reject compensation" : "Reject request",
             amendment: "Request amendment",
             withdraw: "Withdraw request",
           }[action]}
-          description={action === "approve"
-            ? "Approval applies the proposed project change in the same database transaction."
-            : "The project record will not be changed."}
+          description={isStaffCompensation
+            ? action === "approve"
+              ? "This approves the Staff Compensation obligation. It does not record payment."
+              : "This changes the Staff Compensation decision state. No payment is recorded."
+            : action === "approve"
+              ? "Approval applies the proposed project change in the same database transaction."
+              : "The project record will not be changed."}
           confirmLabel={{
-            approve: "Approve and apply",
+            approve: isStaffCompensation ? "Approve compensation" : "Approve and apply",
             reject: "Reject",
             amendment: "Request amendment",
             withdraw: "Withdraw",
           }[action]}
           confirmTone={["reject", "withdraw"].includes(action) ? "danger" : undefined}
-          confirmDisabled={action === "amendment" && !notes.trim()}
+          confirmDisabled={(action === "amendment" || (isStaffCompensation && action === "reject")) && !notes.trim()}
           busy={busy}
           onCancel={() => { if (!busy) { setAction(""); setActionError(""); } }}
           onConfirm={() => runAction(() => {
@@ -230,7 +289,7 @@ export default function AdminApprovalDetail() {
         >
           <label className="block text-sm">
             <span className="mb-1 block text-xs font-medium text-gray-600">
-              Notes {action === "amendment" ? "" : "(optional)"}
+              Notes {(action === "amendment" || (isStaffCompensation && action === "reject")) ? "" : "(optional)"}
             </span>
             <textarea
               value={notes}
