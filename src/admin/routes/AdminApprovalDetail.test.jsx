@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
@@ -193,9 +193,11 @@ describe("Admin approval detail", () => {
     const user = userEvent.setup();
     renderDetail("owner", staffRequest, {}, null);
     await user.click(screen.getByRole("button", { name: "Reject" }));
-    expect(screen.getByRole("button", { name: "Reject" })).toBeDisabled();
-    await user.type(screen.getByRole("textbox"), "Amount needs correction.");
-    expect(screen.getByRole("button", { name: "Reject" })).toBeEnabled();
+    const dialog = screen.getByRole("alertdialog", { name: "Reject compensation" });
+    const confirm = within(dialog).getByRole("button", { name: "Reject" });
+    expect(confirm).toBeDisabled();
+    await user.type(within(dialog).getByRole("textbox"), "Amount needs correction.");
+    expect(confirm).toBeEnabled();
   });
 
   it("surfaces a clear stale error and always restores usable controls", async () => {
