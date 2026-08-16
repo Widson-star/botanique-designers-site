@@ -20,31 +20,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* Maintenance register numbering. Scope this to the register cards only so
-   visit/history links in the overview panel remain untouched. */
-.admin-shell ul:has(> li > a[href^="/admin/maintenance/"] > .border-b) {
-  counter-reset: maintenance-project;
-}
-
-.admin-shell ul:has(> li > a[href^="/admin/maintenance/"] > .border-b) > li {
-  counter-increment: maintenance-project;
-}
-
-.admin-shell ul:has(> li > a[href^="/admin/maintenance/"] > .border-b)
-  > li
-  > a[href^="/admin/maintenance/"]
-  > .border-b
-  > div:first-child
-  > div:first-child::before {
-  content: counter(maintenance-project, decimal-leading-zero);
-  flex: 0 0 auto;
-  min-width: 1.35rem;
-  color: #87938f;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-}
-
 @keyframes softPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(63, 95, 88, 0.35);
