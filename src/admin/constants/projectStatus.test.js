@@ -2,9 +2,23 @@ import { describe, expect, it } from "vitest";
 import {
   PORTFOLIO_PERMISSION_STATUSES,
   PORTFOLIO_PUBLICATION_OPTIONS,
+  PROJECT_STAGES,
+  PROJECT_TYPES,
   derivePortfolioEligible,
   portfolioPublicationLabel,
 } from "./projectStatus";
+
+describe("project vocabulary", () => {
+  it("keeps Maintenance out of Project stage and type choices", () => {
+    expect(PROJECT_STAGES).not.toContain("Maintenance");
+    expect(PROJECT_TYPES).not.toContain("Maintenance");
+  });
+
+  it("retains Completed as the terminal implementation stage", () => {
+    expect(PROJECT_STAGES).toContain("Implementation");
+    expect(PROJECT_STAGES).toContain("Completed");
+  });
+});
 
 // The single-field Portfolio consolidation is display-only: the dropdown is
 // bound to the existing portfolio_permission_status enum, and portfolio_eligible
