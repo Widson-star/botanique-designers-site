@@ -74,7 +74,15 @@
     "every new table and that Lugulu Residential Home, Kitusuru Residence",
     "House 0.8A and Zizu investments Ltd were unchanged (identical status,",
     "stage, project_type, archived, actual_completion_date and updated_at to",
-    "an immediately-pre-apply snapshot)."
+    "an immediately-pre-apply snapshot).",
+    "",
+    "STAFF COMPENSATION V1, 16 Aug 2026. staff_compensation_v1 applied cleanly",
+    "in one transaction (production version 20260816183349). It is additive and",
+    "person-first: Staff Compensation is anchored to public.people, with an optional",
+    "Project reference that does not gate the compensation lifecycle. Post-apply",
+    "verification confirmed RLS on both new tables, no authenticated direct writes,",
+    "and zero Staff Compensation or event rows; no existing operational data was",
+    "migrated or rewritten."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-16",
@@ -101,6 +109,7 @@
     { "name": "internal_cost_claim_correction_authority", "productionVersion": "20260813113103" },
     { "name": "operations_hub_maintenance_v1", "productionVersion": "20260815192636" },
     { "name": "maintenance_assignment_correction_authority", "productionVersion": "20260816123248" },
-    { "name": "internal_cost_claim_superseded_dsr_submission", "productionVersion": "20260816124120" }
+    { "name": "internal_cost_claim_superseded_dsr_submission", "productionVersion": "20260816124120" },
+    { "name": "staff_compensation_v1", "productionVersion": "20260816183349" }
   ]
 }
