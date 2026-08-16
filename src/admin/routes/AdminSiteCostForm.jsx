@@ -3,7 +3,10 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useSiteCosts } from "../context/siteCosts";
-import { calculateSiteCostTotal, canSubmitCostFromDailySite, costSubmissionBlockedReason } from "../utils/siteCostCapabilities";
+import {
+  calculateSiteCostTotal, canSubmitCostFromDailySite, costSubmissionBlockedReason,
+  resolveCurrentDailySiteSource,
+} from "../utils/siteCostCapabilities";
 import { overlappingClaimsForDraft } from "../utils/duplicateCostClaim";
 
 const emptyLine = () => ({ description: "", rateType: "lump_sum", quantity: "1", unit: "item", unitRate: "" });
@@ -48,9 +51,11 @@ export default function AdminSiteCostForm() {
   const { claims, linesForClaim, authorisedProjects, createDraft, authoriseDirect, updateClaim, submitClaim } = useSiteCosts();
   const existing = claims.find((claim) => claim.id === claimId);
   const source = entries.find((entry) => entry.id === sourceId) || (existing?.dailySiteEntryId ? entries.find((entry) => entry.id === existing.dailySiteEntryId) : null);
-  // A derived cost cannot reach a financial decision before its site record is
-  // accepted. A cost with no site-record source is unaffected.
-  const orderingBlocked = Boolean(source) && !canSubmitCostFromDailySite(source);
+  const currentSource = resolveCurrentDailySiteSource(source, entries);
+  // The claim keeps its ORIGINAL Daily Site source for provenance. If that row
+  // was superseded, the current corrected row for the same project/date is the
+  // acceptance gate instead, so supersession never strands Finance.
+  const orderingBlocked = Boolean(source) && !canSubmitCostFromDailySite(source, entries);
   const initial = useMemo(() => existing ? {
     projectId: existing.projectId, serviceDate: existing.serviceDate, dailySiteEntryId: existing.dailySiteEntryId,
     recipientType: existing.recipientType, recipientLabel: existing.recipientLabel,
@@ -124,6 +129,9 @@ export default function AdminSiteCostForm() {
       <p className="font-semibold">Copied planning context — no liability was created automatically</p>
       <p className="mt-1">Work date {source.workDate} · source version {source.version} · {source.expectedWorkerCount || 0} planned workers · planned labour {money(source.plannedLabourCost)}</p>
       <p className="mt-1 text-xs">Review every claim field and line. Later Daily Site changes will not rewrite this claim snapshot.</p>
+      {source.state === "superseded" && currentSource?.id !== source.id && (
+        <p className="mt-2 text-xs font-medium">This original site record was superseded. The cost keeps this source for history; submission now follows the current corrected record for the same day.</p>
+      )}
     </div>}
     {error && <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
     <div className="mt-5 grid gap-5 rounded-lg border border-stone-200 bg-white p-5 sm:grid-cols-2">
@@ -148,7 +156,7 @@ export default function AdminSiteCostForm() {
     </div>
     {orderingBlocked && (
       <p className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950" role="status">
-        {costSubmissionBlockedReason(source)}
+        {costSubmissionBlockedReason(source, entries)}
         {role === "manager" ? " You can still save it as a draft." : ""}
       </p>
     )}
@@ -157,9 +165,9 @@ export default function AdminSiteCostForm() {
       {role === "manager" && <button type="button" disabled={!valid || saving} onClick={() => save(false)} className="min-h-11 rounded-md border border-botanique-green px-4 text-sm font-semibold text-botanique-green disabled:opacity-50">{saving ? "Saving…" : "Save draft"}</button>}
       {/* FOUNDER RULING, 10 August 2026: a cost derived from a Daily Site Record
           may be PREPARED while that record is still under review, but it may not
-          reach a Principal financial decision until the record is accepted. This
-          gates both paths that reach approval — the manager's submit and the
-          Principal's direct authorisation. */}
+          reach a Principal financial decision until the CURRENT authoritative
+          record for that project/date is accepted. Supersession preserves the
+          original cost provenance; it does not create a dead-end workflow. */}
       <button type="button" disabled={!valid || saving || orderingBlocked} onClick={() => save(role === "manager")} className="min-h-11 rounded-md bg-botanique-green px-4 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Working…" : role === "owner" ? "Authorise cost" : "Save and submit"}</button>
     </div>
   </section>;
