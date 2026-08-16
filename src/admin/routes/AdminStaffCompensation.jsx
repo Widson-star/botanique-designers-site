@@ -16,7 +16,7 @@ const labels = {
   approved: "Approved", rejected: "Rejected", withdrawn: "Withdrawn", cancelled: "Cancelled",
 };
 const tones = {
-  draft: "neutral", awaiting_review: "waiting", amendment_requested: "waiting",
+  draft: "neutral", awaiting_review: "decision", amendment_requested: "waiting",
   approved: "settled", rejected: "attention", withdrawn: "neutral", cancelled: "neutral",
 };
 const typeLabels = { compensation: "Compensation", allowance: "Allowance", bonus: "Bonus", other: "Other" };
@@ -107,8 +107,8 @@ export default function AdminStaffCompensation() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric icon="check" tone="settled" label="Approved" value={money(totalApproved)} hint={`${approved.length} ${approved.length === 1 ? "record" : "records"}`} />
         <Metric icon="wallet" tone="brand" label="Paid" value={knownApproved.length ? money(totalPaid) : "—"} hint={knownApproved.length ? "Recorded payments" : historyUnknown.length ? "History to confirm" : "No approved records"} />
-        <Metric icon="clock" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Approved balance"} />
-        <Metric icon="people" tone="neutral" label="Awaiting decision" value={String(awaiting.length)} hint={`${awaiting.length} ${awaiting.length === 1 ? "record" : "records"}`} />
+        <Metric icon="balance" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Approved balance"} />
+        <Metric icon="people" tone="decision" label="Awaiting decision" value={String(awaiting.length)} hint={`${awaiting.length} ${awaiting.length === 1 ? "record" : "records"}`} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
@@ -132,7 +132,7 @@ export default function AdminStaffCompensation() {
             </Filter>
             <div className="flex items-end gap-2">
               <button type="button" onClick={resetFilters} className="min-h-10 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-gray-600 hover:bg-stone-50">Reset filters</button>
-              <button type="button" className="min-h-10 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-gray-600"><span className="mr-1">⌁</span> Filters</button>
+              <button type="button" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-gray-600"><Glyph name="filter" className="h-3.5 w-3.5" /> Filters</button>
             </div>
           </div>
 
@@ -219,10 +219,10 @@ export default function AdminStaffCompensation() {
 
         <aside className="space-y-4">
           <section className="rounded-xl border border-stone-200 bg-white p-4">
-            <div className="flex items-center gap-2.5"><Disc name="alert" tone="waiting" size="h-8 w-8" /><h2 className="text-[13.5px] font-semibold">Needs attention</h2></div>
+            <div className="flex items-center gap-2.5"><Disc name="bell" tone="waiting" size="h-8 w-8" /><h2 className="text-[13.5px] font-semibold">Needs attention</h2></div>
             <div className="mt-3 divide-y divide-stone-100">
-              <Attention icon="people" tone="neutral" label="Awaiting Principal decision" hint="Compensations pending review" count={awaiting.length} to="/admin/approvals" />
-              <Attention icon="clock" tone="waiting" label="Part-paid compensations" hint="Have outstanding balances" count={partPaid.length} to="/admin/finance/staff-compensation" />
+              <Attention icon="people" tone="decision" label="Awaiting Principal decision" hint="Compensations pending review" count={awaiting.length} to="/admin/approvals" />
+              <Attention icon="balance" tone="waiting" label="Part-paid compensations" hint="Have outstanding balances" count={partPaid.length} to="/admin/finance/staff-compensation" />
               <Attention icon="doc" tone="brand" label="Drafts pending submission" hint="Complete and submit for review" count={drafts.length} to="/admin/finance/staff-compensation" />
               {historyUnknown.length > 0 && <Attention icon="wallet" tone="neutral" label="Payment history to confirm" hint="Imported historical records" count={historyUnknown.length} to="/admin/finance/staff-compensation" />}
             </div>
