@@ -69,6 +69,17 @@ export function canManageMaintenance(role) {
   return canSeeMaintenance(role);
 }
 
+// Correcting what was recorded — when an assignment started, or what the
+// person's responsibility actually was — is exceptional authority, not
+// ordinary resourcing. The Operations Manager keeps every day-to-day power
+// (create, re-role an open assignment, end one); only the Principal may
+// rewrite a recorded historical fact. This mirrors canCorrectEngagement in
+// peopleCapabilities, and the database enforces the same boundary
+// independently through correct_maintenance_assignment.
+export function canCorrectMaintenanceAssignment(role) {
+  return role === ROLES.OWNER;
+}
+
 export function frequencyLabel(frequency) {
   return MAINTENANCE_FREQUENCY_LABELS[frequency] || frequency;
 }

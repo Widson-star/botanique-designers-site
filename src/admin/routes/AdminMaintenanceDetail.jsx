@@ -4,7 +4,8 @@ import { useAdminData } from "../context/adminData";
 import { useMaintenance } from "../context/maintenance";
 import { usePeople } from "../context/people";
 import {
-  MAINTENANCE_ASSIGNMENT_ROLES, assignmentRoleLabel, canManageMaintenance, canSeeMaintenance,
+  MAINTENANCE_ASSIGNMENT_ROLES, MAINTENANCE_FREQUENCIES, assignmentRoleLabel,
+  canCorrectMaintenanceAssignment, canManageMaintenance, canSeeMaintenance,
   frequencyLabel, relationshipStatusLabel, visitStatusLabel,
 } from "../utils/maintenanceCapabilities";
 
@@ -44,9 +45,9 @@ export default function AdminMaintenanceDetail() {
   const { people } = usePeople();
   const {
     register, status, visitsForRelationship, assignmentsForRelationship,
-    pauseRelationship, resumeRelationship, endRelationship,
+    editRelationship, pauseRelationship, resumeRelationship, endRelationship,
     addVisit, rescheduleVisit, completeVisit, cancelVisit,
-    addAssignment, endAssignment,
+    addAssignment, endAssignment, correctAssignment,
   } = useMaintenance();
 
   const [feedback, setFeedback] = useState("");
@@ -59,6 +60,10 @@ export default function AdminMaintenanceDetail() {
   const [visitActionForm, setVisitActionForm] = useState({ note: "" });
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [assignForm, setAssignForm] = useState({ personId: "", role: "site_technician", startDate: today() });
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [detailsForm, setDetailsForm] = useState(null);
+  const [correcting, setCorrecting] = useState(null);
+  const [correctionForm, setCorrectionForm] = useState(null);
 
   const relationship = register.find((candidate) => candidate.id === relationshipId);
   const visits = useMemo(
@@ -201,6 +206,62 @@ export default function AdminMaintenanceDetail() {
     if (result.ok) {
       setShowAssignForm(false);
       setAssignForm({ personId: "", role: "site_technician", startDate: today() });
+    }
+  }
+
+  function startEditingDetails() {
+    setActionError("");
+    setFeedback("");
+    setDetailsForm({
+      scope: relationship.scope,
+      startDate: relationship.startDate,
+      frequency: relationship.frequency,
+    });
+    setEditingDetails(true);
+  }
+
+  async function submitDetails(event) {
+    event.preventDefault();
+    const result = await report(
+      editRelationship(relationship.id, relationship.version, detailsForm),
+      "Maintenance details updated."
+    );
+    if (result.ok) {
+      setEditingDetails(false);
+      setDetailsForm(null);
+    }
+  }
+
+  function startCorrection(assignment) {
+    setActionError("");
+    setFeedback("");
+    setCorrecting(assignment);
+    setCorrectionForm({
+      role: assignment.role,
+      startDate: assignment.startDate,
+      correctionReason: "",
+    });
+  }
+
+  async function submitCorrection(event) {
+    event.preventDefault();
+    if (correctionForm.correctionReason.trim().length < 3) {
+      setActionError("Explain why this Maintenance assignment is being corrected.");
+      return;
+    }
+    const result = await report(
+      correctAssignment({
+        assignmentId: correcting.id,
+        expectedVersion: correcting.version,
+        role: correctionForm.role,
+        startDate: correctionForm.startDate,
+        correctionReason: correctionForm.correctionReason,
+      }),
+      "Assignment correction recorded."
+    );
+    if (result.ok) {
+      setCorrecting(null);
+      setCorrectionForm(null);
     }
   }
 
@@ -352,7 +413,68 @@ export default function AdminMaintenanceDetail() {
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-4">
-          <Panel title="Maintenance details">
+          <Panel
+            title="Maintenance details"
+            action={canManageMaintenance(role) && relationship.status !== "ended" && !editingDetails && (
+              <button
+                type="button"
+                onClick={startEditingDetails}
+                className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline"
+              >
+                Edit
+              </button>
+            )}
+          >
+            {editingDetails && detailsForm && (
+              <form onSubmit={submitDetails} className="mb-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
+                <label className="text-sm font-medium">Maintenance scope
+                  <input
+                    value={detailsForm.scope}
+                    onChange={(event) => setDetailsForm({ ...detailsForm, scope: event.target.value })}
+                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                    maxLength={2000}
+                    required
+                  />
+                </label>
+                <label className="text-sm font-medium">Start date
+                  <input
+                    type="date"
+                    value={detailsForm.startDate}
+                    onChange={(event) => setDetailsForm({ ...detailsForm, startDate: event.target.value })}
+                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                    required
+                  />
+                </label>
+                <label className="text-sm font-medium">Frequency
+                  <select
+                    value={detailsForm.frequency}
+                    onChange={(event) => setDetailsForm({ ...detailsForm, frequency: event.target.value })}
+                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                  >
+                    {MAINTENANCE_FREQUENCIES.map((value) => (
+                      <option key={value} value={value}>{frequencyLabel(value)}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="text-xs text-gray-500">
+                  This edits the Maintenance record only. The linked Project and its status are unchanged, and
+                  Maintenance status moves only through Pause, Resume or End.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
+                    Save details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setEditingDetails(false); setDetailsForm(null); }}
+                    className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
             <dl className="grid gap-2 text-sm">
               <div className="flex justify-between gap-3">
                 <dt className="text-gray-500">Status</dt>
@@ -480,29 +602,110 @@ export default function AdminMaintenanceDetail() {
             {!currentTeam.length && <p className="text-sm text-gray-600">Nobody is currently assigned.</p>}
             <ul className="divide-y divide-stone-100">
               {currentTeam.map((assignment) => (
-                <li key={assignment.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{assignment.personName}</span>
-                    <span className="block truncate text-xs text-gray-500">
-                      {assignmentRoleLabel(assignment.role)} · since {showDate(assignment.startDate)}
+                <li key={assignment.id} className="py-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{assignment.personName}</span>
+                      <span className="block truncate text-xs text-gray-500">
+                        {assignmentRoleLabel(assignment.role)} · since {showDate(assignment.startDate)}
+                      </span>
                     </span>
-                  </span>
-                  {/* Fail-safe: ending a relationship atomically closes every
-                      open assignment server-side, so currentTeam should
-                      already be empty for an Ended relationship — this
-                      status check keeps the button from reappearing against
-                      stale or otherwise inconsistent data. */}
-                  {canManageMaintenance(role) && relationship.status !== "ended" && (
+                    {/* Fail-safe: ending a relationship atomically closes every
+                        open assignment server-side, so currentTeam should
+                        already be empty for an Ended relationship — this
+                        status check keeps the button from reappearing against
+                        stale or otherwise inconsistent data. */}
+                    {canManageMaintenance(role) && relationship.status !== "ended" && (
+                      <button
+                        type="button"
+                        onClick={() => report(
+                          endAssignment(assignment.id, assignment.version),
+                          "Assignment ended."
+                        )}
+                        className="min-h-11 shrink-0 py-2 text-xs font-semibold text-gray-600 hover:text-botanique-charcoal hover:underline"
+                      >
+                        End
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Correcting what was recorded is Principal-only and is
+                      deliberately not presented as an ordinary edit: it sits
+                      below the row, in muted type, separate from End. */}
+                  {canCorrectMaintenanceAssignment(role) && relationship.status !== "ended" && correcting?.id !== assignment.id && (
                     <button
                       type="button"
-                      onClick={() => report(
-                        endAssignment(assignment.id, assignment.version),
-                        "Assignment ended."
-                      )}
-                      className="min-h-11 shrink-0 py-2 text-xs font-semibold text-gray-600 hover:text-botanique-charcoal hover:underline"
+                      onClick={() => startCorrection(assignment)}
+                      className="min-h-11 py-2 text-xs font-semibold text-botanique-green hover:underline"
                     >
-                      End
+                      Correct assignment
                     </button>
+                  )}
+
+                  {correcting?.id === assignment.id && correctionForm && (
+                    <form onSubmit={submitCorrection} className="mt-2 grid min-w-0 gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
+                      <p className="text-sm text-gray-700">
+                        Correcting a recorded assignment. The person and the linked Maintenance relationship cannot
+                        change; the original values and your reason are kept in the record.
+                      </p>
+                      <div className="text-sm">
+                        <span className="text-gray-500">Person</span>
+                        <p className="font-medium">{assignment.personName}</p>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="min-w-0 text-sm">
+                          <span className="text-gray-500">Current responsibility</span>
+                          <p className="font-medium">{assignmentRoleLabel(assignment.role)}</p>
+                        </div>
+                        <label className="min-w-0 text-sm font-medium">Corrected responsibility
+                          <select
+                            value={correctionForm.role}
+                            onChange={(event) => setCorrectionForm({ ...correctionForm, role: event.target.value })}
+                            className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                          >
+                            {MAINTENANCE_ASSIGNMENT_ROLES.map((value) => (
+                              <option key={value} value={value}>{assignmentRoleLabel(value)}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <div className="min-w-0 text-sm">
+                          <span className="text-gray-500">Current start date</span>
+                          <p className="font-medium">{showDate(assignment.startDate)}</p>
+                        </div>
+                        <label className="min-w-0 text-sm font-medium">Corrected start date
+                          <input
+                            type="date"
+                            value={correctionForm.startDate}
+                            onChange={(event) => setCorrectionForm({ ...correctionForm, startDate: event.target.value })}
+                            className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                            required
+                          />
+                        </label>
+                      </div>
+                      <label className="min-w-0 text-sm font-medium">Why is this assignment being corrected?
+                        <textarea
+                          value={correctionForm.correctionReason}
+                          onChange={(event) => setCorrectionForm({ ...correctionForm, correctionReason: event.target.value })}
+                          className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
+                          rows={3}
+                          minLength={3}
+                          maxLength={1000}
+                          required
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
+                          Save correction
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setCorrecting(null); setCorrectionForm(null); }}
+                          className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
                   )}
                 </li>
               ))}
