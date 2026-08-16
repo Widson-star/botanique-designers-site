@@ -52,6 +52,7 @@ export default function AdminMaintenance() {
   const { register, visits = [], eligibleProjects, status, error, addRelationship } = useMaintenance();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
+  const [expanded, setExpanded] = useState(new Set());
   const [form, setForm] = useState({ projectId: "", scope: "", startDate: today(), frequency: "monthly" });
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -69,6 +70,15 @@ export default function AdminMaintenance() {
     if (value && value !== fallback) next.set(key, value);
     else next.delete(key);
     setSearchParams(next, { replace: true });
+  }
+
+  function toggleExpanded(id) {
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const visible = useMemo(() => register.filter((relationship) => {
@@ -215,65 +225,91 @@ export default function AdminMaintenance() {
           <div className="grid xl:grid-cols-[minmax(0,1.7fr)_350px]">
             <div className="min-w-0 border-b border-stone-200 xl:border-b-0 xl:border-r">
               <div className="border-b border-stone-100 px-4 py-4 sm:px-5">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <h2 className="text-sm font-semibold">Maintenance register</h2>
                     <p className="mt-0.5 text-xs text-gray-500">Sites currently managed through Botanique Maintenance.</p>
                   </div>
-                  <span className="text-xs font-medium text-gray-400">{visible.length} shown</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-gray-400">{visible.length} shown</span>
+                    <label className="sr-only" htmlFor="maintenance-status">Maintenance status</label>
+                    <select id="maintenance-status" value={statusFilter} onChange={(event) => setParam("status", event.target.value, "active")} className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-botanique-green focus:ring-botanique-green">
+                      <option value="active">Active Maintenance</option>
+                      {MAINTENANCE_RELATIONSHIP_STATUSES.filter((value) => value !== "active").map((value) => <option key={value} value={value}>{relationshipStatusLabel(value)}</option>)}
+                      <option value="all">All statuses</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
-                  <label className="sr-only" htmlFor="maintenance-search">Search Maintenance projects</label>
-                  <input id="maintenance-search" value={search} onChange={(event) => setParam("q", event.target.value, "")} placeholder="Search Maintenance projects" className="block w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-botanique-green focus:ring-botanique-green" />
-                  <label className="sr-only" htmlFor="maintenance-status">Maintenance status</label>
-                  <select id="maintenance-status" value={statusFilter} onChange={(event) => setParam("status", event.target.value, "active")} className="block w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm focus:border-botanique-green focus:ring-botanique-green">
-                    <option value="active">Active Maintenance</option>
-                    {MAINTENANCE_RELATIONSHIP_STATUSES.filter((value) => value !== "active").map((value) => <option key={value} value={value}>{relationshipStatusLabel(value)}</option>)}
-                    <option value="all">All statuses</option>
-                  </select>
-                </div>
+                {search && (
+                  <div className="mt-3">
+                    <label className="sr-only" htmlFor="maintenance-search">Search Maintenance projects</label>
+                    <input id="maintenance-search" value={search} onChange={(event) => setParam("q", event.target.value, "")} placeholder="Search Maintenance projects" className="block w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2 text-sm focus:border-botanique-green focus:ring-botanique-green" />
+                  </div>
+                )}
               </div>
 
               {!visible.length ? (
                 <div className="p-8 text-center text-sm text-gray-600">{register.length === 0 ? "No site is under Maintenance yet. Start one to see it here." : "No Maintenance relationship matches these filters."}</div>
               ) : (
-                <ul className="divide-y divide-stone-100 bg-stone-50/30">
-                  {visible.map((relationship) => (
-                    <li key={relationship.id} className="p-3 sm:p-4">
-                      <Link to={`/admin/maintenance/${relationship.id}`} className="group block overflow-hidden rounded-lg border border-stone-200 bg-white transition hover:border-[#c3d3ca] hover:shadow-sm">
-                        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-stone-100 px-4 py-3">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="truncate text-sm font-semibold text-botanique-green">{relationship.projectName}</h3>
-                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[relationship.status] || ""}`}>{relationshipStatusLabel(relationship.status)}</span>
+                <div>
+                  <div className="hidden grid-cols-[52px_minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-stone-100 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500 sm:grid">
+                    <span>#</span>
+                    <span>Project / Site</span>
+                    <span className="sr-only">Open</span>
+                    <span className="sr-only">Details</span>
+                  </div>
+                  <ul className="divide-y divide-stone-100">
+                    {visible.map((relationship, index) => {
+                      const isExpanded = expanded.has(relationship.id);
+                      return (
+                        <li key={relationship.id} className="px-4 sm:px-5">
+                          <div className="grid grid-cols-[40px_minmax(0,1fr)_auto_auto] items-center gap-3 py-4 sm:grid-cols-[52px_minmax(0,1fr)_auto_auto]">
+                            <span className="text-sm font-semibold tabular-nums text-botanique-green">{String(index + 1).padStart(2, "0")}</span>
+                            <div className="min-w-0">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <h3 className="truncate text-sm font-semibold text-botanique-charcoal">{relationship.projectName}</h3>
+                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[relationship.status] || ""}`}>{relationshipStatusLabel(relationship.status)}</span>
+                              </div>
+                              <p className="mt-0.5 text-xs text-gray-500">{frequencyLabel(relationship.frequency)} maintenance</p>
                             </div>
-                            <p className="mt-0.5 truncate text-xs text-gray-500">{[relationship.clientSiteName, frequencyLabel(relationship.frequency)].filter(Boolean).join(" · ")}</p>
+                            <Link to={`/admin/maintenance/${relationship.id}`} className="hidden min-h-10 items-center text-xs font-semibold text-botanique-green hover:underline sm:inline-flex">Open →</Link>
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(relationship.id)}
+                              aria-expanded={isExpanded}
+                              aria-label={`${isExpanded ? "Hide" : "Show"} details for ${relationship.projectName}`}
+                              className="flex h-10 w-10 items-center justify-center rounded-md border border-stone-200 bg-white text-base text-botanique-green hover:border-[#c3d3ca]"
+                            >
+                              {isExpanded ? "⌃" : "⌄"}
+                            </button>
                           </div>
-                          <span className="text-xs font-semibold text-gray-400 transition group-hover:text-botanique-green">Open →</span>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-px bg-stone-200 sm:grid-cols-4">
-                          <div className="bg-[#f7faf8] px-3 py-2.5">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Frequency</p>
-                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">{frequencyLabel(relationship.frequency)}</p>
-                          </div>
-                          <div className="bg-white px-3 py-2.5">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Last visit</p>
-                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">{relationship.lastVisitDate ? showDate(relationship.lastVisitDate) : "None yet"}</p>
-                          </div>
-                          <div className={relationship.nextVisitDate ? "bg-[#f4f8f6] px-3 py-2.5" : "bg-stone-50 px-3 py-2.5"}>
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Next visit</p>
-                            <p className={`mt-0.5 truncate text-xs font-medium ${relationship.nextVisitDate ? "text-botanique-green" : "text-gray-500"}`}>{relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</p>
-                          </div>
-                          <div className="bg-white px-3 py-2.5">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Assigned team</p>
-                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">{relationship.assignedTeam.length ? relationship.assignedTeam.map((member) => member.full_name).join(", ") : "Unassigned"}</p>
-                          </div>
-                        </div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                          {isExpanded && (
+                            <div className="mb-4 ml-[52px] grid gap-4 rounded-lg bg-stone-50/70 px-4 py-4 text-xs sm:grid-cols-4">
+                              <div>
+                                <p className="text-gray-400">Frequency</p>
+                                <p className="mt-1 font-medium text-botanique-charcoal">{frequencyLabel(relationship.frequency)}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Last visit</p>
+                                <p className="mt-1 font-medium text-botanique-charcoal">{relationship.lastVisitDate ? showDate(relationship.lastVisitDate) : "None yet"}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Next visit</p>
+                                <p className={`mt-1 font-medium ${relationship.nextVisitDate ? "text-botanique-green" : "text-botanique-charcoal"}`}>{relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-400">Assigned team</p>
+                                <p className="mt-1 font-medium text-botanique-charcoal">{relationship.assignedTeam.length ? relationship.assignedTeam.map((member) => member.full_name).join(", ") : "Unassigned"}</p>
+                              </div>
+                              <Link to={`/admin/maintenance/${relationship.id}`} className="text-xs font-semibold text-botanique-green hover:underline sm:hidden">Open Maintenance →</Link>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
             </div>
 
