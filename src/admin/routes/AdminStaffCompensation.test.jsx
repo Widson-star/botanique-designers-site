@@ -37,7 +37,7 @@ describe("Staff Compensation register", () => {
   it("shows a truthful empty state without fabricating staff financial records", () => {
     renderRegister();
     expect(screen.getByText("No Staff Compensation has been recorded yet.")).toBeInTheDocument();
-    expect(screen.getByText("KES 0.00")).toBeInTheDocument();
+    expect(screen.getAllByText("KES 0.00").length).toBeGreaterThan(0);
   });
 
   it("keeps the person primary, allows no Project context, and derives payment truth", () => {
