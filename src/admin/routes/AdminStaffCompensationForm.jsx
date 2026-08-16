@@ -1,32 +1,35 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { usePeople } from "../context/people";
 import { useStaffCompensation } from "../context/staffCompensation";
 
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
+const blankValues = () => ({ personId: "", projectId: "", serviceDate: today(), compensationType: "compensation", description: "", amount: "" });
+const valuesFor = (record) => ({
+  personId: record?.personId || "", projectId: record?.projectId || "", serviceDate: record?.serviceDate || today(),
+  compensationType: record?.compensationType || "compensation", description: record?.description || "",
+  amount: record?.submittedAmount == null ? "" : String(record.submittedAmount),
+});
 
 export default function AdminStaffCompensationForm() {
   const { compensationId } = useParams();
   const navigate = useNavigate();
   const { role, currentUserId, projects } = useAdminData();
   const { people } = usePeople();
-  const { compensations, createDraft, updateRecord } = useStaffCompensation();
+  const { compensations, createDraft, updateRecord, status } = useStaffCompensation();
   const record = compensationId ? compensations.find((item) => item.id === compensationId) : null;
   const editing = Boolean(compensationId);
   const allowed = role === "manager" && (!editing || (record?.requesterId === currentUserId && ["draft", "amendment_requested"].includes(record?.lifecycle)));
-  const initial = useMemo(() => ({
-    personId: record?.personId || "",
-    projectId: record?.projectId || "",
-    serviceDate: record?.serviceDate || today(),
-    compensationType: record?.compensationType || "compensation",
-    description: record?.description || "",
-    amount: record?.submittedAmount == null ? "" : String(record.submittedAmount),
-  }), [record]);
-  const [values, setValues] = useState(initial);
+  const [values, setValues] = useState(blankValues);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (record) setValues(valuesFor(record));
+  }, [record]);
+
+  if (editing && status === "loading" && !record) return <p className="text-sm text-gray-600">Loading Staff Compensation…</p>;
   if (editing && !record) return <section><h1 className="text-xl font-semibold">Staff Compensation unavailable</h1><Link to="/admin/finance/staff-compensation" className="mt-3 inline-block text-sm font-semibold text-botanique-green">Back to Staff Compensation</Link></section>;
   if (!allowed) return <section className="rounded-xl border border-stone-200 bg-white p-5"><h1 className="text-xl font-semibold">This record cannot be edited here</h1><p className="mt-1 text-[13px] text-gray-600">Only the requester may create or amend a draft returned for correction.</p><Link to={editing ? `/admin/finance/staff-compensation/${compensationId}` : "/admin/finance/staff-compensation"} className="mt-3 inline-block text-sm font-semibold text-botanique-green">Back</Link></section>;
 
@@ -36,9 +39,7 @@ export default function AdminStaffCompensationForm() {
     if (working) return;
     if (!values.personId || !values.serviceDate || !values.description.trim() || !Number(values.amount)) { setError("Choose a person, date, purpose and amount."); return; }
     setWorking(true); setError("");
-    const result = editing
-      ? await updateRecord(record.id, record.version, values)
-      : await createDraft(values);
+    const result = editing ? await updateRecord(record.id, record.version, values) : await createDraft(values);
     setWorking(false);
     if (!result.ok) { setError(result.stale ? "This compensation changed elsewhere. Return to the latest record and try again." : result.error); return; }
     const id = editing ? record.id : result.result?.id;
