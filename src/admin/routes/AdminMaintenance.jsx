@@ -23,6 +23,30 @@ const STATUS_BADGE = {
   ended: "bg-stone-100 text-gray-600",
 };
 
+function StatCard({ label, value, hint }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-stone-200 bg-white px-4 py-3">
+      <p className="truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-500">{label}</p>
+      <div className="mt-1 flex items-end justify-between gap-3">
+        <p className="text-2xl font-semibold leading-none text-botanique-charcoal">{value}</p>
+        {hint && <p className="truncate text-[11px] text-gray-400">{hint}</p>}
+      </div>
+    </div>
+  );
+}
+
+function SideSection({ title, count, children }) {
+  return (
+    <section className="px-4 py-4 first:pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-600">{title}</h3>
+        {count !== undefined && <span className="text-xs font-medium text-gray-400">{count}</span>}
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
 export default function AdminMaintenance() {
   const { role } = useAdminData();
   const { register, visits = [], eligibleProjects, status, error, addRelationship } = useMaintenance();
@@ -47,11 +71,11 @@ export default function AdminMaintenance() {
     setSearchParams(next, { replace: true });
   }
 
-  const visible = register.filter((relationship) => {
+  const visible = useMemo(() => register.filter((relationship) => {
     if (statusFilter !== "all" && relationship.status !== statusFilter) return false;
     if (search && !relationship.projectName.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
-  });
+  }), [register, search, statusFilter]);
 
   const kpis = useMemo(() => {
     const active = register.filter((relationship) => relationship.status === "active").length;
@@ -78,6 +102,10 @@ export default function AdminMaintenance() {
       relationship: register.find((row) => row.id === visit.relationshipId),
     }))
     .filter((visit) => visit.relationship), [register, visits]);
+
+  const needsScheduling = useMemo(() => register
+    .filter((relationship) => relationship.status !== "ended" && !relationship.nextVisitDate)
+    .slice(0, 5), [register]);
 
   const recentVisitNotes = useMemo(() => visits
     .filter((visit) => visit.status === "completed" || visit.status === "cancelled")
@@ -144,26 +172,21 @@ export default function AdminMaintenance() {
         )}
       </div>
 
-      <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-stone-200 bg-stone-200 xl:grid-cols-4">
-        {[
-          ["Active relationships", kpis.active],
-          ["Visits due within 7 days", kpis.dueSoon],
-          ["Sites needing a next visit", kpis.needsScheduling],
-          ["Completed visits", kpis.completedVisits],
-        ].map(([label, figure]) => (
-          <div key={label} className="min-w-0 bg-white px-4 py-3">
-            <dt className="truncate text-xs font-medium text-gray-500">{label}</dt>
-            <dd className="mt-0.5 text-xl font-semibold text-botanique-charcoal">{figure}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="mt-5 grid grid-cols-2 gap-2 xl:grid-cols-4">
+        <StatCard label="Active relationships" value={kpis.active} hint="live sites" />
+        <StatCard label="Visits due within 7 days" value={kpis.dueSoon} hint="coming up" />
+        <StatCard label="Sites needing a next visit" value={kpis.needsScheduling} hint="follow-up" />
+        <StatCard label="Completed visits" value={kpis.completedVisits} hint="recorded" />
+      </div>
 
       {showForm && canManageMaintenance(role) && (
         <form onSubmit={submit} className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
-          <p className="text-sm font-semibold">Add a site to Maintenance</p>
-          <p className="mt-1 text-xs text-gray-500">
-            Choose the project/site this Maintenance relationship belongs to. Its implementation lifecycle remains separate.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold">Add a site to Maintenance</p>
+              <p className="mt-0.5 text-xs text-gray-500">The linked Project keeps its own implementation lifecycle.</p>
+            </div>
+          </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-medium sm:col-span-2">Project / site
               <select
@@ -174,9 +197,7 @@ export default function AdminMaintenance() {
               >
                 <option value="">Choose project or site for Maintenance</option>
                 {maintenanceChoices.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {maintenanceProjectChoiceLabel(project)}
-                  </option>
+                  <option key={project.id} value={project.id}>{maintenanceProjectChoiceLabel(project)}</option>
                 ))}
               </select>
             </label>
@@ -222,142 +243,172 @@ export default function AdminMaintenance() {
         </form>
       )}
 
-      <div className="mt-4 grid gap-3 rounded-lg border border-stone-200 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_220px]">
-        <label className="text-sm font-medium">Search Maintenance projects
-          <input
-            value={search}
-            onChange={(event) => setParam("q", event.target.value, "")}
-            placeholder="Search sites under Maintenance"
-            className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-          />
-        </label>
-        <label className="text-sm font-medium">Maintenance status
-          <select
-            value={statusFilter}
-            onChange={(event) => setParam("status", event.target.value, "active")}
-            className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-          >
-            <option value="active">Active</option>
-            {MAINTENANCE_RELATIONSHIP_STATUSES.filter((value) => value !== "active").map((value) => (
-              <option key={value} value={value}>{relationshipStatusLabel(value)}</option>
-            ))}
-            <option value="all">All</option>
-          </select>
-        </label>
-      </div>
-
       {status === "loading" && <p className="mt-6 text-sm text-gray-600">Loading Maintenance…</p>}
       {error && <p className="mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
 
-      {status !== "loading" && !visible.length && (
-        <div className="mt-5 rounded-lg border border-dashed border-stone-300 bg-white p-8 text-center text-sm text-gray-600">
-          {register.length === 0
-            ? "No site is under Maintenance yet. Start one to see it here."
-            : "No Maintenance relationship matches these filters."}
-        </div>
-      )}
-
-      {visible.length > 0 && (
-        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.75fr)] xl:items-start">
-          <section className="min-w-0 overflow-hidden rounded-lg border border-stone-200 bg-white">
-            <div className="flex items-center justify-between gap-3 border-b border-stone-100 px-4 py-3">
-              <div>
-                <h2 className="text-sm font-semibold">Maintenance sites</h2>
-                <p className="mt-0.5 text-xs text-gray-500">Current service relationships and their next operational action.</p>
+      {status !== "loading" && (
+        <div className="mt-4 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+          <div className="grid xl:grid-cols-[minmax(0,1.7fr)_360px]">
+            <div className="min-w-0 border-b border-stone-200 xl:border-b-0 xl:border-r">
+              <div className="border-b border-stone-100 px-4 py-4 sm:px-5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <h2 className="text-sm font-semibold">Maintenance register</h2>
+                    <p className="mt-0.5 text-xs text-gray-500">Sites currently managed through Botanique Maintenance.</p>
+                  </div>
+                  <span className="text-xs font-medium text-gray-400">{visible.length} shown</span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+                  <label className="sr-only" htmlFor="maintenance-search">Search Maintenance projects</label>
+                  <input
+                    id="maintenance-search"
+                    value={search}
+                    onChange={(event) => setParam("q", event.target.value, "")}
+                    placeholder="Search Maintenance projects"
+                    className="block w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm"
+                  />
+                  <label className="sr-only" htmlFor="maintenance-status">Maintenance status</label>
+                  <select
+                    id="maintenance-status"
+                    value={statusFilter}
+                    onChange={(event) => setParam("status", event.target.value, "active")}
+                    className="block w-full rounded-md border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm"
+                  >
+                    <option value="active">Active Maintenance</option>
+                    {MAINTENANCE_RELATIONSHIP_STATUSES.filter((value) => value !== "active").map((value) => (
+                      <option key={value} value={value}>{relationshipStatusLabel(value)}</option>
+                    ))}
+                    <option value="all">All statuses</option>
+                  </select>
+                </div>
               </div>
-              <span className="shrink-0 text-xs font-medium text-gray-500">{visible.length} shown</span>
+
+              {!visible.length ? (
+                <div className="p-8 text-center text-sm text-gray-600">
+                  {register.length === 0
+                    ? "No site is under Maintenance yet. Start one to see it here."
+                    : "No Maintenance relationship matches these filters."}
+                </div>
+              ) : (
+                <ul className="divide-y divide-stone-100">
+                  {visible.map((relationship) => (
+                    <li key={relationship.id} className="p-3 sm:p-4">
+                      <Link
+                        to={`/admin/maintenance/${relationship.id}`}
+                        className="group block rounded-lg border border-stone-200 bg-white px-4 py-3 transition hover:border-stone-300 hover:bg-stone-50"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="truncate text-sm font-semibold text-botanique-green">{relationship.projectName}</h3>
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_BADGE[relationship.status] || ""}`}>
+                                {relationshipStatusLabel(relationship.status)}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 truncate text-xs text-gray-500">
+                              {[relationship.clientSiteName, frequencyLabel(relationship.frequency)].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                          <span className="text-xs font-semibold text-gray-400 transition group-hover:text-botanique-green">Open →</span>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md bg-stone-200 sm:grid-cols-4">
+                          <div className="bg-stone-50 px-3 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Frequency</p>
+                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">{frequencyLabel(relationship.frequency)}</p>
+                          </div>
+                          <div className="bg-stone-50 px-3 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Last visit</p>
+                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">{relationship.lastVisitDate ? showDate(relationship.lastVisitDate) : "None yet"}</p>
+                          </div>
+                          <div className="bg-stone-50 px-3 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Next visit</p>
+                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">{relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</p>
+                          </div>
+                          <div className="bg-stone-50 px-3 py-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Assigned team</p>
+                            <p className="mt-0.5 truncate text-xs font-medium text-botanique-charcoal">
+                              {relationship.assignedTeam.length
+                                ? relationship.assignedTeam.map((member) => member.full_name).join(", ")
+                                : "Unassigned"}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
-            <ul className="divide-y divide-stone-100">
-              {visible.map((relationship) => (
-                <li key={relationship.id}>
-                  <Link
-                    to={`/admin/maintenance/${relationship.id}`}
-                    className="grid min-w-0 gap-3 px-4 py-3 hover:bg-stone-50 sm:grid-cols-[minmax(0,1.35fr)_auto_minmax(150px,0.7fr)_minmax(150px,0.7fr)_auto] sm:items-center"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold text-botanique-green">{relationship.projectName}</span>
-                      <span className="mt-0.5 block truncate text-xs text-gray-500">
-                        {[relationship.clientSiteName, frequencyLabel(relationship.frequency)].filter(Boolean).join(" · ")}
-                      </span>
-                    </span>
-
-                    <span className="flex items-center gap-2 text-xs text-gray-600">
-                      <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_BADGE[relationship.status] || ""}`}>
-                        {relationshipStatusLabel(relationship.status)}
-                      </span>
-                    </span>
-
-                    <span className="grid gap-0.5 text-xs text-gray-600">
-                      <span><span className="text-gray-400">Last</span> {relationship.lastVisitDate ? showDate(relationship.lastVisitDate) : "None yet"}</span>
-                      <span><span className="text-gray-400">Next</span> {relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</span>
-                    </span>
-
-                    <span className="min-w-0 text-xs text-gray-600">
-                      <span className="block text-gray-400">Assigned</span>
-                      <span className="block truncate font-medium text-botanique-charcoal">
-                        {relationship.assignedTeam.length
-                          ? relationship.assignedTeam.map((member) => member.full_name).join(", ")
-                          : "Unassigned"}
-                      </span>
-                    </span>
-
-                    <span className="hidden text-lg text-gray-300 sm:block">›</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <aside className="grid min-w-0 gap-4">
-            <section className="rounded-lg border border-stone-200 bg-white p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold">Upcoming visits</h2>
-                <span className="text-xs text-gray-500">{upcomingVisits.length}</span>
+            <aside className="min-w-0 bg-stone-50/60">
+              <div className="border-b border-stone-200 px-4 py-4">
+                <h2 className="text-sm font-semibold">Maintenance overview</h2>
+                <p className="mt-0.5 text-xs text-gray-500">Visits, follow-up gaps and recent activity.</p>
               </div>
-              {!upcomingVisits.length && (
-                <p className="mt-3 text-sm text-gray-600">No visit is currently scheduled.</p>
-              )}
-              <ul className="mt-2 divide-y divide-stone-100">
-                {upcomingVisits.map((visit) => (
-                  <li key={visit.id} className="py-2.5 first:pt-1">
-                    <Link to={`/admin/maintenance/${visit.relationship.id}`} className="block hover:text-botanique-green">
-                      <span className="flex items-baseline justify-between gap-3">
-                        <span className="truncate text-sm font-medium">{visit.relationship.projectName}</span>
-                        <span className="shrink-0 text-xs text-gray-500">{showDate(visit.scheduledDate)}</span>
-                      </span>
-                      <span className="mt-0.5 block truncate text-xs text-gray-500">{visit.purpose}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
 
-            <section className="rounded-lg border border-stone-200 bg-white p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold">Recent visit notes</h2>
-                <span className="text-xs text-gray-500">History</span>
+              <div className="divide-y divide-stone-200">
+                <SideSection title="Upcoming visits" count={upcomingVisits.length}>
+                  {!upcomingVisits.length ? (
+                    <p className="text-sm text-gray-500">No visit is currently scheduled.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {upcomingVisits.map((visit) => (
+                        <li key={visit.id}>
+                          <Link to={`/admin/maintenance/${visit.relationship.id}`} className="block rounded-md bg-white px-3 py-2.5 ring-1 ring-stone-200 hover:ring-stone-300">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="truncate text-sm font-medium">{visit.relationship.projectName}</span>
+                              <span className="shrink-0 text-xs text-gray-500">{showDate(visit.scheduledDate)}</span>
+                            </div>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{visit.purpose}</p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </SideSection>
+
+                <SideSection title="Needs scheduling" count={needsScheduling.length}>
+                  {!needsScheduling.length ? (
+                    <p className="text-sm text-gray-500">Every active site has a next visit.</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {needsScheduling.map((relationship) => (
+                        <li key={relationship.id}>
+                          <Link to={`/admin/maintenance/${relationship.id}`} className="flex items-center justify-between gap-3 rounded-md px-1 py-1 text-sm hover:text-botanique-green">
+                            <span className="truncate font-medium">{relationship.projectName}</span>
+                            <span className="shrink-0 text-xs text-gray-400">Schedule →</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </SideSection>
+
+                <SideSection title="Recent activity" count={recentVisitNotes.length}>
+                  {!recentVisitNotes.length ? (
+                    <p className="text-sm text-gray-500">No completed or cancelled visit has been recorded yet.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {recentVisitNotes.map((visit) => (
+                        <li key={visit.id}>
+                          <Link to={`/admin/maintenance/${visit.relationship.id}`} className="block">
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="truncate text-sm font-medium">{visit.relationship.projectName}</span>
+                              <span className="shrink-0 text-xs text-gray-400">{showDate(visit.scheduledDate)}</span>
+                            </div>
+                            <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">
+                              {visit.status === "completed" ? visit.completionNote : visit.cancellationReason}
+                            </p>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </SideSection>
               </div>
-              {!recentVisitNotes.length && (
-                <p className="mt-3 text-sm text-gray-600">No completed or cancelled visit has been recorded yet.</p>
-              )}
-              <ul className="mt-2 divide-y divide-stone-100">
-                {recentVisitNotes.map((visit) => (
-                  <li key={visit.id} className="py-2.5 first:pt-1">
-                    <Link to={`/admin/maintenance/${visit.relationship.id}`} className="block hover:text-botanique-green">
-                      <span className="flex items-baseline justify-between gap-3">
-                        <span className="truncate text-sm font-medium">{visit.relationship.projectName}</span>
-                        <span className="shrink-0 text-xs text-gray-500">{showDate(visit.scheduledDate)}</span>
-                      </span>
-                      <span className="mt-0.5 block text-xs text-gray-500">
-                        {visit.status === "completed" ? visit.completionNote : visit.cancellationReason}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          </aside>
+            </aside>
+          </div>
         </div>
       )}
     </section>
