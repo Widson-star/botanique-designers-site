@@ -6,6 +6,10 @@ import {
   MAINTENANCE_FREQUENCIES, MAINTENANCE_RELATIONSHIP_STATUSES, canManageMaintenance,
   canSeeMaintenance, frequencyLabel, relationshipStatusLabel,
 } from "../utils/maintenanceCapabilities";
+import {
+  dedupeMaintenanceEligibleProjects,
+  maintenanceProjectChoiceLabel,
+} from "../utils/maintenancePresentation";
 
 const showDate = (value) => (value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`))
@@ -19,13 +23,6 @@ const STATUS_BADGE = {
   ended: "bg-stone-100 text-gray-600",
 };
 
-// The Maintenance register: one compact row per site under Botanique
-// maintenance, not a dossier. Composition follows the working-authority
-// image `11-maintenance-tools-equipment-working-authority.png`'s Maintenance
-// panel — KPI strip, controlled filters, a compact drill-through list — while
-// Tools & Equipment (also shown in that image) stays its own, separate,
-// unbuilt destination per the settled 9 Aug 2026 ruling. Every figure below
-// is derived from real loaded records; none is illustrative.
 export default function AdminMaintenance() {
   const { role } = useAdminData();
   const { register, eligibleProjects, status, error, addRelationship } = useMaintenance();
@@ -37,6 +34,11 @@ export default function AdminMaintenance() {
 
   const search = searchParams.get("q") || "";
   const statusFilter = searchParams.get("status") || "active";
+
+  const maintenanceChoices = useMemo(
+    () => dedupeMaintenanceEligibleProjects(eligibleProjects),
+    [eligibleProjects]
+  );
 
   function setParam(key, value, fallback) {
     const next = new URLSearchParams(searchParams);
@@ -69,7 +71,7 @@ export default function AdminMaintenance() {
     event.preventDefault();
     setFormError("");
     if (!form.projectId) {
-      setFormError("Choose a site or project.");
+      setFormError("Choose a project or site for Maintenance.");
       return;
     }
     if (!form.scope.trim()) {
@@ -105,8 +107,7 @@ export default function AdminMaintenance() {
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-botanique-green">Operations</p>
           <h1 className="mt-1 text-2xl font-semibold">Maintenance</h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-600">
-            Track Botanique&apos;s scheduled maintenance relationships across all sites, independent of
-            each project&apos;s own implementation status.
+            Scheduled upkeep, assigned teams and follow-up visits for sites under Botanique Maintenance.
           </p>
         </div>
         {canManageMaintenance(role) && (
@@ -122,7 +123,7 @@ export default function AdminMaintenance() {
 
       <dl className="mt-5 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-stone-200 bg-stone-200 sm:grid-cols-3">
         {[
-          ["Active relationships", kpis.active],
+          ["Active Maintenance", kpis.active],
           ["Visits due within 7 days", kpis.dueSoon],
           ["Sites needing a next visit", kpis.needsScheduling],
         ].map(([label, figure]) => (
@@ -135,23 +136,22 @@ export default function AdminMaintenance() {
 
       {showForm && canManageMaintenance(role) && (
         <form onSubmit={submit} className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
-          <p className="text-sm font-semibold">Start a Maintenance relationship</p>
+          <p className="text-sm font-semibold">Add a site to Maintenance</p>
           <p className="mt-1 text-xs text-gray-500">
-            Links to an existing site or project. A Completed project keeps its own status — starting
-            Maintenance here never reopens it.
+            Choose the project/site this Maintenance relationship belongs to. Its implementation lifecycle remains separate.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-medium sm:col-span-2">Site / Project
+            <label className="text-sm font-medium sm:col-span-2">Project / site
               <select
                 value={form.projectId}
                 onChange={(event) => setForm({ ...form, projectId: event.target.value })}
                 className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
                 required
               >
-                <option value="">Choose a site or project</option>
-                {eligibleProjects.map((project) => (
+                <option value="">Choose project or site for Maintenance</option>
+                {maintenanceChoices.map((project) => (
                   <option key={project.id} value={project.id}>
-                    {project.projectName}{project.status ? ` (${project.status})` : ""}
+                    {maintenanceProjectChoiceLabel(project)}
                   </option>
                 ))}
               </select>
@@ -160,7 +160,7 @@ export default function AdminMaintenance() {
               <input
                 value={form.scope}
                 onChange={(event) => setForm({ ...form, scope: event.target.value })}
-                placeholder="e.g. Fortnightly lawn and border upkeep, irrigation check"
+                placeholder="e.g. Lawn, borders, irrigation checks and general upkeep"
                 className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
                 maxLength={2000}
                 required
@@ -198,16 +198,16 @@ export default function AdminMaintenance() {
         </form>
       )}
 
-      <div className="mt-4 grid gap-3 rounded-lg border border-stone-200 bg-white p-4 sm:grid-cols-2">
-        <label className="text-sm font-medium">Search
+      <div className="mt-4 grid gap-3 rounded-lg border border-stone-200 bg-white p-4 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <label className="text-sm font-medium">Search Maintenance projects
           <input
             value={search}
             onChange={(event) => setParam("q", event.target.value, "")}
-            placeholder="Site or project name"
+            placeholder="Search sites under Maintenance"
             className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
           />
         </label>
-        <label className="text-sm font-medium">Status
+        <label className="text-sm font-medium">Maintenance status
           <select
             value={statusFilter}
             onChange={(event) => setParam("status", event.target.value, "active")}
@@ -234,32 +234,34 @@ export default function AdminMaintenance() {
       )}
 
       {visible.length > 0 && (
-        <ul className="mt-5 divide-y divide-stone-100 overflow-hidden rounded-lg border border-stone-200 bg-white">
+        <ul className="mt-5 space-y-2">
           {visible.map((relationship) => (
             <li key={relationship.id}>
               <Link
                 to={`/admin/maintenance/${relationship.id}`}
-                className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 hover:bg-stone-50"
+                className="grid min-w-0 gap-3 rounded-lg border border-stone-200 bg-white px-4 py-3 hover:bg-stone-50 sm:grid-cols-[minmax(0,1.35fr)_auto_auto_auto] sm:items-center"
               >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold text-botanique-green">{relationship.projectName}</span>
-                  <span className="block truncate text-xs text-gray-500">
-                    {relationship.clientSiteName ? `${relationship.clientSiteName} · ` : ""}
-                    {frequencyLabel(relationship.frequency)}
-                    {relationship.projectStatus ? ` · Project: ${relationship.projectStatus}` : ""}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-botanique-green">{relationship.projectName}</span>
+                  <span className="mt-0.5 block truncate text-xs text-gray-500">
+                    {[relationship.clientSiteName, frequencyLabel(relationship.frequency)].filter(Boolean).join(" · ")}
                   </span>
                 </span>
-                <span className="flex min-w-0 shrink-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
+
+                <span className="flex items-center gap-2 text-xs text-gray-600">
                   <span className={`rounded-full px-2 py-0.5 font-medium ${STATUS_BADGE[relationship.status] || ""}`}>
                     {relationshipStatusLabel(relationship.status)}
                   </span>
-                  <span className="whitespace-nowrap">
-                    Last visit: {relationship.lastVisitDate ? showDate(relationship.lastVisitDate) : "None yet"}
-                  </span>
-                  <span className="whitespace-nowrap">
-                    Next visit: {relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}
-                  </span>
-                  <span className="whitespace-nowrap">
+                </span>
+
+                <span className="grid gap-0.5 text-xs text-gray-600 sm:min-w-[150px]">
+                  <span><span className="text-gray-400">Last</span> {relationship.lastVisitDate ? showDate(relationship.lastVisitDate) : "None yet"}</span>
+                  <span><span className="text-gray-400">Next</span> {relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</span>
+                </span>
+
+                <span className="min-w-0 text-xs text-gray-600 sm:max-w-[190px]">
+                  <span className="block text-gray-400">Assigned</span>
+                  <span className="block truncate font-medium text-botanique-charcoal">
                     {relationship.assignedTeam.length
                       ? relationship.assignedTeam.map((member) => member.full_name).join(", ")
                       : "Unassigned"}
