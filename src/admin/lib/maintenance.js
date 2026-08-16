@@ -39,17 +39,22 @@ const ASSIGNMENT_COLUMNS = [
 
 // The compact register — one row per relationship the caller may reach, with
 // the site/project and the derived last/next visit and assigned team already
-// attached.
+// attached. Client/site identity remains in the underlying Project authority,
+// but Maintenance presentation intentionally receives it blank for privacy.
 export async function fetchMaintenanceRegister(accessToken) {
-  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/maintenance_register`, {
+  const rows = await read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/maintenance_register`, {
     method: "POST",
     headers: headers(accessToken),
     body: JSON.stringify({}),
   }));
+  return (rows || []).map((row) => ({ ...row, client_site_name: "" }));
 }
 
 // The projects a caller may start a NEW Maintenance relationship on — already
 // restricted server-side to Ongoing/Paused/Completed, unarchived projects.
+// The UI label intentionally uses only project_name; client/site identity is
+// retained here only so existing duplicate-project presentation safeguards can
+// still prefer the richer canonical Project row without displaying that name.
 export async function fetchMaintenanceAuthorisedProjects(accessToken) {
   return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/maintenance_authorised_projects`, {
     method: "POST",
