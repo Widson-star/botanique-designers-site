@@ -7,6 +7,8 @@ export const PROJECT_STATUSES = [
   "Design-only",
 ];
 
+// Project stage describes the implementation lifecycle only. Maintenance has
+// its own Operations domain and must not be used as a Project stage.
 export const PROJECT_STAGES = [
   "Inquiry",
   "Site Visit",
@@ -15,7 +17,6 @@ export const PROJECT_STAGES = [
   "Quotation Sent",
   "Awaiting Approval",
   "Implementation",
-  "Maintenance",
   "Completed",
   "Archived",
 ];
@@ -71,6 +72,8 @@ export function derivePortfolioEligible(permissionStatus) {
   return match ? match.eligible : false;
 }
 
+// Project type describes the project itself. Maintenance is an operational
+// relationship linked to a Project, not a Project type.
 export const PROJECT_TYPES = [
   "Residential",
   "Estate",
@@ -79,6 +82,5 @@ export const PROJECT_TYPES = [
   "Commercial",
   "Public Realm",
   "Design Concept",
-  "Maintenance",
   "Other",
 ];
