@@ -10,6 +10,26 @@ The Founder approved the Staff Compensation mockup generated and reviewed in the
 
 This authority does not reopen any other committed Operations Hub PNG or module.
 
+## Founder amendment — icons and Hub colour rule
+
+The Founder subsequently reviewed the live implementation against the approved Staff Compensation mockup and issued the following amendment:
+
+- the approved mockup remains authoritative for composition, spacing, hierarchy, register structure, support panels and icon placement;
+- icon forms must follow the approved mockup as closely as the shared Hub icon system permits;
+- `Outstanding` uses the balance/pie-style icon rather than a generic clock;
+- `Awaiting decision` uses the people/group icon with a distinct decision treatment;
+- `Needs attention` uses a bell, not a warning triangle;
+- `Part-paid` uses the balance/pie-style icon;
+- Filters use a recognisable filter glyph rather than an improvised text symbol;
+- **amber is prohibited throughout the Botanique Designers Operations Hub.** Any amber visible in this or another previously approved authority image is superseded by this rule;
+- waiting/pending/outstanding states use restrained cool blue or blue-grey;
+- people/decision emphasis may use restrained violet;
+- stone/grey remains for neutral, draft, inactive or unknown states;
+- green remains for approved/paid/settled positive states;
+- red is reserved for genuine errors, rejection, cancellation and destructive actions.
+
+This is a Hub-wide presentation rule, not a Staff Compensation-only exception.
+
 ## Desktop composition
 
 The live Staff Compensation screen must follow the approved mockup composition:
