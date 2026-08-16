@@ -4,13 +4,21 @@ import { AdminApprovalsContext } from "./adminApprovals";
 import {
   amendAndResubmitApproval as apiAmend,
   decideProjectApproval as apiDecide,
+  decideStaffCompensationApproval as apiDecideStaffCompensation,
   fetchApprovalEvents,
   fetchApprovalRequests,
+  fetchStaffCompensationApprovalEvents,
+  fetchStaffCompensationApprovalRequests,
   requestApprovalAmendment as apiRequestAmendment,
   submitProjectApproval as apiSubmit,
   withdrawApprovalRequest as apiWithdraw,
 } from "../lib/approvals";
-import { mapApprovalEvent, mapApprovalRequest } from "../utils/approvalFormatters";
+import {
+  mapApprovalEvent,
+  mapApprovalRequest,
+  mapStaffCompensationApprovalEvent,
+  mapStaffCompensationApprovalRequest,
+} from "../utils/approvalFormatters";
 import {
   isValidApprovalMutationResponse,
   normalizeApprovalFailure,
@@ -18,6 +26,12 @@ import {
 
 const demoRequests = [];
 const demoEvents = {};
+
+function newestFirst(a, b) {
+  const aTime = Date.parse(a.requestedAt || "") || 0;
+  const bTime = Date.parse(b.requestedAt || "") || 0;
+  return bTime - aTime;
+}
 
 export default function AdminApprovalsProvider({ children, session, isDemo, role }) {
   const { refetchProjects, updateProject } = useAdminData();
@@ -33,8 +47,14 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
       return { ok: true };
     }
     try {
-      const rows = await fetchApprovalRequests(accessToken);
-      setRequests(rows.map(mapApprovalRequest));
+      const [projectRows, compensationRows] = await Promise.all([
+        fetchApprovalRequests(accessToken),
+        fetchStaffCompensationApprovalRequests(accessToken),
+      ]);
+      setRequests([
+        ...(projectRows || []).map(mapApprovalRequest),
+        ...(compensationRows || []).map(mapStaffCompensationApprovalRequest),
+      ].sort(newestFirst));
       setStatus("ready");
       setError("");
       return { ok: true };
@@ -61,11 +81,17 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
   const loadEvents = useCallback(async (requestId, force = false) => {
     if (!force && eventsByRequest[requestId]) return eventsByRequest[requestId];
     if (isDemo) return [];
-    const rows = await fetchApprovalEvents(accessToken, requestId);
-    const mapped = rows.map(mapApprovalEvent);
+    const request = requests.find((item) => item.id === requestId);
+    if (!request) return [];
+    const rows = request.source === "staff_compensation"
+      ? await fetchStaffCompensationApprovalEvents(accessToken, request.sourceId)
+      : await fetchApprovalEvents(accessToken, request.sourceId || request.id);
+    const mapped = request.source === "staff_compensation"
+      ? rows.map(mapStaffCompensationApprovalEvent)
+      : rows.map(mapApprovalEvent);
     setEventsByRequest((current) => ({ ...current, [requestId]: mapped }));
     return mapped;
-  }, [accessToken, eventsByRequest, isDemo]);
+  }, [accessToken, eventsByRequest, isDemo, requests]);
 
   const runMutation = useCallback(async (operation, { refetchProject = false } = {}) => {
     try {
@@ -78,7 +104,7 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
       }
       await refreshRequests();
       if (refetchProject) await refetchProjects();
-      return { ok: true, request: result ? mapApprovalRequest(result) : null };
+      return { ok: true };
     } catch (nextError) {
       return normalizeApprovalFailure(nextError);
     }
@@ -89,6 +115,8 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
       const now = new Date().toISOString();
       const request = {
         id: `demo-approval-${Date.now()}`,
+        source: "project",
+        sourceId: `demo-approval-${Date.now()}`,
         approvalType: values.approvalType,
         projectId: values.projectId,
         requesterId: values.requesterId,
@@ -106,58 +134,83 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
     return runMutation(() => apiSubmit(accessToken, values));
   }, [accessToken, isDemo, runMutation]);
 
-  const withdraw = useCallback((requestId, notes) => (
-    isDemo
-      ? Promise.resolve((setRequests((current) => current.map((request) => (
-          request.id === requestId
-            ? { ...request, state: "withdrawn", withdrawnAt: new Date().toISOString() }
-            : request
+  const withdraw = useCallback((requestId, notes) => {
+    const request = requests.find((item) => item.id === requestId);
+    if (request?.source === "staff_compensation") {
+      return Promise.resolve({ ok: false, error: "Amend or withdraw Staff Compensation from Finance." });
+    }
+    return isDemo
+      ? Promise.resolve((setRequests((current) => current.map((item) => (
+          item.id === requestId
+            ? { ...item, state: "withdrawn", withdrawnAt: new Date().toISOString() }
+            : item
         ))), { ok: true }))
-      :
-    runMutation(() => apiWithdraw(accessToken, requestId, notes))
-  ), [accessToken, isDemo, runMutation]);
+      : runMutation(() => apiWithdraw(accessToken, request?.sourceId || requestId, notes));
+  }, [accessToken, isDemo, requests, runMutation]);
 
-  const requestAmendment = useCallback((requestId, notes) => (
-    isDemo
-      ? Promise.resolve((setRequests((current) => current.map((request) => (
-          request.id === requestId
+  const requestAmendment = useCallback((requestId, notes) => {
+    const request = requests.find((item) => item.id === requestId);
+    if (request?.source === "staff_compensation") {
+      return runMutation(() => apiDecideStaffCompensation(
+        accessToken,
+        request.sourceId,
+        request.version,
+        "amendment_requested",
+        notes
+      ));
+    }
+    return isDemo
+      ? Promise.resolve((setRequests((current) => current.map((item) => (
+          item.id === requestId
             ? {
-                ...request,
+                ...item,
                 state: "amendment_requested",
                 decision: "amendment_requested",
                 decisionNotes: notes,
                 reviewedAt: new Date().toISOString(),
               }
-            : request
+            : item
         ))), { ok: true }))
-      :
-    runMutation(() => apiRequestAmendment(accessToken, requestId, notes))
-  ), [accessToken, isDemo, runMutation]);
+      : runMutation(() => apiRequestAmendment(accessToken, request?.sourceId || requestId, notes));
+  }, [accessToken, isDemo, requests, runMutation]);
 
-  const amendAndResubmit = useCallback((requestId, values) => (
-    isDemo
-      ? Promise.resolve((setRequests((current) => current.map((request) => (
-          request.id === requestId
+  const amendAndResubmit = useCallback((requestId, values) => {
+    const request = requests.find((item) => item.id === requestId);
+    if (request?.source === "staff_compensation") {
+      return Promise.resolve({ ok: false, error: "Amend and resubmit Staff Compensation from Finance." });
+    }
+    return isDemo
+      ? Promise.resolve((setRequests((current) => current.map((item) => (
+          item.id === requestId
             ? {
-                ...request,
+                ...item,
                 ...values,
                 state: "awaiting_review",
                 decision: "",
                 decisionNotes: "",
                 reviewedAt: "",
-                requestRound: request.requestRound + 1,
+                requestRound: item.requestRound + 1,
                 requestedAt: new Date().toISOString(),
               }
-            : request
+            : item
         ))), { ok: true }))
-      :
-    runMutation(() => apiAmend(accessToken, requestId, values))
-  ), [accessToken, isDemo, runMutation]);
+      : runMutation(() => apiAmend(accessToken, request?.sourceId || requestId, values));
+  }, [accessToken, isDemo, requests, runMutation]);
 
   const decide = useCallback(async (requestId, decision, notes) => {
+    const request = requests.find((item) => item.id === requestId);
+    if (!request) return { ok: false, error: "Approval item is no longer available." };
+    if (request.source === "staff_compensation") {
+      return runMutation(() => apiDecideStaffCompensation(
+        accessToken,
+        request.sourceId,
+        request.version,
+        decision,
+        notes
+      ));
+    }
     if (isDemo) {
-      const request = requests.find((item) => item.id === requestId);
-      if (decision === "approved" && request) {
+      if (decision === "approved") {
         const projectResult = await updateProject(request.projectId, request.proposedValues);
         if (!projectResult.ok) return projectResult;
       }
@@ -175,11 +228,9 @@ export default function AdminApprovalsProvider({ children, session, isDemo, role
       )));
       return { ok: true };
     }
-    return (
-    runMutation(
-      () => apiDecide(accessToken, requestId, decision, notes),
+    return runMutation(
+      () => apiDecide(accessToken, request.sourceId || requestId, decision, notes),
       { refetchProject: decision === "approved" }
-    )
     );
   }, [accessToken, isDemo, requests, runMutation, updateProject]);
 
