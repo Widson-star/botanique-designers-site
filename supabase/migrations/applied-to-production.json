@@ -77,7 +77,7 @@
     "an immediately-pre-apply snapshot)."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-15",
+  "verifiedAt": "2026-08-16",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -99,6 +99,7 @@
     { "name": "project_cost_historical_settlement", "productionVersion": "20260812203621" },
     { "name": "project_cost_payment_truth_lock_order", "productionVersion": "20260813105102" },
     { "name": "internal_cost_claim_correction_authority", "productionVersion": "20260813113103" },
-    { "name": "operations_hub_maintenance_v1", "productionVersion": "20260815192636" }
+    { "name": "operations_hub_maintenance_v1", "productionVersion": "20260815192636" },
+    { "name": "maintenance_assignment_correction_authority", "productionVersion": "20260816123248" }
   ]
 }
