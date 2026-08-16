@@ -45,39 +45,62 @@ export function canCancelSiteCost(claim, role) {
 // itself has been accepted. Preparing a draft from a submitted record stays
 // allowed, because it is operationally useful; submitting it for a money
 // decision does not.
-//
-// The audit that produced this ruling is in WORKSTREAMS.md: the previous
-// ordering was inherited implementation behaviour with no settled authority
-// behind it.
-//
-// NOTE ON DURABILITY. This is the CLIENT half only. The database helper
-// `private_internal_cost_claim_daily_site_snapshot` still accepts
-// submitted/resubmitted/accepted at both create and submit, so a caller going
-// straight to the RPC could still submit early. Closing that needs a migration
-// to that function, which is reported for a decision rather than taken here.
 export function canCopyDailySiteToCost(entry, role) {
   return canSeeSiteCosts(role) && entry?.disposition === "working" &&
     ["submitted", "resubmitted", "accepted"].includes(entry?.state);
 }
 
-// May a claim drafted from this site record be SUBMITTED for the Principal's
-// financial decision yet? Only once the record itself is accepted.
-export function canSubmitCostFromDailySite(entry) {
-  // A claim with no Daily Site Record source is unaffected by this ordering.
-  if (!entry) return true;
-  return entry.state === "accepted";
+// A Project Cost keeps the Daily Site Record it was originally copied from as
+// immutable provenance. Superseding that record must not strand the cost,
+// though: the current authoritative record for the SAME project/date becomes
+// the submission gate. The Daily Site table guarantees at most one live row
+// for a project/date, so this resolver does not invent a new relationship or
+// rewrite the claim's original source.
+export function resolveCurrentDailySiteSource(entry, entries = []) {
+  if (!entry || entry.state !== "superseded") return entry || null;
+
+  const liveStates = new Set(["draft", "submitted", "returned_for_correction", "resubmitted", "accepted"]);
+  return entries.find((candidate) =>
+    candidate.id !== entry.id &&
+    candidate.projectId === entry.projectId &&
+    candidate.workDate === entry.workDate &&
+    liveStates.has(candidate.state)
+  ) || entry;
 }
 
-// Why not, in the reader's language.
-export function costSubmissionBlockedReason(entry) {
-  if (!entry || entry.state === "accepted") return "";
-  if (["submitted", "resubmitted"].includes(entry.state)) {
-    return "The site record for this day is still awaiting review. It has to be accepted before this cost can go to the Principal for a financial decision.";
+// May a claim drafted from this site record be SUBMITTED for the Principal's
+// financial decision yet? If its original source was superseded, the current
+// corrected record for the same project/date controls the answer.
+export function canSubmitCostFromDailySite(entry, entries = []) {
+  if (!entry) return true;
+  const current = resolveCurrentDailySiteSource(entry, entries);
+  return current?.disposition === "working" && current?.state === "accepted";
+}
+
+// Why not, in the reader's language. A superseded source is historical, not a
+// dead end: explain the state of the current corrected record instead.
+export function costSubmissionBlockedReason(entry, entries = []) {
+  if (!entry) return "";
+  const current = resolveCurrentDailySiteSource(entry, entries);
+  if (current?.disposition === "working" && current?.state === "accepted") return "";
+
+  const correctedPrefix = entry.state === "superseded" && current?.id !== entry.id
+    ? "The current corrected site record for this day"
+    : "The site record for this day";
+
+  if (["submitted", "resubmitted"].includes(current?.state)) {
+    return `${correctedPrefix} is still awaiting review. It has to be accepted before this cost can go to the Principal for a financial decision.`;
   }
-  if (entry.state === "returned_for_correction") {
-    return "The site record for this day was returned for correction. It has to be corrected and accepted before this cost can be submitted.";
+  if (current?.state === "returned_for_correction") {
+    return `${correctedPrefix} was returned for correction. It has to be corrected and accepted before this cost can be submitted.`;
   }
-  return "The site record for this day is not accepted, so this cost cannot be submitted yet.";
+  if (current?.state === "draft") {
+    return `${correctedPrefix} is still a draft. It has to be submitted and accepted before this cost can be submitted.`;
+  }
+  if (current?.disposition === "no_work") {
+    return `${correctedPrefix} records no work for this day, so this labour cost cannot be submitted from it.`;
+  }
+  return `${correctedPrefix} is not accepted, so this cost cannot be submitted yet.`;
 }
 
 export function calculateSiteCostTotal(lines = []) {
