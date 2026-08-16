@@ -6,6 +6,7 @@ export const APPROVAL_TYPE_LABELS = {
   project_archive: "Project archive",
   project_restore: "Project restoration",
   project_material_change: "Material project change",
+  staff_compensation: "Staff compensation",
 };
 
 export const APPROVAL_STATE_LABELS = {
@@ -15,6 +16,7 @@ export const APPROVAL_STATE_LABELS = {
   approved: "Approved",
   rejected: "Rejected",
   withdrawn: "Withdrawn",
+  cancelled: "Cancelled",
 };
 
 export const APPROVAL_EVENT_LABELS = {
@@ -26,6 +28,7 @@ export const APPROVAL_EVENT_LABELS = {
   approved: "Request approved",
   rejected: "Request rejected",
   withdrawn: "Request withdrawn",
+  cancelled: "Request cancelled",
   project_change_applied: "Approved project change applied",
 };
 
@@ -49,9 +52,12 @@ const VALUE_LABELS = {
 export function mapApprovalRequest(row) {
   return {
     id: row.id,
+    source: "project",
+    sourceId: row.id,
     approvalDomain: row.approval_domain,
     approvalType: row.approval_type,
     projectId: row.project_id,
+    personId: "",
     requesterId: row.requester_id,
     state: row.state,
     requestRound: row.request_round,
@@ -68,6 +74,41 @@ export function mapApprovalRequest(row) {
     supersedesRequestId: row.supersedes_request_id || "",
   };
 }
+
+export function mapStaffCompensationApprovalRequest(row) {
+  return {
+    id: `staff-compensation-${row.id}`,
+    source: "staff_compensation",
+    sourceId: row.id,
+    approvalDomain: "finance",
+    approvalType: "staff_compensation",
+    projectId: row.project_id || "",
+    personId: row.person_id,
+    requesterId: row.requester_id,
+    state: row.lifecycle,
+    requestRound: row.request_round,
+    version: row.version,
+    compensationType: row.compensation_type,
+    serviceDate: row.service_date,
+    submittedAmount: row.submitted_amount,
+    approvedAmount: row.approved_amount,
+    description: row.description || "",
+    originalValues: {},
+    proposedValues: {},
+    reason: row.description || "",
+    requesterNotes: "",
+    decision: ["approved", "rejected", "amendment_requested"].includes(row.lifecycle)
+      ? row.lifecycle
+      : "",
+    decisionNotes: "",
+    requestedAt: row.submitted_at || row.updated_at || "",
+    reviewedAt: row.decided_at || "",
+    decidedAt: row.decided_at || "",
+    withdrawnAt: row.withdrawn_at || "",
+    cancelledAt: row.cancelled_at || "",
+  };
+}
+
 export function mapApprovalEvent(row) {
   return {
     id: row.id,
@@ -78,6 +119,20 @@ export function mapApprovalEvent(row) {
     toState: row.to_state,
     roundNumber: row.round_number,
     eventNotes: row.event_notes || "",
+    occurredAt: row.occurred_at || "",
+  };
+}
+
+export function mapStaffCompensationApprovalEvent(row) {
+  return {
+    id: row.id,
+    approvalRequestId: `staff-compensation-${row.compensation_id}`,
+    eventType: row.event_type,
+    actorId: row.actor_id,
+    fromState: row.previous_lifecycle || "",
+    toState: row.next_lifecycle || "",
+    roundNumber: row.request_round,
+    eventNotes: row.reason || "",
     occurredAt: row.occurred_at || "",
   };
 }
