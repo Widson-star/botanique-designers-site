@@ -82,7 +82,10 @@
     "Project reference that does not gate the compensation lifecycle. Post-apply",
     "verification confirmed RLS on both new tables, no authenticated direct writes,",
     "and zero Staff Compensation or event rows; no existing operational data was",
-    "migrated or rewritten."
+    "migrated or rewritten. The performance-advisor follow-up",
+    "staff_compensation_v1_indexes applied cleanly in one transaction (production",
+    "version 20260816183600), adding only covering indexes for the new requester,",
+    "decider and event-actor foreign keys."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-16",
@@ -110,6 +113,7 @@
     { "name": "operations_hub_maintenance_v1", "productionVersion": "20260815192636" },
     { "name": "maintenance_assignment_correction_authority", "productionVersion": "20260816123248" },
     { "name": "internal_cost_claim_superseded_dsr_submission", "productionVersion": "20260816124120" },
-    { "name": "staff_compensation_v1", "productionVersion": "20260816183349" }
+    { "name": "staff_compensation_v1", "productionVersion": "20260816183349" },
+    { "name": "staff_compensation_v1_indexes", "productionVersion": "20260816183600" }
   ]
 }
