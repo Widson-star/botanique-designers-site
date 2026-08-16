@@ -23,6 +23,7 @@ import DailySiteOperationsProvider from "./context/DailySiteOperationsProvider";
 import SiteCostsProvider from "./context/SiteCostsProvider";
 import FundRequestsProvider from "./context/FundRequestsProvider";
 import PeopleProvider from "./context/PeopleProvider";
+import StaffCompensationProvider from "./context/StaffCompensationProvider";
 import MaintenanceProvider from "./context/MaintenanceProvider";
 import AdminMaintenance from "./routes/AdminMaintenance";
 import AdminMaintenanceDetail from "./routes/AdminMaintenanceDetail";
@@ -34,6 +35,9 @@ import AdminFundRequestForm from "./routes/AdminFundRequestForm";
 import AdminFundRequestDetail from "./routes/AdminFundRequestDetail";
 import AdminFinance from "./routes/AdminFinance";
 import AdminFinanceUnbuilt from "./routes/AdminFinanceUnbuilt";
+import AdminStaffCompensation from "./routes/AdminStaffCompensation";
+import AdminStaffCompensationForm from "./routes/AdminStaffCompensationForm";
+import AdminStaffCompensationDetail from "./routes/AdminStaffCompensationDetail";
 import AdminReports from "./routes/AdminReports";
 import AdminPeople from "./routes/AdminPeople";
 import AdminPersonDetail from "./routes/AdminPersonDetail";
@@ -209,6 +213,7 @@ export default function AdminApp() {
         <SiteCostsProvider session={session} role={role} isDemo={isDemo}>
         <FundRequestsProvider session={session} role={role} isDemo={isDemo}>
         <PeopleProvider session={session} role={role} isDemo={isDemo}>
+        <StaffCompensationProvider session={session} role={role} isDemo={isDemo}>
         <MaintenanceProvider session={session} role={role} isDemo={isDemo}>
           <Routes>
             <Route
@@ -248,7 +253,10 @@ export default function AdminApp() {
               <Route path="/admin/finance" element={<AdminFinance />} />
               <Route path="/admin/finance/project-financials" element={<AdminFinanceUnbuilt area="project-financials" />} />
               <Route path="/admin/finance/company-expenses" element={<AdminFinanceUnbuilt area="company-expenses" />} />
-              <Route path="/admin/finance/staff-compensation" element={<AdminFinanceUnbuilt area="staff-compensation" />} />
+              <Route path="/admin/finance/staff-compensation" element={<AdminStaffCompensation />} />
+              <Route path="/admin/finance/staff-compensation/new" element={<AdminStaffCompensationForm />} />
+              <Route path="/admin/finance/staff-compensation/:compensationId" element={<AdminStaffCompensationDetail />} />
+              <Route path="/admin/finance/staff-compensation/:compensationId/edit" element={<AdminStaffCompensationForm />} />
               <Route path="/admin/people" element={<AdminPeople />} />
               <Route path="/admin/people/:personId" element={<AdminPersonDetail />} />
               <Route path="/admin/maintenance" element={<AdminMaintenance />} />
@@ -258,6 +266,7 @@ export default function AdminApp() {
             </Route>
           </Routes>
         </MaintenanceProvider>
+        </StaffCompensationProvider>
         </PeopleProvider>
         </FundRequestsProvider>
         </SiteCostsProvider>
