@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateSiteCostTotal, canCancelSiteCost, canCopyDailySiteToCost,
   canDecideSiteCost, canEditSiteCost, canSeeSiteCosts, canSubmitSiteCost,
-  canSubmitCostFromDailySite, costSubmissionBlockedReason,
+  canSubmitCostFromDailySite, costSubmissionBlockedReason, resolveCurrentDailySiteSource,
 } from "./siteCostCapabilities";
 
 describe("site cost capabilities", () => {
@@ -43,21 +43,50 @@ describe("site cost capabilities", () => {
   });
 });
 
-// FOUNDER ORDERING, unchanged: a DSR-derived Project Cost may not go for a
-// financial decision before its source record has been accepted.
-describe("Project Cost submission follows Daily Site Record acceptance", () => {
+// FOUNDER ORDERING: a DSR-derived Project Cost may not go for a financial
+// decision before the CURRENT authoritative DSR for that project/date has been
+// accepted. The original source remains the immutable provenance on the claim.
+describe("Project Cost submission follows current Daily Site Record acceptance", () => {
   const draft = { id: "c1", lifecycle: "draft", requesterId: "m1" };
+  const superseded = {
+    id: "old", projectId: "p1", workDate: "2026-08-15", state: "superseded", disposition: "working",
+  };
 
   it("refuses submission while the source record is still awaiting review", () => {
     expect(canSubmitSiteCost(draft, "manager", "m1")).toBe(true);
-    expect(canSubmitCostFromDailySite({ state: "submitted" })).toBe(false);
-    expect(costSubmissionBlockedReason({ state: "submitted" })).toMatch(/has to be accepted/);
+    expect(canSubmitCostFromDailySite({ state: "submitted", disposition: "working" })).toBe(false);
+    expect(costSubmissionBlockedReason({ state: "submitted", disposition: "working" })).toMatch(/has to be accepted/);
   });
 
   it("allows the requesting manager to submit once the record is accepted", () => {
     expect(canSubmitSiteCost(draft, "manager", "m1")).toBe(true);
-    expect(canSubmitCostFromDailySite({ state: "accepted" })).toBe(true);
-    expect(costSubmissionBlockedReason({ state: "accepted" })).toBe("");
+    expect(canSubmitCostFromDailySite({ state: "accepted", disposition: "working" })).toBe(true);
+    expect(costSubmissionBlockedReason({ state: "accepted", disposition: "working" })).toBe("");
+  });
+
+  it("keeps a superseded row as provenance but follows its accepted current correction", () => {
+    const current = {
+      id: "current", projectId: "p1", workDate: "2026-08-15", state: "accepted", disposition: "working",
+    };
+    expect(resolveCurrentDailySiteSource(superseded, [superseded, current])).toEqual(current);
+    expect(canSubmitCostFromDailySite(superseded, [superseded, current])).toBe(true);
+    expect(costSubmissionBlockedReason(superseded, [superseded, current])).toBe("");
+  });
+
+  it("remains blocked when the corrected current row is not yet accepted", () => {
+    const current = {
+      id: "current", projectId: "p1", workDate: "2026-08-15", state: "submitted", disposition: "working",
+    };
+    expect(canSubmitCostFromDailySite(superseded, [superseded, current])).toBe(false);
+    expect(costSubmissionBlockedReason(superseded, [superseded, current])).toMatch(/current corrected site record.*awaiting review/i);
+  });
+
+  it("refuses labour submission if the corrected current row records no work", () => {
+    const current = {
+      id: "current", projectId: "p1", workDate: "2026-08-15", state: "accepted", disposition: "no_work",
+    };
+    expect(canSubmitCostFromDailySite(superseded, [superseded, current])).toBe(false);
+    expect(costSubmissionBlockedReason(superseded, [superseded, current])).toMatch(/records no work/i);
   });
 
   it("keeps submission with the requester, not the Principal or another manager", () => {
