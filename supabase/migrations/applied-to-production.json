@@ -106,10 +106,22 @@
     "payment until its old payment position has been reviewed. Three Founder-verified",
     "Martine Lotom legacy staff claims were then imported as canonical Staff",
     "Compensation records with their original Project Costs retained for audit; no",
-    "Staff Compensation payment transactions were fabricated."
+    "Staff Compensation payment transactions were fabricated.",
+    "",
+    "STAFF COMPENSATION HISTORICAL SETTLEMENT, 17 Aug 2026.",
+    "staff_compensation_historical_settlement applied cleanly in one transaction",
+    "(production version 20260817090819). It corrects the legacy-payment boundary so",
+    "reviewing history can no longer imply KES 0 paid. Imported Staff Pay now stores",
+    "a Principal-confirmed historical paid amount separately from dated payment",
+    "transactions; effective paid and balance include both, overpayment and",
+    "cancellation guards use the combined truth, and a correction returns only the",
+    "historical assertion to unconfirmed without deleting real payments. Post-apply",
+    "verification confirmed all three imported approved records remained unconfirmed",
+    "with KES 0 historical amount as a neutral placeholder; no payment transaction or",
+    "historical settlement was fabricated."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-16",
+  "verifiedAt": "2026-08-17",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -138,6 +150,7 @@
     { "name": "staff_compensation_v1_indexes", "productionVersion": "20260816183600" },
     { "name": "staff_compensation_payments_v1", "productionVersion": "20260816184658" },
     { "name": "staff_compensation_payment_event_index", "productionVersion": "20260816184731" },
-    { "name": "staff_compensation_authority_and_legacy_truth", "productionVersion": "20260816201136" }
+    { "name": "staff_compensation_authority_and_legacy_truth", "productionVersion": "20260816201136" },
+    { "name": "staff_compensation_historical_settlement", "productionVersion": "20260817090819" }
   ]
 }
