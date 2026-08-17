@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { StaffCompensationContext } from "./staffCompensation";
 import {
-  cancelStaffCompensation, confirmStaffCompensationPaymentHistory, createStaffCompensationDraft,
+  cancelStaffCompensation, confirmStaffCompensationHistoricalPaymentPosition,
+  correctStaffCompensationHistoricalPaymentPosition, createStaffCompensationDraft,
   fetchStaffCompensationEvents, fetchStaffCompensationPaymentPositions, fetchStaffCompensationPayments,
   fetchStaffCompensations, principalAuthoriseStaffCompensation, recordStaffCompensationPayment,
   reverseStaffCompensationPayment, submitStaffCompensation, updateStaffCompensation,
@@ -26,6 +27,10 @@ function mapCompensation(row) {
     directAuthorityActorId: row.direct_authority_actor_id || "",
     legacySourceClaimId: row.legacy_source_claim_id || "",
     paymentHistoryKnown: Boolean(row.payment_history_known),
+    historicalPaidAmount: Number(row.historical_paid_amount || 0),
+    paymentHistoryConfirmedBy: row.payment_history_confirmed_by || "",
+    paymentHistoryConfirmedAt: row.payment_history_confirmed_at || "",
+    paymentHistoryNote: row.payment_history_note || "",
     version: row.version,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -61,6 +66,7 @@ function mapPosition(row) {
     compensationId: row.compensation_id,
     approvedAmount: row.approved_amount == null ? null : Number(row.approved_amount),
     paymentCount: Number(row.payment_count || 0),
+    historicalPaidAmount: row.historical_paid_amount == null ? null : Number(row.historical_paid_amount),
     paidAmount: row.paid_amount == null ? null : Number(row.paid_amount),
     balanceAmount: row.balance_amount == null ? null : Number(row.balance_amount),
     paymentStatus: row.payment_status,
@@ -129,7 +135,8 @@ export default function StaffCompensationProvider({ children, session, role, isD
   const submitRecord = useCallback((id, version) => run(() => submitStaffCompensation(accessToken, id, version)), [accessToken, run]);
   const withdrawRecord = useCallback((id, version, reason = "") => run(() => withdrawStaffCompensation(accessToken, id, version, reason)), [accessToken, run]);
   const cancelRecord = useCallback((id, version, reason) => run(() => cancelStaffCompensation(accessToken, id, version, reason)), [accessToken, run]);
-  const confirmPaymentHistory = useCallback((id, version, reason) => run(() => confirmStaffCompensationPaymentHistory(accessToken, id, version, reason)), [accessToken, run]);
+  const confirmPaymentHistory = useCallback((id, version, historicalPaidAmount, reason) => run(() => confirmStaffCompensationHistoricalPaymentPosition(accessToken, id, version, historicalPaidAmount, reason)), [accessToken, run]);
+  const correctPaymentHistory = useCallback((id, version, reason) => run(() => correctStaffCompensationHistoricalPaymentPosition(accessToken, id, version, reason)), [accessToken, run]);
   const recordPayment = useCallback((id, values) => run(() => recordStaffCompensationPayment(accessToken, id, values)), [accessToken, run]);
   const reversePayment = useCallback((paymentId, version, reason) => run(() => reverseStaffCompensationPayment(accessToken, paymentId, version, reason)), [accessToken, run]);
 
@@ -139,10 +146,10 @@ export default function StaffCompensationProvider({ children, session, role, isD
   const value = useMemo(() => ({
     compensations, payments, paymentPositions, eventsByCompensation, status, error,
     refresh, loadEvents, createDraft, authoriseDirect, updateRecord, submitRecord,
-    withdrawRecord, cancelRecord, confirmPaymentHistory, recordPayment, reversePayment,
+    withdrawRecord, cancelRecord, confirmPaymentHistory, correctPaymentHistory, recordPayment, reversePayment,
     paymentsForCompensation, paymentPositionForCompensation,
   }), [
-    authoriseDirect, cancelRecord, compensations, confirmPaymentHistory, createDraft, error,
+    authoriseDirect, cancelRecord, compensations, confirmPaymentHistory, correctPaymentHistory, createDraft, error,
     eventsByCompensation, loadEvents, paymentPositionForCompensation, paymentPositions,
     payments, paymentsForCompensation, recordPayment, refresh, reversePayment, status,
     submitRecord, updateRecord, withdrawRecord,
