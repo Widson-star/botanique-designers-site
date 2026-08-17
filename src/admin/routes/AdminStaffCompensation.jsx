@@ -49,6 +49,18 @@ export default function AdminStaffCompensation() {
   const drafts = compensations.filter((item) => item.lifecycle === "draft");
   const hasHistoricalSettlement = knownApproved.some((item) => Number(paymentPositionForCompensation(item.id)?.historicalPaidAmount || 0) > 0);
 
+  const visibleApproved = visible.filter((item) => item.lifecycle === "approved");
+  const visibleUnknown = visibleApproved.filter((item) => paymentPositionForCompensation(item.id)?.paymentStatus === "payment_history_unknown");
+  const visibleApprovedTotal = visibleApproved.reduce((sum, item) => sum + Number(item.approvedAmount || 0), 0);
+  const visiblePaidTotal = visibleApproved.reduce((sum, item) => {
+    const position = paymentPositionForCompensation(item.id);
+    return sum + (position?.paidAmount == null ? 0 : Number(position.paidAmount));
+  }, 0);
+  const visibleBalanceTotal = visibleApproved.reduce((sum, item) => {
+    const position = paymentPositionForCompensation(item.id);
+    return sum + (position?.balanceAmount == null ? 0 : Number(position.balanceAmount));
+  }, 0);
+
   const recordedPayments = payments
     .filter((item) => item.status === "recorded")
     .slice()
@@ -116,13 +128,23 @@ export default function AdminStaffCompensation() {
               return <li key={item.id} className="rounded-xl border border-stone-200 bg-white p-3.5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><Link to={`/admin/finance/staff-compensation/${item.id}`} className="font-semibold text-botanique-green hover:underline">{person?.fullName || "Person"}</Link><p className="mt-1 text-[11.5px] text-gray-500">#{index+1} · {date(item.serviceDate)} · {typeLabels[item.compensationType]}</p></div><Chip tone={tones[item.lifecycle]}>{labels[item.lifecycle]}</Chip></div><p className="mt-2 line-clamp-2 text-[12px] text-gray-600">{item.projectId ? projectMap.get(item.projectId)?.projectName || "Project" : "No Project context"}</p><dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[11.5px]"><div><dt className="text-gray-500">Total</dt><dd className="font-semibold tabular-nums">{money(item.lifecycle === "approved" ? item.approvedAmount : item.submittedAmount)}</dd></div><div><dt className="text-gray-500">Paid</dt><dd>{unknown || position?.paidAmount == null ? "—" : money(position.paidAmount)}</dd></div><div><dt className="text-gray-500">Balance</dt><dd>{unknown || position?.balanceAmount == null ? "—" : money(position.balanceAmount)}</dd></div></dl><div className="mt-2.5 flex justify-end"><PayActionMenu item={item} position={position} role={role} currentUserId={currentUserId} open={openMenu===item.id} dropUp={index===visible.length-1} onToggle={()=>setOpenMenu(openMenu===item.id?null:item.id)}/></div></li>;
             })}</ul>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 px-4 py-3 text-[11px] text-gray-500"><span>Showing 1 to {visible.length} of {visible.length} {visible.length===1?"record":"records"}</span><div className="flex items-center gap-2"><button disabled className="h-8 w-8 rounded-lg border border-stone-200 text-gray-300">‹</button><span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-botanique-green px-2 font-semibold text-botanique-green">1</span><button disabled className="h-8 w-8 rounded-lg border border-stone-200 text-gray-300">›</button><span className="rounded-lg border border-stone-200 px-3 py-2">10 / page</span></div></div>
+            <div className="border-t border-stone-100 px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
+                <span>Showing 1 to {visible.length} of {visible.length} {visible.length===1?"record":"records"}</span>
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-botanique-charcoal">
+                  <span>Approved <strong className="tabular-nums">{money(visibleApprovedTotal)}</strong></span>
+                  <span>Paid <strong className="tabular-nums">{visibleUnknown.length ? "—" : money(visiblePaidTotal)}</strong></span>
+                  <span>Balance <strong className="tabular-nums">{visibleUnknown.length ? "—" : money(visibleBalanceTotal)}</strong></span>
+                </div>
+                <div className="flex items-center gap-2"><button disabled className="h-8 w-8 rounded-lg border border-stone-200 text-gray-300">‹</button><span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-botanique-green px-2 font-semibold text-botanique-green">1</span><button disabled className="h-8 w-8 rounded-lg border border-stone-200 text-gray-300">›</button><span className="rounded-lg border border-stone-200 px-3 py-2">10 / page</span></div>
+              </div>
+              {visibleUnknown.length > 0 && <p className="mt-2 text-right text-[10.5px] text-gray-500">Paid and Balance totals stay blank until {visibleUnknown.length} imported payment {visibleUnknown.length === 1 ? "position is" : "positions are"} confirmed.</p>}
+            </div>
           </>}
         </div>
 
         <aside className="space-y-4">
           <section className="rounded-xl border border-stone-200 bg-white p-4"><div className="flex items-center gap-2.5"><Disc name="bell" tone="waiting" size="h-8 w-8"/><h2 className="text-[13.5px] font-semibold">Needs attention</h2></div><div className="mt-3 divide-y divide-stone-100"><Attention icon="people" tone="decision" label="Awaiting Principal decision" hint="Staff pay pending review" count={awaiting.length} to="/admin/approvals"/><Attention icon="balance" tone="waiting" label="Part-paid staff pay" hint="Have outstanding balances" count={partPaid.length} to="/admin/finance/staff-compensation"/><Attention icon="doc" tone="brand" label="Drafts pending submission" hint="Complete and submit for review" count={drafts.length} to="/admin/finance/staff-compensation"/>{historyUnknown.length>0&&<Attention icon="wallet" tone="neutral" label="Payment history to confirm" hint="Imported historical records" count={historyUnknown.length} to="/admin/finance/staff-compensation"/>}</div><Link to="/admin/finance/staff-compensation" className="mt-3 flex items-center justify-between text-[11.5px] font-semibold text-botanique-green">View all <span>→</span></Link></section>
-
           <section className="rounded-xl border border-stone-200 bg-white p-4"><div className="flex items-center gap-2.5"><Disc name="bank" tone="brand" size="h-8 w-8"/><h2 className="text-[13.5px] font-semibold">Recent payment activity</h2></div>{recordedPayments.length?<ul className="mt-3 divide-y divide-stone-100">{recordedPayments.map(({payment,person,project})=><li key={payment.id} className="py-3 first:pt-0"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[12px] font-semibold">{person?.fullName || "Person"}</p><p className="mt-0.5 truncate text-[10.5px] text-gray-500">{project?.projectName || "No Project context"}</p><p className="mt-0.5 text-[10px] text-gray-400">{methodLabels[payment.paymentChannel] || "Payment"} · {date(payment.paidAt)}</p></div><span className="shrink-0 text-[11px] font-semibold text-emerald-700">+{money(payment.amount)}</span></div></li>)}</ul>:<p className="mt-3 text-[11.5px] text-gray-500">{hasHistoricalSettlement ? "Historical settlement is included in Paid; no dated Staff Pay payment transaction has been recorded yet." : "No Staff Pay payment has been recorded yet."}</p>}<Link to="/admin/finance/staff-compensation" className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3 text-[11.5px] font-semibold text-botanique-green">View all activity <span>→</span></Link></section>
         </aside>
       </div>
@@ -138,7 +160,6 @@ function PayActionMenu({ item, position, role, currentUserId, open, dropUp = fal
   if (role === "owner" && item.lifecycle === "awaiting_review") items.unshift({ label: "Review in Approvals", to: `/admin/approvals/staff-compensation:${item.id}` });
   if (role === "manager" && item.requesterId === currentUserId && ["draft", "amendment_requested"].includes(item.lifecycle)) items.unshift({ label: item.lifecycle === "amendment_requested" ? "Amend and resubmit" : "Edit and submit", to: `/admin/finance/staff-compensation/${item.id}/edit` });
   if (item.legacySourceClaimId) items.push({ label: "View original Project Cost", to: `/admin/site-costs/${item.legacySourceClaimId}` });
-
   const menuPosition = dropUp ? "bottom-full mb-1" : "top-full mt-1";
   return <div className="relative inline-block text-left" onClick={(event)=>event.stopPropagation()}><button type="button" onClick={onToggle} aria-haspopup="menu" aria-expanded={open} aria-label="Staff pay actions" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-white text-gray-600 transition hover:border-botanique-green hover:text-botanique-green"><span aria-hidden="true" className="text-[15px] leading-none tracking-widest">···</span></button>{open&&<div role="menu" className={`absolute right-0 z-40 w-56 overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg ${menuPosition}`}>{items.map((action)=><Link key={action.label} role="menuitem" to={action.to} className="block px-3 py-2 text-left text-[12.5px] text-botanique-charcoal transition hover:bg-stone-50">{action.label}</Link>)}</div>}</div>;
 }
