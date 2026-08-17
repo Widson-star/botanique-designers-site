@@ -47,7 +47,7 @@ const stateInfo = {
   overdue: { label: "Overdue", className: "bg-red-50 text-red-700", priority: 3 },
   due: { label: "Due today", className: "bg-stone-100 text-gray-700", priority: 4 },
   draft_field_record: { label: "Draft field record", className: "bg-stone-100 text-gray-700", priority: 5 },
-  schedule_next: { label: "Schedule next visit", className: "bg-stone-100 text-gray-700", priority: 6 },
+  schedule_next: { label: "Schedule visit", className: "bg-stone-100 text-gray-700", priority: 6 },
   upcoming: { label: "Upcoming", className: "bg-[#eef3f0] text-botanique-green", priority: 8 },
 };
 
@@ -109,7 +109,7 @@ export default function AdminMaintenance() {
         const entry = byDate.get(currentVisit.scheduledDate) || null;
         const state = workState(currentVisit, entry, nowDate);
         rows.push({ relationship, visit: currentVisit, entry, state, info: stateInfo[state] });
-      } else if (relationship.frequency !== "as_needed") {
+      } else {
         rows.push({ relationship, visit: null, entry: activity[0] || null, state: "schedule_next", info: stateInfo.schedule_next });
       }
     }
@@ -281,7 +281,7 @@ export default function AdminMaintenance() {
               <td className="px-4 py-3">{relationshipStatusLabel(relationship.status)}</td>
               <td className="px-4 py-3">{frequencyLabel(relationship.frequency)}</td>
               <td className="px-4 py-3">{showDate(relationship.lastVisitDate)}</td>
-              <td className="px-4 py-3">{relationship.frequency === "as_needed" && !relationship.nextVisitDate ? "As needed" : showDate(relationship.nextVisitDate)}</td>
+              <td className="px-4 py-3">{relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</td>
               <td className="px-4 py-3">{(relationship.assignedTeam || []).map((member) => member.full_name).join(", ") || "—"}</td>
               <td className="px-4 py-3 text-right"><Link to={`/admin/maintenance/${relationship.id}`} className="font-semibold text-botanique-green">View →</Link></td>
             </tr>)}</tbody>
