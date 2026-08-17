@@ -35,8 +35,9 @@ export function fetchStaffCompensations(accessToken) {
       "id", "person_id", "project_id", "service_date", "compensation_type", "currency",
       "description", "lifecycle", "request_round", "submitted_amount", "approved_amount",
       "requester_id", "decider_id", "direct_authority_actor_id", "legacy_source_claim_id",
-      "payment_history_known", "version", "created_at", "updated_at", "submitted_at",
-      "decided_at", "withdrawn_at", "cancelled_at",
+      "payment_history_known", "historical_paid_amount", "payment_history_confirmed_by",
+      "payment_history_confirmed_at", "payment_history_note", "version", "created_at", "updated_at",
+      "submitted_at", "decided_at", "withdrawn_at", "cancelled_at",
     ].join(","),
     order: "service_date.desc,updated_at.desc",
   });
@@ -114,8 +115,17 @@ export function cancelStaffCompensation(accessToken, compensationId, expectedVer
   });
 }
 
-export function confirmStaffCompensationPaymentHistory(accessToken, compensationId, expectedVersion, reason) {
-  return rpc(accessToken, "confirm_staff_compensation_payment_history", {
+export function confirmStaffCompensationHistoricalPaymentPosition(accessToken, compensationId, expectedVersion, historicalPaidAmount, reason) {
+  return rpc(accessToken, "confirm_staff_compensation_historical_payment_position", {
+    target_compensation_id: compensationId,
+    target_expected_version: expectedVersion,
+    target_historical_paid_amount: Number(historicalPaidAmount),
+    target_reason: reason,
+  });
+}
+
+export function correctStaffCompensationHistoricalPaymentPosition(accessToken, compensationId, expectedVersion, reason) {
+  return rpc(accessToken, "correct_staff_compensation_historical_payment_position", {
     target_compensation_id: compensationId,
     target_expected_version: expectedVersion,
     target_reason: reason,
