@@ -118,7 +118,17 @@
     "historical assertion to unconfirmed without deleting real payments. Post-apply",
     "verification confirmed all three imported approved records remained unconfirmed",
     "with KES 0 historical amount as a neutral placeholder; no payment transaction or",
-    "historical settlement was fabricated."
+    "historical settlement was fabricated.",
+    "",
+    "MAINTENANCE DAILY SITE EXECUTION, 17 Aug 2026.",
+    "maintenance_daily_site_execution applied cleanly in one transaction (production",
+    "version 20260817092111). It reuses Daily Site Record as Maintenance's actual",
+    "field-execution record: an Active Maintenance relationship keeps a non-archived",
+    "site eligible for new Daily Site Records even after implementation stops being",
+    "Ongoing. Morning implementation compliance is deliberately unchanged, so weekly",
+    "or as-needed Maintenance never creates a false weekday DSR obligation. No",
+    "Maintenance relationship, visit, assignment, Project or Daily Site row was",
+    "created, changed or backfilled by this migration."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-17",
@@ -151,6 +161,7 @@
     { "name": "staff_compensation_payments_v1", "productionVersion": "20260816184658" },
     { "name": "staff_compensation_payment_event_index", "productionVersion": "20260816184731" },
     { "name": "staff_compensation_authority_and_legacy_truth", "productionVersion": "20260816201136" },
-    { "name": "staff_compensation_historical_settlement", "productionVersion": "20260817090819" }
+    { "name": "staff_compensation_historical_settlement", "productionVersion": "20260817090819" },
+    { "name": "maintenance_daily_site_execution", "productionVersion": "20260817092111" }
   ]
 }
