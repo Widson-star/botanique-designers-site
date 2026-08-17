@@ -128,7 +128,20 @@
     "Ongoing. Morning implementation compliance is deliberately unchanged, so weekly",
     "or as-needed Maintenance never creates a false weekday DSR obligation. No",
     "Maintenance relationship, visit, assignment, Project or Daily Site row was",
-    "created, changed or backfilled by this migration."
+    "created, changed or backfilled by this migration.",
+    "",
+    "PERSONNEL / LABOUR FINANCE BOUNDARY, 17 Aug 2026.",
+    "personnel_labour_finance_boundary applied cleanly in one transaction (production",
+    "version 20260817110220). It prevents new Project Cost obligations from using",
+    "recipient_type=staff: named Botanique staff belong in Staff Pay, while Project",
+    "Cost labour is reserved for casual/site crew. Existing historical staff-labelled",
+    "claims remain lifecycle-correctable so withdrawals/cancellations preserve audit",
+    "history. Before this boundary was recorded, the duplicate Alego Waweru KES 700",
+    "Project Cost was cancelled in favour of its existing Staff Pay record; the",
+    "Kitusuru Kefa KES 700 Project Cost remained Withdrawn and a canonical Kefa Staff",
+    "Pay record was created. The three Martine imported Staff Pay opening positions",
+    "were also Principal-confirmed at KES 0 historically paid, leaving balances of",
+    "KES 60,000 Karen, KES 25,000 Alego and KES 30,000 Lugulu."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-17",
@@ -162,6 +175,7 @@
     { "name": "staff_compensation_payment_event_index", "productionVersion": "20260816184731" },
     { "name": "staff_compensation_authority_and_legacy_truth", "productionVersion": "20260816201136" },
     { "name": "staff_compensation_historical_settlement", "productionVersion": "20260817090819" },
-    { "name": "maintenance_daily_site_execution", "productionVersion": "20260817092111" }
+    { "name": "maintenance_daily_site_execution", "productionVersion": "20260817092111" },
+    { "name": "personnel_labour_finance_boundary", "productionVersion": "20260817110220" }
   ]
 }
