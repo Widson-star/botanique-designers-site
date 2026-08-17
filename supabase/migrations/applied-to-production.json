@@ -162,7 +162,15 @@
     "and can schedule the next recurring visit in the same transaction. The migration",
     "created no operational rows and auto-closed no visits. Immediately after apply,",
     "the existing Kitusuru and Lugulu 17 Aug visits remained Scheduled with no DSR",
-    "link, outcome or follow-up; closure remains an explicit operator action."
+    "link, outcome or follow-up; closure remains an explicit operator action.",
+    "",
+    "MAINTENANCE SERVICE CADENCE V1, 17 Aug 2026.",
+    "maintenance_service_cadence_v1 applied cleanly in one transaction (production",
+    "version 20260817191907). It added nullable service_days and cadence_end_date",
+    "fields plus validation and read-model exposure. The fields are optional only;",
+    "they do not create visits or force service dates. The later UI correction keeps",
+    "actual Maintenance visits explicitly scheduled so changing client arrangements,",
+    "one-off inspections and staff handover periods remain operationally flexible."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-17",
@@ -199,6 +207,7 @@
     { "name": "maintenance_daily_site_execution", "productionVersion": "20260817092111" },
     { "name": "personnel_labour_finance_boundary", "productionVersion": "20260817110220" },
     { "name": "maintenance_authority_acl_correction", "productionVersion": "20260817155812" },
-    { "name": "maintenance_operating_loop_v1", "productionVersion": "20260817181419" }
+    { "name": "maintenance_operating_loop_v1", "productionVersion": "20260817181419" },
+    { "name": "maintenance_service_cadence_v1", "productionVersion": "20260817191907" }
   ]
 }
