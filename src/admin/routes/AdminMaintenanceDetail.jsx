@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
+import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useMaintenance } from "../context/maintenance";
 import { usePeople } from "../context/people";
 import {
@@ -9,40 +10,25 @@ import {
   frequencyLabel, relationshipStatusLabel, visitStatusLabel,
 } from "../utils/maintenanceCapabilities";
 
-const showDate = (value) => (value
-  ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`))
-  : "—");
-
-const today = () => new Date().toISOString().slice(0, 10);
-
-const VISIT_STATUS_BADGE = {
-  scheduled: "bg-[#edf2ef] text-botanique-green",
-  completed: "bg-stone-100 text-gray-600",
-  cancelled: "bg-red-50 text-red-700",
-};
+const showDate = (value) => value ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : "—";
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
+const liveEntryStates = new Set(["draft", "submitted", "returned_for_correction", "resubmitted", "accepted"]);
+const entryLabel = (state) => ({ draft: "Draft", submitted: "Awaiting review", returned_for_correction: "Correction needed", resubmitted: "Awaiting review", accepted: "Accepted" })[state] || state;
+const entryTone = (state) => ({ draft: "bg-stone-100 text-gray-600", submitted: "bg-sky-50 text-sky-800", returned_for_correction: "bg-amber-50 text-amber-800", resubmitted: "bg-sky-50 text-sky-800", accepted: "bg-emerald-50 text-emerald-800" })[state] || "bg-stone-100 text-gray-600";
+const visitTone = { scheduled: "bg-[#edf2ef] text-botanique-green", completed: "bg-stone-100 text-gray-600", cancelled: "bg-red-50 text-red-700" };
 
 function Panel({ title, action, children }) {
-  return (
-    <section className="min-w-0 rounded-lg border border-stone-200 bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {action}
-      </div>
-      <div className="mt-3">{children}</div>
-    </section>
-  );
+  return <section className="min-w-0 rounded-xl border border-stone-200 bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-[14px] font-semibold">{title}</h2>{action}</div><div className="mt-3">{children}</div></section>;
+}
+function Position({ label, value, hint }) {
+  return <div className="min-w-0"><p className="text-[10.5px] text-gray-500">{label}</p><p className="mt-1 truncate text-[13px] font-semibold text-botanique-charcoal">{value}</p>{hint && <p className="mt-0.5 text-[10.5px] text-gray-500">{hint}</p>}</div>;
 }
 
-// One Maintenance relationship, contained. Composition follows the working-
-// authority image's Maintenance panel and the compact Project Summary
-// pattern: a small grid of panels, not a long dossier. No cost, payment or
-// evidence panel appears here — none of that is Maintenance's to hold; a
-// visit or a purchase that costs money is a Project Cost, linked, not
-// recreated.
 export default function AdminMaintenanceDetail() {
   const { relationshipId } = useParams();
   const { role } = useAdminData();
   const { people } = usePeople();
+  const { entries = [], status: dailyStatus } = useDailySiteOperations();
   const {
     register, status, visitsForRelationship, assignmentsForRelationship,
     editRelationship, pauseRelationship, resumeRelationship, endRelationship,
@@ -57,7 +43,7 @@ export default function AdminMaintenanceDetail() {
   const [showVisitForm, setShowVisitForm] = useState(false);
   const [visitForm, setVisitForm] = useState({ scheduledDate: today(), purpose: "" });
   const [actingOnVisit, setActingOnVisit] = useState(null);
-  const [visitActionForm, setVisitActionForm] = useState({ note: "" });
+  const [visitActionForm, setVisitActionForm] = useState({ note: "", newDate: today() });
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [assignForm, setAssignForm] = useState({ personId: "", role: "site_technician", startDate: today() });
   const [editingDetails, setEditingDetails] = useState(false);
@@ -66,669 +52,126 @@ export default function AdminMaintenanceDetail() {
   const [correctionForm, setCorrectionForm] = useState(null);
 
   const relationship = register.find((candidate) => candidate.id === relationshipId);
-  const visits = useMemo(
-    () => visitsForRelationship(relationshipId).slice().sort((a, b) => (a.scheduledDate < b.scheduledDate ? 1 : -1)),
-    [visitsForRelationship, relationshipId]
-  );
-  const assignments = useMemo(
-    () => assignmentsForRelationship(relationshipId),
-    [assignmentsForRelationship, relationshipId]
-  );
+  const visits = useMemo(() => visitsForRelationship(relationshipId).slice().sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate)), [visitsForRelationship, relationshipId]);
+  const assignments = useMemo(() => assignmentsForRelationship(relationshipId), [assignmentsForRelationship, relationshipId]);
   const currentTeam = assignments.filter((assignment) => !assignment.endDate);
-  // Ended assignments are historical and terminal (the database refuses to
-  // rewrite them), so they stay readable here rather than disappearing —
-  // this is the assignment side of the same "history remains visible" rule
-  // Visit history already follows.
   const pastTeam = assignments.filter((assignment) => assignment.endDate);
-  const scheduledVisits = visits.filter((visit) => visit.status === "scheduled");
+  const scheduledVisits = visits.filter((visit) => visit.status === "scheduled").slice().sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
   const pastVisits = visits.filter((visit) => visit.status !== "scheduled");
+  const activePeople = useMemo(() => people.filter((person) => person.isActive && !currentTeam.some((assignment) => assignment.personId === person.id)), [people, currentTeam]);
 
-  const activePeople = useMemo(
-    () => people.filter((person) => person.isActive && !currentTeam.some((assignment) => assignment.personId === person.id)),
-    [people, currentTeam]
-  );
+  const fieldActivity = useMemo(() => {
+    if (!relationship) return [];
+    return entries.filter((entry) => entry.projectId === relationship.projectId && entry.workDate >= relationship.startDate && liveEntryStates.has(entry.state))
+      .slice().sort((a, b) => b.workDate.localeCompare(a.workDate) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
+  }, [entries, relationship]);
+  const latestActivity = fieldActivity[0] || null;
+  const nextVisit = scheduledVisits.find((visit) => visit.scheduledDate >= today()) || null;
+  const overdueVisits = scheduledVisits.filter((visit) => visit.scheduledDate < today());
+  const operationalGaps = [];
+  if (relationship?.status === "active" && !currentTeam.length) operationalGaps.push("No maintenance team assigned");
+  if (relationship?.status === "active" && relationship.frequency !== "as_needed" && !scheduledVisits.length) operationalGaps.push("Next visit is not scheduled");
+  if (overdueVisits.length) operationalGaps.push(`${overdueVisits.length} scheduled ${overdueVisits.length === 1 ? "visit is" : "visits are"} overdue`);
+  if (latestActivity?.state === "returned_for_correction") operationalGaps.push("Latest Daily Site Record needs correction");
+  if (["submitted", "resubmitted"].includes(latestActivity?.state)) operationalGaps.push("Latest Daily Site Record is awaiting review");
+  if (latestActivity?.evidenceStatus === "promised") operationalGaps.push("Promised field evidence is still outstanding");
+  const visitWithRecordStillOpen = scheduledVisits.find((visit) => fieldActivity.some((entry) => entry.workDate === visit.scheduledDate && entry.state === "accepted"));
+  if (visitWithRecordStillOpen) operationalGaps.push(`${showDate(visitWithRecordStillOpen.scheduledDate)} has an accepted field record but the visit is still marked Scheduled`);
 
-  if (!canSeeMaintenance(role)) {
-    return (
-      <section>
-        <h1 className="text-2xl font-semibold">Maintenance unavailable</h1>
-        <p className="mt-2 max-w-2xl text-sm text-gray-600">
-          Maintenance is available to the Principal and the Operations Manager.
-        </p>
-      </section>
-    );
-  }
-
+  if (!canSeeMaintenance(role)) return <section><h1 className="text-2xl font-semibold">Maintenance unavailable</h1><p className="mt-2 text-sm text-gray-600">Maintenance is available to the Principal and the Operations Manager.</p></section>;
   if (status === "loading") return <p className="text-sm text-gray-600">Loading Maintenance…</p>;
-
-  if (!relationship) {
-    return (
-      <section>
-        <Link to="/admin/maintenance" className="text-sm font-semibold text-botanique-green hover:underline">← Maintenance</Link>
-        <h1 className="mt-2 text-2xl font-semibold">Maintenance relationship not found</h1>
-        <p className="mt-2 max-w-2xl text-sm text-gray-600">
-          This Maintenance relationship does not exist, or you do not have authority to view it.
-        </p>
-      </section>
-    );
-  }
+  if (!relationship) return <section><Link to="/admin/maintenance" className="text-sm font-semibold text-botanique-green">← Maintenance</Link><h1 className="mt-2 text-2xl font-semibold">Maintenance relationship not found</h1></section>;
 
   async function report(promise, successMessage) {
-    setActionError("");
-    setFeedback("");
+    setActionError(""); setFeedback("");
     const result = await promise;
-    if (result.ok) setFeedback(successMessage);
-    else setActionError(result.error || "That action did not complete.");
+    if (result.ok) setFeedback(successMessage); else setActionError(result.error || "That action did not complete.");
     return result;
   }
-
   async function submitTransition(kind) {
-    if (kind === "end" && !transitionReason.trim()) {
-      setActionError("Explain why this Maintenance relationship is ending.");
-      return;
-    }
-    const action = kind === "pause"
-      ? pauseRelationship(relationship.id, relationship.version, transitionReason.trim())
-      : kind === "resume"
-        ? resumeRelationship(relationship.id, relationship.version)
-        : endRelationship(relationship.id, relationship.version, transitionReason.trim());
-    const messages = {
-      pause: "Maintenance paused.",
-      resume: "Maintenance resumed.",
-      end: "Maintenance relationship ended. The site's Project record is unchanged.",
-    };
-    const result = await report(action, messages[kind]);
-    if (result.ok) {
-      setConfirmingTransition("");
-      setTransitionReason("");
-    }
+    if (kind === "end" && !transitionReason.trim()) return setActionError("Explain why this Maintenance relationship is ending.");
+    const action = kind === "pause" ? pauseRelationship(relationship.id, relationship.version, transitionReason.trim()) : kind === "resume" ? resumeRelationship(relationship.id, relationship.version) : endRelationship(relationship.id, relationship.version, transitionReason.trim());
+    const result = await report(action, { pause: "Maintenance paused.", resume: "Maintenance resumed.", end: "Maintenance relationship ended. The Project record is unchanged." }[kind]);
+    if (result.ok) { setConfirmingTransition(""); setTransitionReason(""); }
   }
-
   async function submitVisit(event) {
     event.preventDefault();
-    if (!visitForm.purpose.trim()) {
-      setActionError("Describe the planned work for this visit.");
-      return;
-    }
-    const result = await report(
-      addVisit({ relationshipId: relationship.id, scheduledDate: visitForm.scheduledDate, purpose: visitForm.purpose.trim() }),
-      "Visit scheduled."
-    );
-    if (result.ok) {
-      setShowVisitForm(false);
-      setVisitForm({ scheduledDate: today(), purpose: "" });
-    }
+    if (!visitForm.purpose.trim()) return setActionError("Describe the planned work for this visit.");
+    const result = await report(addVisit({ relationshipId: relationship.id, scheduledDate: visitForm.scheduledDate, purpose: visitForm.purpose.trim() }), "Visit scheduled.");
+    if (result.ok) { setShowVisitForm(false); setVisitForm({ scheduledDate: today(), purpose: "" }); }
   }
-
   function startVisitAction(visit, kind) {
-    setActionError("");
-    setFeedback("");
-    setActingOnVisit({ visit, kind });
-    setVisitActionForm({ note: "", newDate: visit.scheduledDate });
+    setActionError(""); setFeedback(""); setActingOnVisit({ visit, kind }); setVisitActionForm({ note: "", newDate: visit.scheduledDate });
   }
-
   async function submitVisitAction(event) {
-    event.preventDefault();
-    const { visit, kind } = actingOnVisit;
-    if (kind === "complete" && !visitActionForm.note.trim()) {
-      setActionError("Add a short completed-work note.");
-      return;
-    }
-    if (kind === "cancel" && !visitActionForm.note.trim()) {
-      setActionError("A cancellation reason is required.");
-      return;
-    }
-    const action = kind === "complete"
-      ? completeVisit(visit.id, visit.version, visitActionForm.note.trim())
-      : kind === "cancel"
-        ? cancelVisit(visit.id, visit.version, visitActionForm.note.trim())
-        : rescheduleVisit(visit.id, visit.version, visitActionForm.newDate);
-    const messages = {
-      complete: "Visit marked completed.",
-      cancel: "Visit cancelled.",
-      reschedule: "Visit rescheduled.",
-    };
-    const result = await report(action, messages[kind]);
+    event.preventDefault(); const { visit, kind } = actingOnVisit;
+    if (["complete", "cancel"].includes(kind) && !visitActionForm.note.trim()) return setActionError(kind === "complete" ? "Add a short completed-work note." : "A cancellation reason is required.");
+    const action = kind === "complete" ? completeVisit(visit.id, visit.version, visitActionForm.note.trim()) : kind === "cancel" ? cancelVisit(visit.id, visit.version, visitActionForm.note.trim()) : rescheduleVisit(visit.id, visit.version, visitActionForm.newDate);
+    const result = await report(action, { complete: "Visit marked completed.", cancel: "Visit cancelled.", reschedule: "Visit rescheduled." }[kind]);
     if (result.ok) setActingOnVisit(null);
   }
-
   async function submitAssignment(event) {
-    event.preventDefault();
-    if (!assignForm.personId) {
-      setActionError("Choose a person.");
-      return;
-    }
-    const person = people.find((candidate) => candidate.id === assignForm.personId);
-    const result = await report(
-      addAssignment({ relationshipId: relationship.id, ...assignForm }, person?.fullName),
-      "Person assigned to this Maintenance relationship."
-    );
-    if (result.ok) {
-      setShowAssignForm(false);
-      setAssignForm({ personId: "", role: "site_technician", startDate: today() });
-    }
+    event.preventDefault(); if (!assignForm.personId) return setActionError("Choose a person.");
+    const result = await report(addAssignment({ relationshipId: relationship.id, ...assignForm }), "Person assigned to Maintenance.");
+    if (result.ok) { setShowAssignForm(false); setAssignForm({ personId: "", role: "site_technician", startDate: today() }); }
   }
-
-  function startEditingDetails() {
-    setActionError("");
-    setFeedback("");
-    setDetailsForm({
-      scope: relationship.scope,
-      startDate: relationship.startDate,
-      frequency: relationship.frequency,
-    });
-    setEditingDetails(true);
-  }
-
+  function startEditingDetails() { setDetailsForm({ scope: relationship.scope, startDate: relationship.startDate, frequency: relationship.frequency }); setEditingDetails(true); setActionError(""); }
   async function submitDetails(event) {
-    event.preventDefault();
-    const result = await report(
-      editRelationship(relationship.id, relationship.version, detailsForm),
-      "Maintenance details updated."
-    );
-    if (result.ok) {
-      setEditingDetails(false);
-      setDetailsForm(null);
-    }
+    event.preventDefault(); const result = await report(editRelationship(relationship.id, relationship.version, detailsForm), "Maintenance details updated.");
+    if (result.ok) { setEditingDetails(false); setDetailsForm(null); }
   }
-
-  function startCorrection(assignment) {
-    setActionError("");
-    setFeedback("");
-    setCorrecting(assignment);
-    setCorrectionForm({
-      role: assignment.role,
-      startDate: assignment.startDate,
-      correctionReason: "",
-    });
-  }
-
+  function startCorrection(assignment) { setCorrecting(assignment); setCorrectionForm({ role: assignment.role, startDate: assignment.startDate, correctionReason: "" }); setActionError(""); }
   async function submitCorrection(event) {
-    event.preventDefault();
-    if (correctionForm.correctionReason.trim().length < 3) {
-      setActionError("Explain why this Maintenance assignment is being corrected.");
-      return;
-    }
-    const result = await report(
-      correctAssignment({
-        assignmentId: correcting.id,
-        expectedVersion: correcting.version,
-        role: correctionForm.role,
-        startDate: correctionForm.startDate,
-        correctionReason: correctionForm.correctionReason,
-      }),
-      "Assignment correction recorded."
-    );
-    if (result.ok) {
-      setCorrecting(null);
-      setCorrectionForm(null);
-    }
+    event.preventDefault(); if (correctionForm.correctionReason.trim().length < 3) return setActionError("Explain why this assignment is being corrected.");
+    const result = await report(correctAssignment({ assignmentId: correcting.id, expectedVersion: correcting.version, role: correctionForm.role, startDate: correctionForm.startDate, correctionReason: correctionForm.correctionReason.trim() }), "Assignment correction recorded.");
+    if (result.ok) { setCorrecting(null); setCorrectionForm(null); }
   }
 
-  return (
-    <section>
-      <Link to="/admin/maintenance" className="text-sm font-semibold text-botanique-green hover:underline">← Maintenance</Link>
+  return <section className="space-y-4">
+    <Link to="/admin/maintenance" className="text-sm font-semibold text-botanique-green">← Maintenance</Link>
+    <header className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-botanique-green">Operations · Maintenance</p><h1 className="mt-1 text-2xl font-semibold">{relationship.projectName}</h1><p className="mt-1 text-sm text-gray-600">{frequencyLabel(relationship.frequency)} · {relationshipStatusLabel(relationship.status)} · Project status: {relationship.projectStatus || "—"}</p></div><Link to={`/admin/projects/${relationship.projectId}`} className="min-h-10 py-2 text-sm font-semibold text-botanique-green">View Project →</Link></header>
+    {feedback && <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{feedback}</p>}{actionError && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{actionError}</p>}{dailyStatus === "error" && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Maintenance loaded, but Daily Site Records could not be read. Field execution is temporarily incomplete.</p>}
 
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">{relationship.projectName}</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            {relationship.clientSiteName ? `${relationship.clientSiteName} · ` : ""}
-            Project status: {relationship.projectStatus || "—"}
-          </p>
-        </div>
-        <Link
-          to={`/admin/projects/${relationship.projectId}`}
-          className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline"
-        >
-          View Project →
-        </Link>
-      </div>
-
-      {feedback && <p className="mt-4 rounded-md border border-stone-200 bg-[#edf2ef] p-3 text-sm text-botanique-green">{feedback}</p>}
-      {actionError && <p className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">{actionError}</p>}
-
-      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
-        <div className="grid min-w-0 grid-cols-1 gap-4">
-          <Panel
-            title="Scheduled visits"
-            action={canManageMaintenance(role) && relationship.status !== "ended" && (
-              <button
-                type="button"
-                onClick={() => { setShowVisitForm((shown) => !shown); setActionError(""); }}
-                className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline"
-              >
-                {showVisitForm ? "Cancel" : "Schedule visit"}
-              </button>
-            )}
-          >
-            {showVisitForm && (
-              <form onSubmit={submitVisit} className="mb-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3 sm:grid-cols-3">
-                <label className="text-sm font-medium">Scheduled date
-                  <input
-                    type="date"
-                    value={visitForm.scheduledDate}
-                    onChange={(event) => setVisitForm({ ...visitForm, scheduledDate: event.target.value })}
-                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                    required
-                  />
-                </label>
-                <label className="text-sm font-medium sm:col-span-2">Planned work / purpose
-                  <input
-                    value={visitForm.purpose}
-                    onChange={(event) => setVisitForm({ ...visitForm, purpose: event.target.value })}
-                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                    maxLength={1000}
-                    required
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark sm:col-span-3 sm:w-auto sm:justify-self-start"
-                >
-                  Schedule visit
-                </button>
-              </form>
-            )}
-
-            {!scheduledVisits.length && <p className="text-sm text-gray-600">No visit currently scheduled.</p>}
-
-            <ul className="divide-y divide-stone-100">
-              {scheduledVisits.map((visit) => (
-                <li key={visit.id} className="py-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{showDate(visit.scheduledDate)}</span>
-                      <span className="block truncate text-xs text-gray-500">{visit.purpose}</span>
-                    </span>
-                    {/* Fail-safe: under the corrected database rule an Ended
-                        relationship has zero Scheduled visits, so this branch
-                        should be unreachable in practice — the explicit
-                        status check keeps it that way even against stale or
-                        otherwise inconsistent data. */}
-                    {canManageMaintenance(role) && relationship.status !== "ended" && (
-                      <span className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
-                        <button type="button" onClick={() => startVisitAction(visit, "complete")} className="min-h-11 py-2 text-botanique-green hover:underline">Complete</button>
-                        <button type="button" onClick={() => startVisitAction(visit, "reschedule")} className="min-h-11 py-2 text-gray-600 hover:text-botanique-charcoal hover:underline">Reschedule</button>
-                        <button type="button" onClick={() => startVisitAction(visit, "cancel")} className="min-h-11 py-2 text-gray-600 hover:text-botanique-charcoal hover:underline">Cancel</button>
-                      </span>
-                    )}
-                  </div>
-
-                  {actingOnVisit?.visit.id === visit.id && (
-                    <form onSubmit={submitVisitAction} className="mt-2 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
-                      {actingOnVisit.kind === "reschedule" ? (
-                        <label className="text-sm font-medium">New scheduled date
-                          <input
-                            type="date"
-                            value={visitActionForm.newDate}
-                            onChange={(event) => setVisitActionForm({ ...visitActionForm, newDate: event.target.value })}
-                            className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                            required
-                          />
-                        </label>
-                      ) : (
-                        <label className="text-sm font-medium">
-                          {actingOnVisit.kind === "complete" ? "Completed-work note" : "Cancellation reason"}
-                          <input
-                            value={visitActionForm.note}
-                            onChange={(event) => setVisitActionForm({ ...visitActionForm, note: event.target.value })}
-                            className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                            maxLength={actingOnVisit.kind === "complete" ? 2000 : 1000}
-                            required
-                          />
-                        </label>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-                          {actingOnVisit.kind === "complete" ? "Mark completed" : actingOnVisit.kind === "cancel" ? "Cancel visit" : "Save new date"}
-                        </button>
-                        <button type="button" onClick={() => setActingOnVisit(null)} className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline">Cancel</button>
-                      </div>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
-          <Panel title="Visit history">
-            {!pastVisits.length && <p className="text-sm text-gray-600">No completed or cancelled visit yet.</p>}
-            <ul className="divide-y divide-stone-100">
-              {pastVisits.map((visit) => (
-                <li key={visit.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{showDate(visit.scheduledDate)} · {visit.purpose}</p>
-                    <p className="text-xs text-gray-500">
-                      {visit.status === "completed" ? visit.completionNote : visit.cancellationReason}
-                    </p>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${VISIT_STATUS_BADGE[visit.status] || ""}`}>
-                    {visitStatusLabel(visit.status)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        </div>
-
-        <div className="grid min-w-0 grid-cols-1 gap-4">
-          <Panel
-            title="Maintenance details"
-            action={canManageMaintenance(role) && relationship.status !== "ended" && !editingDetails && (
-              <button
-                type="button"
-                onClick={startEditingDetails}
-                className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline"
-              >
-                Edit
-              </button>
-            )}
-          >
-            {editingDetails && detailsForm && (
-              <form onSubmit={submitDetails} className="mb-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
-                <label className="text-sm font-medium">Maintenance scope
-                  <input
-                    value={detailsForm.scope}
-                    onChange={(event) => setDetailsForm({ ...detailsForm, scope: event.target.value })}
-                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
-                    maxLength={2000}
-                    required
-                  />
-                </label>
-                <label className="text-sm font-medium">Start date
-                  <input
-                    type="date"
-                    value={detailsForm.startDate}
-                    onChange={(event) => setDetailsForm({ ...detailsForm, startDate: event.target.value })}
-                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
-                    required
-                  />
-                </label>
-                <label className="text-sm font-medium">Frequency
-                  <select
-                    value={detailsForm.frequency}
-                    onChange={(event) => setDetailsForm({ ...detailsForm, frequency: event.target.value })}
-                    className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
-                  >
-                    {MAINTENANCE_FREQUENCIES.map((value) => (
-                      <option key={value} value={value}>{frequencyLabel(value)}</option>
-                    ))}
-                  </select>
-                </label>
-                <p className="text-xs text-gray-500">
-                  This edits the Maintenance record only. The linked Project and its status are unchanged, and
-                  Maintenance status moves only through Pause, Resume or End.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-                    Save details
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setEditingDetails(false); setDetailsForm(null); }}
-                    className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-
-            <dl className="grid gap-2 text-sm">
-              <div className="flex justify-between gap-3">
-                <dt className="text-gray-500">Status</dt>
-                <dd>{relationshipStatusLabel(relationship.status)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-gray-500">Frequency</dt>
-                <dd>{frequencyLabel(relationship.frequency)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-gray-500">Start date</dt>
-                <dd>{showDate(relationship.startDate)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-gray-500">Next visit</dt>
-                <dd>{relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</dd>
-              </div>
-            </dl>
-            <p className="mt-3 text-sm text-gray-600">{relationship.scope}</p>
-
-            {canManageMaintenance(role) && (
-              <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-100 pt-3">
-                {relationship.status === "active" && (
-                  <button type="button" onClick={() => { setConfirmingTransition("pause"); setActionError(""); }} className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline">
-                    Pause Maintenance
-                  </button>
-                )}
-                {relationship.status === "paused" && (
-                  <button type="button" onClick={() => submitTransition("resume")} className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline">
-                    Resume Maintenance
-                  </button>
-                )}
-                {relationship.status !== "ended" && (
-                  <button type="button" onClick={() => { setConfirmingTransition("end"); setActionError(""); }} className="min-h-11 py-2 text-sm font-semibold text-gray-600 hover:text-botanique-charcoal hover:underline">
-                    End Maintenance
-                  </button>
-                )}
-              </div>
-            )}
-
-            {confirmingTransition && (
-              <form
-                onSubmit={(event) => { event.preventDefault(); submitTransition(confirmingTransition); }}
-                className="mt-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3"
-              >
-                <p className="text-sm text-gray-700">
-                  {confirmingTransition === "pause"
-                    ? "Pausing keeps this relationship in place; it can be resumed later."
-                    : "Ending closes this Maintenance relationship. The site's Project record and status are unchanged."}
-                </p>
-                <label className="text-sm font-medium">Reason {confirmingTransition === "pause" ? "(optional)" : ""}
-                  <input
-                    value={transitionReason}
-                    onChange={(event) => setTransitionReason(event.target.value)}
-                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                    maxLength={1000}
-                    required={confirmingTransition === "end"}
-                  />
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-                    Confirm
-                  </button>
-                  <button type="button" onClick={() => { setConfirmingTransition(""); setTransitionReason(""); }} className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-          </Panel>
-
-          <Panel
-            title="Assigned team"
-            action={canManageMaintenance(role) && relationship.status !== "ended" && (
-              <button
-                type="button"
-                onClick={() => { setShowAssignForm((shown) => !shown); setActionError(""); }}
-                className="min-h-11 py-2 text-sm font-semibold text-botanique-green hover:underline"
-              >
-                {showAssignForm ? "Cancel" : "Assign person"}
-              </button>
-            )}
-          >
-            {showAssignForm && (
-              <form onSubmit={submitAssignment} className="mb-3 grid gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
-                <label className="text-sm font-medium">Person
-                  <select
-                    value={assignForm.personId}
-                    onChange={(event) => setAssignForm({ ...assignForm, personId: event.target.value })}
-                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                    required
-                  >
-                    <option value="">Choose a person</option>
-                    {activePeople.map((person) => (
-                      <option key={person.id} value={person.id}>{person.fullName}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm font-medium">Responsibility
-                  <select
-                    value={assignForm.role}
-                    onChange={(event) => setAssignForm({ ...assignForm, role: event.target.value })}
-                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                  >
-                    {MAINTENANCE_ASSIGNMENT_ROLES.map((value) => (
-                      <option key={value} value={value}>{assignmentRoleLabel(value)}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="text-sm font-medium">Starts
-                  <input
-                    type="date"
-                    value={assignForm.startDate}
-                    onChange={(event) => setAssignForm({ ...assignForm, startDate: event.target.value })}
-                    className="mt-1 block w-full rounded-md border border-stone-300 px-3 py-2.5"
-                    required
-                  />
-                </label>
-                <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-                  Assign
-                </button>
-              </form>
-            )}
-
-            {!currentTeam.length && <p className="text-sm text-gray-600">Nobody is currently assigned.</p>}
-            <ul className="divide-y divide-stone-100">
-              {currentTeam.map((assignment) => (
-                <li key={assignment.id} className="py-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{assignment.personName}</span>
-                      <span className="block truncate text-xs text-gray-500">
-                        {assignmentRoleLabel(assignment.role)} · since {showDate(assignment.startDate)}
-                      </span>
-                    </span>
-                    {/* Fail-safe: ending a relationship atomically closes every
-                        open assignment server-side, so currentTeam should
-                        already be empty for an Ended relationship — this
-                        status check keeps the button from reappearing against
-                        stale or otherwise inconsistent data. */}
-                    {canManageMaintenance(role) && relationship.status !== "ended" && (
-                      <button
-                        type="button"
-                        onClick={() => report(
-                          endAssignment(assignment.id, assignment.version),
-                          "Assignment ended."
-                        )}
-                        className="min-h-11 shrink-0 py-2 text-xs font-semibold text-gray-600 hover:text-botanique-charcoal hover:underline"
-                      >
-                        End
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Correcting what was recorded is Principal-only and is
-                      deliberately not presented as an ordinary edit: it sits
-                      below the row, in muted type, separate from End. */}
-                  {canCorrectMaintenanceAssignment(role) && relationship.status !== "ended" && correcting?.id !== assignment.id && (
-                    <button
-                      type="button"
-                      onClick={() => startCorrection(assignment)}
-                      className="min-h-11 py-2 text-xs font-semibold text-botanique-green hover:underline"
-                    >
-                      Correct assignment
-                    </button>
-                  )}
-
-                  {correcting?.id === assignment.id && correctionForm && (
-                    <form onSubmit={submitCorrection} className="mt-2 grid min-w-0 gap-3 rounded-md border border-stone-200 bg-stone-50 p-3">
-                      <p className="text-sm text-gray-700">
-                        Correcting a recorded assignment. The person and the linked Maintenance relationship cannot
-                        change; the original values and your reason are kept in the record.
-                      </p>
-                      <div className="text-sm">
-                        <span className="text-gray-500">Person</span>
-                        <p className="font-medium">{assignment.personName}</p>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="min-w-0 text-sm">
-                          <span className="text-gray-500">Current responsibility</span>
-                          <p className="font-medium">{assignmentRoleLabel(assignment.role)}</p>
-                        </div>
-                        <label className="min-w-0 text-sm font-medium">Corrected responsibility
-                          <select
-                            value={correctionForm.role}
-                            onChange={(event) => setCorrectionForm({ ...correctionForm, role: event.target.value })}
-                            className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
-                          >
-                            {MAINTENANCE_ASSIGNMENT_ROLES.map((value) => (
-                              <option key={value} value={value}>{assignmentRoleLabel(value)}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <div className="min-w-0 text-sm">
-                          <span className="text-gray-500">Current start date</span>
-                          <p className="font-medium">{showDate(assignment.startDate)}</p>
-                        </div>
-                        <label className="min-w-0 text-sm font-medium">Corrected start date
-                          <input
-                            type="date"
-                            value={correctionForm.startDate}
-                            onChange={(event) => setCorrectionForm({ ...correctionForm, startDate: event.target.value })}
-                            className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
-                            required
-                          />
-                        </label>
-                      </div>
-                      <label className="min-w-0 text-sm font-medium">Why is this assignment being corrected?
-                        <textarea
-                          value={correctionForm.correctionReason}
-                          onChange={(event) => setCorrectionForm({ ...correctionForm, correctionReason: event.target.value })}
-                          className="mt-1 block w-full min-w-0 rounded-md border border-stone-300 px-3 py-2.5"
-                          rows={3}
-                          minLength={3}
-                          maxLength={1000}
-                          required
-                        />
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        <button type="submit" className="inline-flex min-h-11 items-center justify-center rounded-md bg-botanique-green px-4 py-2 text-sm font-semibold text-white hover:bg-botanique-dark">
-                          Save correction
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setCorrecting(null); setCorrectionForm(null); }}
-                          className="min-h-11 px-2 py-2 text-sm font-semibold text-gray-600 hover:underline"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            {pastTeam.length > 0 && (
-              <div className="mt-4 border-t border-stone-100 pt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Past assignments</p>
-                <ul className="mt-2 divide-y divide-stone-100">
-                  {pastTeam.map((assignment) => (
-                    <li key={assignment.id} className="py-2">
-                      <span className="block truncate text-sm font-medium text-gray-700">{assignment.personName}</span>
-                      <span className="block truncate text-xs text-gray-500">
-                        {assignmentRoleLabel(assignment.role)} · {showDate(assignment.startDate)} – {showDate(assignment.endDate)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </Panel>
-        </div>
-      </div>
+    <section className="rounded-xl border border-stone-200 bg-white p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-[14px] font-semibold">Operating position</h2><p className="mt-1 text-[12px] text-gray-500">Maintenance plan and actual site execution shown together.</p></div>{operationalGaps.length ? <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800">Needs attention</span> : <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">Current</span>}</div><div className="mt-4 grid gap-3 border-t border-stone-100 pt-4 sm:grid-cols-2 lg:grid-cols-4"><Position label="Next planned visit" value={nextVisit ? showDate(nextVisit.scheduledDate) : relationship.frequency === "as_needed" ? "As needed" : "Not scheduled"} hint={nextVisit?.purpose}/><Position label="Latest field record" value={latestActivity ? showDate(latestActivity.workDate) : "None yet"} hint={latestActivity ? entryLabel(latestActivity.state) : "Daily Site Record"}/><Position label="Evidence" value={latestActivity ? evidenceLabel(latestActivity.evidenceStatus) : "—"} hint={latestActivity?.crewReference || ""}/><Position label="Assigned team" value={currentTeam.length ? currentTeam.map((item) => item.personName).join(", ") : "Unassigned"} hint={`${currentTeam.length} active ${currentTeam.length === 1 ? "assignment" : "assignments"}`}/></div>{operationalGaps.length > 0 && <ul className="mt-4 grid gap-2 border-t border-stone-100 pt-4 sm:grid-cols-2">{operationalGaps.map((gap) => <li key={gap} className="rounded-lg bg-amber-50 px-3 py-2 text-[11.5px] text-amber-900">{gap}</li>)}</ul>}
+      {relationship.status === "active" && <div className="mt-4 flex flex-wrap gap-2 border-t border-stone-100 pt-4"><Link to={`/admin/daily-site-operations/new?project=${relationship.projectId}`} className="inline-flex min-h-10 items-center rounded-lg bg-botanique-green px-3.5 text-[12px] font-semibold text-white">Record field work</Link>{latestActivity && <Link to={`/admin/daily-site-operations/${latestActivity.id}`} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-3.5 text-[12px] font-semibold text-botanique-green">Open latest site record</Link>}<button type="button" onClick={() => setShowVisitForm(true)} className="min-h-10 rounded-lg border border-stone-300 px-3.5 text-[12px] font-semibold">Schedule next visit</button></div>}
     </section>
-  );
+
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(300px,.75fr)] lg:items-start">
+      <div className="space-y-4">
+        <Panel title="Planned visits" action={canManageMaintenance(role) && relationship.status !== "ended" && <button onClick={() => setShowVisitForm((open) => !open)} className="min-h-9 text-[12px] font-semibold text-botanique-green">{showVisitForm ? "Close" : "Schedule visit"}</button>}>
+          {showVisitForm && <form onSubmit={submitVisit} className="mb-3 grid gap-3 rounded-lg bg-stone-50 p-3 sm:grid-cols-3"><label className="text-[12px] font-medium">Date<input type="date" value={visitForm.scheduledDate} onChange={(e) => setVisitForm({ ...visitForm, scheduledDate: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3" required /></label><label className="text-[12px] font-medium sm:col-span-2">Work planned<input value={visitForm.purpose} onChange={(e) => setVisitForm({ ...visitForm, purpose: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3" required /></label><button className="min-h-10 rounded-lg bg-botanique-green px-3 text-[12px] font-semibold text-white sm:col-span-3 sm:w-fit">Schedule visit</button></form>}
+          {!scheduledVisits.length && <p className="text-[12.5px] text-gray-500">{relationship.frequency === "as_needed" ? "No visit is scheduled. This site is maintained as needed." : "No visit is scheduled yet."}</p>}
+          <ul className="divide-y divide-stone-100">{scheduledVisits.map((visit) => <li key={visit.id} className="py-3"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[12.5px] font-semibold">{showDate(visit.scheduledDate)}</p><p className="mt-0.5 text-[11.5px] text-gray-500">{visit.purpose}</p></div>{canManageMaintenance(role) && relationship.status !== "ended" && <div className="flex gap-3 text-[11.5px] font-semibold"><button onClick={() => startVisitAction(visit, "complete")} className="text-botanique-green">Complete</button><button onClick={() => startVisitAction(visit, "reschedule")} className="text-gray-600">Reschedule</button><button onClick={() => startVisitAction(visit, "cancel")} className="text-red-700">Cancel</button></div>}</div>{actingOnVisit?.visit.id === visit.id && <form onSubmit={submitVisitAction} className="mt-3 rounded-lg bg-stone-50 p-3">{actingOnVisit.kind === "reschedule" ? <label className="text-[12px] font-medium">New date<input type="date" value={visitActionForm.newDate} onChange={(e) => setVisitActionForm({ ...visitActionForm, newDate: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3" required /></label> : <label className="text-[12px] font-medium">{actingOnVisit.kind === "complete" ? "Completed work / result" : "Cancellation reason"}<textarea rows={2} value={visitActionForm.note} onChange={(e) => setVisitActionForm({ ...visitActionForm, note: e.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2" required /></label>}<div className="mt-2 flex gap-2"><button className="min-h-9 rounded-lg bg-botanique-green px-3 text-[11.5px] font-semibold text-white">Confirm</button><button type="button" onClick={() => setActingOnVisit(null)} className="min-h-9 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold">Keep visit</button></div></form>}</li>)}</ul>
+        </Panel>
+
+        <Panel title="Field execution · Daily Site Record" action={relationship.status === "active" && <Link to={`/admin/daily-site-operations/new?project=${relationship.projectId}`} className="min-h-9 py-2 text-[12px] font-semibold text-botanique-green">Record field work</Link>}>
+          <p className="mb-3 text-[11.5px] leading-relaxed text-gray-500">This is the actual day-of-work record: what was done, crew, evidence and review state. Maintenance does not duplicate it.</p>
+          {!fieldActivity.length ? <p className="rounded-lg bg-stone-50 p-3 text-[12.5px] text-gray-600">No Daily Site Record has been recorded since Maintenance started on {showDate(relationship.startDate)}.</p> : <ul className="divide-y divide-stone-100">{fieldActivity.slice(0, 8).map((entry) => <li key={entry.id} className="py-3"><Link to={`/admin/daily-site-operations/${entry.id}`} className="block"><div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0"><p className="text-[12.5px] font-semibold">{showDate(entry.workDate)} · {entry.disposition === "working" ? `${entry.expectedWorkerCount || 0} crew` : "No work"}</p><p className="mt-1 line-clamp-2 text-[11.5px] text-gray-600">{entry.workPlanned || entry.notes || "Site activity recorded"}</p></div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${entryTone(entry.state)}`}>{entryLabel(entry.state)}</span></div><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10.5px] text-gray-500"><span>{evidenceLabel(entry.evidenceStatus)}</span>{entry.crewReference && <span>· {entry.crewReference}</span>}{entry.notes && <span className="line-clamp-1">· {entry.notes}</span>}</div></Link></li>)}</ul>}
+        </Panel>
+
+        <Panel title="Visit history">
+          {!pastVisits.length && <p className="text-[12.5px] text-gray-500">No Maintenance visit has been completed or cancelled yet. Field execution above remains visible independently.</p>}
+          <ul className="divide-y divide-stone-100">{pastVisits.map((visit) => <li key={visit.id} className="flex items-start justify-between gap-3 py-3"><div><p className="text-[12.5px] font-semibold">{showDate(visit.scheduledDate)} · {visit.purpose}</p><p className="mt-1 text-[11.5px] text-gray-500">{visit.status === "completed" ? visit.completionNote : visit.cancellationReason}</p></div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${visitTone[visit.status] || ""}`}>{visitStatusLabel(visit.status)}</span></li>)}</ul>
+        </Panel>
+      </div>
+
+      <div className="space-y-4">
+        <Panel title="Maintenance details" action={canManageMaintenance(role) && relationship.status !== "ended" && !editingDetails && <button onClick={startEditingDetails} className="min-h-9 text-[12px] font-semibold text-botanique-green">Edit</button>}>
+          {editingDetails && detailsForm && <form onSubmit={submitDetails} className="mb-3 grid gap-3 rounded-lg bg-stone-50 p-3"><label className="text-[12px] font-medium">Scope<textarea rows={3} value={detailsForm.scope} onChange={(e) => setDetailsForm({ ...detailsForm, scope: e.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2" required /></label><label className="text-[12px] font-medium">Start date<input type="date" value={detailsForm.startDate} onChange={(e) => setDetailsForm({ ...detailsForm, startDate: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3" required /></label><label className="text-[12px] font-medium">Frequency<select value={detailsForm.frequency} onChange={(e) => setDetailsForm({ ...detailsForm, frequency: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3">{MAINTENANCE_FREQUENCIES.map((value) => <option key={value} value={value}>{frequencyLabel(value)}</option>)}</select></label><div className="flex gap-2"><button className="min-h-9 rounded-lg bg-botanique-green px-3 text-[11.5px] font-semibold text-white">Save</button><button type="button" onClick={() => setEditingDetails(false)} className="min-h-9 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold">Cancel</button></div></form>}
+          <dl className="space-y-2 text-[12.5px]"><DetailRow label="Status" value={relationshipStatusLabel(relationship.status)}/><DetailRow label="Frequency" value={frequencyLabel(relationship.frequency)}/><DetailRow label="Start date" value={showDate(relationship.startDate)}/><DetailRow label="Next visit" value={relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : relationship.frequency === "as_needed" ? "As needed" : "Not scheduled"}/></dl><p className="mt-3 border-t border-stone-100 pt-3 text-[12px] leading-relaxed text-gray-600">{relationship.scope}</p>
+          {canManageMaintenance(role) && relationship.status !== "ended" && <div className="mt-3 flex flex-wrap gap-3 border-t border-stone-100 pt-3 text-[11.5px] font-semibold">{relationship.status === "active" ? <button onClick={() => setConfirmingTransition("pause")} className="text-botanique-green">Pause Maintenance</button> : <button onClick={() => submitTransition("resume")} className="text-botanique-green">Resume Maintenance</button>}<button onClick={() => setConfirmingTransition("end")} className="text-gray-600">End Maintenance</button></div>}
+          {confirmingTransition && <form onSubmit={(e) => { e.preventDefault(); submitTransition(confirmingTransition); }} className="mt-3 rounded-lg bg-stone-50 p-3"><label className="text-[12px] font-medium">Reason {confirmingTransition === "pause" ? "(optional)" : ""}<textarea rows={2} value={transitionReason} onChange={(e) => setTransitionReason(e.target.value)} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2" required={confirmingTransition === "end"} /></label><div className="mt-2 flex gap-2"><button className="min-h-9 rounded-lg bg-botanique-green px-3 text-[11.5px] font-semibold text-white">Confirm</button><button type="button" onClick={() => setConfirmingTransition("")} className="min-h-9 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold">Cancel</button></div></form>}
+        </Panel>
+
+        <Panel title="Assigned team" action={canManageMaintenance(role) && relationship.status !== "ended" && <button onClick={() => setShowAssignForm((open) => !open)} className="min-h-9 text-[12px] font-semibold text-botanique-green">{showAssignForm ? "Close" : "Assign person"}</button>}>
+          {showAssignForm && <form onSubmit={submitAssignment} className="mb-3 grid gap-3 rounded-lg bg-stone-50 p-3"><label className="text-[12px] font-medium">Person<select value={assignForm.personId} onChange={(e) => setAssignForm({ ...assignForm, personId: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3" required><option value="">Choose person</option>{activePeople.map((person) => <option key={person.id} value={person.id}>{person.fullName}</option>)}</select></label><label className="text-[12px] font-medium">Responsibility<select value={assignForm.role} onChange={(e) => setAssignForm({ ...assignForm, role: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3">{MAINTENANCE_ASSIGNMENT_ROLES.map((value) => <option key={value} value={value}>{assignmentRoleLabel(value)}</option>)}</select></label><label className="text-[12px] font-medium">Starts<input type="date" value={assignForm.startDate} onChange={(e) => setAssignForm({ ...assignForm, startDate: e.target.value })} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 px-3" required /></label><button className="min-h-9 rounded-lg bg-botanique-green px-3 text-[11.5px] font-semibold text-white">Assign</button></form>}
+          {!currentTeam.length && <p className="text-[12.5px] text-gray-500">Nobody is currently assigned.</p>}<ul className="divide-y divide-stone-100">{currentTeam.map((assignment) => <li key={assignment.id} className="py-3"><div className="flex items-start justify-between gap-3"><div><p className="text-[12.5px] font-semibold">{assignment.personName}</p><p className="mt-0.5 text-[11px] text-gray-500">{assignmentRoleLabel(assignment.role)} · since {showDate(assignment.startDate)}</p></div>{canManageMaintenance(role) && relationship.status !== "ended" && <button onClick={() => report(endAssignment(assignment.id, assignment.version), "Assignment ended.")} className="text-[11px] font-semibold text-gray-600">End</button>}</div>{canCorrectMaintenanceAssignment(role) && relationship.status !== "ended" && <button onClick={() => startCorrection(assignment)} className="mt-1 text-[10.5px] font-semibold text-botanique-green">Correct assignment</button>}{correcting?.id === assignment.id && correctionForm && <form onSubmit={submitCorrection} className="mt-2 grid gap-2 rounded-lg bg-stone-50 p-3"><select value={correctionForm.role} onChange={(e) => setCorrectionForm({ ...correctionForm, role: e.target.value })} className="min-h-9 rounded-lg border border-stone-300 px-2 text-[12px]">{MAINTENANCE_ASSIGNMENT_ROLES.map((value) => <option key={value} value={value}>{assignmentRoleLabel(value)}</option>)}</select><input type="date" value={correctionForm.startDate} onChange={(e) => setCorrectionForm({ ...correctionForm, startDate: e.target.value })} className="min-h-9 rounded-lg border border-stone-300 px-2 text-[12px]"/><textarea rows={2} value={correctionForm.correctionReason} onChange={(e) => setCorrectionForm({ ...correctionForm, correctionReason: e.target.value })} placeholder="Reason for correction" className="rounded-lg border border-stone-300 px-2 py-2 text-[12px]" required/><div className="flex gap-2"><button className="min-h-9 rounded-lg bg-botanique-green px-3 text-[11px] font-semibold text-white">Save correction</button><button type="button" onClick={() => setCorrecting(null)} className="min-h-9 rounded-lg border border-stone-300 px-3 text-[11px] font-semibold">Cancel</button></div></form>}</li>)}</ul>
+          {pastTeam.length > 0 && <div className="mt-3 border-t border-stone-100 pt-3"><p className="text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">Past assignments</p>{pastTeam.map((assignment) => <p key={assignment.id} className="mt-2 text-[11.5px] text-gray-600">{assignment.personName} · {assignmentRoleLabel(assignment.role)} · {showDate(assignment.startDate)}–{showDate(assignment.endDate)}</p>)}</div>}
+        </Panel>
+      </div>
+    </div>
+  </section>;
 }
+
+function DetailRow({ label, value }) { return <div className="flex justify-between gap-3"><dt className="text-gray-500">{label}</dt><dd className="text-right font-medium text-botanique-charcoal">{value}</dd></div>; }
+function evidenceLabel(value) { return ({ none: "No evidence stated", promised: "Evidence promised", provided: "Evidence provided", not_required: "Evidence not required" })[value] || "Evidence not stated"; }
