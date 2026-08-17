@@ -41,15 +41,28 @@ describe("Staff Pay working surface", () => {
     expect(screen.getByText("No Staff Pay has been recorded yet.")).toBeInTheDocument();
   });
 
-  it("shows full name once per row, renders ordinary type as Pay, and exposes row actions", () => {
+  it("makes the full name itself open the Staff Pay record and keeps row actions", () => {
     renderRegister({ compensations: [compensation], position: { compensationId: "comp-1", paidAmount: 30000, balanceAmount: 30000, paymentStatus: "part_paid" } });
     for (const heading of ["#", "Date", "Person", "Type", "Project", "Status", "Total", "Paid", "Balance", "Action"]) expect(screen.getByRole("columnheader", { name: heading })).toBeInTheDocument();
     expect(screen.getByText("Pay")).toBeInTheDocument();
-    expect(screen.getByText("Martine Lotom")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Martine Lotom" })).toHaveAttribute("href", "/admin/finance/staff-compensation/comp-1");
     expect(screen.queryByText("ML")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Staff pay actions" }));
     expect(screen.getByRole("menuitem", { name: "Record payment" })).toHaveAttribute("href", "/admin/finance/staff-compensation/comp-1#payments");
     expect(screen.getByRole("menuitem", { name: "View staff pay" })).toHaveAttribute("href", "/admin/finance/staff-compensation/comp-1");
+  });
+
+  it("opens lower register action menus upward so their options are not clipped", () => {
+    const rows = [
+      compensation,
+      { ...compensation, id: "comp-2", serviceDate: "2026-08-15" },
+      { ...compensation, id: "comp-3", serviceDate: "2026-08-14", lifecycle: "amendment_requested", approvedAmount: null },
+    ];
+    renderRegister({ compensations: rows, position: { paidAmount: null, balanceAmount: null, paymentStatus: "amendment_requested" } });
+    const buttons = screen.getAllByRole("button", { name: "Staff pay actions" });
+    fireEvent.click(buttons[2]);
+    expect(screen.getByRole("menu")).toHaveClass("bottom-full");
+    expect(screen.getByRole("menuitem", { name: "View staff pay" })).toHaveAttribute("href", "/admin/finance/staff-compensation/comp-3");
   });
 
   it("offers Resolve payment history instead of inventing a balance for imported approved pay", () => {
