@@ -152,7 +152,17 @@
     "assignment correction remains Principal-only. A read-only production proof",
     "confirmed the Operations Manager sees all three live Maintenance relationships;",
     "an attempted Manager terminal closure was rejected and left the relationship",
-    "Active with its version unchanged. The migration changed no operational row."
+    "Active with its version unchanged. The migration changed no operational row.",
+    "",
+    "MAINTENANCE OPERATING LOOP V1, 17 Aug 2026.",
+    "maintenance_operating_loop_v1 applied cleanly in one transaction (production",
+    "version 20260817181419). It makes the Maintenance visit the operational cycle",
+    "around Daily Site Record execution: a completed visit may link to the Accepted",
+    "same-site, same-date DSR, records completed/partial outcome and follow-up truth,",
+    "and can schedule the next recurring visit in the same transaction. The migration",
+    "created no operational rows and auto-closed no visits. Immediately after apply,",
+    "the existing Kitusuru and Lugulu 17 Aug visits remained Scheduled with no DSR",
+    "link, outcome or follow-up; closure remains an explicit operator action."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-17",
@@ -188,6 +198,7 @@
     { "name": "staff_compensation_historical_settlement", "productionVersion": "20260817090819" },
     { "name": "maintenance_daily_site_execution", "productionVersion": "20260817092111" },
     { "name": "personnel_labour_finance_boundary", "productionVersion": "20260817110220" },
-    { "name": "maintenance_authority_acl_correction", "productionVersion": "20260817155812" }
+    { "name": "maintenance_authority_acl_correction", "productionVersion": "20260817155812" },
+    { "name": "maintenance_operating_loop_v1", "productionVersion": "20260817181419" }
   ]
 }
