@@ -1,8 +1,7 @@
-// Role capabilities and pure derivations for Operations > Maintenance. These
-// mirror the database authority (they never widen it) — the RLS helper
-// public.can_manage_maintenance_project is the real boundary; owner reaches
-// every project, a manager reaches a project they lead or are assigned to.
-// Staff and viewer have no access, matching every other Operations domain.
+// Role capabilities for Operations > Maintenance. These mirror the database
+// authority and never widen it: Principal and Operations Manager operate the
+// Maintenance portfolio; Project Team and Read-only do not enter Maintenance
+// V1. Exceptional history/closure actions stay Principal-only.
 import { ROLES } from "../constants/roles";
 
 export const MAINTENANCE_RELATIONSHIP_STATUSES = ["active", "paused", "ended"];
@@ -22,14 +21,7 @@ export const MAINTENANCE_VISIT_STATUS_LABELS = {
 };
 
 export const MAINTENANCE_FREQUENCIES = [
-  "weekly",
-  "fortnightly",
-  "monthly",
-  "quarterly",
-  "biannual",
-  "annual",
-  "as_needed",
-  "other",
+  "weekly", "fortnightly", "monthly", "quarterly", "biannual", "annual", "as_needed", "other",
 ];
 
 export const MAINTENANCE_FREQUENCY_LABELS = {
@@ -43,14 +35,8 @@ export const MAINTENANCE_FREQUENCY_LABELS = {
   other: "Other",
 };
 
-// A maintenance responsibility is a distinct fact from a project engagement
-// role, so it keeps its own, deliberately small, vocabulary.
 export const MAINTENANCE_ASSIGNMENT_ROLES = [
-  "maintenance_lead",
-  "site_technician",
-  "inspector",
-  "supervisor",
-  "support",
+  "maintenance_lead", "site_technician", "inspector", "supervisor", "support",
 ];
 
 export const MAINTENANCE_ASSIGNMENT_ROLE_LABELS = {
@@ -65,17 +51,19 @@ export function canSeeMaintenance(role) {
   return role === ROLES.OWNER || role === ROLES.MANAGER;
 }
 
+// Day-to-day Maintenance operations are portfolio-wide for both operational
+// authority roles. Supabase's can_manage_maintenance_project() is the real ACL.
 export function canManageMaintenance(role) {
   return canSeeMaintenance(role);
 }
 
-// Correcting what was recorded — when an assignment started, or what the
-// person's responsibility actually was — is exceptional authority, not
-// ordinary resourcing. The Operations Manager keeps every day-to-day power
-// (create, re-role an open assignment, end one); only the Principal may
-// rewrite a recorded historical fact. This mirrors canCorrectEngagement in
-// peopleCapabilities, and the database enforces the same boundary
-// independently through correct_maintenance_assignment.
+// Ending the service relationship is a terminal business action, not ordinary
+// scheduling. The database independently enforces this owner-only boundary.
+export function canEndMaintenance(role) {
+  return role === ROLES.OWNER;
+}
+
+// Correcting already-recorded assignment history is also exceptional authority.
 export function canCorrectMaintenanceAssignment(role) {
   return role === ROLES.OWNER;
 }
