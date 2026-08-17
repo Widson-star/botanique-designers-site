@@ -3,11 +3,11 @@ import { useAdminData } from "./adminData";
 import { MaintenanceContext } from "./maintenance";
 import {
   assignMaintenancePerson, cancelMaintenanceVisit, completeMaintenanceVisit,
-  correctMaintenanceAssignment, createMaintenanceRelationship, endMaintenanceAssignment,
-  endMaintenanceRelationship, fetchMaintenanceAssignments, fetchMaintenanceAuthorisedProjects,
-  fetchMaintenanceRegister, fetchMaintenanceVisits, pauseMaintenanceRelationship,
-  rescheduleMaintenanceVisit, resumeMaintenanceRelationship, scheduleMaintenanceVisit,
-  updateMaintenanceRelationship,
+  completeMaintenanceVisitCycle, correctMaintenanceAssignment,
+  createMaintenanceRelationship, endMaintenanceAssignment, endMaintenanceRelationship,
+  fetchMaintenanceAssignments, fetchMaintenanceAuthorisedProjects, fetchMaintenanceRegister,
+  fetchMaintenanceVisits, pauseMaintenanceRelationship, rescheduleMaintenanceVisit,
+  resumeMaintenanceRelationship, scheduleMaintenanceVisit, updateMaintenanceRelationship,
 } from "../lib/maintenance";
 
 const now = () => new Date().toISOString();
@@ -15,83 +15,43 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function mapRegisterRow(row) {
   return {
-    id: row.id,
-    projectId: row.project_id,
-    projectName: row.project_name,
-    clientSiteName: row.client_site_name || "",
-    projectStatus: row.project_status,
-    status: row.status,
-    scope: row.scope,
-    frequency: row.frequency,
-    startDate: row.start_date,
-    version: row.version,
-    lastVisitDate: row.last_visit_date || "",
-    nextVisitDate: row.next_visit_date || "",
+    id: row.id, projectId: row.project_id, projectName: row.project_name,
+    clientSiteName: row.client_site_name || "", projectStatus: row.project_status,
+    status: row.status, scope: row.scope, frequency: row.frequency, startDate: row.start_date,
+    version: row.version, lastVisitDate: row.last_visit_date || "", nextVisitDate: row.next_visit_date || "",
     assignedTeam: row.assigned_team || [],
   };
 }
 
 function mapVisit(row) {
   return {
-    id: row.id,
-    relationshipId: row.maintenance_relationship_id,
-    scheduledDate: row.scheduled_date,
-    status: row.status,
-    purpose: row.purpose,
-    completedAt: row.completed_at || "",
-    completionNote: row.completion_note || "",
-    cancellationReason: row.cancellation_reason || "",
-    version: row.version,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id, relationshipId: row.maintenance_relationship_id, scheduledDate: row.scheduled_date,
+    status: row.status, purpose: row.purpose, completedAt: row.completed_at || "",
+    completionNote: row.completion_note || "", cancellationReason: row.cancellation_reason || "",
+    dailySiteEntryId: row.daily_site_entry_id || "", completionOutcome: row.completion_outcome || "",
+    followUpRequired: row.follow_up_required === true, followUpNote: row.follow_up_note || "",
+    version: row.version, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
 function mapAssignment(row) {
   return {
-    id: row.id,
-    relationshipId: row.maintenance_relationship_id,
-    personId: row.person_id,
-    personName: row.people?.full_name || "",
-    role: row.role,
-    startDate: row.start_date,
-    endDate: row.end_date || "",
-    version: row.version,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id: row.id, relationshipId: row.maintenance_relationship_id, personId: row.person_id,
+    personName: row.people?.full_name || "", role: row.role, startDate: row.start_date,
+    endDate: row.end_date || "", version: row.version, createdAt: row.created_at, updatedAt: row.updated_at,
   };
 }
 
-// A small demo seed so the screens are usable without Supabase configured.
-// Illustrative only — nothing here reaches a real database. Linked to two
-// real demo projects from ../data/projectSeed so the Completed-project +
-// Active-Maintenance coexistence is genuinely demonstrable in preview.
 function buildDemoState() {
   const relationships = [
-    {
-      id: "demo-maintenance-1",
-      projectId: "muthithi-gardens-estate",
-      scope: "Quarterly grounds inspection and irrigation servicing.",
-      startDate: "2026-06-01",
-      frequency: "quarterly",
-      status: "active",
-      version: 1,
-    },
-    {
-      id: "demo-maintenance-2",
-      projectId: "karen-residence-fountain-garden",
-      scope: "Fortnightly lawn, border and fountain upkeep.",
-      startDate: "2026-07-15",
-      frequency: "fortnightly",
-      status: "active",
-      version: 1,
-    },
+    { id: "demo-maintenance-1", projectId: "muthithi-gardens-estate", scope: "Quarterly grounds inspection and irrigation servicing.", startDate: "2026-06-01", frequency: "quarterly", status: "active", version: 1 },
+    { id: "demo-maintenance-2", projectId: "karen-residence-fountain-garden", scope: "Fortnightly lawn, border and fountain upkeep.", startDate: "2026-07-15", frequency: "fortnightly", status: "active", version: 1 },
   ];
   const visits = [
-    { id: "demo-visit-1", relationshipId: "demo-maintenance-1", scheduledDate: "2026-08-05", status: "completed", purpose: "Quarterly grounds inspection", completedAt: "2026-08-05T09:00:00Z", completionNote: "Irrigation checked, no issues found.", cancellationReason: "", version: 2 },
-    { id: "demo-visit-2", relationshipId: "demo-maintenance-1", scheduledDate: "2026-11-05", status: "scheduled", purpose: "Quarterly grounds inspection", completedAt: "", completionNote: "", cancellationReason: "", version: 1 },
-    { id: "demo-visit-3", relationshipId: "demo-maintenance-2", scheduledDate: "2026-08-01", status: "completed", purpose: "Routine lawn and fountain maintenance", completedAt: "2026-08-01T10:00:00Z", completionNote: "Lawn mowed, fountain pump serviced.", cancellationReason: "", version: 2 },
-    { id: "demo-visit-4", relationshipId: "demo-maintenance-2", scheduledDate: "2026-08-22", status: "scheduled", purpose: "Routine lawn and fountain maintenance", completedAt: "", completionNote: "", cancellationReason: "", version: 1 },
+    { id: "demo-visit-1", relationshipId: "demo-maintenance-1", scheduledDate: "2026-08-05", status: "completed", purpose: "Quarterly grounds inspection", completedAt: "2026-08-05T09:00:00Z", completionNote: "Irrigation checked, no issues found.", cancellationReason: "", completionOutcome: "completed", followUpRequired: false, followUpNote: "", dailySiteEntryId: "", version: 2 },
+    { id: "demo-visit-2", relationshipId: "demo-maintenance-1", scheduledDate: "2026-11-05", status: "scheduled", purpose: "Quarterly grounds inspection", completedAt: "", completionNote: "", cancellationReason: "", completionOutcome: "", followUpRequired: false, followUpNote: "", dailySiteEntryId: "", version: 1 },
+    { id: "demo-visit-3", relationshipId: "demo-maintenance-2", scheduledDate: "2026-08-01", status: "completed", purpose: "Routine lawn and fountain maintenance", completedAt: "2026-08-01T10:00:00Z", completionNote: "Lawn mowed, fountain pump serviced.", cancellationReason: "", completionOutcome: "completed", followUpRequired: false, followUpNote: "", dailySiteEntryId: "", version: 2 },
+    { id: "demo-visit-4", relationshipId: "demo-maintenance-2", scheduledDate: "2026-08-22", status: "scheduled", purpose: "Routine lawn and fountain maintenance", completedAt: "", completionNote: "", cancellationReason: "", completionOutcome: "", followUpRequired: false, followUpNote: "", dailySiteEntryId: "", version: 1 },
   ];
   const assignments = [
     { id: "demo-assignment-1", relationshipId: "demo-maintenance-1", personId: "demo-person-1", personName: "Lincoln Waweru", role: "maintenance_lead", startDate: "2026-06-01", endDate: "", version: 1 },
@@ -102,35 +62,19 @@ function buildDemoState() {
 }
 
 function deriveLastVisit(visits, relationshipId) {
-  const dates = visits
-    .filter((visit) => visit.relationshipId === relationshipId && visit.status === "completed")
-    .map((visit) => visit.scheduledDate);
-  return dates.length ? dates.sort().at(-1) : "";
+  const dates = visits.filter((visit) => visit.relationshipId === relationshipId && visit.status === "completed").map((visit) => visit.scheduledDate).sort();
+  return dates.at(-1) || "";
 }
-
 function deriveNextVisit(visits, relationshipId) {
-  const todayIso = today();
-  const dates = visits
-    .filter((visit) => visit.relationshipId === relationshipId && visit.status === "scheduled" && visit.scheduledDate >= todayIso)
-    .map((visit) => visit.scheduledDate);
-  return dates.length ? dates.sort()[0] : "";
+  const dates = visits.filter((visit) => visit.relationshipId === relationshipId && visit.status === "scheduled" && visit.scheduledDate >= today()).map((visit) => visit.scheduledDate).sort();
+  return dates[0] || "";
 }
-
 function buildDemoRegister(relationships, visits, assignments, projects) {
   return relationships.map((relationship) => {
     const project = projects.find((candidate) => candidate.id === relationship.projectId);
-    const team = assignments
-      .filter((assignment) => assignment.relationshipId === relationship.id && !assignment.endDate)
+    const team = assignments.filter((assignment) => assignment.relationshipId === relationship.id && !assignment.endDate)
       .map((assignment) => ({ person_id: assignment.personId, full_name: assignment.personName, role: assignment.role }));
-    return {
-      ...relationship,
-      projectName: project?.projectName || "Unknown project",
-      clientSiteName: project?.clientSiteName || "",
-      projectStatus: project?.status || "",
-      lastVisitDate: deriveLastVisit(visits, relationship.id),
-      nextVisitDate: deriveNextVisit(visits, relationship.id),
-      assignedTeam: team,
-    };
+    return { ...relationship, projectName: project?.projectName || "Unknown project", clientSiteName: project?.clientSiteName || "", projectStatus: project?.status || "", lastVisitDate: deriveLastVisit(visits, relationship.id), nextVisitDate: deriveNextVisit(visits, relationship.id), assignedTeam: team };
   });
 }
 
@@ -138,7 +82,6 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
   const { projects } = useAdminData();
   const accessToken = session?.access_token || "";
   const demoSeed = useMemo(() => (isDemo ? buildDemoState() : null), [isDemo]);
-
   const [relationships, setRelationships] = useState(() => demoSeed?.relationships || []);
   const [visits, setVisits] = useState(() => demoSeed?.visits || []);
   const [assignments, setAssignments] = useState(() => demoSeed?.assignments || []);
@@ -146,356 +89,125 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
   const [error, setError] = useState("");
 
-  // `relationships` already holds mapped rows: the authenticated path maps the
-  // maintenance_register() response once in refresh(), and demo mode seeds
-  // already-shaped objects. Mapping again here re-read snake_case keys off
-  // camelCase objects and silently returned undefined for projectId,
-  // projectName, clientSiteName, projectStatus, startDate, last/nextVisitDate
-  // and assignedTeam — which is exactly how the first live record rendered
-  // with a blank site heading, "Project status: —" and "Start date: —" while
-  // status/scope/frequency (identically named on both sides) survived. Demo
-  // mode still composes its register from the demo visit/assignment stores.
-  const register = useMemo(
-    () => (isDemo ? buildDemoRegister(relationships, visits, assignments, projects) : relationships),
-    [isDemo, relationships, visits, assignments, projects]
-  );
-
-  const eligibleProjects = useMemo(
-    () => (isDemo
-      ? projects.filter((project) => !project.archived && ["Ongoing", "Paused", "Completed"].includes(project.status))
-      : authorisedProjects),
-    [isDemo, projects, authorisedProjects]
-  );
+  const register = useMemo(() => isDemo ? buildDemoRegister(relationships, visits, assignments, projects) : relationships, [isDemo, relationships, visits, assignments, projects]);
+  const eligibleProjects = useMemo(() => isDemo ? projects.filter((project) => !project.archived && ["Ongoing", "Paused", "Completed"].includes(project.status)) : authorisedProjects, [isDemo, projects, authorisedProjects]);
 
   const refresh = useCallback(async () => {
     if (isDemo) return { ok: true };
     try {
       const [registerRows, visitRows, assignmentRows, projectRows] = await Promise.all([
-        fetchMaintenanceRegister(accessToken),
-        fetchMaintenanceVisits(accessToken),
-        fetchMaintenanceAssignments(accessToken),
-        fetchMaintenanceAuthorisedProjects(accessToken),
+        fetchMaintenanceRegister(accessToken), fetchMaintenanceVisits(accessToken), fetchMaintenanceAssignments(accessToken), fetchMaintenanceAuthorisedProjects(accessToken),
       ]);
       setRelationships((registerRows || []).map(mapRegisterRow));
       setVisits((visitRows || []).map(mapVisit));
       setAssignments((assignmentRows || []).map(mapAssignment));
-      setAuthorisedProjects((projectRows || []).map((row) => ({
-        id: row.id, projectName: row.project_name, clientSiteName: row.client_site_name || "", status: row.status,
-      })));
-      setStatus("ready");
-      setError("");
-      return { ok: true };
+      setAuthorisedProjects((projectRows || []).map((row) => ({ id: row.id, projectName: row.project_name, clientSiteName: row.client_site_name || "", status: row.status })));
+      setStatus("ready"); setError(""); return { ok: true };
     } catch (nextError) {
-      setStatus("error");
-      setError(nextError.message || "Unable to load Maintenance.");
-      return { ok: false, error: nextError };
+      setStatus("error"); setError(nextError.message || "Unable to load Maintenance."); return { ok: false, error: nextError };
     }
   }, [accessToken, isDemo]);
 
-  useEffect(() => {
-    if (isDemo || !accessToken || !role) return undefined;
-    let cancelled = false;
-    (async () => {
-      const result = await refresh();
-      if (cancelled && result.ok) return;
-    })();
-    return () => { cancelled = true; };
-  }, [accessToken, isDemo, role, refresh]);
+  useEffect(() => { if (!isDemo && accessToken && role) refresh(); }, [accessToken, isDemo, role, refresh]);
 
   const run = useCallback(async (operation, staleMessage) => {
     try {
       const result = await operation();
-      // A version-filtered write that matched no row means somebody else
-      // changed this record first. Nothing was written, and the reader is
-      // told so rather than being shown a success that did not happen.
       if (!result) return { ok: false, error: staleMessage, stale: true };
-      await refresh();
-      return { ok: true, record: result };
+      await refresh(); return { ok: true, record: result };
     } catch (nextError) {
-      const message = nextError.message || "The Maintenance action did not complete.";
-      return { ok: false, error: message, stale: nextError.code === "40001" };
+      return { ok: false, error: nextError.message || "The Maintenance action did not complete.", stale: nextError.code === "40001" };
     }
   }, [refresh]);
 
-  // ---- Relationship actions ------------------------------------------------
   const addRelationship = useCallback((values) => {
-    if (isDemo) {
-      const relationship = {
-        id: `demo-maintenance-${Date.now()}`, projectId: values.projectId, scope: values.scope,
-        startDate: values.startDate, frequency: values.frequency, status: "active", version: 1,
-      };
-      setRelationships((current) => [...current, relationship]);
-      return Promise.resolve({ ok: true, record: relationship });
-    }
+    if (isDemo) { const record = { id: `demo-maintenance-${Date.now()}`, ...values, status: "active", version: 1 }; setRelationships((current) => [...current, record]); return Promise.resolve({ ok: true, record }); }
     return run(() => createMaintenanceRelationship(accessToken, values), "This Maintenance relationship could not be started.");
   }, [accessToken, isDemo, run]);
 
-  // Ordinary correction of the relationship's descriptive fields. Lifecycle
-  // status is deliberately absent: it moves only through pause/resume/end.
   const editRelationship = useCallback((relationshipId, expectedVersion, values) => {
-    const cleanScope = (values.scope || "").trim();
-    if (!cleanScope) {
-      return Promise.resolve({ ok: false, error: "Describe the maintenance scope." });
-    }
-    if (!values.startDate) {
-      return Promise.resolve({ ok: false, error: "A start date is required." });
-    }
-    if (isDemo) {
-      let changed = null;
-      setRelationships((current) => current.map((relationship) => {
-        if (relationship.id !== relationshipId) return relationship;
-        changed = {
-          ...relationship,
-          scope: cleanScope,
-          startDate: values.startDate,
-          frequency: values.frequency,
-          version: relationship.version + 1,
-        };
-        return changed;
-      }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Relationship not found." });
-    }
-    return run(
-      () => updateMaintenanceRelationship(accessToken, relationshipId, expectedVersion, {
-        ...values, scope: cleanScope,
-      }),
-      "This Maintenance relationship was changed elsewhere. Reload and try again."
-    );
+    const scope = (values.scope || "").trim();
+    if (!scope) return Promise.resolve({ ok: false, error: "Describe the maintenance scope." });
+    if (!values.startDate) return Promise.resolve({ ok: false, error: "A start date is required." });
+    if (isDemo) { let changed; setRelationships((current) => current.map((item) => item.id === relationshipId ? (changed = { ...item, ...values, scope, version: item.version + 1 }) : item)); return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Relationship not found." }); }
+    return run(() => updateMaintenanceRelationship(accessToken, relationshipId, expectedVersion, { ...values, scope }), "This Maintenance relationship was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
-  const pauseRelationship = useCallback((relationshipId, expectedVersion, reason) => {
+  const transitionRelationship = useCallback((kind, relationshipId, expectedVersion, reason) => {
     if (isDemo) {
-      let changed = null;
-      setRelationships((current) => current.map((relationship) => {
-        if (relationship.id !== relationshipId) return relationship;
-        changed = { ...relationship, status: "paused", version: relationship.version + 1 };
-        return changed;
-      }));
+      let changed; setRelationships((current) => current.map((item) => item.id === relationshipId ? (changed = { ...item, status: kind === "pause" ? "paused" : kind === "resume" ? "active" : "ended", version: item.version + 1 }) : item));
       return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Relationship not found." });
     }
-    return run(
-      () => pauseMaintenanceRelationship(accessToken, relationshipId, expectedVersion, reason),
-      "This Maintenance relationship was changed elsewhere. Reload and try again."
-    );
+    const op = kind === "pause" ? pauseMaintenanceRelationship(accessToken, relationshipId, expectedVersion, reason) : kind === "resume" ? resumeMaintenanceRelationship(accessToken, relationshipId, expectedVersion) : endMaintenanceRelationship(accessToken, relationshipId, expectedVersion, reason);
+    return run(() => op, "This Maintenance relationship was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
+  const pauseRelationship = useCallback((id, version, reason) => transitionRelationship("pause", id, version, reason), [transitionRelationship]);
+  const resumeRelationship = useCallback((id, version) => transitionRelationship("resume", id, version), [transitionRelationship]);
+  const endRelationship = useCallback((id, version, reason) => transitionRelationship("end", id, version, reason), [transitionRelationship]);
 
-  const resumeRelationship = useCallback((relationshipId, expectedVersion) => {
-    if (isDemo) {
-      let changed = null;
-      setRelationships((current) => current.map((relationship) => {
-        if (relationship.id !== relationshipId) return relationship;
-        changed = { ...relationship, status: "active", version: relationship.version + 1 };
-        return changed;
-      }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Relationship not found." });
-    }
-    return run(
-      () => resumeMaintenanceRelationship(accessToken, relationshipId, expectedVersion),
-      "This Maintenance relationship was changed elsewhere. Reload and try again."
-    );
-  }, [accessToken, isDemo, run]);
-
-  // Mirrors the database's own End gate in demo mode, so the dev preview
-  // never demonstrates a state the real RPC would refuse: a non-blank
-  // reason is required, every visit must already be Completed/Cancelled,
-  // and every currently open assignment closes atomically (client-side, in
-  // the same state update) with the server-derived date.
-  const endRelationship = useCallback((relationshipId, expectedVersion, reason) => {
-    const cleanReason = (reason || "").trim();
-    if (!cleanReason) {
-      return Promise.resolve({ ok: false, error: "A reason is required to end this Maintenance relationship." });
-    }
-    if (isDemo) {
-      const hasScheduledVisit = visits.some(
-        (visit) => visit.relationshipId === relationshipId && visit.status === "scheduled"
-      );
-      if (hasScheduledVisit) {
-        return Promise.resolve({ ok: false, error: "Resolve all scheduled Maintenance visits before ending this relationship." });
-      }
-      let changed = null;
-      setRelationships((current) => current.map((relationship) => {
-        if (relationship.id !== relationshipId) return relationship;
-        changed = { ...relationship, status: "ended", version: relationship.version + 1 };
-        return changed;
-      }));
-      if (!changed) {
-        return Promise.resolve({ ok: false, error: "Relationship not found." });
-      }
-      const closeDate = today();
-      setAssignments((current) => current.map((assignment) => {
-        if (assignment.relationshipId !== relationshipId || assignment.endDate) return assignment;
-        return {
-          ...assignment,
-          endDate: closeDate > assignment.startDate ? closeDate : assignment.startDate,
-          version: assignment.version + 1,
-        };
-      }));
-      return Promise.resolve({ ok: true, record: changed });
-    }
-    return run(
-      () => endMaintenanceRelationship(accessToken, relationshipId, expectedVersion, cleanReason),
-      "This Maintenance relationship was changed elsewhere. Reload and try again."
-    );
-  }, [accessToken, isDemo, run, visits]);
-
-  // ---- Visit actions --------------------------------------------------------
   const addVisit = useCallback((values) => {
-    if (isDemo) {
-      const visit = {
-        id: `demo-visit-${Date.now()}`, relationshipId: values.relationshipId, scheduledDate: values.scheduledDate,
-        status: "scheduled", purpose: values.purpose, completedAt: "", completionNote: "", cancellationReason: "", version: 1,
-      };
-      setVisits((current) => [visit, ...current]);
-      return Promise.resolve({ ok: true, record: visit });
-    }
+    if (isDemo) { const record = { id: `demo-visit-${Date.now()}`, relationshipId: values.relationshipId, scheduledDate: values.scheduledDate, status: "scheduled", purpose: values.purpose, completedAt: "", completionNote: "", cancellationReason: "", dailySiteEntryId: "", completionOutcome: "", followUpRequired: false, followUpNote: "", version: 1 }; setVisits((current) => [record, ...current]); return Promise.resolve({ ok: true, record }); }
     return run(() => scheduleMaintenanceVisit(accessToken, values), "This visit could not be scheduled.");
   }, [accessToken, isDemo, run]);
 
   const rescheduleVisit = useCallback((visitId, expectedVersion, newScheduledDate) => {
-    if (isDemo) {
-      let changed = null;
-      setVisits((current) => current.map((visit) => {
-        if (visit.id !== visitId) return visit;
-        changed = { ...visit, scheduledDate: newScheduledDate, version: visit.version + 1 };
-        return changed;
-      }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Visit not found." });
-    }
-    return run(
-      () => rescheduleMaintenanceVisit(accessToken, visitId, expectedVersion, newScheduledDate),
-      "This visit was changed elsewhere. Reload and try again."
-    );
+    if (isDemo) { let changed; setVisits((current) => current.map((item) => item.id === visitId ? (changed = { ...item, scheduledDate: newScheduledDate, version: item.version + 1 }) : item)); return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Visit not found." }); }
+    return run(() => rescheduleMaintenanceVisit(accessToken, visitId, expectedVersion, newScheduledDate), "This visit was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
   const completeVisit = useCallback((visitId, expectedVersion, completionNote) => {
+    if (isDemo) { let changed; setVisits((current) => current.map((item) => item.id === visitId ? (changed = { ...item, status: "completed", completedAt: now(), completionNote, completionOutcome: "completed", followUpRequired: false, version: item.version + 1 }) : item)); return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Visit not found." }); }
+    return run(() => completeMaintenanceVisit(accessToken, visitId, expectedVersion, completionNote), "This visit was changed elsewhere. Reload and try again.");
+  }, [accessToken, isDemo, run]);
+
+  const completeVisitCycle = useCallback((values) => {
     if (isDemo) {
-      let changed = null;
-      setVisits((current) => current.map((visit) => {
-        if (visit.id !== visitId) return visit;
-        changed = { ...visit, status: "completed", completedAt: now(), completionNote, version: visit.version + 1 };
-        return changed;
-      }));
+      let changed;
+      setVisits((current) => {
+        const next = current.map((item) => item.id === values.visitId ? (changed = { ...item, status: "completed", completedAt: now(), completionNote: values.completionNote, dailySiteEntryId: values.dailySiteEntryId || "", completionOutcome: values.outcome, followUpRequired: Boolean(values.followUpRequired), followUpNote: values.followUpRequired ? values.followUpNote : "", version: item.version + 1 }) : item);
+        if (values.nextScheduledDate) next.unshift({ id: `demo-visit-${Date.now()}`, relationshipId: changed?.relationshipId || "", scheduledDate: values.nextScheduledDate, status: "scheduled", purpose: values.nextPurpose, completedAt: "", completionNote: "", cancellationReason: "", dailySiteEntryId: "", completionOutcome: "", followUpRequired: false, followUpNote: "", version: 1 });
+        return next;
+      });
       return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Visit not found." });
     }
-    return run(
-      () => completeMaintenanceVisit(accessToken, visitId, expectedVersion, completionNote),
-      "This visit was changed elsewhere. Reload and try again."
-    );
+    return run(() => completeMaintenanceVisitCycle(accessToken, values), "This visit was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
   const cancelVisit = useCallback((visitId, expectedVersion, cancellationReason) => {
-    if (isDemo) {
-      let changed = null;
-      setVisits((current) => current.map((visit) => {
-        if (visit.id !== visitId) return visit;
-        changed = { ...visit, status: "cancelled", cancellationReason, version: visit.version + 1 };
-        return changed;
-      }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Visit not found." });
-    }
-    return run(
-      () => cancelMaintenanceVisit(accessToken, visitId, expectedVersion, cancellationReason),
-      "This visit was changed elsewhere. Reload and try again."
-    );
+    if (isDemo) { let changed; setVisits((current) => current.map((item) => item.id === visitId ? (changed = { ...item, status: "cancelled", cancellationReason, version: item.version + 1 }) : item)); return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Visit not found." }); }
+    return run(() => cancelMaintenanceVisit(accessToken, visitId, expectedVersion, cancellationReason), "This visit was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
-  // ---- Assignment actions ----------------------------------------------------
   const addAssignment = useCallback((values, personName) => {
-    if (isDemo) {
-      const assignment = {
-        id: `demo-assignment-${Date.now()}`, relationshipId: values.relationshipId, personId: values.personId,
-        personName: personName || "", role: values.role, startDate: values.startDate, endDate: "", version: 1,
-      };
-      setAssignments((current) => [...current, assignment]);
-      return Promise.resolve({ ok: true, record: assignment });
-    }
+    if (isDemo) { const record = { id: `demo-assignment-${Date.now()}`, relationshipId: values.relationshipId, personId: values.personId, personName: personName || "", role: values.role, startDate: values.startDate, endDate: "", version: 1 }; setAssignments((current) => [...current, record]); return Promise.resolve({ ok: true, record }); }
     return run(() => assignMaintenancePerson(accessToken, values), "This assignment could not be recorded.");
   }, [accessToken, isDemo, run]);
 
   const endAssignment = useCallback((assignmentId, expectedVersion) => {
-    if (isDemo) {
-      let changed = null;
-      const closeDate = today();
-      setAssignments((current) => current.map((assignment) => {
-        if (assignment.id !== assignmentId) return assignment;
-        if (assignment.endDate) {
-          return assignment;
-        }
-        // Never before its own start, matching the database's clamp.
-        changed = {
-          ...assignment,
-          endDate: closeDate > assignment.startDate ? closeDate : assignment.startDate,
-          version: assignment.version + 1,
-        };
-        return changed;
-      }));
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "This assignment has already ended." });
-    }
-    return run(
-      () => endMaintenanceAssignment(accessToken, assignmentId, expectedVersion),
-      "This assignment was changed elsewhere. Reload and try again."
-    );
+    if (isDemo) { let changed; setAssignments((current) => current.map((item) => item.id === assignmentId && !item.endDate ? (changed = { ...item, endDate: today() > item.startDate ? today() : item.startDate, version: item.version + 1 }) : item)); return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "This assignment has already ended." }); }
+    return run(() => endMaintenanceAssignment(accessToken, assignmentId, expectedVersion), "This assignment was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
-  // Principal-only correction of a recorded assignment. Mirrors the database
-  // rules here so the demo preview can never demonstrate a correction the real
-  // RPC would refuse: an open assignment only, a stated reason, and only role
-  // and start date moving — never the person, the relationship or the closure.
   const correctAssignment = useCallback((values) => {
-    const cleanReason = (values.correctionReason || "").trim();
-    if (cleanReason.length < 3) {
-      return Promise.resolve({ ok: false, error: "Explain why this Maintenance assignment is being corrected." });
-    }
-    if (!values.startDate) {
-      return Promise.resolve({ ok: false, error: "A corrected start date is required." });
-    }
-    if (isDemo) {
-      let changed = null;
-      let refused = "";
-      setAssignments((current) => current.map((assignment) => {
-        if (assignment.id !== values.assignmentId) return assignment;
-        if (assignment.endDate) {
-          refused = "This Maintenance assignment has ended and is historical; it cannot be corrected.";
-          return assignment;
-        }
-        changed = {
-          ...assignment,
-          role: values.role,
-          startDate: values.startDate,
-          version: assignment.version + 1,
-        };
-        return changed;
-      }));
-      if (refused) return Promise.resolve({ ok: false, error: refused });
-      return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Assignment not found." });
-    }
-    return run(
-      () => correctMaintenanceAssignment(accessToken, { ...values, correctionReason: cleanReason }),
-      "This assignment was changed elsewhere. Reload and try again."
-    );
+    const reason = (values.correctionReason || "").trim();
+    if (reason.length < 3) return Promise.resolve({ ok: false, error: "Explain why this Maintenance assignment is being corrected." });
+    if (isDemo) { let changed; setAssignments((current) => current.map((item) => item.id === values.assignmentId && !item.endDate ? (changed = { ...item, role: values.role, startDate: values.startDate, version: item.version + 1 }) : item)); return Promise.resolve(changed ? { ok: true, record: changed } : { ok: false, error: "Assignment not found or already ended." }); }
+    return run(() => correctMaintenanceAssignment(accessToken, { ...values, correctionReason: reason }), "This assignment was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
-  // The compact Project-detail indicator: at most one live relationship per
-  // project, matching the database's own one-live-per-project constraint.
   const summaryForProject = useCallback((projectId) => {
     const relationship = register.find((row) => row.projectId === projectId && row.status !== "ended");
-    if (!relationship) return null;
-    return { id: relationship.id, status: relationship.status, nextVisitDate: relationship.nextVisitDate };
+    return relationship ? { id: relationship.id, status: relationship.status, nextVisitDate: relationship.nextVisitDate } : null;
   }, [register]);
 
   const value = useMemo(() => ({
-    register, visits, assignments, eligibleProjects, status, error,
-    refresh, addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
-    addVisit, rescheduleVisit, completeVisit, cancelVisit,
+    register, visits, assignments, eligibleProjects, status, error, refresh,
+    addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
+    addVisit, rescheduleVisit, completeVisit, completeVisitCycle, cancelVisit,
     addAssignment, endAssignment, correctAssignment, summaryForProject,
     visitsForRelationship: (relationshipId) => visits.filter((visit) => visit.relationshipId === relationshipId),
     assignmentsForRelationship: (relationshipId) => assignments.filter((assignment) => assignment.relationshipId === relationshipId),
-  }), [
-    register, visits, assignments, eligibleProjects, status, error, refresh,
-    addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
-    addVisit, rescheduleVisit, completeVisit, cancelVisit,
-    addAssignment, endAssignment, correctAssignment, summaryForProject,
-  ]);
+  }), [register, visits, assignments, eligibleProjects, status, error, refresh, addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship, addVisit, rescheduleVisit, completeVisit, completeVisitCycle, cancelVisit, addAssignment, endAssignment, correctAssignment, summaryForProject]);
 
   return <MaintenanceContext.Provider value={value}>{children}</MaintenanceContext.Provider>;
 }
