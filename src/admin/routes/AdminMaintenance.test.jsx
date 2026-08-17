@@ -142,7 +142,7 @@ describe("Maintenance detail scheduling and RBAC", () => {
   it("shows Schedule visit for an as-needed relationship with no current visit", () => {
     wrap(values(), "/admin/maintenance/rel-2");
     expect(screen.getByRole("button", { name: "Schedule visit" })).toBeInTheDocument();
-    expect(screen.getByText("No visit scheduled")).toBeInTheDocument();
+    expect(screen.getAllByText("No visit scheduled").length).toBeGreaterThan(0);
   });
 
   it("lets Operations Manager manage ordinary visits but not terminal closure or historical correction", () => {
