@@ -12,11 +12,11 @@ const register = [
   {
     id: "rel-1", projectId: "p1", projectName: "Lugulu Residential Home", projectStatus: "Completed",
     status: "active", scope: "Lawn, borders and irrigation upkeep", frequency: "weekly",
-    startDate: "2026-08-01", version: 2, lastVisitDate: "", nextVisitDate: "2026-08-20",
+    startDate: "2026-08-01", version: 2, lastVisitDate: "2026-08-05", nextVisitDate: "2026-08-20",
     assignedTeam: [{ person_id: "person-1", full_name: "Lincoln Waweru", role: "maintenance_lead" }],
   },
   {
-    id: "rel-2", projectId: "p2", projectName: "Alego Usonga", projectStatus: "Ongoing",
+    id: "rel-2", projectId: "p2", projectName: "Alego Usonga", projectStatus: "Completed",
     status: "active", scope: "Attend when requested", frequency: "as_needed",
     startDate: "2026-08-01", version: 1, lastVisitDate: "", nextVisitDate: "",
     assignedTeam: [{ person_id: "person-2", full_name: "Grace Njeri", role: "site_technician" }],
@@ -25,7 +25,7 @@ const register = [
 
 const visits = [
   { id: "visit-1", relationshipId: "rel-1", scheduledDate: "2026-08-20", status: "scheduled", purpose: "Routine weekly upkeep", completionNote: "", cancellationReason: "", version: 1 },
-  { id: "visit-2", relationshipId: "rel-1", scheduledDate: "2026-08-05", status: "completed", purpose: "Lawn and borders", completionNote: "Lawn mowed and borders trimmed.", cancellationReason: "", version: 2 },
+  { id: "visit-2", relationshipId: "rel-1", scheduledDate: "2026-08-05", status: "completed", purpose: "Lawn and borders", completedAt: "2026-08-05T10:00:00Z", completionNote: "Lawn mowed and borders trimmed.", cancellationReason: "", version: 2 },
 ];
 
 const assignments = [
@@ -36,7 +36,7 @@ const assignments = [
 const entries = [
   {
     id: "dsr-1", projectId: "p1", workDate: "2026-08-17", disposition: "working",
-    expectedWorkerCount: 2, crewReference: "Lincoln + casual", workPlanned: "Regular maintenance and touchups",
+    expectedWorkerCount: 2, crewReference: "casual crew", workPlanned: "Regular maintenance and touchups",
     notes: "Watered borders and trimmed lawn edges.", evidenceStatus: "promised", state: "accepted",
     updatedAt: "2026-08-17T10:00:00Z",
   },
@@ -47,7 +47,7 @@ const entries = [
   },
   {
     id: "dsr-2", projectId: "p2", workDate: "2026-08-16", disposition: "working",
-    expectedWorkerCount: 1, crewReference: "Grace", workPlanned: "As-needed touchup",
+    expectedWorkerCount: 1, crewReference: "casual crew", workPlanned: "As-needed touchup",
     notes: "", evidenceStatus: "provided", state: "accepted", updatedAt: "2026-08-16T10:00:00Z",
   },
 ];
@@ -108,30 +108,43 @@ function wrap(context, initial = "/admin/maintenance") {
   );
 }
 
-describe("Maintenance operational register", () => {
-  it("shows actual field activity next to the Maintenance plan", () => {
+describe("Maintenance authority-led landing", () => {
+  it("puts visit planning, follow-up and completed work ahead of Daily Site Record activity", () => {
     wrap(values());
     expect(screen.getByRole("heading", { level: 1, name: "Maintenance" })).toBeInTheDocument();
-    expect(screen.getByText("Lugulu Residential Home")).toBeInTheDocument();
-    expect(screen.getAllByText("17 Aug 2026").length).toBeGreaterThan(0);
+    expect(screen.getByText("Scheduled visits").parentElement).toHaveTextContent("1");
+    expect(screen.getByText("Next due visits").parentElement).toHaveTextContent("1");
+    expect(screen.getByText("Sites needing follow-up").parentElement).toHaveTextContent("1");
+    expect(screen.getByText("Completed visits").parentElement).toHaveTextContent("1");
+    expect(screen.getByRole("heading", { name: "Upcoming scheduled visits" })).toBeInTheDocument();
+    expect(screen.getByText("Routine weekly upkeep")).toBeInTheDocument();
+  });
+
+  it("shows current maintenance responsibility and genuine recorded notes", () => {
+    wrap(values());
+    expect(screen.getByRole("heading", { name: "Assigned maintenance team" })).toBeInTheDocument();
+    expect(screen.getAllByText("Lincoln Waweru").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Grace Njeri").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Recent maintenance notes" })).toBeInTheDocument();
+    expect(screen.getByText("Lawn mowed and borders trimmed.")).toBeInTheDocument();
+    expect(screen.getByText("Watered borders and trimmed lawn edges.")).toBeInTheDocument();
+  });
+
+  it("keeps Daily Site Record as supporting execution and excludes pre-Maintenance implementation work", () => {
+    wrap(values());
+    expect(screen.getByRole("heading", { name: "Recent field execution" })).toBeInTheDocument();
     expect(screen.getAllByText(/Regular maintenance and touchups/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Implementation work before maintenance started/)).not.toBeInTheDocument();
   });
 
-  it("treats promised evidence as an operational follow-up", () => {
+  it("does not create a schedule gap for as-needed maintenance", () => {
     wrap(values());
-    expect(screen.getAllByText(/Evidence promised/).length).toBeGreaterThan(0);
-    expect(screen.getByText("Needs attention").parentElement).toHaveTextContent("1");
-  });
-
-  it("does not require a next scheduled visit for as-needed maintenance", () => {
-    wrap(values());
-    const row = screen.getByText("Alego Usonga").closest("li");
+    const row = screen.getByText("Alego Usonga").closest("tr");
     expect(row).toHaveTextContent("As needed");
-    expect(row).not.toHaveTextContent("Next visit is not scheduled");
+    expect(screen.getByText("Sites needing follow-up").parentElement).toHaveTextContent("1");
   });
 
-  it("starts a new Maintenance relationship without changing the linked Project lifecycle", async () => {
+  it("starts a Maintenance relationship without changing the linked Project lifecycle", async () => {
     const context = values();
     wrap(context);
     fireEvent.click(screen.getByRole("button", { name: "Start Maintenance" }));
@@ -142,26 +155,26 @@ describe("Maintenance operational register", () => {
   });
 });
 
-describe("Maintenance operating detail", () => {
-  it("keeps an active Maintenance operation usable when the Project itself is Completed", () => {
+describe("Maintenance RBAC and operating detail", () => {
+  it("keeps active Maintenance usable when the Project itself is Completed", () => {
     wrap(values(), "/admin/maintenance/rel-1");
     expect(screen.getByText(/Project status: Completed/)).toBeInTheDocument();
-    const recordLinks = screen.getAllByRole("link", { name: "Record field work" });
-    expect(recordLinks[0]).toHaveAttribute("href", "/admin/daily-site-operations/new?project=p1");
+    expect(screen.getAllByRole("link", { name: "Record field work" })[0]).toHaveAttribute("href", "/admin/daily-site-operations/new?project=p1");
   });
 
-  it("shows plan, execution, evidence and follow-up without duplicating the Daily Site Record", () => {
-    wrap(values(), "/admin/maintenance/rel-1");
-    expect(screen.getByText("Operating position")).toBeInTheDocument();
-    expect(screen.getByText("Field execution · Daily Site Record")).toBeInTheDocument();
-    expect(screen.getAllByText(/Regular maintenance and touchups/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Evidence promised").length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Open latest site record" })).toHaveAttribute("href", "/admin/daily-site-operations/dsr-1");
+  it("lets the Operations Manager operate Maintenance but not terminate the service relationship", () => {
+    wrap(values({ role: "manager" }), "/admin/maintenance/rel-1");
+    expect(screen.getByRole("button", { name: "Pause Maintenance" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schedule visit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Assign person" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "End Maintenance" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Correct assignment" })).not.toBeInTheDocument();
   });
 
-  it("does not misclassify pre-Maintenance implementation records as Maintenance execution", () => {
-    wrap(values(), "/admin/maintenance/rel-1");
-    expect(screen.queryByText(/Implementation work before maintenance started/)).not.toBeInTheDocument();
+  it("keeps terminal closure and historical assignment correction with the Principal", () => {
+    wrap(values({ role: "owner" }), "/admin/maintenance/rel-1");
+    expect(screen.getByRole("button", { name: "End Maintenance" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Correct assignment" })).toBeInTheDocument();
   });
 
   it("still schedules and completes Maintenance visits", async () => {
@@ -173,18 +186,8 @@ describe("Maintenance operating detail", () => {
     await waitFor(() => expect(context.maintenance.completeVisit).toHaveBeenCalledWith("visit-1", 1, "Visit completed; irrigation checked."));
   });
 
-  it("keeps team assignment operational", async () => {
-    const context = values();
-    wrap(context, "/admin/maintenance/rel-1");
-    fireEvent.click(screen.getByRole("button", { name: "Assign person" }));
-    fireEvent.change(screen.getByLabelText("Person"), { target: { value: "person-3" } });
-    fireEvent.click(screen.getByRole("button", { name: "Assign" }));
-    await waitFor(() => expect(context.maintenance.addAssignment).toHaveBeenCalledWith(expect.objectContaining({ relationshipId: "rel-1", personId: "person-3" })));
-  });
-
-  it("denies Maintenance to a staff reader", () => {
-    const context = values({ role: "staff" });
-    wrap(context);
+  it("denies Maintenance to Project Team", () => {
+    wrap(values({ role: "staff" }));
     expect(screen.getByRole("heading", { name: "Maintenance unavailable" })).toBeInTheDocument();
   });
 });

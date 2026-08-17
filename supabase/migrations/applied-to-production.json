@@ -141,7 +141,18 @@
     "Kitusuru Kefa KES 700 Project Cost remained Withdrawn and a canonical Kefa Staff",
     "Pay record was created. The three Martine imported Staff Pay opening positions",
     "were also Principal-confirmed at KES 0 historically paid, leaving balances of",
-    "KES 60,000 Karen, KES 25,000 Alego and KES 30,000 Lugulu."
+    "KES 60,000 Karen, KES 25,000 Alego and KES 30,000 Lugulu.",
+    "",
+    "MAINTENANCE AUTHORITY / ACL CORRECTION, 17 Aug 2026.",
+    "maintenance_authority_acl_correction applied cleanly in one transaction",
+    "(production version 20260817155812). It aligns Maintenance with the Operations",
+    "role model: Principal and Operations Manager have portfolio-wide Maintenance",
+    "authority, while Project Team and Read-only remain outside Maintenance V1.",
+    "Terminal end-of-service is Principal-only at the RPC boundary and historical",
+    "assignment correction remains Principal-only. A read-only production proof",
+    "confirmed the Operations Manager sees all three live Maintenance relationships;",
+    "an attempted Manager terminal closure was rejected and left the relationship",
+    "Active with its version unchanged. The migration changed no operational row."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-17",
@@ -176,6 +187,7 @@
     { "name": "staff_compensation_authority_and_legacy_truth", "productionVersion": "20260816201136" },
     { "name": "staff_compensation_historical_settlement", "productionVersion": "20260817090819" },
     { "name": "maintenance_daily_site_execution", "productionVersion": "20260817092111" },
-    { "name": "personnel_labour_finance_boundary", "productionVersion": "20260817110220" }
+    { "name": "personnel_labour_finance_boundary", "productionVersion": "20260817110220" },
+    { "name": "maintenance_authority_acl_correction", "productionVersion": "20260817155812" }
   ]
 }
