@@ -1,45 +1,30 @@
-// Phase 1B-A2 shared-project-form helpers — PURE functions.
-//
-// Responsibilities:
-//   * project record  -> form state       (projectToFormState)
-//   * form state       -> INSERT payload   (buildCreatePayload)
-//   * form state       -> changed-field UPDATE patch (buildUpdatePatch)
-//   * material owner quick-action patches  (buildActionPatch)
-//   * validation matching the database constraints (validateProjectForm)
-//   * blank optional -> null normalisation (normalizeOptional)
-//
-// Rules enforced here (see the Phase 1B-A1 migration + product requirements):
-//   * Audit-controlled columns are NEVER sent: created_by/at, updated_by/at,
-//     archived_by/at, last_updated. Finance columns are never sent.
-//   * Updates carry ONLY genuinely changed fields (no full-object PATCH).
-//   * Manager payloads are role-scoped: forced Pending/non-archived/portfolio
-//     defaults on create; owner-reserved fields excluded from an update patch.
-//   * Optional blanks normalise to null so an inaccessible/absent value is not
-//     coerced into an empty string.
 import { isManager, isOwner, MATERIAL_FIELD_KEYS } from "./projectCapabilities";
 
-// Blank / whitespace-only optional inputs normalise to null; otherwise trimmed.
 export function normalizeOptional(value) {
   if (value === null || value === undefined) return null;
   const trimmed = String(value).trim();
   return trimmed.length ? trimmed : null;
 }
 
-// Optional date input -> ISO date string or null (never "").
 export function normalizeDate(value) {
-  const normalised = normalizeOptional(value);
-  return normalised;
+  return normalizeOptional(value);
 }
 
-// An empty form for the create route.
+export function deriveInitialStatusFromStage(stage) {
+  if (stage === "Inquiry") return "Pending";
+  if (stage === "Completed") return "Completed";
+  return "Ongoing";
+}
+
 export function emptyProjectForm(role) {
   return {
     projectName: "",
+    siteName: "",
     clientSiteName: "",
     location: "",
     county: "",
     projectType: "Residential",
-    status: isManager(role) ? "Pending" : "Pending",
+    status: "Pending",
     stage: "Inquiry",
     leadPersonId: "",
     startDate: "",
@@ -55,10 +40,10 @@ export function emptyProjectForm(role) {
   };
 }
 
-// Map a loaded project (camelCase, from projectMappers) into editable form state.
 export function projectToFormState(project) {
   return {
     projectName: project.projectName || "",
+    siteName: project.siteName || project.projectName || "",
     clientSiteName: project.clientSiteName || "",
     location: project.location || "",
     county: project.county || "",
@@ -79,8 +64,6 @@ export function projectToFormState(project) {
   };
 }
 
-// Full DB-shaped operational value set from a form (used for diffing / create).
-// Never includes audit or finance columns.
 function formToOperationalValues(form) {
   return {
     project_name: normalizeOptional(form.projectName),
@@ -104,46 +87,18 @@ function formToOperationalValues(form) {
   };
 }
 
-// Columns a role may include when CREATING a project.
 const OWNER_CREATE_COLUMNS = [
-  "project_name",
-  "client_site_name",
-  "location",
-  "county",
-  "project_type",
-  "status",
-  "stage",
-  "lead_person_id",
-  "start_date",
-  "actual_start_date",
-  "target_completion_date",
-  "actual_completion_date",
-  "next_action",
-  "next_action_date",
-  "blocker",
-  "notes",
-  "portfolio_eligible",
+  "project_name", "client_site_name", "location", "county", "project_type",
+  "status", "stage", "lead_person_id", "start_date", "actual_start_date",
+  "target_completion_date", "actual_completion_date", "next_action",
+  "next_action_date", "blocker", "notes", "portfolio_eligible",
   "portfolio_permission_status",
 ];
 
-// A manager creates a Pending intake record only: no material status, no
-// archived, no actual completion, portfolio publication left at owner defaults.
-// A proposed target_completion_date IS allowed (planning value).
 const MANAGER_CREATE_COLUMNS = [
-  "project_name",
-  "client_site_name",
-  "location",
-  "county",
-  "project_type",
-  "stage",
-  "lead_person_id",
-  "start_date",
-  "actual_start_date",
-  "target_completion_date",
-  "next_action",
-  "next_action_date",
-  "blocker",
-  "notes",
+  "project_name", "client_site_name", "location", "county", "project_type",
+  "stage", "lead_person_id", "start_date", "actual_start_date",
+  "target_completion_date", "next_action", "next_action_date", "blocker", "notes",
 ];
 
 export function buildCreatePayload(form, role) {
@@ -151,89 +106,49 @@ export function buildCreatePayload(form, role) {
   const payload = {};
 
   if (isOwner(role)) {
+    values.status = deriveInitialStatusFromStage(values.stage);
+    if (values.status === "Completed") {
+      values.next_action = null;
+      values.next_action_date = null;
+      values.blocker = null;
+    }
     for (const col of OWNER_CREATE_COLUMNS) payload[col] = values[col];
+    // Client-only site identity consumed by the Supabase adapter before POST.
+    payload.__site_name = normalizeOptional(form.siteName) || values.project_name;
     return payload;
   }
 
-  // Manager: role-scoped intake defaults.
   for (const col of MANAGER_CREATE_COLUMNS) payload[col] = values[col];
   payload.status = "Pending";
+  payload.stage = "Inquiry";
   payload.portfolio_eligible = false;
   payload.portfolio_permission_status = "Not Reviewed";
   return payload;
 }
 
-// Columns a role may CHANGE via an update patch. Note: `archived` is excluded
-// for both — archive/restore is an explicit owner quick action, never a form
-// field. `last_updated` and all audit/finance columns are never editable.
 const OWNER_UPDATE_COLUMNS = [
-  "project_name",
-  "client_site_name",
-  "location",
-  "county",
-  "project_type",
-  "status",
-  "stage",
-  "lead_person_id",
-  "start_date",
-  "actual_start_date",
-  "target_completion_date",
-  "actual_completion_date",
-  "next_action",
-  "next_action_date",
-  "blocker",
-  "notes",
-  "portfolio_eligible",
+  "project_name", "client_site_name", "location", "county", "project_type",
+  "status", "stage", "lead_person_id", "start_date", "actual_start_date",
+  "target_completion_date", "actual_completion_date", "next_action",
+  "next_action_date", "blocker", "notes", "portfolio_eligible",
   "portfolio_permission_status",
 ];
+const MANAGER_UPDATE_COLUMNS = ["next_action", "next_action_date", "blocker", "notes"];
 
-// Phase 1B-A4 — a manager's DIRECT update patch carries ONLY the low-risk
-// operational fields. Every material identity/authority/schedule field —
-// including `status` (Ongoing<->Paused is Principal-approved) — is excluded here
-// and routed through a project_material_change approval (see buildMaterialProposal).
-const MANAGER_UPDATE_COLUMNS = [
-  "next_action",
-  "next_action_date",
-  "blocker",
-  "notes",
-];
-
-function valuesEqual(a, b) {
-  // null and "" are treated as equal-to-null already (normalised). Booleans and
-  // strings compare directly; dates are ISO strings.
-  return a === b;
-}
+function valuesEqual(a, b) { return a === b; }
 
 export function buildUpdatePatch(form, originalProject, role) {
   const next = formToOperationalValues(form);
   const prev = formToOperationalValues(projectToFormState(originalProject));
   const columns = isOwner(role) ? OWNER_UPDATE_COLUMNS : MANAGER_UPDATE_COLUMNS;
-
   const patch = {};
-  for (const col of columns) {
-    if (!valuesEqual(next[col], prev[col])) {
-      patch[col] = next[col];
-    }
-  }
-
-  // Carry the authoritative version the form was opened against, but only when
-  // there is a real change to save. This is deliberately a client-only key: the
-  // Supabase adapter removes it from the PATCH body and uses it as an
-  // `updated_at` match condition. A stale full edit therefore cannot replay old
-  // project name/status/lead values over a newer save.
+  for (const col of columns) if (!valuesEqual(next[col], prev[col])) patch[col] = next[col];
   if (Object.keys(patch).length > 0 && originalProject?.updatedAt) {
     patch.__expected_updated_at = originalProject.updatedAt;
   }
-
   return patch;
 }
 
-// ---- Manager material-change proposal + intake proposal -------------------
-// Build a project_material_change proposal payload from a proposed-values form
-// keyed by material field. Only genuinely changed material fields are included;
-// original snapshot mirrors the proposed key set (matching the database
-// validator). `proposed` is a partial map of material field key -> new value
-// (already form-normalised). Returns { changedKeys, originalValues, proposedValues }.
 export function buildMaterialProposal(originalProject, proposed) {
   const current = formToOperationalValues(projectToFormState(originalProject));
   const originalValues = {};
@@ -250,48 +165,33 @@ export function buildMaterialProposal(originalProject, proposed) {
   return { changedKeys, originalValues, proposedValues };
 }
 
-// Intake proposal payload (project_intake_requests.proposed_values). Only the
-// minimum, non-owner-reserved intake fields; never status/stage/lead/portfolio.
 const INTAKE_KEYS = [
-  "project_name",
-  "project_type",
-  "client_site_name",
-  "location",
-  "county",
-  "notes",
-  "start_date",
-  "target_completion_date",
+  "project_name", "project_type", "client_site_name", "location", "county",
+  "notes", "start_date", "target_completion_date",
 ];
-
 export function buildIntakePayload(form) {
   const values = formToOperationalValues(form);
   const payload = {};
   for (const key of INTAKE_KEYS) {
     const value = values[key];
-    // project_name and project_type are always sent; optionals only when set.
-    if (key === "project_name" || key === "project_type") {
-      payload[key] = value;
-    } else if (value !== null && value !== undefined && value !== "") {
-      payload[key] = value;
-    }
+    if (key === "project_name" || key === "project_type") payload[key] = value;
+    else if (value !== null && value !== undefined && value !== "") payload[key] = value;
   }
   return payload;
 }
 
-// ---- Owner material quick-action patches ----------------------------------
-// Each sends ONLY the genuinely changing field(s); no coupled/silent changes.
-export function buildActivatePatch() {
-  return { status: "Ongoing" };
-}
+export function buildActivatePatch() { return { status: "Ongoing" }; }
 
 export function buildMarkCompletedPatch(actualCompletionDate) {
   const date = normalizeDate(actualCompletionDate);
-  if (!date) {
-    throw new Error("An actual completion date is required.");
-  }
+  if (!date) throw new Error("An actual completion date is required.");
   return {
     status: "Completed",
+    stage: "Completed",
     actual_completion_date: date,
+    next_action: null,
+    next_action_date: null,
+    blocker: null,
   };
 }
 
@@ -299,31 +199,18 @@ export function validateActualCompletionDate(actualCompletionDate, actualStartDa
   const date = normalizeDate(actualCompletionDate);
   if (!date) return "An actual completion date is required.";
   const start = normalizeDate(actualStartDate);
-  if (start && date < start) {
-    return `Actual completion cannot be before the actual start date (${start}).`;
-  }
+  if (start && date < start) return `Actual completion cannot be before the actual start date (${start}).`;
   return "";
 }
 
-export function buildCancelPatch() {
-  return { status: "Cancelled" };
-}
+export function buildCancelPatch() { return { status: "Cancelled" }; }
+export function buildDesignOnlyPatch() { return { status: "Design-only" }; }
+export function buildArchivePatch() { return { archived: true }; }
+export function buildRestorePatch() { return { archived: false }; }
 
-export function buildDesignOnlyPatch() {
-  return { status: "Design-only" };
-}
-
-export function buildArchivePatch() {
-  return { archived: true };
-}
-
-export function buildRestorePatch() {
-  return { archived: false };
-}
-
-// ---- Validation (mirrors database CHECK constraints) ----------------------
 const LIMITS = {
   projectName: 160,
+  siteName: 160,
   clientSiteName: 160,
   location: 120,
   county: 80,
@@ -334,46 +221,29 @@ const LIMITS = {
 
 export function validateProjectForm(form) {
   const errors = {};
-
   const name = normalizeOptional(form.projectName);
-  if (!name) {
-    errors.projectName = "Project name is required.";
-  } else if (name.length > LIMITS.projectName) {
-    errors.projectName = `Project name must be ${LIMITS.projectName} characters or fewer.`;
-  }
+  if (!name) errors.projectName = "Project name is required.";
+  else if (name.length > LIMITS.projectName) errors.projectName = `Project name must be ${LIMITS.projectName} characters or fewer.`;
+
+  const siteName = normalizeOptional(form.siteName);
+  if (siteName && siteName.length > LIMITS.siteName) errors.siteName = `Site / property name must be ${LIMITS.siteName} characters or fewer.`;
 
   const lengthChecks = [
-    ["clientSiteName", "Client / site label"],
-    ["location", "Location"],
-    ["county", "County"],
-    ["nextAction", "Next action"],
-    ["blocker", "Blocker"],
-    ["notes", "Notes"],
+    ["clientSiteName", "Client / account label"], ["location", "Location"], ["county", "County"],
+    ["nextAction", "Next action"], ["blocker", "Blocker"], ["notes", "Notes"],
   ];
   for (const [key, label] of lengthChecks) {
     const value = normalizeOptional(form[key]);
-    if (value && value.length > LIMITS[key]) {
-      errors[key] = `${label} must be ${LIMITS[key]} characters or fewer.`;
-    }
+    if (value && value.length > LIMITS[key]) errors[key] = `${label} must be ${LIMITS[key]} characters or fewer.`;
   }
 
   const start = normalizeDate(form.startDate);
   const target = normalizeDate(form.targetCompletionDate);
-  if (start && target && target < start) {
-    errors.targetCompletionDate =
-      "Target completion cannot be before the planned start date.";
-  }
-
+  if (start && target && target < start) errors.targetCompletionDate = "Target completion cannot be before the planned start date.";
   const actualStart = normalizeDate(form.actualStartDate);
   const actualCompletion = normalizeDate(form.actualCompletionDate);
-  if (actualStart && actualCompletion && actualCompletion < actualStart) {
-    errors.actualCompletionDate =
-      "Actual completion cannot be before the actual start date.";
-  }
-
+  if (actualStart && actualCompletion && actualCompletion < actualStart) errors.actualCompletionDate = "Actual completion cannot be before the actual start date.";
   return errors;
 }
 
-export function hasErrors(errors) {
-  return Object.keys(errors).length > 0;
-}
+export function hasErrors(errors) { return Object.keys(errors).length > 0; }
