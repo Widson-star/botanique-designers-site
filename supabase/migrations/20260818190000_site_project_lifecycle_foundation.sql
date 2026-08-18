@@ -58,14 +58,14 @@ begin
   new.county := nullif(regexp_replace(trim(coalesce(new.county, '')), '\s+', ' ', 'g'), '');
   new.notes := nullif(trim(coalesce(new.notes, '')), '');
   if tg_op = 'INSERT' then
-    new.created_by := auth.uid();
-    new.updated_by := auth.uid();
-    new.created_at := now();
-    new.updated_at := now();
+    new.created_by := coalesce(auth.uid(), new.created_by);
+    new.updated_by := coalesce(auth.uid(), new.updated_by, new.created_by);
+    new.created_at := coalesce(new.created_at, now());
+    new.updated_at := coalesce(new.updated_at, new.created_at, now());
   else
     new.created_by := old.created_by;
     new.created_at := old.created_at;
-    new.updated_by := auth.uid();
+    new.updated_by := coalesce(auth.uid(), new.updated_by, old.updated_by);
     new.updated_at := now();
   end if;
   return new;
