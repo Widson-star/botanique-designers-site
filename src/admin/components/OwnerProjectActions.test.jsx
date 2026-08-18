@@ -41,12 +41,23 @@ describe("OwnerProjectActions", () => {
     fireEvent.click(screen.getByRole("button", { name: "More actions" }));
     const menu = screen.getByRole("menu", { name: "More project actions" });
     expect(within(menu).getByRole("menuitem", { name: "Cancel" })).toBeInTheDocument();
+    // Design-only is incoherent in Implementation and the lifecycle guard
+    // rejects it, so it is not offered here.
     expect(
-      within(menu).getByRole("menuitem", { name: "Classify Design-only" })
-    ).toBeInTheDocument();
+      within(menu).queryByRole("menuitem", { name: "Classify Design-only" })
+    ).not.toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
     // Not pending -> no Activate.
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
+  });
+
+  it("still offers Design-only before delivery reaches Implementation", () => {
+    renderActions({ role: "owner", project: { ...ongoing, stage: "Concept Design" } });
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const menu = screen.getByRole("menu", { name: "More project actions" });
+    expect(
+      within(menu).getByRole("menuitem", { name: "Classify Design-only" })
+    ).toBeInTheDocument();
   });
 
   it("closes the More actions menu with Escape and restores trigger focus", async () => {
@@ -78,20 +89,70 @@ describe("OwnerProjectActions", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("activate confirmation sends only { status: 'Ongoing' }", async () => {
+  it("requires a deliberate phase choice before a project can be activated", async () => {
     const updateProject = vi.fn().mockResolvedValue({ ok: true });
     renderActions({ role: "owner", project: pending, updateProject });
 
     fireEvent.click(screen.getByRole("button", { name: "Activate" }));
-    // Confirm dialog appears; both the trigger and the dialog confirm read
-    // "Activate" — the dialog's confirm button lives inside the alertdialog.
     const dialog = await screen.findByRole("alertdialog");
+    const phase = within(dialog).getByLabelText(/Project phase/);
+
+    // Nothing is preselected, and the offered phases exclude the pre-active and
+    // terminal positions.
+    expect(phase).toHaveValue("");
+    expect(Array.from(phase.querySelectorAll("option")).map((o) => o.textContent)).toEqual([
+      "Select project phase",
+      "Site Assessment",
+      "Concept Design",
+      "Detailed Design",
+      "Quotation Sent",
+      "Awaiting Approval",
+      "Implementation",
+    ]);
+
+    // Confirm is unavailable until a phase is chosen, and clicking does nothing.
+    const confirm = within(dialog).getByRole("button", { name: "Activate" });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(confirm);
+    expect(updateProject).not.toHaveBeenCalled();
+
+    fireEvent.change(phase, { target: { value: "Site Assessment" } });
+    expect(within(dialog).getByRole("button", { name: "Activate" })).toBeEnabled();
+  });
+
+  it("activation submits status and phase together and nothing else", async () => {
+    const updateProject = vi.fn().mockResolvedValue({ ok: true });
+    renderActions({ role: "owner", project: pending, updateProject });
+
+    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    fireEvent.change(within(dialog).getByLabelText(/Project phase/), {
+      target: { value: "Implementation" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Activate" }));
 
     await waitFor(() => expect(updateProject).toHaveBeenCalled());
     const [id, patch] = updateProject.mock.calls[0];
     expect(id).toBe("p1");
-    expect(patch).toEqual({ status: "Ongoing" });
+    // No intermediate Ongoing + Inquiry, and no unrelated field is coupled in.
+    expect(patch).toEqual({ status: "Ongoing", stage: "Implementation" });
+  });
+
+  it("does not carry a phase choice over from a previous activation dialog", async () => {
+    renderActions({ role: "owner", project: pending });
+
+    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    let dialog = await screen.findByRole("alertdialog");
+    fireEvent.change(within(dialog).getByLabelText(/Project phase/), {
+      target: { value: "Implementation" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByLabelText(/Project phase/)).toHaveValue("");
+    expect(within(dialog).getByRole("button", { name: "Activate" })).toBeDisabled();
   });
 
   it("blocks a blank completion date and shows inline validation", async () => {
@@ -110,7 +171,7 @@ describe("OwnerProjectActions", () => {
     expect(updateProject).not.toHaveBeenCalled();
   });
 
-  it("submits exactly status and actual completion for a valid date", async () => {
+  it("submits one coherent completion transition for a valid date", async () => {
     const updateProject = vi.fn().mockResolvedValue({ ok: true });
     renderActions({ role: "owner", project: ongoing, updateProject });
 
@@ -124,7 +185,11 @@ describe("OwnerProjectActions", () => {
     await waitFor(() =>
       expect(updateProject).toHaveBeenCalledWith("p2", {
         status: "Completed",
+        stage: "Completed",
         actual_completion_date: "2026-07-27",
+        next_action: null,
+        next_action_date: null,
+        blocker: null,
       })
     );
   });
@@ -167,9 +232,17 @@ describe("OwnerProjectActions", () => {
     await waitFor(() => expect(opener).toHaveFocus());
   });
 
-  it("focuses safe Cancel first in a dialog without form input", async () => {
+  it("focuses the phase selector first in the activation dialog", async () => {
     renderActions({ role: "owner", project: pending });
     fireEvent.click(screen.getByRole("button", { name: "Activate" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByLabelText(/Project phase/)).toHaveFocus();
+  });
+
+  it("focuses safe Cancel first in a dialog without form input", async () => {
+    renderActions({ role: "owner", project: pending });
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Archive" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByRole("button", { name: "Cancel" })).toHaveFocus();
   });

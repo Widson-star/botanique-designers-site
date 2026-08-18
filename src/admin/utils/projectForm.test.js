@@ -184,10 +184,20 @@ describe("buildUpdatePatch", () => {
 });
 
 describe("buildMarkCompletedPatch", () => {
-  it("sends only status + actual completion (no silent stage change)", () => {
+  it("closes the delivery cycle coherently: status, phase, date and stale attention", () => {
     const patch = buildMarkCompletedPatch("2026-12-01");
-    expect(patch).toEqual({ status: "Completed", actual_completion_date: "2026-12-01" });
-    expect(patch).not.toHaveProperty("stage");
+    expect(patch).toEqual({
+      status: "Completed",
+      stage: "Completed",
+      actual_completion_date: "2026-12-01",
+      next_action: null,
+      next_action_date: null,
+      blocker: null,
+    });
+    // Notes, lead, identity and finance references are never part of the patch.
+    expect(patch).not.toHaveProperty("notes");
+    expect(patch).not.toHaveProperty("lead_person_id");
+    expect(patch).not.toHaveProperty("project_name");
   });
 
   it("refuses to construct a completion patch without a date", () => {
