@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { PROJECT_STAGES, PROJECT_TYPES } from "../constants/projectStatus";
+import { ACTIVATION_STAGES, PROJECT_STAGES, PROJECT_TYPES } from "../constants/projectStatus";
 import {
+  buildActivatePatch,
   buildCreatePayload,
   buildMarkCompletedPatch,
   deriveInitialStatusFromStage,
@@ -66,6 +67,37 @@ describe("Project lifecycle foundation", () => {
     const base = { archived: false, status: "Ongoing" };
     expect(canClassifyDesignOnly("owner", { ...base, stage: "Concept Design" })).toBe(true);
     expect(canClassifyDesignOnly("owner", { ...base, stage: "Implementation" })).toBe(false);
+  });
+
+  it("offers exactly the six activation phases, excluding the pre-active and terminal ones", () => {
+    expect(ACTIVATION_STAGES).toEqual([
+      "Site Assessment",
+      "Concept Design",
+      "Detailed Design",
+      "Quotation Sent",
+      "Awaiting Approval",
+      "Implementation",
+    ]);
+  });
+
+  it("activates into the chosen phase as one coherent transition", () => {
+    expect(buildActivatePatch("Site Assessment")).toEqual({
+      status: "Ongoing",
+      stage: "Site Assessment",
+    });
+    expect(buildActivatePatch("Implementation")).toEqual({
+      status: "Ongoing",
+      stage: "Implementation",
+    });
+    // Nothing unrelated is coupled into the activation write.
+    expect(Object.keys(buildActivatePatch("Concept Design"))).toEqual(["status", "stage"]);
+  });
+
+  it("refuses to activate without a deliberate, valid delivery phase", () => {
+    const message = "Select the project phase this project is entering.";
+    for (const invalid of ["Inquiry", "Maintenance", "Completed", "Archived", "Site Visit", "", undefined]) {
+      expect(() => buildActivatePatch(invalid)).toThrow(message);
+    }
   });
 
   it("keeps a deprecated legacy stage visible on edit without offering it on create", () => {

@@ -22,6 +22,13 @@ export const PROJECT_STAGES = [
   "Completed",
 ];
 
+// The delivery phases a Pending project may be activated into. Inquiry is the
+// pre-active position, so an active project never remains there; Completed is
+// reached by the direct create-at-Completed path or Mark completed, not Activate.
+export const ACTIVATION_STAGES = PROJECT_STAGES.filter(
+  (stage) => !["Inquiry", "Completed"].includes(stage)
+);
+
 export const PAYMENT_STATUSES = [
   "Not Quoted",
   "Quoted",

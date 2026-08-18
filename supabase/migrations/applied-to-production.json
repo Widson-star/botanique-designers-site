@@ -193,7 +193,17 @@
     "(20260818173318) defines Site / property identity for new Project inserts, and",
     "project_lifecycle_legacy_compatibility (20260818173519) keeps old deprecated",
     "stage rows operationally correctable while rejecting those values on new or",
-    "deliberate stage/type changes."
+    "deliberate stage/type changes.",
+    "",
+    "PROJECT ACTIVATION PHASE INTEGRITY, 18 Aug 2026.",
+    "project_activation_phase_integrity (production version 20260818182232) closes",
+    "the Ongoing + Inquiry path left open when Activate changed status alone.",
+    "Inquiry is the pre-active position, so Ongoing and Paused are now rejected",
+    "there and activation must name the delivery phase the Project is entering.",
+    "Cancelled + Inquiry stays valid, because a Project may be cancelled before it",
+    "is ever activated. A read-only check confirmed zero Ongoing/Paused + Inquiry",
+    "rows before the guard was applied. Lifecycle enforcement only: no Project,",
+    "Site, Maintenance, Staff Pay, Project Cost or Daily Site row was rewritten."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-18",
@@ -236,6 +246,7 @@
     { "name": "site_project_lifecycle_foundation", "productionVersion": "20260818172640" },
     { "name": "site_identity_correction", "productionVersion": "20260818172805" },
     { "name": "new_project_site_identity", "productionVersion": "20260818173318" },
-    { "name": "project_lifecycle_legacy_compatibility", "productionVersion": "20260818173519" }
+    { "name": "project_lifecycle_legacy_compatibility", "productionVersion": "20260818173519" },
+    { "name": "project_activation_phase_integrity", "productionVersion": "20260818182232" }
   ]
 }

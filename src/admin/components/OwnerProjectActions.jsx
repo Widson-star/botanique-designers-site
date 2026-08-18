@@ -10,6 +10,7 @@ import {
   buildMarkCompletedPatch, buildRestorePatch, validateActualCompletionDate,
 } from "../utils/projectForm";
 import { todayIsoDate } from "../utils/dashboardMetrics";
+import { ACTIVATION_STAGES } from "../constants/projectStatus";
 import ConfirmDialog from "./ConfirmDialog";
 
 const actionButtonClass = "rounded-md border border-stone-300 px-2.5 py-1.5 text-xs font-medium text-botanique-charcoal hover:bg-stone-50 transition";
@@ -18,11 +19,13 @@ export default function OwnerProjectActions({ role, project }) {
   const { updateProject } = useAdminData();
   const [active, setActive] = useState(null);
   const [completionDate, setCompletionDate] = useState(todayIsoDate());
+  const [activationStage, setActivationStage] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [returnToMore, setReturnToMore] = useState(false);
   const completionDateId = useId();
+  const activationStageId = useId();
   const moreActionsId = `project-more-actions-${project.id}`;
   const moreActionsMenuId = `${moreActionsId}-menu`;
 
@@ -31,8 +34,10 @@ export default function OwnerProjectActions({ role, project }) {
     setError(""); setActive(key); setReturnToMore(fromMenu);
     if (fromMenu) setMenuOpen(false);
     if (key === "complete") setCompletionDate(project.actualCompletionDate || todayIsoDate());
+    // Never preselect a phase — activation must be a deliberate choice.
+    if (key === "activate") setActivationStage("");
   }
-  function close() { if (busy) return; setActive(null); if (returnToMore) { setReturnToMore(false); focusMoreActions(); } }
+  function close() { if (busy) return; setActive(null); setActivationStage(""); if (returnToMore) { setReturnToMore(false); focusMoreActions(); } }
   async function run(patch) {
     setBusy(true); setError("");
     const result = await updateProject(project.id, patch);
@@ -52,9 +57,16 @@ export default function OwnerProjectActions({ role, project }) {
   if (!hasOwnerMaterialActions(role, project)) return null;
   const completionError = active === "complete" ? validateActualCompletionDate(completionDate, project.actualStartDate) : "";
   function confirmComplete() { if (completionError) return; run(buildMarkCompletedPatch(completionDate)); }
+  const activationValid = ACTIVATION_STAGES.includes(activationStage);
+  function confirmActivate() { if (!activationValid) return; run(buildActivatePatch(activationStage)); }
 
   const dialogs = {
-    activate: { title: "Activate project", description: `Move "${project.projectName}" from Pending to Ongoing.`, confirmLabel: "Activate", onConfirm: () => run(buildActivatePatch()) },
+    activate: {
+      title: "Activate project",
+      description: `Move "${project.projectName}" from Pending to Ongoing. Choose the delivery phase it is actually entering — only status and project phase change.`,
+      confirmLabel: "Activate", confirmDisabled: !activationValid, onConfirm: confirmActivate,
+      body: <div className="block text-sm"><label className="block" htmlFor={activationStageId}><span className="mb-1 block text-xs font-medium text-gray-600">Project phase <span className="text-red-600">*</span></span><select id={activationStageId} value={activationStage} onChange={(e) => setActivationStage(e.target.value)} aria-invalid={!activationValid} className="w-full rounded-md border border-stone-200 px-3 py-2 text-sm focus:border-botanique-green focus:outline-none"><option value="">Select project phase</option>{ACTIVATION_STAGES.map((stage) => <option key={stage} value={stage}>{stage}</option>)}</select></label></div>,
+    },
     complete: {
       title: "Mark project completed",
       description: `Close the delivery cycle for "${project.projectName}". Status and project phase will both become Completed, and stale next-action attention will be cleared.`,

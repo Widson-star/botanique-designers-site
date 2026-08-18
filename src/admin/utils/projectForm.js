@@ -1,4 +1,5 @@
 import { isManager, isOwner, MATERIAL_FIELD_KEYS } from "./projectCapabilities";
+import { ACTIVATION_STAGES } from "../constants/projectStatus";
 
 export function normalizeOptional(value) {
   if (value === null || value === undefined) return null;
@@ -85,7 +86,12 @@ export function buildMaterialProposal(originalProject, proposed) {
 const INTAKE_KEYS=["project_name","project_type","client_site_name","location","county","notes","start_date","target_completion_date"];
 export function buildIntakePayload(form){ const values=formToOperationalValues(form); const payload={}; for(const key of INTAKE_KEYS){ const value=values[key]; if(key==="project_name"||key==="project_type") payload[key]=value; else if(value!==null&&value!==undefined&&value!=="") payload[key]=value; } return payload; }
 
-export function buildActivatePatch(){ return {status:"Ongoing"}; }
+// Activation is one coherent transition: a Pending project leaves Inquiry for
+// the phase it is actually entering. There is no intermediate Ongoing + Inquiry.
+export function buildActivatePatch(selectedStage){
+  if(!ACTIVATION_STAGES.includes(selectedStage)) throw new Error("Select the project phase this project is entering.");
+  return {status:"Ongoing",stage:selectedStage};
+}
 export function buildMarkCompletedPatch(actualCompletionDate){
   const date=normalizeDate(actualCompletionDate); if(!date) throw new Error("An actual completion date is required.");
   return {status:"Completed",stage:"Completed",actual_completion_date:date,next_action:null,next_action_date:null,blocker:null};
