@@ -24,7 +24,9 @@ export function canSeePendingActivation(role){ return isOwner(role); }
 export function canActivate(role,project){ return isOwner(role)&&!project.archived&&project.status==="Pending"; }
 export function canMarkCompleted(role,project){ return isOwner(role)&&!project.archived&&!["Completed","Cancelled"].includes(project.status); }
 export function canCancel(role,project){ return isOwner(role)&&!project.archived&&!["Cancelled","Completed"].includes(project.status); }
-export function canClassifyDesignOnly(role,project){ return isOwner(role)&&!project.archived&&!["Design-only","Completed","Cancelled"].includes(project.status); }
+// Design-only is incoherent once delivery has reached Implementation, and the
+// lifecycle trigger rejects that pair — so the action is not offered there.
+export function canClassifyDesignOnly(role,project){ return isOwner(role)&&!project.archived&&!["Design-only","Completed","Cancelled"].includes(project.status)&&project.stage!=="Implementation"; }
 export function canArchive(role,project){ return isOwner(role)&&!project.archived; }
 export function canRestore(role,project){ return isOwner(role)&&project.archived; }
 export function hasOwnerMaterialActions(role,project){ return canActivate(role,project)||canMarkCompleted(role,project)||canCancel(role,project)||canClassifyDesignOnly(role,project)||canArchive(role,project)||canRestore(role,project); }

@@ -83,6 +83,7 @@ export default function ProjectForm({ mode, project }) {
 
       <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
         <h2 className="text-base font-semibold">Project details</h2>
+        {!caps.materialEditable && <p className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-gray-500">These identity fields are read-only for your role. Use “Propose a material change” below to request a change with Principal approval.</p>}
         <div className="grid gap-4 md:grid-cols-2">
           {caps.materialEditable ? <Field label="Project name" htmlFor="projectName" error={errors.projectName} required><input id="projectName" maxLength={160} value={form.projectName} onChange={(e) => setField("projectName", e.target.value)} className={inputClass}/></Field> : <ReadOnlyValue label="Project name" value={form.projectName || "Not set"}/>} 
           {caps.materialEditable ? <Field label="Site / property name" htmlFor="clientSiteName" error={errors.clientSiteName} hint={mode === "create" ? "Physical property or site this project belongs to." : undefined}><input id="clientSiteName" maxLength={160} value={form.clientSiteName} onChange={(e) => setField("clientSiteName", e.target.value)} placeholder="Example: Krave Hotel" className={inputClass}/></Field> : <ReadOnlyValue label="Site / property name" value={form.clientSiteName || "Not set"}/>} 
@@ -129,6 +130,7 @@ export default function ProjectForm({ mode, project }) {
       </section>}
 
       <section className="space-y-4 rounded-lg border border-stone-200 bg-white p-5">
+        <h2 className="text-base font-semibold">Internal notes</h2>
         <Field label="Internal project notes" htmlFor="notes" error={errors.notes}><textarea id="notes" rows={4} maxLength={5000} value={form.notes} onChange={(e) => setField("notes", e.target.value)} className={inputClass}/></Field>
       </section>
 
@@ -138,8 +140,8 @@ export default function ProjectForm({ mode, project }) {
       </section>}
 
       <div className="sticky bottom-0 z-10 -mx-2 flex items-center gap-3 border-t border-stone-200 bg-[#f6f7f4]/95 px-2 py-3 backdrop-blur">
-        <button type="submit" disabled={busy} className="rounded-md bg-botanique-green px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{busy ? "Saving…" : mode === "create" ? "Create project" : caps.proposesMaterial ? "Save operational updates" : "Save changes"}</button>
-        <button type="button" onClick={() => navigate(mode === "edit" && project ? `/admin/projects/${project.id}` : "/admin/projects")} disabled={busy} className="rounded-md border border-stone-200 px-5 py-2.5 text-sm font-medium text-gray-600">Cancel</button>
+        <button type="submit" disabled={busy} className="rounded-md bg-botanique-green px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-botanique-dark disabled:opacity-60">{busy ? "Saving…" : mode === "create" ? "Create project" : caps.proposesMaterial ? "Save operational updates" : "Save changes"}</button>
+        <button type="button" onClick={() => navigate(mode === "edit" && project ? `/admin/projects/${project.id}` : "/admin/projects")} disabled={busy} className="rounded-md border border-stone-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-stone-50 disabled:opacity-50">Cancel</button>
       </div>
     </form>
     {caps.proposesMaterial && mode === "edit" && project && <MaterialChangeProposal project={project}/>} 

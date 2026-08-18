@@ -81,12 +81,74 @@ describe("owner form", () => {
 
   it("shows full controls including actual completion and a single portfolio control", () => {
     renderForm({ role: "owner", mode: "create" });
-    expect(screen.getByLabelText("Status")).toBeInTheDocument();
+    // Status is no longer independently chosen on create: it is derived from the
+    // selected delivery phase and shown read-only.
+    expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+    expect(screen.getByText("Initial status")).toBeInTheDocument();
     expect(screen.getByLabelText("Actual completion")).toBeInTheDocument();
     // One clear control replaces the old checkbox + permission dropdown pair.
     expect(screen.getByLabelText(/Portfolio publication status/)).toBeInTheDocument();
     expect(screen.queryByLabelText("Portfolio eligible")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Portfolio permission status")).not.toBeInTheDocument();
+  });
+
+  it("derives status from the chosen delivery phase and offers no contradictory phases", () => {
+    renderForm({ role: "owner", mode: "create" });
+    const phase = screen.getByLabelText("Current project phase");
+    expect(Array.from(phase.querySelectorAll("option")).map((o) => o.textContent)).toEqual([
+      "Inquiry",
+      "Site Assessment",
+      "Concept Design",
+      "Detailed Design",
+      "Quotation Sent",
+      "Awaiting Approval",
+      "Implementation",
+      "Completed",
+    ]);
+
+    const derivedStatus = () =>
+      screen.getByText("Initial status").parentElement.querySelector("p").textContent;
+
+    expect(derivedStatus()).toBe("Pending");
+    fireEvent.change(phase, { target: { value: "Site Assessment" } });
+    expect(derivedStatus()).toBe("Ongoing");
+    fireEvent.change(phase, { target: { value: "Implementation" } });
+    expect(derivedStatus()).toBe("Ongoing");
+    fireEvent.change(phase, { target: { value: "Completed" } });
+    expect(derivedStatus()).toBe("Completed");
+  });
+
+  // Mwiko Gardens / Krave Hotel — a historical project created directly at
+  // Completed, with no known completion date and no fabricated attention.
+  it("creates a historical completed project without inventing a date or next action", async () => {
+    const { createProject } = renderForm({ role: "owner", mode: "create" });
+    fireEvent.change(screen.getByLabelText(/Project name/), { target: { value: "Mwiko Gardens" } });
+    fireEvent.change(screen.getByLabelText(/Site \/ property name/), { target: { value: "Krave Hotel" } });
+    fireEvent.change(screen.getByLabelText("Project type"), { target: { value: "Hospitality" } });
+    fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Parklands, Nairobi" } });
+    fireEvent.change(screen.getByLabelText("County"), { target: { value: "Nairobi" } });
+    fireEvent.change(screen.getByLabelText("Current project phase"), { target: { value: "Completed" } });
+
+    // No delivery-attention fields are even offered for a historical completion.
+    expect(screen.queryByLabelText("Next required action")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Current delivery constraint")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+    await waitFor(() => expect(createProject).toHaveBeenCalledTimes(1));
+
+    expect(createProject.mock.calls[0][0]).toMatchObject({
+      project_name: "Mwiko Gardens",
+      client_site_name: "Krave Hotel",
+      project_type: "Hospitality",
+      location: "Parklands, Nairobi",
+      county: "Nairobi",
+      status: "Completed",
+      stage: "Completed",
+      actual_completion_date: null,
+      next_action: null,
+      next_action_date: null,
+      blocker: null,
+    });
   });
 
   it("submits and preserves the default Not Reviewed portfolio state", async () => {

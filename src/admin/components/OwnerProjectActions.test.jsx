@@ -41,12 +41,23 @@ describe("OwnerProjectActions", () => {
     fireEvent.click(screen.getByRole("button", { name: "More actions" }));
     const menu = screen.getByRole("menu", { name: "More project actions" });
     expect(within(menu).getByRole("menuitem", { name: "Cancel" })).toBeInTheDocument();
+    // Design-only is incoherent in Implementation and the lifecycle guard
+    // rejects it, so it is not offered here.
     expect(
-      within(menu).getByRole("menuitem", { name: "Classify Design-only" })
-    ).toBeInTheDocument();
+      within(menu).queryByRole("menuitem", { name: "Classify Design-only" })
+    ).not.toBeInTheDocument();
     expect(within(menu).getByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
     // Not pending -> no Activate.
     expect(screen.queryByRole("button", { name: "Activate" })).not.toBeInTheDocument();
+  });
+
+  it("still offers Design-only before delivery reaches Implementation", () => {
+    renderActions({ role: "owner", project: { ...ongoing, stage: "Concept Design" } });
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    const menu = screen.getByRole("menu", { name: "More project actions" });
+    expect(
+      within(menu).getByRole("menuitem", { name: "Classify Design-only" })
+    ).toBeInTheDocument();
   });
 
   it("closes the More actions menu with Escape and restores trigger focus", async () => {
@@ -110,7 +121,7 @@ describe("OwnerProjectActions", () => {
     expect(updateProject).not.toHaveBeenCalled();
   });
 
-  it("submits exactly status and actual completion for a valid date", async () => {
+  it("submits one coherent completion transition for a valid date", async () => {
     const updateProject = vi.fn().mockResolvedValue({ ok: true });
     renderActions({ role: "owner", project: ongoing, updateProject });
 
@@ -124,7 +135,11 @@ describe("OwnerProjectActions", () => {
     await waitFor(() =>
       expect(updateProject).toHaveBeenCalledWith("p2", {
         status: "Completed",
+        stage: "Completed",
         actual_completion_date: "2026-07-27",
+        next_action: null,
+        next_action_date: null,
+        blocker: null,
       })
     );
   });

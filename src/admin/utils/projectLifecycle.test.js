@@ -6,7 +6,7 @@ import {
   deriveInitialStatusFromStage,
   emptyProjectForm,
 } from "./projectForm";
-import { stageOptionsForForm } from "./projectCapabilities";
+import { canClassifyDesignOnly, stageOptionsForForm } from "./projectCapabilities";
 
 describe("Project lifecycle foundation", () => {
   it("derives a coherent initial status from delivery phase", () => {
@@ -45,6 +45,27 @@ describe("Project lifecycle foundation", () => {
       next_action_date: null,
       blocker: null,
     });
+  });
+
+  it("offers the exact settled delivery phases, in order", () => {
+    expect(PROJECT_STAGES).toEqual([
+      "Inquiry",
+      "Site Assessment",
+      "Concept Design",
+      "Detailed Design",
+      "Quotation Sent",
+      "Awaiting Approval",
+      "Implementation",
+      "Completed",
+    ]);
+  });
+
+  // The lifecycle trigger rejects Design-only + Implementation, so the quick
+  // action must not be offered on a project already in Implementation.
+  it("does not offer Design-only classification once delivery reached Implementation", () => {
+    const base = { archived: false, status: "Ongoing" };
+    expect(canClassifyDesignOnly("owner", { ...base, stage: "Concept Design" })).toBe(true);
+    expect(canClassifyDesignOnly("owner", { ...base, stage: "Implementation" })).toBe(false);
   });
 
   it("keeps a deprecated legacy stage visible on edit without offering it on create", () => {
