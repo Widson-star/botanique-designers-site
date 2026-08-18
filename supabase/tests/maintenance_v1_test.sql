@@ -38,9 +38,12 @@ insert into public.projects (
    null, false, 'Not Reviewed'),
   ('00000000-0000-0000-0000-0000002010a2', 'Ongoing Portfolio Site', 'Residential', 'Ongoing', 'Implementation', false,
    null, false, 'Not Reviewed'),
-  ('00000000-0000-0000-0000-0000002010a3', 'Archived Site', 'Residential', 'Completed', 'Archived', true,
+  -- Archive is a record state, not a delivery phase, and a Cancelled Project
+  -- keeps the phase it was cancelled at (both settled by the Project lifecycle
+  -- foundation; the lifecycle trigger rejects the old fixture values).
+  ('00000000-0000-0000-0000-0000002010a3', 'Archived Site', 'Residential', 'Completed', 'Completed', true,
    null, false, 'Not Reviewed'),
-  ('00000000-0000-0000-0000-0000002010a4', 'Cancelled Site', 'Residential', 'Cancelled', 'Completed', false,
+  ('00000000-0000-0000-0000-0000002010a4', 'Cancelled Site', 'Residential', 'Cancelled', 'Implementation', false,
    null, false, 'Not Reviewed');
 
 create temp table project_baseline as

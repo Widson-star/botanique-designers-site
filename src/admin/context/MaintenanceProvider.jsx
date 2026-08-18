@@ -5,7 +5,8 @@ import {
   assignMaintenancePerson, cancelMaintenanceVisit, completeMaintenanceVisit,
   completeMaintenanceVisitCycle, correctMaintenanceAssignment,
   createMaintenanceRelationship, endMaintenanceAssignment, endMaintenanceRelationship,
-  fetchMaintenanceAssignments, fetchMaintenanceAuthorisedProjects, fetchMaintenanceRegister,
+  createMaintenanceSite,
+  fetchMaintenanceAssignments, fetchMaintenanceAuthorisedSites, fetchMaintenanceRegister,
   fetchMaintenanceVisits, pauseMaintenanceRelationship, rescheduleMaintenanceVisit,
   resumeMaintenanceRelationship, scheduleMaintenanceVisit, updateMaintenanceRelationship,
 } from "../lib/maintenance";
@@ -13,13 +14,28 @@ import {
 const now = () => new Date().toISOString();
 const today = () => new Date().toISOString().slice(0, 10);
 
+// Site is the durable identity; Project is optional origin context and may be
+// null for a maintenance-only Site.
 function mapRegisterRow(row) {
   return {
-    id: row.id, projectId: row.project_id, projectName: row.project_name,
-    clientSiteName: row.client_site_name || "", projectStatus: row.project_status,
+    id: row.id,
+    siteId: row.site_id, siteName: row.site_name || "",
+    siteLocation: row.site_location || "", siteCounty: row.site_county || "",
+    projectId: row.project_id || "", projectName: row.project_name || "",
+    projectStatus: row.project_status || "",
     status: row.status, scope: row.scope, frequency: row.frequency, startDate: row.start_date,
     version: row.version, lastVisitDate: row.last_visit_date || "", nextVisitDate: row.next_visit_date || "",
     assignedTeam: row.assigned_team || [],
+  };
+}
+
+function mapAuthorisedSite(row) {
+  return {
+    id: row.id, siteName: row.site_name || "",
+    location: row.location || "", county: row.county || "",
+    projects: (row.projects || []).map((project) => ({
+      id: project.id, projectName: project.project_name, status: project.status,
+    })),
   };
 }
 
@@ -44,8 +60,10 @@ function mapAssignment(row) {
 
 function buildDemoState() {
   const relationships = [
-    { id: "demo-maintenance-1", projectId: "muthithi-gardens-estate", scope: "Quarterly grounds inspection and irrigation servicing.", startDate: "2026-06-01", frequency: "quarterly", status: "active", version: 1 },
-    { id: "demo-maintenance-2", projectId: "karen-residence-fountain-garden", scope: "Fortnightly lawn, border and fountain upkeep.", startDate: "2026-07-15", frequency: "fortnightly", status: "active", version: 1 },
+    { id: "demo-maintenance-1", siteId: "demo-site-1", siteName: "Muthithi Gardens Estate", siteLocation: "Muthithi Estate", siteCounty: "Nairobi", projectId: "muthithi-gardens-estate", scope: "Quarterly grounds inspection and irrigation servicing.", startDate: "2026-06-01", frequency: "quarterly", status: "active", version: 1 },
+    { id: "demo-maintenance-2", siteId: "demo-site-2", siteName: "Karen Residence", siteLocation: "Karen", siteCounty: "Nairobi", projectId: "karen-residence-fountain-garden", scope: "Fortnightly lawn, border and fountain upkeep.", startDate: "2026-07-15", frequency: "fortnightly", status: "active", version: 1 },
+    // A maintenance-only Site: Botanique never built here, so there is no Project.
+    { id: "demo-maintenance-3", siteId: "demo-site-3", siteName: "Riverside Court", siteLocation: "Westlands", siteCounty: "Nairobi", projectId: "", scope: "Weekly grounds upkeep for a landscape Botanique did not build.", startDate: "2026-08-01", frequency: "weekly", status: "active", version: 1 },
   ];
   const visits = [
     { id: "demo-visit-1", relationshipId: "demo-maintenance-1", scheduledDate: "2026-08-05", status: "completed", purpose: "Quarterly grounds inspection", completedAt: "2026-08-05T09:00:00Z", completionNote: "Irrigation checked, no issues found.", cancellationReason: "", completionOutcome: "completed", followUpRequired: false, followUpNote: "", dailySiteEntryId: "", version: 2 },
@@ -71,11 +89,37 @@ function deriveNextVisit(visits, relationshipId) {
 }
 function buildDemoRegister(relationships, visits, assignments, projects) {
   return relationships.map((relationship) => {
-    const project = projects.find((candidate) => candidate.id === relationship.projectId);
+    const project = relationship.projectId
+      ? projects.find((candidate) => candidate.id === relationship.projectId)
+      : null;
     const team = assignments.filter((assignment) => assignment.relationshipId === relationship.id && !assignment.endDate)
       .map((assignment) => ({ person_id: assignment.personId, full_name: assignment.personName, role: assignment.role }));
-    return { ...relationship, projectName: project?.projectName || "Unknown project", clientSiteName: project?.clientSiteName || "", projectStatus: project?.status || "", lastVisitDate: deriveLastVisit(visits, relationship.id), nextVisitDate: deriveNextVisit(visits, relationship.id), assignedTeam: team };
+    return {
+      ...relationship,
+      // Never invent a Project label: a maintenance-only Site simply has none.
+      projectName: project?.projectName || "",
+      projectStatus: project?.status || "",
+      lastVisitDate: deriveLastVisit(visits, relationship.id),
+      nextVisitDate: deriveNextVisit(visits, relationship.id),
+      assignedTeam: team,
+    };
   });
+}
+
+// Sites a demo operator may start Maintenance at: every Project-backed Site with
+// no live relationship, plus a free maintenance-only Site.
+function buildDemoEligibleSites(relationships, projects) {
+  const taken = new Set(relationships.filter((item) => item.status !== "ended").map((item) => item.siteId));
+  const fromProjects = projects
+    .filter((project) => !project.archived && ["Ongoing", "Paused", "Completed"].includes(project.status))
+    .map((project) => ({
+      id: project.siteId || `demo-site-of-${project.id}`,
+      siteName: project.clientSiteName || project.projectName,
+      location: project.location || "", county: project.county || "",
+      projects: [{ id: project.id, projectName: project.projectName, status: project.status }],
+    }));
+  const maintenanceOnly = [{ id: "demo-site-free", siteName: "Acacia Court", location: "Lavington", county: "Nairobi", projects: [] }];
+  return [...fromProjects, ...maintenanceOnly].filter((site) => !taken.has(site.id));
 }
 
 export default function MaintenanceProvider({ children, session, role, isDemo }) {
@@ -85,23 +129,25 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
   const [relationships, setRelationships] = useState(() => demoSeed?.relationships || []);
   const [visits, setVisits] = useState(() => demoSeed?.visits || []);
   const [assignments, setAssignments] = useState(() => demoSeed?.assignments || []);
-  const [authorisedProjects, setAuthorisedProjects] = useState([]);
+  const [authorisedSites, setAuthorisedSites] = useState([]);
   const [status, setStatus] = useState(isDemo ? "ready" : "loading");
   const [error, setError] = useState("");
 
   const register = useMemo(() => isDemo ? buildDemoRegister(relationships, visits, assignments, projects) : relationships, [isDemo, relationships, visits, assignments, projects]);
-  const eligibleProjects = useMemo(() => isDemo ? projects.filter((project) => !project.archived && ["Ongoing", "Paused", "Completed"].includes(project.status)) : authorisedProjects, [isDemo, projects, authorisedProjects]);
+  // The start-Maintenance choice is a SITE. Each Site carries its related
+  // Botanique Projects, which stay optional origin context.
+  const eligibleSites = useMemo(() => isDemo ? buildDemoEligibleSites(relationships, projects) : authorisedSites, [isDemo, relationships, projects, authorisedSites]);
 
   const refresh = useCallback(async () => {
     if (isDemo) return { ok: true };
     try {
-      const [registerRows, visitRows, assignmentRows, projectRows] = await Promise.all([
-        fetchMaintenanceRegister(accessToken), fetchMaintenanceVisits(accessToken), fetchMaintenanceAssignments(accessToken), fetchMaintenanceAuthorisedProjects(accessToken),
+      const [registerRows, visitRows, assignmentRows, siteRows] = await Promise.all([
+        fetchMaintenanceRegister(accessToken), fetchMaintenanceVisits(accessToken), fetchMaintenanceAssignments(accessToken), fetchMaintenanceAuthorisedSites(accessToken),
       ]);
       setRelationships((registerRows || []).map(mapRegisterRow));
       setVisits((visitRows || []).map(mapVisit));
       setAssignments((assignmentRows || []).map(mapAssignment));
-      setAuthorisedProjects((projectRows || []).map((row) => ({ id: row.id, projectName: row.project_name, clientSiteName: row.client_site_name || "", status: row.status })));
+      setAuthorisedSites((siteRows || []).map(mapAuthorisedSite));
       setStatus("ready"); setError(""); return { ok: true };
     } catch (nextError) {
       setStatus("error"); setError(nextError.message || "Unable to load Maintenance."); return { ok: false, error: nextError };
@@ -121,9 +167,43 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
   }, [refresh]);
 
   const addRelationship = useCallback((values) => {
-    if (isDemo) { const record = { id: `demo-maintenance-${Date.now()}`, ...values, status: "active", version: 1 }; setRelationships((current) => [...current, record]); return Promise.resolve({ ok: true, record }); }
+    if (!values.siteId) return Promise.resolve({ ok: false, error: "Choose the Site this Maintenance belongs to." });
+    if (isDemo) {
+      const site = buildDemoEligibleSites(relationships, projects).find((item) => item.id === values.siteId);
+      const project = values.projectId ? projects.find((item) => item.id === values.projectId) : null;
+      const record = {
+        id: `demo-maintenance-${Date.now()}`, ...values,
+        siteName: site?.siteName || values.siteName || "", siteLocation: site?.location || "", siteCounty: site?.county || "",
+        projectId: values.projectId || "", projectName: project?.projectName || "",
+        status: "active", version: 1,
+      };
+      setRelationships((current) => [...current, record]);
+      return Promise.resolve({ ok: true, record });
+    }
     return run(() => createMaintenanceRelationship(accessToken, values), "This Maintenance relationship could not be started.");
-  }, [accessToken, isDemo, run]);
+  }, [accessToken, isDemo, run, relationships, projects]);
+
+  // Create (or reuse) the Site a maintenance-only client needs, without granting
+  // a manager generic Site authority — the database RPC owns that boundary.
+  const addMaintenanceSite = useCallback(async (values) => {
+    const siteName = (values.siteName || "").trim();
+    if (!siteName) return { ok: false, error: "A Site / property name is required." };
+    if (isDemo) {
+      const record = { id: `demo-site-${Date.now()}`, siteName, location: values.location || "", county: values.county || "", projects: [] };
+      setAuthorisedSites((current) => [...current, record]);
+      return { ok: true, record };
+    }
+    try {
+      const created = await createMaintenanceSite(accessToken, { ...values, siteName });
+      const record = mapAuthorisedSite({ ...created, projects: [] });
+      setAuthorisedSites((current) =>
+        current.some((item) => item.id === record.id) ? current : [...current, record]
+      );
+      return { ok: true, record };
+    } catch (nextError) {
+      return { ok: false, error: nextError.message || "The Site could not be created." };
+    }
+  }, [accessToken, isDemo]);
 
   const editRelationship = useCallback((relationshipId, expectedVersion, values) => {
     const scope = (values.scope || "").trim();
@@ -195,19 +275,21 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
     return run(() => correctMaintenanceAssignment(accessToken, { ...values, correctionReason: reason }), "This assignment was changed elsewhere. Reload and try again.");
   }, [accessToken, isDemo, run]);
 
+  // A relationship with no originating Project never appears on a Project page.
   const summaryForProject = useCallback((projectId) => {
+    if (!projectId) return null;
     const relationship = register.find((row) => row.projectId === projectId && row.status !== "ended");
     return relationship ? { id: relationship.id, status: relationship.status, nextVisitDate: relationship.nextVisitDate } : null;
   }, [register]);
 
   const value = useMemo(() => ({
-    register, visits, assignments, eligibleProjects, status, error, refresh,
-    addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
+    register, visits, assignments, eligibleSites, status, error, refresh,
+    addRelationship, addMaintenanceSite, editRelationship, pauseRelationship, resumeRelationship, endRelationship,
     addVisit, rescheduleVisit, completeVisit, completeVisitCycle, cancelVisit,
     addAssignment, endAssignment, correctAssignment, summaryForProject,
     visitsForRelationship: (relationshipId) => visits.filter((visit) => visit.relationshipId === relationshipId),
     assignmentsForRelationship: (relationshipId) => assignments.filter((assignment) => assignment.relationshipId === relationshipId),
-  }), [register, visits, assignments, eligibleProjects, status, error, refresh, addRelationship, editRelationship, pauseRelationship, resumeRelationship, endRelationship, addVisit, rescheduleVisit, completeVisit, completeVisitCycle, cancelVisit, addAssignment, endAssignment, correctAssignment, summaryForProject]);
+  }), [register, visits, assignments, eligibleSites, status, error, refresh, addRelationship, addMaintenanceSite, editRelationship, pauseRelationship, resumeRelationship, endRelationship, addVisit, rescheduleVisit, completeVisit, completeVisitCycle, cancelVisit, addAssignment, endAssignment, correctAssignment, summaryForProject]);
 
   return <MaintenanceContext.Provider value={value}>{children}</MaintenanceContext.Provider>;
 }

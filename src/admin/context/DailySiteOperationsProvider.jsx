@@ -7,6 +7,7 @@ import {
   createComplianceWaiver as apiCreateWaiver,
   createDailySiteEntryDraft as apiCreateDraft,
   fetchAuthorisedProjects,
+  fetchAuthorisedSites,
   fetchDailySiteEntries,
   fetchDailySiteEntryEvents,
   fetchDailySiteWaivers,
@@ -38,7 +39,8 @@ function buildDemoEntry(values, currentUserId, overrides = {}) {
   const working = values.disposition === "working";
   return {
     id: `demo-entry-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    projectId: values.projectId,
+    siteId: values.siteId || "",
+    projectId: values.projectId || "",
     workDate: values.workDate,
     disposition: values.disposition,
     noWorkReason: values.disposition === "no_work" ? values.noWorkReason || "" : "",
@@ -121,6 +123,7 @@ export default function DailySiteOperationsProvider({ children, session, role, i
   const { currentUserId, projects } = useAdminData();
   const accessToken = session?.access_token || "";
   const [entries, setEntries] = useState([]);
+  const [remoteAuthorisedSites, setRemoteAuthorisedSites] = useState([]);
   const [waivers, setWaivers] = useState([]);
   const [eventsByEntry, setEventsByEntry] = useState({});
   const [remoteCompliance, setRemoteCompliance] = useState([]);
@@ -144,6 +147,28 @@ export default function DailySiteOperationsProvider({ children, session, role, i
     [isDemo, projects, remoteAuthorisedProjects]
   );
 
+  // The SITES a caller may record a new field record for. A Site qualifies
+  // through Ongoing Project work OR an active Maintenance relationship, so a
+  // maintenance-only property appears here with an empty Projects list.
+  const authorisedSites = useMemo(() => {
+    if (!isDemo) return remoteAuthorisedSites;
+    const bySite = new Map();
+    for (const project of projects) {
+      if (project.archived || project.status !== "Ongoing") continue;
+      const id = project.siteId || `demo-site-of-${project.id}`;
+      const current = bySite.get(id) || {
+        id,
+        siteName: project.clientSiteName || project.projectName,
+        location: project.location || "",
+        county: project.county || "",
+        projects: [],
+      };
+      current.projects.push({ id: project.id, projectName: project.projectName, status: project.status });
+      bySite.set(id, current);
+    }
+    return [...bySite.values()];
+  }, [isDemo, projects, remoteAuthorisedSites]);
+
   // Demo compliance is derived (not stored) from local state; real compliance
   // comes from the EAT-aware database RPC via refresh().
   const compliance = useMemo(
@@ -157,12 +182,22 @@ export default function DailySiteOperationsProvider({ children, session, role, i
       return { ok: true };
     }
     try {
-      const [entryRows, waiverRows, complianceRows, authorisedRows] = await Promise.all([
+      const [entryRows, waiverRows, complianceRows, authorisedRows, authorisedSiteRows] = await Promise.all([
         fetchDailySiteEntries(accessToken),
         fetchDailySiteWaivers(accessToken),
         fetchMorningCompliance(accessToken, null),
         fetchAuthorisedProjects(accessToken),
+        fetchAuthorisedSites(accessToken),
       ]);
+      setRemoteAuthorisedSites((authorisedSiteRows || []).map((row) => ({
+        id: row.id,
+        siteName: row.site_name || "",
+        location: row.location || "",
+        county: row.county || "",
+        projects: (row.projects || []).map((project) => ({
+          id: project.id, projectName: project.project_name, status: project.status,
+        })),
+      })));
       setEntries(entryRows.map(mapDailySiteEntry));
       setWaivers(waiverRows.map(mapDailySiteWaiver));
       setRemoteCompliance((complianceRows || []).map(mapComplianceRow));
@@ -340,6 +375,7 @@ export default function DailySiteOperationsProvider({ children, session, role, i
     waivers,
     compliance,
     authorisedProjects,
+    authorisedSites,
     status,
     error,
     refresh,
@@ -355,7 +391,7 @@ export default function DailySiteOperationsProvider({ children, session, role, i
     createWaiver,
     revokeWaiver,
   }), [
-    entries, waivers, compliance, authorisedProjects, status, error, refresh, loadEvents,
+    entries, waivers, compliance, authorisedProjects, authorisedSites, status, error, refresh, loadEvents,
     createDraft, updateDraft, submitEntry, returnEntry, correctEntry,
     acceptEntry, voidEntry, supersedeEntry, createWaiver, revokeWaiver,
   ]);

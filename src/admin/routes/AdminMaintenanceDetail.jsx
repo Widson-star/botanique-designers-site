@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useMaintenance } from "../context/maintenance";
+import { maintenanceRecordLabel } from "../utils/maintenancePresentation";
 import { usePeople } from "../context/people";
 import {
   MAINTENANCE_ASSIGNMENT_ROLES,
@@ -95,7 +96,7 @@ export default function AdminMaintenanceDetail() {
 
   const fieldActivity = useMemo(() => {
     if (!relationship) return [];
-    return entries.filter((entry) => entry.projectId === relationship.projectId && entry.workDate >= relationship.startDate && liveEntryStates.has(entry.state))
+    return entries.filter((entry) => entry.siteId === relationship.siteId && entry.workDate >= relationship.startDate && liveEntryStates.has(entry.state))
       .slice().sort((a, b) => b.workDate.localeCompare(a.workDate) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
   }, [entries, relationship]);
   const fieldByDate = useMemo(() => new Map(fieldActivity.map((entry) => [entry.workDate, entry])), [fieldActivity]);
@@ -205,11 +206,13 @@ export default function AdminMaintenanceDetail() {
     ? `${relationship.nextVisitDate < today() ? "Overdue · " : ""}${showDate(relationship.nextVisitDate)}`
     : "Not scheduled";
 
+  const siteContext = [relationship.siteLocation, relationship.siteCounty].filter(Boolean).join(", ");
+
   return <section className="space-y-4">
     <Link to="/admin/maintenance" className="text-sm font-semibold text-botanique-green">← Maintenance</Link>
     <header className="flex flex-wrap items-start justify-between gap-3">
-      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-botanique-green">Operations · Maintenance</p><h1 className="mt-1 text-2xl font-semibold">{relationship.projectName}</h1><p className="mt-1 text-sm text-gray-600">{frequencyLabel(relationship.frequency)} · {relationshipStatusLabel(relationship.status)}</p></div>
-      <Link to={`/admin/projects/${relationship.projectId}`} className="min-h-10 py-2 text-sm font-semibold text-botanique-green">View Project →</Link>
+      <div><p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-botanique-green">Operations · Maintenance</p><h1 className="mt-1 text-2xl font-semibold">{maintenanceRecordLabel(relationship)}</h1>{siteContext && <p className="mt-0.5 text-sm text-gray-600">{siteContext}</p>}<p className="mt-1 text-sm text-gray-600">{frequencyLabel(relationship.frequency)} · {relationshipStatusLabel(relationship.status)}</p></div>
+      {relationship.projectId && <Link to={`/admin/projects/${relationship.projectId}`} className="min-h-10 py-2 text-sm font-semibold text-botanique-green">View Project →</Link>}
     </header>
     {feedback && <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{feedback}</p>}
     {actionError && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{actionError}</p>}
@@ -233,7 +236,7 @@ export default function AdminMaintenanceDetail() {
         {currentState === "follow_up" && <button onClick={() => openVisitForm(followUp.followUpNote || followUp.purpose)} className="min-h-11 rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Schedule follow-up</button>}
         {currentState === "needs_closure" && <button onClick={() => startCompletion(currentVisit)} className="min-h-11 rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Complete visit</button>}
         {["awaiting_review", "correction_needed", "draft_field_record"].includes(currentState) && currentEntry && <Link to={`/admin/daily-site-operations/${currentEntry.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Open site record</Link>}
-        {["due", "overdue", "upcoming"].includes(currentState) && currentVisit && !currentEntry && <Link to={`/admin/daily-site-operations/new?project=${relationship.projectId}&date=${currentVisit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Record field work</Link>}
+        {["due", "overdue", "upcoming"].includes(currentState) && currentVisit && !currentEntry && <Link to={`/admin/daily-site-operations/new?site=${relationship.siteId}${relationship.projectId ? `&project=${relationship.projectId}` : ""}&date=${currentVisit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Record field work</Link>}
         {currentState === "not_scheduled" && <button onClick={() => openVisitForm(relationship.scope)} className="min-h-11 rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Schedule visit</button>}
       </div>}
     </section>
@@ -263,7 +266,7 @@ export default function AdminMaintenanceDetail() {
               ? <button onClick={() => startCompletion(visit)} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Complete</button>
               : execution
                 ? <Link to={`/admin/daily-site-operations/${execution.id}`} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Open DSR</Link>
-                : <Link to={`/admin/daily-site-operations/new?project=${relationship.projectId}&date=${visit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Record field work</Link>;
+                : <Link to={`/admin/daily-site-operations/new?site=${relationship.siteId}${relationship.projectId ? `&project=${relationship.projectId}` : ""}&date=${visit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Record field work</Link>;
             return <li key={visit.id} className="py-3">
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <div><p className="text-[12.5px] font-semibold">{showDate(visit.scheduledDate)}</p><p className="mt-0.5 text-[11.5px] text-gray-500">{visit.purpose}</p>{execution && <Link to={`/admin/daily-site-operations/${execution.id}`} className="mt-1 block text-[10.5px] font-semibold text-botanique-green">DSR: {entryLabel(execution.state)} →</Link>}</div>

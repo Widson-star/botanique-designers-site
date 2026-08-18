@@ -112,6 +112,7 @@ export async function fetchCurrentProfile(accessToken, userId) {
 // last-modified value. No finance columns are read here.
 const PROJECT_SELECT = [
   "id",
+  "site_id",
   "project_name",
   "client_site_name",
   "location",

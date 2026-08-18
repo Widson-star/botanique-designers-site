@@ -9,9 +9,9 @@ import AdminMaintenance from "./AdminMaintenance";
 import AdminMaintenanceDetail from "./AdminMaintenanceDetail";
 
 const register = [
-  { id: "rel-1", projectId: "p1", projectName: "Kitusuru Residence House 0.8A", projectStatus: "Ongoing", status: "active", scope: "Routine garden maintenance", frequency: "weekly", startDate: "2026-08-05", version: 2, lastVisitDate: "", nextVisitDate: "2026-08-17", assignedTeam: [{ person_id: "person-1", full_name: "Kefa Nyamari Ochenge", role: "site_technician" }] },
-  { id: "rel-2", projectId: "p2", projectName: "Lugulu Residential Home", projectStatus: "Completed", status: "active", scope: "Attend when requested", frequency: "as_needed", startDate: "2026-08-01", version: 1, lastVisitDate: "", nextVisitDate: "", assignedTeam: [{ person_id: "person-2", full_name: "Martine Lotom", role: "supervisor" }] },
-  { id: "rel-3", projectId: "p3", projectName: "Inspection Only Site", projectStatus: "Completed", status: "active", scope: "Inspection and one-off maintenance", frequency: "as_needed", startDate: "2026-08-01", version: 1, lastVisitDate: "", nextVisitDate: "", assignedTeam: [] },
+  { id: "rel-1", siteId: "s1", siteName: "Kitusuru Residence House 0.8A", siteLocation: "Kitusuru", siteCounty: "Nairobi", projectId: "p1", projectName: "Kitusuru Residence House 0.8A", projectStatus: "Ongoing", status: "active", scope: "Routine garden maintenance", frequency: "weekly", startDate: "2026-08-05", version: 2, lastVisitDate: "", nextVisitDate: "2026-08-17", assignedTeam: [{ person_id: "person-1", full_name: "Kefa Nyamari Ochenge", role: "site_technician" }] },
+  { id: "rel-2", siteId: "s2", siteName: "Lugulu Residential Home", siteLocation: "Lugulu", siteCounty: "Bungoma", projectId: "p2", projectName: "Lugulu Residential Home", projectStatus: "Completed", status: "active", scope: "Attend when requested", frequency: "as_needed", startDate: "2026-08-01", version: 1, lastVisitDate: "", nextVisitDate: "", assignedTeam: [{ person_id: "person-2", full_name: "Martine Lotom", role: "supervisor" }] },
+  { id: "rel-3", siteId: "s3", siteName: "Inspection Only Site", siteLocation: "", siteCounty: "", projectId: "", projectName: "", projectStatus: "", status: "active", scope: "Inspection and one-off maintenance", frequency: "as_needed", startDate: "2026-08-01", version: 1, lastVisitDate: "", nextVisitDate: "", assignedTeam: [] },
 ];
 const visits = [{ id: "visit-1", relationshipId: "rel-1", scheduledDate: "2026-08-17", status: "scheduled", purpose: "Weeding, removing weeds, trimming and watering", completedAt: "", completionNote: "", cancellationReason: "", dailySiteEntryId: "", completionOutcome: "", followUpRequired: false, followUpNote: "", version: 2 }];
 const assignments = [
@@ -19,7 +19,7 @@ const assignments = [
   { id: "assign-2", relationshipId: "rel-2", personId: "person-2", personName: "Martine Lotom", role: "supervisor", startDate: "2026-08-01", endDate: "", version: 1 },
 ];
 const entries = [
-  { id: "dsr-1", projectId: "p1", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 1, workPlanned: "Maintenance", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T10:58:00Z" },
+  { id: "dsr-1", siteId: "s1", projectId: "p1", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 1, workPlanned: "Maintenance", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T10:58:00Z" },
 ];
 const people = [
   { id: "person-1", fullName: "Kefa Nyamari Ochenge", isActive: true },
@@ -41,9 +41,10 @@ function values(overrides = {}) {
       register: effectiveRegister,
       visits: effectiveVisits,
       assignments: effectiveAssignments,
-      eligibleProjects: [{ id: "p4", projectName: "New Maintenance Site", status: "Completed" }],
+      eligibleSites: [{ id: "s4", siteName: "New Maintenance Site", location: "Karen", county: "Nairobi", projects: [] }],
       status: "ready", error: "",
       addRelationship: vi.fn(() => Promise.resolve({ ok: true })),
+      addMaintenanceSite: vi.fn(() => Promise.resolve({ ok: true, record: { id: "s-new", siteName: "Riverside Court", location: "", county: "", projects: [] } })),
       editRelationship: vi.fn(() => Promise.resolve({ ok: true })),
       pauseRelationship: vi.fn(() => Promise.resolve({ ok: true })),
       resumeRelationship: vi.fn(() => Promise.resolve({ ok: true })),
@@ -124,14 +125,49 @@ describe("Maintenance workboard", () => {
     expect(screen.getByRole("columnheader", { name: "Arrangement" })).toBeInTheDocument();
   });
 
+  it("leads a maintenance-only Site with its Site name and invents no Project", () => {
+    wrap(values());
+    // rel-3 has no Project at all; the workboard must still name the property.
+    expect(screen.getByText("Inspection Only Site")).toBeInTheDocument();
+    expect(screen.queryByText("Unknown project")).not.toBeInTheDocument();
+  });
+
+  it("starts Maintenance on a Site that has no Botanique Project", async () => {
+    const context = values();
+    wrap(context);
+    fireEvent.click(screen.getByRole("button", { name: "Start Maintenance" }));
+    fireEvent.change(screen.getByLabelText("Site / property"), { target: { value: "s4" } });
+    // The Site carries no Projects, so no Project selector is offered at all.
+    expect(screen.queryByLabelText("Related Botanique Project (optional)")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Scope"), { target: { value: "Grounds upkeep" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start Maintenance" }));
+    await waitFor(() => expect(context.maintenance.addRelationship).toHaveBeenCalledWith(
+      expect.objectContaining({ siteId: "s4", projectId: "", scope: "Grounds upkeep" })
+    ));
+  });
+
+  it("creates a Site for a property Botanique did not build", async () => {
+    const context = values();
+    wrap(context);
+    fireEvent.click(screen.getByRole("button", { name: "Start Maintenance" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add a Site Botanique did not build" }));
+    fireEvent.change(screen.getByLabelText("Site / property name"), { target: { value: "Riverside Court" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create Site" }));
+    await waitFor(() => expect(context.maintenance.addMaintenanceSite).toHaveBeenCalledWith(
+      expect.objectContaining({ siteName: "Riverside Court" })
+    ));
+    // Immediately selectable for starting Maintenance.
+    await waitFor(() => expect(screen.getByLabelText("Site / property")).toBeInTheDocument());
+  });
+
   it("starts Maintenance without changing Project lifecycle", async () => {
     const context = values();
     wrap(context);
     fireEvent.click(screen.getByRole("button", { name: "Start Maintenance" }));
-    fireEvent.change(screen.getByLabelText("Project / site"), { target: { value: "p4" } });
+    fireEvent.change(screen.getByLabelText("Site / property"), { target: { value: "s4" } });
     fireEvent.change(screen.getByLabelText("Scope"), { target: { value: "  Weekly lawn care  " } });
     fireEvent.click(screen.getByRole("button", { name: "Start Maintenance" }));
-    await waitFor(() => expect(context.maintenance.addRelationship).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p4", scope: "Weekly lawn care" })));
+    await waitFor(() => expect(context.maintenance.addRelationship).toHaveBeenCalledWith(expect.objectContaining({ siteId: "s4", scope: "Weekly lawn care" })));
   });
 });
 
