@@ -96,7 +96,8 @@ describe("Maintenance workboard", () => {
     wrap(values());
     expect(screen.getAllByText("Lugulu Residential Home").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Inspection Only Site").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Schedule visit").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("No visit scheduled").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole("link", { name: "Schedule visit →" }).length).toBeGreaterThanOrEqual(2);
   });
 
   it("counts only real outstanding follow-up", () => {
