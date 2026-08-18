@@ -29,12 +29,18 @@ const people = [
 
 function values(overrides = {}) {
   const role = overrides.role || "owner";
+  const maintenanceOverrides = overrides.maintenance || {};
+  const effectiveRegister = maintenanceOverrides.register || register;
+  const effectiveVisits = maintenanceOverrides.visits || visits;
+  const effectiveAssignments = maintenanceOverrides.assignments || assignments;
   return {
     admin: { role },
-    daily: { entries, status: "ready", error: "" },
-    people: { people },
+    daily: { entries, status: "ready", error: "", ...overrides.daily },
+    people: { people, ...overrides.people },
     maintenance: {
-      register, visits, assignments,
+      register: effectiveRegister,
+      visits: effectiveVisits,
+      assignments: effectiveAssignments,
       eligibleProjects: [{ id: "p4", projectName: "New Maintenance Site", status: "Completed" }],
       status: "ready", error: "",
       addRelationship: vi.fn(() => Promise.resolve({ ok: true })),
@@ -49,9 +55,9 @@ function values(overrides = {}) {
       addAssignment: vi.fn(() => Promise.resolve({ ok: true })),
       endAssignment: vi.fn(() => Promise.resolve({ ok: true })),
       correctAssignment: vi.fn(() => Promise.resolve({ ok: true })),
-      visitsForRelationship: (id) => visits.filter((visit) => visit.relationshipId === id),
-      assignmentsForRelationship: (id) => assignments.filter((assignment) => assignment.relationshipId === id),
-      ...overrides.maintenance,
+      visitsForRelationship: (id) => effectiveVisits.filter((visit) => visit.relationshipId === id),
+      assignmentsForRelationship: (id) => effectiveAssignments.filter((assignment) => assignment.relationshipId === id),
+      ...maintenanceOverrides,
     },
   };
 }
@@ -93,9 +99,26 @@ describe("Maintenance workboard", () => {
     expect(screen.getAllByText("Schedule visit").length).toBeGreaterThanOrEqual(2);
   });
 
+  it("counts only real outstanding follow-up", () => {
+    const followUpVisit = { id: "visit-follow", relationshipId: "rel-3", scheduledDate: "2026-08-16", status: "completed", purpose: "Inspection", completedAt: "2026-08-16T09:00:00Z", completionNote: "Inspection completed", cancellationReason: "", dailySiteEntryId: "dsr-follow", completionOutcome: "partial", followUpRequired: true, followUpNote: "Return to repair irrigation leak", version: 2 };
+    wrap(values({ maintenance: { visits: [...visits, followUpVisit] } }));
+    expect(screen.getByText("Follow-up").parentElement).toHaveTextContent("1");
+    expect(screen.getByText("Follow-up outstanding")).toBeInTheDocument();
+    expect(screen.getByText(/Return to repair irrigation leak/)).toBeInTheDocument();
+  });
+
+  it("treats a later non-cancelled visit as covering the follow-up", () => {
+    const followUpVisit = { id: "visit-follow", relationshipId: "rel-3", scheduledDate: "2026-08-16", status: "completed", purpose: "Inspection", completedAt: "2026-08-16T09:00:00Z", completionNote: "Inspection completed", cancellationReason: "", dailySiteEntryId: "dsr-follow", completionOutcome: "partial", followUpRequired: true, followUpNote: "Return to repair irrigation leak", version: 2 };
+    const laterVisit = { id: "visit-later", relationshipId: "rel-3", scheduledDate: "2026-08-21", status: "scheduled", purpose: "Repair irrigation leak", completedAt: "", completionNote: "", cancellationReason: "", dailySiteEntryId: "", completionOutcome: "", followUpRequired: false, followUpNote: "", version: 1 };
+    wrap(values({ maintenance: { visits: [...visits, followUpVisit, laterVisit] } }));
+    expect(screen.getByText("Follow-up").parentElement).toHaveTextContent("0");
+    expect(screen.queryByText("Follow-up outstanding")).not.toBeInTheDocument();
+  });
+
   it("keeps the permanent register collapsed by default", () => {
     wrap(values());
     expect(screen.queryByRole("columnheader", { name: "Arrangement" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "View register" }));
     expect(screen.getByRole("columnheader", { name: "Arrangement" })).toBeInTheDocument();
   });
@@ -122,34 +145,52 @@ describe("Maintenance detail scheduling and RBAC", () => {
   it("never preselects the next visit when closing an accepted visit", async () => {
     const context = values();
     wrap(context, "/admin/maintenance/rel-1");
-    fireEvent.click(screen.getAllByRole("button", { name: "Complete visit" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Complete visit" }));
     expect(screen.getByRole("heading", { name: "Close visit" })).toBeInTheDocument();
     const scheduleAnother = screen.getByLabelText("Schedule another visit");
     expect(scheduleAnother).not.toBeChecked();
     expect(screen.queryByLabelText("Date")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Complete visit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save completion" }));
     await waitFor(() => expect(context.maintenance.completeVisitCycle).toHaveBeenCalledWith(expect.objectContaining({ nextScheduledDate: "", nextPurpose: "" })));
   });
 
-  it("allows a new explicit date only after operator chooses to schedule another visit", () => {
+  it("allows a new explicit date only after operator chooses another visit", () => {
     wrap(values(), "/admin/maintenance/rel-1");
-    fireEvent.click(screen.getAllByRole("button", { name: "Complete visit" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Complete visit" }));
     fireEvent.click(screen.getByLabelText("Schedule another visit"));
     expect(screen.getByLabelText("Date")).toBeInTheDocument();
     expect(screen.getByLabelText("Work planned")).toBeInTheDocument();
   });
 
-  it("shows Schedule visit for an as-needed relationship with no current visit", () => {
+  it("shows one Schedule visit action for an as-needed relationship with no current visit", () => {
     wrap(values(), "/admin/maintenance/rel-2");
     expect(screen.getByRole("button", { name: "Schedule visit" })).toBeInTheDocument();
     expect(screen.getAllByText("No visit scheduled").length).toBeGreaterThan(0);
   });
 
+  it("surfaces an outstanding follow-up and prefills its work", () => {
+    const followUpVisit = { id: "visit-follow", relationshipId: "rel-2", scheduledDate: "2026-08-16", status: "completed", purpose: "Inspection", completedAt: "2026-08-16T09:00:00Z", completionNote: "Inspection completed", cancellationReason: "", dailySiteEntryId: "dsr-follow", completionOutcome: "partial", followUpRequired: true, followUpNote: "Return to repair irrigation leak", version: 2 };
+    wrap(values({ maintenance: { visits: [...visits, followUpVisit] } }), "/admin/maintenance/rel-2");
+    expect(screen.getAllByText("Follow-up outstanding").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Return to repair irrigation leak/).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Schedule follow-up" }));
+    expect(screen.getByLabelText("Work planned")).toHaveValue("Return to repair irrigation leak");
+    expect(screen.getByRole("button", { name: "Save visit" })).toBeInTheDocument();
+  });
+
+  it("does not offer visit scheduling while Maintenance is paused", () => {
+    const pausedRegister = register.map((item) => item.id === "rel-2" ? { ...item, status: "paused" } : item);
+    wrap(values({ maintenance: { register: pausedRegister } }), "/admin/maintenance/rel-2");
+    expect(screen.queryByRole("button", { name: "Schedule visit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add visit" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Resume Maintenance" })).toBeInTheDocument();
+  });
+
   it("lets Operations Manager manage ordinary visits but not terminal closure or historical correction", () => {
     wrap(values({ role: "manager" }), "/admin/maintenance/rel-1");
-    expect(screen.getAllByRole("button", { name: "Complete visit" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Complete visit" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause Maintenance" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Schedule visit" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Add visit" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "End Maintenance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Correct assignment" })).not.toBeInTheDocument();
   });
