@@ -40,14 +40,24 @@ function workState(visit, entry, nowDate) {
   return "upcoming";
 }
 
+function outstandingFollowUp(relationshipId, visits) {
+  const related = visits.filter((visit) => visit.relationshipId === relationshipId);
+  return related
+    .filter((visit) => visit.status === "completed" && visit.followUpRequired)
+    .slice()
+    .sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate))
+    .find((visit) => !related.some((later) => later.status !== "cancelled" && later.scheduledDate > visit.scheduledDate)) || null;
+}
+
 const stateInfo = {
-  needs_closure: { label: "Needs closure", className: "bg-sky-50 text-sky-800", priority: 1 },
-  awaiting_review: { label: "Awaiting review", className: "bg-sky-50 text-sky-800", priority: 2 },
-  correction_needed: { label: "Correction needed", className: "bg-red-50 text-red-700", priority: 2 },
-  overdue: { label: "Overdue", className: "bg-red-50 text-red-700", priority: 3 },
-  due: { label: "Due today", className: "bg-stone-100 text-gray-700", priority: 4 },
-  draft_field_record: { label: "Draft field record", className: "bg-stone-100 text-gray-700", priority: 5 },
-  schedule_next: { label: "Schedule visit", className: "bg-stone-100 text-gray-700", priority: 6 },
+  follow_up: { label: "Follow-up outstanding", className: "bg-red-50 text-red-700", priority: 1 },
+  needs_closure: { label: "Needs closure", className: "bg-sky-50 text-sky-800", priority: 2 },
+  awaiting_review: { label: "Awaiting review", className: "bg-sky-50 text-sky-800", priority: 3 },
+  correction_needed: { label: "Correction needed", className: "bg-red-50 text-red-700", priority: 3 },
+  overdue: { label: "Overdue", className: "bg-red-50 text-red-700", priority: 4 },
+  due: { label: "Due today", className: "bg-stone-100 text-gray-700", priority: 5 },
+  draft_field_record: { label: "Draft field record", className: "bg-stone-100 text-gray-700", priority: 6 },
+  schedule_next: { label: "No visit scheduled", className: "bg-stone-100 text-gray-700", priority: 7 },
   upcoming: { label: "Upcoming", className: "bg-[#eef3f0] text-botanique-green", priority: 8 },
 };
 
@@ -70,7 +80,6 @@ export default function AdminMaintenance() {
   const [saving, setSaving] = useState(false);
   const statusFilter = searchParams.get("status") || "active";
   const nowDate = today();
-  const monthPrefix = nowDate.slice(0, 7);
 
   const maintenanceChoices = useMemo(
     () => dedupeMaintenanceEligibleProjects(eligibleProjects),
@@ -105,12 +114,16 @@ export default function AdminMaintenance() {
         .slice()
         .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
       const currentVisit = scheduled.find((visit) => visit.scheduledDate <= nowDate) || scheduled[0] || null;
+      const followUp = outstandingFollowUp(relationship.id, visits);
+
       if (currentVisit) {
         const entry = byDate.get(currentVisit.scheduledDate) || null;
         const state = workState(currentVisit, entry, nowDate);
-        rows.push({ relationship, visit: currentVisit, entry, state, info: stateInfo[state] });
+        rows.push({ relationship, visit: currentVisit, entry, followUp: null, state, info: stateInfo[state] });
+      } else if (followUp) {
+        rows.push({ relationship, visit: null, entry: null, followUp, state: "follow_up", info: stateInfo.follow_up });
       } else {
-        rows.push({ relationship, visit: null, entry: activity[0] || null, state: "schedule_next", info: stateInfo.schedule_next });
+        rows.push({ relationship, visit: null, entry: activity[0] || null, followUp: null, state: "schedule_next", info: stateInfo.schedule_next });
       }
     }
     return rows.sort((a, b) => a.info.priority - b.info.priority || String(a.visit?.scheduledDate || "9999").localeCompare(String(b.visit?.scheduledDate || "9999")) || a.relationship.projectName.localeCompare(b.relationship.projectName));
@@ -118,8 +131,7 @@ export default function AdminMaintenance() {
 
   const needsClosure = workboard.filter((row) => row.state === "needs_closure").length;
   const dueOrOverdue = workboard.filter((row) => ["due", "overdue"].includes(row.state)).length;
-  const followUpCount = workboard.filter((row) => ["awaiting_review", "correction_needed", "draft_field_record", "schedule_next"].includes(row.state)).length;
-  const completedThisMonth = visits.filter((visit) => visit.status === "completed" && String(visit.completedAt || visit.scheduledDate).slice(0, 7) === monthPrefix).length;
+  const followUpCount = workboard.filter((row) => row.state === "follow_up").length;
 
   const teamSummary = useMemo(() => {
     const byPerson = new Map();
@@ -179,11 +191,10 @@ export default function AdminMaintenance() {
       {canManageMaintenance(role) && <button type="button" onClick={() => { setShowForm((open) => !open); setFormError(""); }} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-botanique-green px-4 text-sm font-semibold text-white">{showForm ? "Close" : "Start Maintenance"}</button>}
     </header>
 
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-3">
       <Metric label="Needs closure" value={needsClosure} />
       <Metric label="Due / overdue" value={dueOrOverdue} />
       <Metric label="Follow-up" value={followUpCount} />
-      <Metric label="Completed this month" value={completedThisMonth} />
     </div>
 
     {showForm && canManageMaintenance(role) && <form onSubmit={submit} className="rounded-xl border border-stone-200 bg-white p-5">
@@ -220,7 +231,7 @@ export default function AdminMaintenance() {
           <div className="border-b border-stone-200 px-4 py-4"><h2 className="text-lg font-semibold">Maintenance workboard</h2></div>
           {!workboard.length ? <p className="p-4 text-sm text-gray-500">No active Maintenance action.</p> : <ul className="divide-y divide-stone-100">{workboard.map((row) => {
             const team = row.relationship.assignedTeam || [];
-            const actionLabel = row.state === "needs_closure" ? "Complete visit" : row.state === "awaiting_review" ? "Review field record" : ["correction_needed", "draft_field_record"].includes(row.state) ? "Open field record" : row.state === "schedule_next" ? "Schedule visit" : row.entry ? "View field record" : "Open Maintenance";
+            const actionLabel = row.state === "follow_up" ? "Schedule follow-up" : row.state === "needs_closure" ? "Complete visit" : row.state === "awaiting_review" ? "Review field record" : ["correction_needed", "draft_field_record"].includes(row.state) ? "Open field record" : row.state === "schedule_next" ? "Schedule visit" : row.entry ? "View field record" : "Open Maintenance";
             const actionTo = ["awaiting_review", "correction_needed", "draft_field_record"].includes(row.state) && row.entry
               ? `/admin/daily-site-operations/${row.entry.id}`
               : `/admin/maintenance/${row.relationship.id}`;
@@ -233,9 +244,10 @@ export default function AdminMaintenance() {
                   </div>
                   <p className="mt-1 text-[11.5px] text-gray-500">{frequencyLabel(row.relationship.frequency)} · {team.length ? team.map((member) => member.full_name).join(", ") : "Unassigned"}</p>
                   {row.visit && <p className="mt-1 text-[11.5px] text-gray-700">{showDate(row.visit.scheduledDate)} · {row.visit.purpose}</p>}
+                  {row.followUp && <p className="mt-1 text-[11.5px] text-gray-700">{showDate(row.followUp.scheduledDate)} · {row.followUp.followUpNote}</p>}
                   {row.entry && <p className="mt-1 text-[10.5px] text-gray-500">DSR {entryLabel(row.entry.state)}{row.entry.workPlanned ? ` · ${row.entry.workPlanned}` : ""}</p>}
                 </div>
-                <Link to={actionTo} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green hover:bg-stone-50">{actionLabel} →</Link>
+                <Link to={actionTo} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green hover:bg-stone-50">{actionLabel} →</Link>
               </div>
             </li>;
           })}</ul>}
@@ -264,29 +276,31 @@ export default function AdminMaintenance() {
 
       <section className="rounded-xl border border-stone-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div><h2 className="text-lg font-semibold">Maintenance register</h2></div>
-          <div className="flex gap-2">
+          <h2 className="text-lg font-semibold">Maintenance register</h2>
+          <button type="button" onClick={() => setShowRegister((open) => !open)} className="min-h-10 rounded-lg border border-stone-300 px-3 text-sm font-semibold text-botanique-green">{showRegister ? "Hide" : "View register"}</button>
+        </div>
+        {showRegister && <>
+          <div className="border-t border-stone-200 px-4 py-3">
             <select value={statusFilter} onChange={(event) => setParam("status", event.target.value, "active")} className="min-h-10 rounded-lg border border-stone-300 bg-white px-3 text-sm">
               <option value="all">All Maintenance</option>
               {MAINTENANCE_RELATIONSHIP_STATUSES.map((value) => <option key={value} value={value}>{relationshipStatusLabel(value)}</option>)}
             </select>
-            <button type="button" onClick={() => setShowRegister((open) => !open)} className="min-h-10 rounded-lg border border-stone-300 px-3 text-sm font-semibold text-botanique-green">{showRegister ? "Hide" : "View register"}</button>
           </div>
-        </div>
-        {showRegister && <div className="overflow-x-auto border-t border-stone-200">
-          <table className="w-full text-left text-[12px]">
-            <thead className="bg-[#fbfbfa] text-[10px] uppercase tracking-wide text-gray-500"><tr><th className="px-4 py-3 font-medium">Site</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Arrangement</th><th className="px-4 py-3 font-medium">Last visit</th><th className="px-4 py-3 font-medium">Next visit</th><th className="px-4 py-3 font-medium">Team</th><th className="px-4 py-3 text-right font-medium">Action</th></tr></thead>
-            <tbody className="divide-y divide-stone-100">{visible.map((relationship) => <tr key={relationship.id}>
-              <td className="px-4 py-3 font-semibold">{relationship.projectName}</td>
-              <td className="px-4 py-3">{relationshipStatusLabel(relationship.status)}</td>
-              <td className="px-4 py-3">{frequencyLabel(relationship.frequency)}</td>
-              <td className="px-4 py-3">{showDate(relationship.lastVisitDate)}</td>
-              <td className="px-4 py-3">{relationship.nextVisitDate ? showDate(relationship.nextVisitDate) : "Not scheduled"}</td>
-              <td className="px-4 py-3">{(relationship.assignedTeam || []).map((member) => member.full_name).join(", ") || "—"}</td>
-              <td className="px-4 py-3 text-right"><Link to={`/admin/maintenance/${relationship.id}`} className="font-semibold text-botanique-green">View →</Link></td>
-            </tr>)}</tbody>
-          </table>
-        </div>}
+          <div className="overflow-x-auto border-t border-stone-200">
+            <table className="w-full text-left text-[12px]">
+              <thead className="bg-[#fbfbfa] text-[10px] uppercase tracking-wide text-gray-500"><tr><th className="px-4 py-3 font-medium">Site</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Arrangement</th><th className="px-4 py-3 font-medium">Last visit</th><th className="px-4 py-3 font-medium">Next visit</th><th className="px-4 py-3 font-medium">Team</th><th className="px-4 py-3 text-right font-medium">Action</th></tr></thead>
+              <tbody className="divide-y divide-stone-100">{visible.map((relationship) => <tr key={relationship.id}>
+                <td className="px-4 py-3 font-semibold">{relationship.projectName}</td>
+                <td className="px-4 py-3">{relationshipStatusLabel(relationship.status)}</td>
+                <td className="px-4 py-3">{frequencyLabel(relationship.frequency)}</td>
+                <td className="px-4 py-3">{showDate(relationship.lastVisitDate)}</td>
+                <td className="px-4 py-3">{relationship.nextVisitDate ? `${relationship.nextVisitDate < nowDate ? "Overdue · " : ""}${showDate(relationship.nextVisitDate)}` : "Not scheduled"}</td>
+                <td className="px-4 py-3">{(relationship.assignedTeam || []).map((member) => member.full_name).join(", ") || "—"}</td>
+                <td className="px-4 py-3 text-right"><Link to={`/admin/maintenance/${relationship.id}`} className="font-semibold text-botanique-green">View →</Link></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </>}
       </section>
     </>}
   </section>;
