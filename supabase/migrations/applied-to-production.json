@@ -170,10 +170,18 @@
     "fields plus validation and read-model exposure. The fields are optional only;",
     "they do not create visits or force service dates. The later UI correction keeps",
     "actual Maintenance visits explicitly scheduled so changing client arrangements,",
-    "one-off inspections and staff handover periods remain operationally flexible."
+    "one-off inspections and staff handover periods remain operationally flexible.",
+    "",
+    "MAINTENANCE FOLLOW-UP / SCHEDULING INTEGRITY, 18 Aug 2026.",
+    "maintenance_followup_scheduling_integrity applied cleanly in one transaction",
+    "(production version 20260818110737). It changes functions only: Active",
+    "Maintenance cannot pause while Scheduled visits remain, Paused Maintenance",
+    "cannot accept new or rescheduled visits, and derived next_visit_date retains",
+    "overdue Scheduled visits instead of reporting them as Not scheduled. No",
+    "Maintenance, Project, People, assignment, visit or Daily Site row was changed."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-17",
+  "verifiedAt": "2026-08-18",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -208,6 +216,7 @@
     { "name": "personnel_labour_finance_boundary", "productionVersion": "20260817110220" },
     { "name": "maintenance_authority_acl_correction", "productionVersion": "20260817155812" },
     { "name": "maintenance_operating_loop_v1", "productionVersion": "20260817181419" },
-    { "name": "maintenance_service_cadence_v1", "productionVersion": "20260817191907" }
+    { "name": "maintenance_service_cadence_v1", "productionVersion": "20260817191907" },
+    { "name": "maintenance_followup_scheduling_integrity", "productionVersion": "20260818110737" }
   ]
 }
