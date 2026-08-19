@@ -91,8 +91,8 @@ export default function AdminStaffCompensation() {
 
       <div role="group" aria-label="Staff Pay summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Metric icon="check" tone="settled" label="Payable" value={money(totalApproved)} hint={`${approved.length} payable ${approved.length === 1 ? "record" : "records"}`} />
-        <Metric icon="wallet" tone="brand" label="Paid" value={knownApproved.length ? money(totalPaid) : "—"} hint={knownApproved.length ? "Confirmed paid position" : historyUnknown.length ? "History to confirm" : "No approved records"} />
-        <Metric icon="balance" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Approved balance"} />
+        <Metric icon="wallet" tone="brand" label="Paid" value={knownApproved.length ? money(totalPaid) : "—"} hint={knownApproved.length ? "Confirmed paid position" : historyUnknown.length ? "History to confirm" : "No payable records"} />
+        <Metric icon="balance" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Payable balance"} />
         <Metric icon="people" tone="decision" label="Awaiting decision" value={String(awaiting.length)} hint={`${awaiting.length} ${awaiting.length === 1 ? "record" : "records"}`} />
       </div>
 

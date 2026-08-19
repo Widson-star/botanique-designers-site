@@ -208,6 +208,29 @@ describe("Staff Pay summary is a payment position, not an approval count", () =>
     expect(summary().getByText("4 payable records")).toBeInTheDocument();
   });
 
+  it("leaves no approval-first wording on any summary hint", () => {
+    renderRegister(mixedRegister);
+    expect(summary().queryByText(/approved record/i)).not.toBeInTheDocument();
+    expect(summary().queryByText("Approved balance")).not.toBeInTheDocument();
+  });
+
+  it("calls a fully known Outstanding position a Payable balance", () => {
+    // "Payable balance" only replaces the unconfirmed-history hint when every
+    // position is known, so this register carries no imported record.
+    renderRegister({
+      compensations: mixedRegister.compensations.filter((item) => item.id !== "comp-unknown"),
+      positions: mixedRegister.positions,
+    });
+    expect(summary().getByText("Payable balance")).toBeInTheDocument();
+    expect(summary().queryByText("Approved balance")).not.toBeInTheDocument();
+  });
+
+  it("says no payable records rather than no approved records on an empty register", () => {
+    renderRegister();
+    expect(summary().getByText("No payable records")).toBeInTheDocument();
+    expect(summary().queryByText("No approved records")).not.toBeInTheDocument();
+  });
+
   it("still computes Payable from approved amounts only", () => {
     renderRegister(mixedRegister);
     // 700 + 60,000 + 30,000 + 28,100 — the draft and awaiting-review records
