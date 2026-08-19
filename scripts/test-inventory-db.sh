@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # BD-OPERATIONS-HUB-01 — Inventory / Tools & Equipment V1 database test runner.
 # Spins up a disposable PostgreSQL 17 cluster, applies every migration in
-# order, then runs the Inventory test suite followed by a genuine two-session
+# order, then runs the Inventory test suites followed by a genuine two-session
 # concurrency regression against negative stock. No hosted Supabase is touched
 # and no production data is read or written.
 set -euo pipefail
@@ -31,7 +31,11 @@ for migration in "$repo_dir"/supabase/migrations/*.sql; do "${psql_cmd[@]}" -f "
 
 echo "Inventory / Tools & Equipment V1 — schema, authority, audit and stock truth:"
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_tools_equipment_v1_test.sql" >/dev/null
-echo "  all assertions passed"
+echo "  foundation assertions passed"
+
+echo "Inventory / Tools & Equipment V1 — control-review hardening:"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_tools_equipment_v1_hardening_test.sql" >/dev/null
+echo "  hardening assertions passed"
 
 # =====================================================================
 # Negative-stock concurrency regression.
@@ -60,7 +64,7 @@ run_race() {
     >"$holder_out" 2>&1 &
   local holder_pid=$!
 
-  sleep 0.4 # give the holder time to acquire its lock before the attempt starts
+  sleep 0.4
 
   local attempt_start attempt_end
   attempt_start=$(date +%s)
@@ -102,8 +106,6 @@ balance_query() {
 
 echo "Negative-stock concurrency regression:"
 
-# Ordering 1: both sessions want 8 of 10. The holder wins the lock; the second
-# must block, re-read a balance of 2, and be REFUSED.
 run_race "00000000-0000-0000-0000-0000009130c1" \
   "inventory_stock_concurrency_attempt.sql" "A-overdraw-refused"
 if [[ "$race_holder_status" -ne 0 ]]; then
@@ -120,8 +122,6 @@ assert_sql "A-balance-is-two-not-negative" "$(balance_query 00000000-0000-0000-0
 assert_sql "A-only-one-consumption-recorded" \
   "select count(*)::text from public.inventory_stock_movements where inventory_item_id = '00000000-0000-0000-0000-0000009130c1' and movement_type = 'consumed'" "1"
 
-# Ordering 2: the holder takes 8, the second wants only 2. It must still BLOCK,
-# then SUCCEED — proving the lock serialises rather than simply rejecting.
 run_race "00000000-0000-0000-0000-0000009130c2" \
   "inventory_stock_concurrency_small_attempt.sql" "B-within-balance-allowed"
 if [[ "$race_holder_status" -ne 0 ]]; then
@@ -138,10 +138,6 @@ assert_sql "B-balance-is-exactly-zero" "$(balance_query 00000000-0000-0000-0000-
 assert_sql "B-both-consumptions-recorded" \
   "select count(*)::text from public.inventory_stock_movements where inventory_item_id = '00000000-0000-0000-0000-0000009130c2' and movement_type = 'consumed'" "2"
 
-# Nothing anywhere went negative. Computed straight from the ledger rather than
-# through inventory_stock_position(), because this connection is a superuser
-# with no JWT claim: the read model would correctly return nothing for it, and
-# an empty result is not evidence.
 assert_sql "no-negative-position-anywhere" \
   "select count(*)::text from (
      select m.inventory_item_id as item, m.from_site_id as site from public.inventory_stock_movements m
