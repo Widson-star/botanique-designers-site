@@ -70,7 +70,10 @@ describe("Project Cost payment controls", () => {
     const completePaymentHistory = vi.fn(() => Promise.resolve({ ok: true }));
     renderDetail({ completePaymentHistory });
 
-    expect(screen.getByText("Payment history not yet confirmed")).toBeInTheDocument();
+    // Settled Founder vocabulary, identical to the register chip and to Staff
+    // Pay — not the old near-miss "Payment history not yet confirmed".
+    expect(screen.getAllByText("Payment history to confirm").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Payment history not yet confirmed")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirm payment history" })).toBeInTheDocument();
     expect(screen.getByText(/nothing was ever paid against this cost/)).toBeInTheDocument();
 
