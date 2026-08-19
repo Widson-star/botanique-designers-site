@@ -7094,3 +7094,104 @@ Maintenance/Tools and Approvals untouched.
 
 **Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
 Founder's visual review.
+
+## BD-OPERATIONS-HUB-01 — Inventory / Tools & Equipment V1 database foundation — 19 August 2026
+
+**Database only. No navigation, route, provider, component or page was added, and the destination
+remains invisible.** Status: **NOT `ACTIVE_VERIFIED`** — see "What is not done" below.
+
+### What was built
+
+The smallest sound schema for the Founder-approved model settled on 19 August 2026: **one shared
+catalogue** with **two truth models** beneath it — individually identified equipment with an
+immutable event history, and quantity stock that exists only as the sum of an immutable movement
+ledger. The full architecture record, including every boundary and every deferral, is
+`docs/ui-authority/operations-hub/INVENTORY-TOOLS-EQUIPMENT-V1.md`.
+
+Five new tables, all purely additive: `inventory_items`, `inventory_item_events`,
+`equipment_assets`, `equipment_asset_events`, `inventory_stock_movements`. Thirty-eight functions:
+eighteen `authenticated`-callable actions (including the derived read model
+`inventory_stock_position()` — a function, not a view, so it cannot bypass RLS the way a view
+without `security_invoker` would) and twenty internal helpers and trigger functions.
+
+**Maintenance and Tools & Equipment stayed distinct**, as the Founder ruled on 9 August 2026.
+Working-authority image `11` draws them together; that is composition guidance, and no
+`maintenance_*` table was touched. Image `11`'s 214 items, 162 assigned, purchase-needs count,
+custodians, reorder statuses and "Operations Hub Store" location are illustrative sample content
+and none of them was written anywhere.
+
+**Site is the primary physical context and Project is optional.** A maintenance-only Site — one
+with no Botanique Project at all — is a fully usable position for both equipment and stock, proved
+in the tests. No Project is ever fabricated to hold inventory. A **nullable Site means Botanique
+custody**, and no "Main Store", warehouse, office or depot row was invented to represent it.
+
+**There is no current-quantity column anywhere.** Nobody can silently change 50 to 33; they record
+what happened and the position follows. Quantities are always positive and the movement type
+decides direction. Negative stock is prevented by a `FOR UPDATE` lock on the catalogue row taken
+before the source balance is read, which serialises concurrent movements for that item and no
+other.
+
+**Finance owns the money, and none of it leaked in.** No supplier, cost, price, currency, invoice,
+depreciation, warranty or accounting-value column exists in the domain, and there is no foreign key
+to any Finance table. The acquisition → inventory hand-off is deliberately deferred, because the
+Company Expense acquisition truth it would hang from is not yet complete.
+
+### Authority
+
+Portfolio-wide for both operational roles, following the shape of `public.people` rather than the
+project-scoped shape of Daily Site Operations. Principal and Operations Manager both run every
+ordinary operation; the Principal alone holds the three exceptional powers — catalogue identity
+correction and deactivation, equipment correction and retirement, and stock-taking adjustment.
+**Project Team and Read-only reach nothing at all**, by RLS and by an in-function role check, not
+by UI. Equipment and all three ledgers carry no INSERT or UPDATE grant for any client.
+
+### Evidence
+
+`./scripts/test-inventory-db.sh` — new. Disposable PostgreSQL 17 cluster, full migration chain,
+then the A–H matrix in `supabase/tests/inventory_tools_equipment_v1_test.sql` (schema and RLS;
+Principal authority; Manager can-and-cannot; staff/viewer no access; asset audit integrity; stock
+truth and reconciliation; Site/Project/Maintenance boundary; catalogue identity hardening), all
+passing. Then a **genuine two-session concurrency regression** against negative stock: both
+orderings blocked for a real 2s and resolved correctly — an overdraw refused with the position left
+at 2 rather than −6, and a within-balance draw allowed to exactly 0.
+
+Regression: every other database suite was run. `daily-site`, `fund-release`, `people`, `reports`,
+`site-owned-maintenance`, `work-inbox`, `approvals` and `material-approvals` pass. `fund-requests`,
+`internal-cost-claims` and `maintenance` fail — **byte-identically on `origin/main` (e6b843a)**,
+so they are a pre-existing baseline this tranche neither caused nor fixed. (`approvals` and
+`material-approvals` are the only two runners that do not `export LC_ALL`; they need `LC_ALL=C` to
+start their cluster on this host. Also pre-existing, and left alone as unrelated cleanup.)
+
+JavaScript suite: 10 failures, against a 9-failure baseline measured on this same tree with the new
+migration temporarily removed. The single new failure is
+`src/test/migrationDrift.test.js > holds for the real repository`, which is **the drift guard
+working correctly** — see below.
+
+### What is not done
+
+**Nothing was applied to the production Supabase project, and no production data was created,
+changed or read for a test.** `supabase/migrations/applied-to-production.json` is therefore
+deliberately **not** updated: recording a migration that nobody applied would defeat the guard the
+ledger exists to be. As a result `npm run check:migrations` fails and names the pending file, and
+the real-repository assertion in `src/test/migrationDrift.test.js` fails with it. That is the
+designed behaviour documented in `docs/ui-authority/operations-hub/MIGRATION-DEPLOYMENT.md` step 1:
+apply to production by hand, record the version Supabase reports, then the build passes.
+
+Hosted apply and authenticated verification as both Principal and Operations Manager remain
+outstanding. **`ACTIVE_VERIFIED` must not be claimed before both.**
+
+Also not built, and not to be inferred from image `11`: reorder thresholds and "purchase needs"
+(illustrative, and the first step of purchasing logic), staff acknowledgement/receipt, reservation
+and booking, barcodes, attachments, batch/lot and bin logistics. The full deferral list is in the
+architecture record.
+
+### Migration posture at the time of this work
+
+48 repository migrations reconciled by name, in order, with all 48 ledger entries — no drift. The
+production project reports **55** rows in `supabase_migrations.schema_migrations`, which is not a
+discrepancy: `project_cost_payments` was applied in five transactions and
+`project_cost_historical_settlement` in four, both documented in the ledger header, contributing
+seven extra rows (48 + 4 + 3 = 55). Every ledger `productionVersion` matches the first hosted row
+for its name, every repository migration is present in production, and the latest applied version
+`20260819100629 / maintenance_execution_link_integrity` matches the ledger tail exactly. This
+tranche makes it 49 repository migrations against 48 applied, by design.
