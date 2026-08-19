@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  costPaymentTruth, costTotal, PAYMENT_KNOWLEDGE, summarisePaymentTruth,
+  approvedCostPosition, costBalanceEmphasis, costPaymentTruth, costTotal,
+  PAYMENT_KNOWLEDGE, summarisePaymentTruth,
 } from "./costPaymentTruth";
 import { costReference } from "./costReference";
 
@@ -201,5 +202,83 @@ describe("Project Cost historical settlement", () => {
     expect(summary.unrecordedCount).toBe(0);
     expect(summary.paid).toBe(11900);
     expect(summary.balance).toBe(0);
+  });
+});
+
+// The portfolio position above the register. It is not the register footer:
+// the footer reconciles the currently visible rows, whatever their lifecycle,
+// while this answers what Botanique has actually accepted as an obligation.
+describe("approved Project Cost position", () => {
+  const known = (id, paid, total) => ({
+    claimId: id, historyComplete: true, paymentCount: paid > 0 ? 1 : 0,
+    paidAmount: paid, balanceAmount: Math.max(total - paid, 0),
+  });
+
+  const portfolio = [
+    claim({ id: "approved-part", approvedTotal: 6000, submittedTotal: 6000 }),
+    claim({ id: "approved-settled", approvedTotal: 4000, submittedTotal: 4000 }),
+    claim({ id: "approved-unknown", approvedTotal: 5000, submittedTotal: 5000 }),
+    claim({ id: "awaiting", lifecycle: "awaiting_review", approvedTotal: null, submittedTotal: 3350 }),
+    claim({ id: "withdrawn", lifecycle: "withdrawn", approvedTotal: null, submittedTotal: 8000 }),
+    claim({ id: "rejected", lifecycle: "rejected", approvedTotal: null, submittedTotal: 7000 }),
+    claim({ id: "cancelled", lifecycle: "cancelled", approvedTotal: 9999, submittedTotal: 9999 }),
+    claim({ id: "amendment", lifecycle: "amendment_requested", approvedTotal: null, submittedTotal: 2500 }),
+    claim({ id: "draft", lifecycle: "draft", approvedTotal: null, submittedTotal: null }),
+  ];
+  const positions = new Map([
+    ["approved-part", known("approved-part", 2000, 6000)],
+    ["approved-settled", known("approved-settled", 4000, 4000)],
+  ]);
+  const position = () => approvedCostPosition(portfolio, (id) => positions.get(id) || null);
+
+  it("counts only approved costs as obligations", () => {
+    expect(position().approvedCount).toBe(3);
+    expect(position().approvedTotal).toBe(15000);
+  });
+
+  it("adds Paid and Outstanding from confirmed positions only", () => {
+    expect(position().paid).toBe(6000);
+    expect(position().outstanding).toBe(4000);
+    expect(position().knownCount).toBe(2);
+  });
+
+  it("counts an unconfirmed history apart rather than as KES 0 paid", () => {
+    expect(position().unknownCount).toBe(1);
+    // 5,000 of approved obligation is in approvedTotal but in neither answer.
+    expect(position().paid).not.toBe(6000 + 5000);
+    expect(position().outstanding).not.toBe(4000 + 5000);
+  });
+
+  it("leaves Paid and Outstanding unknown when no history is confirmed", () => {
+    const unknownOnly = approvedCostPosition([claim({ id: "solo" })], () => null);
+    expect(unknownOnly.approvedTotal).toBe(5950);
+    expect(unknownOnly.paid).toBeNull();
+    expect(unknownOnly.outstanding).toBeNull();
+    expect(unknownOnly.unknownCount).toBe(1);
+  });
+
+  it("counts only costs awaiting the Principal as awaiting decision", () => {
+    expect(position().awaitingDecisionCount).toBe(1);
+  });
+
+  it("reads a draft's structured line total exactly as costTotal does", () => {
+    const drafts = [claim({ id: "draft", lifecycle: "draft", approvedTotal: null, submittedTotal: null })];
+    // A draft is not an obligation, so it contributes nothing either way.
+    expect(approvedCostPosition(drafts, () => null, () => [{ lineTotal: 1500 }]).approvedTotal).toBe(0);
+  });
+});
+
+describe("Project Cost balance emphasis", () => {
+  it("gives a balance still owing the stronger weight", () => {
+    expect(costBalanceEmphasis({ balance: 4000 })).toBe("strong");
+  });
+
+  it("keeps a settled balance quiet", () => {
+    expect(costBalanceEmphasis({ balance: 0 })).toBe("quiet");
+  });
+
+  it("keeps an unknown balance quiet rather than emphasising a guess", () => {
+    expect(costBalanceEmphasis({ balance: null })).toBe("quiet");
+    expect(costBalanceEmphasis(null)).toBe("quiet");
   });
 });

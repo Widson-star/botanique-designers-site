@@ -91,6 +91,62 @@ export function balanceDisplay(truth, money) {
   return truth.balance == null ? "—" : money(truth.balance);
 }
 
+// Balance is the reconciliation answer, so it outranks Paid while money is
+// still owed and steps back to ordinary weight when nothing is. Staff Pay reads
+// the same way, so the two Finance registers signal unresolved money alike.
+export function costBalanceEmphasis(truth) {
+  if (!truth || truth.balance == null) return "quiet";
+  return truth.balance > 0 ? "strong" : "quiet";
+}
+
+// The portfolio-level Project Cost position that sits ABOVE the register, and
+// deliberately answers a different question from the register's own footer.
+//
+// Approval is the point at which a Project Cost becomes an accepted Botanique
+// obligation, so only approved costs carry an amount here — a draft, a cost
+// awaiting review and a withdrawn cost are none of them obligations. Payment
+// stays on the same footing as everywhere else in Project Costs: a cost whose
+// history the Hub has not confirmed is counted apart, never folded into KES 0
+// paid, so Paid and Outstanding report only the position that is actually known.
+export function approvedCostPosition(claims = [], positionForClaim = () => null, linesForClaim = null) {
+  let approvedCount = 0;
+  let approvedTotal = 0;
+  let paid = 0;
+  let outstanding = 0;
+  let knownCount = 0;
+  let unknownCount = 0;
+  let awaitingDecisionCount = 0;
+
+  claims.forEach((claim) => {
+    // Only awaiting_review waits on the Principal. amendment_requested is back
+    // with the requester, exactly as canDecideSiteCost already states.
+    if (claim?.lifecycle === "awaiting_review") awaitingDecisionCount += 1;
+    if (claim?.lifecycle !== "approved") return;
+
+    approvedCount += 1;
+    const truth = costPaymentTruth(
+      claim, positionForClaim(claim.id), linesForClaim ? linesForClaim(claim.id) : null);
+    approvedTotal = round(approvedTotal + truth.total);
+    if (truth.paid == null) {
+      unknownCount += 1;
+      return;
+    }
+    knownCount += 1;
+    paid = round(paid + truth.paid);
+    outstanding = round(outstanding + truth.balance);
+  });
+
+  return {
+    approvedCount,
+    approvedTotal,
+    paid: knownCount > 0 ? paid : null,
+    outstanding: knownCount > 0 ? outstanding : null,
+    knownCount,
+    unknownCount,
+    awaitingDecisionCount,
+  };
+}
+
 // The register's portfolio line. Costs whose payment truth is unknown are
 // counted separately rather than silently folded into "unpaid".
 export function summarisePaymentTruth(claims = [], positionForClaim = () => null, linesForClaim = null) {
