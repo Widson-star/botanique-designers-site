@@ -70,6 +70,10 @@ export function costPaymentTruth(claim, position = null, lines = null) {
   // FOUNDER RULING, 12 Aug 2026. A historically settled cost is paid, but the
   // Hub holds no transaction detail for it and must not imply that it does.
   const historicalSettlement = round(position.historicalSettlementAmount || 0);
+  // `note` is an internal sentence for diagnostics and is not rendered anywhere.
+  // It is NOT the register vocabulary — the settled visible wording is Unpaid /
+  // Partially Paid / Paid / Payment history to confirm, in projectCostStatus.js.
+  // Never surface this string in the UI.
   return {
     knowledge: PAYMENT_KNOWLEDGE.known,
     total,

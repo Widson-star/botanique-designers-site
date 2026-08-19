@@ -324,8 +324,12 @@ describe("Project Costs register (Founder amendment)", () => {
   // CASE E. Approval decides authority. It never decides that money moved.
   it("never fabricates a payment from an approval", () => {
     const { container } = wrap(<AdminSiteCosts />, contexts({ claims: [approvedClaim] }));
-    expect(screen.getAllByText("Approved").length).toBeGreaterThan(0);
     const table = container.querySelector("table");
+    // Approved, history unconfirmed — the row says exactly that, and the word
+    // "Approved" survives only in the Approval status filter, never as the row's
+    // working status.
+    expect(table.textContent).toContain("Payment history to confirm");
+    expect(table.textContent).not.toContain("Approved");
     expect(table.textContent).not.toMatch(/Paid in full/);
     // An approved cost with unknown history stays unknown, not zero-paid.
     expect(cellsOf()[6]).toBe("—");
@@ -590,7 +594,7 @@ describe("Project Costs register — Cancelled hidden by default", () => {
   it("shows Cancelled when the Principal explicitly selects the Cancelled filter", async () => {
     const user = userEvent.setup();
     const { container } = register();
-    await user.selectOptions(screen.getByLabelText("Status"), "cancelled");
+    await user.selectOptions(screen.getByLabelText("Approval status"), "cancelled");
     expect(container.textContent).toContain(costReference(cancelledCost));
     // A deliberate Cancelled filter is exclusive — the working statuses drop out.
     expect(container.textContent).not.toContain(costReference(draftCost));
@@ -919,5 +923,248 @@ describe("Project Costs at-a-glance position", () => {
     const unrecorded = register("/admin/site-costs?payment=unrecorded");
     expect(screen.getAllByRole("link", { name: costReference(approvedUnknown) }).length).toBeGreaterThan(0);
     unrecorded.unmount();
+  });
+});
+
+// FOUNDER RULING, 19 Aug 2026. The register must answer IS THIS COST STILL
+// OWED? at a glance. A fully settled cost and a cost with its whole balance
+// outstanding both used to read "Approved", which made the table materially
+// less useful than Staff Pay even though the money columns were already right.
+//
+// Approval stays the underlying lifecycle and is untouched. Once a cost is
+// approved, the VISIBLE row status becomes its current payment position.
+describe("Project Costs register — payment position as row status", () => {
+  const cost = (id, lifecycle, extra = {}) => ({ ...claim, id, lifecycle, ...extra });
+
+  const unpaid = cost("10000000-0000-0000-0000-000000000001", "approved", { submittedTotal: 2400, approvedTotal: 2400 });
+  const partPaid = cost("20000000-0000-0000-0000-000000000002", "approved", { submittedTotal: 10000, approvedTotal: 10000 });
+  const settled = cost("30000000-0000-0000-0000-000000000003", "approved", { submittedTotal: 6500, approvedTotal: 6500 });
+  const unconfirmed = cost("40000000-0000-0000-0000-000000000004", "approved", { submittedTotal: 5000, approvedTotal: 5000 });
+  const draftCost = cost("50000000-0000-0000-0000-000000000005", "draft", { submittedTotal: null, approvedTotal: null });
+  const awaitingCost = cost("60000000-0000-0000-0000-000000000006", "awaiting_review", { submittedTotal: 3350, approvedTotal: null });
+  const amendmentCost = cost("70000000-0000-0000-0000-000000000007", "amendment_requested", { submittedTotal: 2500, approvedTotal: null });
+  const rejectedCost = cost("80000000-0000-0000-0000-000000000008", "rejected", { submittedTotal: 7000, approvedTotal: null });
+  const withdrawnCost = cost("90000000-0000-0000-0000-000000000009", "withdrawn", { submittedTotal: 8000, approvedTotal: null });
+  const cancelledCost = cost("a0000000-0000-0000-0000-00000000000a", "cancelled", { submittedTotal: 9999, approvedTotal: 9999 });
+
+  const everyState = [unpaid, partPaid, settled, unconfirmed, draftCost, awaitingCost, amendmentCost, rejectedCost, withdrawnCost, cancelledCost];
+  const positions = [
+    positionFor(unpaid.id, { paid: 0, total: 2400 }),
+    positionFor(partPaid.id, { paid: 4000, total: 10000 }),
+    positionFor(settled.id, { paid: 6500, total: 6500 }),
+    // `unconfirmed` deliberately has no position: history not confirmed.
+  ];
+
+  function register(initial = "/admin/site-costs", overrides = {}) {
+    const values = contexts({ claims: everyState, positions, ...overrides });
+    values.costs.linesForClaim = () => [];
+    return { values, ...wrap(<AdminSiteCosts />, values, initial) };
+  }
+
+  const chipIn = (selector) => (row) => screen.getAllByRole("link", { name: costReference(row) })
+    .map((node) => node.closest(selector)).find(Boolean).querySelector("[data-register-status]");
+  const rowChip = chipIn("tr");
+  const cardChip = chipIn("li");
+
+  // 1 — Karen Residence HSE 19: KES 2,400, paid KES 0, balance KES 2,400.
+  it("shows an approved cost with nothing paid as Unpaid", () => {
+    register();
+    expect(rowChip(unpaid)).toHaveTextContent("Unpaid");
+    expect(rowChip(unpaid)).toHaveAttribute("data-register-status", "payment:unpaid");
+  });
+
+  // 2 — Total KES 10,000, paid KES 4,000, balance KES 6,000.
+  it("shows a part-paid cost as exactly Partially Paid", () => {
+    register();
+    const chip = rowChip(partPaid);
+    expect(chip).toHaveTextContent("Partially Paid");
+    expect(chip.textContent).toBe("Partially Paid");
+    ["Part paid", "Part-paid", "Part Paid", "Partially received"].forEach((banned) =>
+      expect(chip.textContent).not.toContain(banned));
+  });
+
+  // 3 — Alego Usonga: KES 6,500, paid KES 6,500, balance KES 0.
+  it("shows a settled cost as Paid", () => {
+    register();
+    expect(rowChip(settled).textContent).toBe("Paid");
+    expect(rowChip(settled)).toHaveAttribute("data-register-status", "payment:paid");
+  });
+
+  it("shows an approved cost with no confirmed history as Payment history to confirm", () => {
+    register();
+    expect(rowChip(unconfirmed).textContent).toBe("Payment history to confirm");
+    ["Payment not recorded", "Nothing paid", "Paid in full"].forEach((banned) =>
+      expect(rowChip(unconfirmed).textContent).not.toContain(banned));
+  });
+
+  it("never uses Approved as the visible row status of an approved cost", () => {
+    const { container } = register();
+    const table = container.querySelector("table");
+    expect(table.textContent).not.toContain("Approved");
+    [unpaid, partPaid, settled, unconfirmed].forEach((row) =>
+      expect(rowChip(row).getAttribute("data-register-status")).toMatch(/^payment:/));
+  });
+
+  it("keeps the lifecycle label on every record that has not been approved", () => {
+    register();
+    expect(rowChip(draftCost).textContent).toBe("Draft");
+    expect(rowChip(awaitingCost).textContent).toBe("Awaiting review");
+    expect(rowChip(amendmentCost).textContent).toBe("Amendment requested");
+    expect(rowChip(rejectedCost).textContent).toBe("Rejected");
+    expect(rowChip(withdrawnCost).textContent).toBe("Withdrawn");
+    [draftCost, awaitingCost, amendmentCost, rejectedCost, withdrawnCost].forEach((row) =>
+      expect(rowChip(row).getAttribute("data-register-status")).toMatch(/^lifecycle:/));
+  });
+
+  it("keeps Cancelled as Cancelled once it is explicitly shown", () => {
+    register("/admin/site-costs?status=cancelled");
+    expect(rowChip(cancelledCost).textContent).toBe("Cancelled");
+  });
+
+  it("gives the mobile card the identical derived status, never a second opinion", () => {
+    register();
+    [unpaid, partPaid, settled, unconfirmed, draftCost, awaitingCost].forEach((row) => {
+      expect(cardChip(row).textContent).toBe(rowChip(row).textContent);
+      expect(cardChip(row).getAttribute("data-register-status"))
+        .toBe(rowChip(row).getAttribute("data-register-status"));
+    });
+  });
+
+  it("names the lifecycle filter Approval status and keeps Approved in it", () => {
+    register();
+    const approval = screen.getByLabelText("Approval status");
+    expect(approval).toBeInTheDocument();
+    // "Approved" is legitimate here: this filter explicitly means approval.
+    expect(within(approval).getByRole("option", { name: "Approved" })).toBeInTheDocument();
+    expect(within(approval).getByRole("option", { name: "All statuses" })).toBeInTheDocument();
+    ["Draft", "Awaiting review", "Amendment requested", "Rejected", "Withdrawn", "Cancelled"].forEach((label) =>
+      expect(within(approval).getByRole("option", { name: label })).toBeInTheDocument());
+  });
+
+  it("names the payment filter Payment position and offers exactly the register's vocabulary", () => {
+    register();
+    const position = screen.getByLabelText("Payment position");
+    expect(position).toBeInTheDocument();
+    expect(within(position).getByRole("option", { name: "Any payment position" })).toBeInTheDocument();
+    ["Unpaid", "Partially Paid", "Paid", "Payment history to confirm"].forEach((label) =>
+      expect(within(position).getByRole("option", { name: label })).toBeInTheDocument());
+    // The old vocabulary is gone from the filter entirely.
+    ["Part paid", "Nothing paid", "Paid in full", "Payment not recorded", "Any payment state"].forEach((banned) =>
+      expect(position.textContent).not.toContain(banned));
+  });
+
+  it("keeps the existing ?payment= URL values filtering correctly", () => {
+    const part = register("/admin/site-costs?payment=part_paid");
+    expect(rowChip(partPaid).textContent).toBe("Partially Paid");
+    expect(screen.queryByText(costReference(settled))).not.toBeInTheDocument();
+    expect(screen.getByText(/Filtered to Partially Paid\./)).toBeInTheDocument();
+    part.unmount();
+
+    const unrecorded = register("/admin/site-costs?payment=unrecorded");
+    expect(rowChip(unconfirmed).textContent).toBe("Payment history to confirm");
+    expect(screen.queryByText(costReference(partPaid))).not.toBeInTheDocument();
+    unrecorded.unmount();
+
+    const nil = register("/admin/site-costs?payment=unpaid");
+    expect(rowChip(unpaid).textContent).toBe("Unpaid");
+    expect(screen.queryByText(costReference(settled))).not.toBeInTheDocument();
+    nil.unmount();
+
+    register("/admin/site-costs?payment=paid");
+    expect(rowChip(settled).textContent).toBe("Paid");
+    expect(screen.queryByText(costReference(unpaid))).not.toBeInTheDocument();
+  });
+
+  it("leaves the Project filter untouched", () => {
+    register();
+    const project = screen.getByLabelText("Project");
+    expect(within(project).getByRole("option", { name: "All projects" })).toBeInTheDocument();
+    expect(within(project).getByRole("option", { name: "Alego Usonga" })).toBeInTheDocument();
+  });
+
+  it("keeps Status as the table's column heading", () => {
+    const { container } = register();
+    const headings = [...container.querySelectorAll("thead th")].map((cell) => cell.textContent);
+    expect(headings).toContain("Status");
+    expect(headings).not.toContain("Approval status");
+    expect(headings).not.toContain("Payment position");
+  });
+
+  it("changes nothing underneath — the approval lifecycle is untouched", () => {
+    const { values } = register();
+    expect(values.costs.claims.find((c) => c.id === unpaid.id).lifecycle).toBe("approved");
+    expect(values.costs.claims.find((c) => c.id === settled.id).lifecycle).toBe("approved");
+    expect(values.costs.decideClaim).not.toHaveBeenCalled();
+    expect(values.costs.cancelClaim).not.toHaveBeenCalled();
+    expect(values.costs.updateClaim).not.toHaveBeenCalled();
+  });
+
+  it("leaves the top cards, the footer and the Balance emphasis exactly as PR #147 shipped them", () => {
+    const { container } = register();
+    const cards = screen.getByRole("group", { name: "Project Costs summary" });
+    // 2,400 + 10,000 + 6,500 + 5,000 approved obligations.
+    expect(within(cards).getByText("Approved costs").parentElement.querySelectorAll("p")[1].textContent)
+      .toMatch(/KES\s*23,900\.00/);
+    // Footer still reconciles the visible register: cancelled is hidden here.
+    expect(screen.getByText("9 of 10 costs")).toBeInTheDocument();
+    // Balance emphasis survives untouched.
+    const balanceOf = (row) => screen.getAllByRole("link", { name: costReference(row) })
+      .map((node) => node.closest("tr")).find(Boolean).querySelector("[data-balance-emphasis]");
+    expect(balanceOf(unpaid)).toHaveAttribute("data-balance-emphasis", "strong");
+    expect(balanceOf(settled)).toHaveAttribute("data-balance-emphasis", "quiet");
+    expect(balanceOf(unconfirmed).textContent).toBe("—");
+    expect(container.querySelector("table")).toBeInTheDocument();
+  });
+
+  it("leaves the row action menu unchanged", async () => {
+    register();
+    await userEvent.click(screen.getAllByRole("button", { name: `Actions for ${costReference(partPaid)}` })[0]);
+    const menu = screen.getAllByRole("menu")[0];
+    ["View cost", "Mark paid", "Record payment"].forEach((label) =>
+      expect(within(menu).getByRole("menuitem", { name: label })).toBeInTheDocument());
+  });
+});
+
+// The detail page must not contradict the register one click away. Approval is
+// not removed anywhere — it stays on the identity line, in the decision panel
+// and throughout the history — it simply stops being the CURRENT status badge.
+describe("Project Cost detail — current position vs approval provenance", () => {
+  const approved = { ...claim, id: "c1", lifecycle: "approved", submittedTotal: 10000, approvedTotal: 10000, deciderId: "o1", decidedAt: "2026-08-01T09:00:00Z" };
+  const detail = (positions = []) =>
+    wrap(<Routes><Route path="/admin/site-costs/:claimId" element={<AdminSiteCostDetail />} /></Routes>,
+      contexts({ claims: [approved], positions }), "/admin/site-costs/c1");
+
+  const badge = () => document.querySelector("header [data-register-status]");
+
+  it("badges a part-paid cost as Partially Paid, not Approved", () => {
+    detail([positionFor("c1", { paid: 4000, total: 10000 })]);
+    expect(badge().textContent).toBe("Partially Paid");
+    expect(badge()).toHaveAttribute("data-register-status", "payment:part_paid");
+  });
+
+  it("badges a settled cost as Paid", () => {
+    detail([positionFor("c1", { paid: 10000, total: 10000 })]);
+    expect(badge().textContent).toBe("Paid");
+  });
+
+  it("badges a cost with nothing paid as Unpaid", () => {
+    detail([positionFor("c1", { paid: 0, total: 10000 })]);
+    expect(badge().textContent).toBe("Unpaid");
+  });
+
+  it("uses the settled wording for an unconfirmed payment history", () => {
+    detail();
+    expect(badge().textContent).toBe("Payment history to confirm");
+    // The old near-miss wording is gone.
+    expect(document.body.textContent).not.toContain("Payment history not yet confirmed");
+  });
+
+  it("keeps the approval decision visible as provenance", () => {
+    detail([positionFor("c1", { paid: 0, total: 10000 })]);
+    // Identity line still states the approval lifecycle …
+    expect(document.body.textContent).toMatch(/Alego Usonga · .+ · Approved/);
+    // … and the approved amount keeps its own label.
+    expect(screen.getByText("Approved amount")).toBeInTheDocument();
+    expect(screen.getByText("Approval does not mean paid. Payment is recorded separately against the Project Cost.")).toBeInTheDocument();
   });
 });

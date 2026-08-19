@@ -280,12 +280,19 @@ describe("Finance landing speaks the Staff Pay payment-position vocabulary", () 
     for (const row of rows) expect(row).not.toHaveTextContent("Staff pay · Approved");
   });
 
-  it("keeps approval vocabulary where Project Costs still own it", () => {
+  // FOUNDER RULING, 19 Aug 2026. Project Cost activity now reads the same
+  // derived working status as the Project Costs register, exactly as Staff Pay
+  // already did. Approval vocabulary survives where it describes an APPROVAL —
+  // the "Approved project costs" aggregate — not where it claims to describe
+  // what is currently owed.
+  it("describes a Project Cost activity row by its payment position", () => {
     renderFinance({ compensations: [] });
     expect(glance()).toHaveTextContent("Approved project costs");
     expect(glance()).toHaveTextContent("1 · KES 12,000");
-    // A Project Cost is still described by its approval; only Staff Pay moved.
-    expect(within(activity()).getByRole("link", { name: /Turf crew/ })).toHaveTextContent("Turf crew · Approved");
+    // This cost is approved with no confirmed payment history.
+    expect(within(activity()).getByRole("link", { name: /Turf crew/ })).toHaveTextContent("Turf crew · Payment history to confirm");
+    expect(within(activity()).getByRole("link", { name: /Turf crew/ })).not.toHaveTextContent("Turf crew · Approved");
+    // Advances are a different domain and keep their own request vocabulary.
     expect(within(activity()).getByRole("link", { name: /BDFR-2026-0002/ })).toHaveTextContent("Submitted");
   });
 

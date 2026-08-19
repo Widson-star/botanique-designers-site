@@ -9,6 +9,8 @@ import { canSeeSiteCosts } from "../utils/siteCostCapabilities";
 import { canSeeFundRequests } from "../utils/fundRequestCapabilities";
 import { formatKes } from "../utils/dailySiteFormatters";
 import { staffPayRegisterStatus } from "../utils/staffPayStatus";
+import { costPaymentTruth } from "../utils/costPaymentTruth";
+import { projectCostRegisterStatus } from "../utils/projectCostStatus";
 import { Disc } from "../components/ui/Surfaces";
 
 const AREAS = [
@@ -23,7 +25,7 @@ const ADVANCE_CUSTODY = "operations_manager_accountable_advance";
 export default function AdminFinance() {
   const { role, projects } = useAdminData();
   const { people } = usePeople();
-  const { claims, status: costsStatus } = useSiteCosts();
+  const { claims, paymentPositionForClaim, status: costsStatus } = useSiteCosts();
   const { requests, releases, status: fundsStatus } = useFundRequests();
   const { compensations, paymentPositionForCompensation, status: compensationStatus } = useStaffCompensation();
   const canCosts = canSeeSiteCosts(role);
@@ -53,7 +55,10 @@ export default function AdminFinance() {
   const advancesIssuedAmount = advancesIssued.reduce((sum, release) => sum + Number(release.releasedAmount ?? 0), 0);
 
   const activity = [
-    ...projectCostClaims.map((claim) => ({ id: `cost-${claim.id}`, title: projectName[claim.projectId] || "Project", detail: `${claim.recipientLabel || "Project cost"} · ${plainStatus(claim.lifecycle)}`, amount: Number(claim.approvedTotal ?? claim.submittedTotal ?? 0), at: claim.updatedAt || claim.decidedAt || claim.submittedAt || "", to: `/admin/site-costs/${claim.id}` })),
+    // Project Cost activity reads the same derived working status as the
+    // Project Costs register — an approved cost describes what is still owed,
+    // not that a decision once happened.
+    ...projectCostClaims.map((claim) => ({ id: `cost-${claim.id}`, title: projectName[claim.projectId] || "Project", detail: `${claim.recipientLabel || "Project cost"} · ${projectCostRegisterStatus(claim, costPaymentTruth(claim, paymentPositionForClaim?.(claim.id))).label}`, amount: Number(claim.approvedTotal ?? claim.submittedTotal ?? 0), at: claim.updatedAt || claim.decidedAt || claim.submittedAt || "", to: `/admin/site-costs/${claim.id}` })),
     // Staff Pay activity reads the same derived working status as the Staff Pay
     // register, so one record cannot describe itself two ways across Finance.
     ...compensations.map((item) => ({ id: `pay-${item.id}`, title: personName[item.personId] || "Staff member", detail: `Staff pay · ${staffPayRegisterStatus(item, paymentPositionForCompensation(item.id)).label}`, amount: Number(item.approvedAmount ?? item.submittedAmount ?? 0), at: item.updatedAt || item.decidedAt || item.submittedAt || item.createdAt || "", to: `/admin/finance/staff-compensation/${item.id}` })),

@@ -11,8 +11,10 @@ import {
 import { profilePresentationName } from "../utils/personName";
 import { possibleDuplicateClaims } from "../utils/duplicateCostClaim";
 import { costPaymentTruth, costTotal } from "../utils/costPaymentTruth";
+import { projectCostRegisterStatus, PROJECT_COST_PAYMENT_LABELS } from "../utils/projectCostStatus";
 import { costReference } from "../utils/costReference";
 import { costAmountLabel, paymentChannelLabel } from "../utils/costPresentation";
+import { Chip } from "../components/ui/Surfaces";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", {
   style: "currency", currency: "KES", currencyDisplay: "code", maximumFractionDigits: 2,
@@ -174,6 +176,7 @@ export default function AdminSiteCostDetail() {
   }
 
   const authoritativeAmount = costTotal(claim, lines);
+  const registerStatus = projectCostRegisterStatus(claim, paymentTruth);
   // Approved, payment truth known, nothing left owing.
   const settledAndPaid = claim.lifecycle === "approved"
     && paymentTruth.paid != null && paymentTruth.balance === 0;
@@ -197,7 +200,11 @@ export default function AdminSiteCostDetail() {
             {project?.projectName || "Project"} · {costReference(claim)} · {SITE_COST_LIFECYCLES[claim.lifecycle]}
           </p>
         </div>
-        <span className="w-fit rounded-full bg-stone-100 px-3 py-1.5 text-sm font-semibold">{SITE_COST_LIFECYCLES[claim.lifecycle]}</span>
+        {/* The badge is this cost's CURRENT working status and reads exactly as
+            the register row does, so one record cannot describe itself two ways.
+            The approval lifecycle is not removed — it stays in the line above,
+            in the decision panel and throughout the history. */}
+        <Chip data-register-status={registerStatus.key} tone={registerStatus.tone} className="w-fit px-3 py-1.5 text-sm font-semibold">{registerStatus.label}</Chip>
       </header>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
@@ -209,7 +216,7 @@ export default function AdminSiteCostDetail() {
             <p className="mt-1 text-[12px] text-gray-500">Approval does not mean paid. Payment is recorded separately against the Project Cost.</p>
           </div>
           {paymentTruth.paid == null && claim.lifecycle === "approved" && (
-            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-800">Payment history not yet confirmed</span>
+            <Chip tone="neutral">{PROJECT_COST_PAYMENT_LABELS.unrecorded}</Chip>
           )}
         </div>
         <dl className="mt-4 grid grid-cols-3 gap-3 border-t border-stone-100 pt-4">
