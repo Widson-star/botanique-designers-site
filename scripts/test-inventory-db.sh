@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # BD-OPERATIONS-HUB-01 — Inventory / Tools & Equipment V1 database test runner.
 # Spins up a disposable PostgreSQL 17 cluster, applies every migration in
-# order, then runs the Inventory test suites followed by a genuine two-session
-# concurrency regression against negative stock. No hosted Supabase is touched
-# and no production data is read or written.
+# order, then runs the Inventory test suites followed by genuine two-session
+# concurrency regressions. No hosted Supabase is touched and no production
+# data is read or written.
 set -euo pipefail
 export LC_ALL="${LC_ALL:-C}"
 
@@ -39,22 +39,12 @@ echo "  hardening assertions passed"
 
 # =====================================================================
 # Negative-stock concurrency regression.
-#
-# Two genuinely separate psql connections take from the SAME position of the
-# SAME item at the same time. This is the case a single-session test cannot
-# reach: without the FOR UPDATE lock on the catalogue row, both sessions read
-# 10, both pass the balance check, and the position ends at -6.
 # =====================================================================
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_stock_concurrency_fixture.sql" >/dev/null
 
 race_dir="$test_root/race"
 mkdir -p "$race_dir"
 
-# Runs two psql sessions against the same item: $1 starts first and holds the
-# catalogue-row lock for ~2s before committing; after a short head start, $2
-# attempts its own movement, which must block until $1 releases. Verifies
-# genuine blocking occurred (elapsed time), then leaves both exit codes in
-# race_holder_status / race_attempt_status for the caller to check.
 run_race() {
   local itemid="$1" attempt_script="$2" label="$3"
   local holder_out="$race_dir/${label}.holder.out"
@@ -146,3 +136,81 @@ assert_sql "no-negative-position-anywhere" \
    ) p where public.private_inventory_stock_balance(p.item, p.site) < 0" "0"
 
 echo "Negative-stock concurrency: both orderings confirmed — concurrent movements serialise, and stock never goes negative."
+
+# =====================================================================
+# Equipment registration vs catalogue deactivation concurrency regression.
+# =====================================================================
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_asset_registration_race_fixture.sql" >/dev/null
+
+run_asset_race() {
+  local holder_script="$1" attempt_script="$2" itemid="$3" assetcode="$4" label="$5"
+  local holder_out="$race_dir/${label}.holder.out"
+  local attempt_out="$race_dir/${label}.attempt.out"
+
+  "${psql_cmd[@]}" -v "itemid=$itemid" -v "assetcode=$assetcode" \
+    -f "$repo_dir/supabase/tests/$holder_script" >"$holder_out" 2>&1 &
+  local holder_pid=$!
+  sleep 0.4
+
+  local attempt_start attempt_end
+  attempt_start=$(date +%s)
+  set +e
+  "${psql_cmd[@]}" -v "itemid=$itemid" -v "assetcode=$assetcode" \
+    -f "$repo_dir/supabase/tests/$attempt_script" >"$attempt_out" 2>&1
+  asset_race_attempt_status=$?
+  set -e
+  attempt_end=$(date +%s)
+  asset_race_attempt_elapsed=$((attempt_end - attempt_start))
+
+  set +e
+  wait "$holder_pid"
+  asset_race_holder_status=$?
+  set -e
+
+  echo "  [$label] holder exit=$asset_race_holder_status attempt exit=$asset_race_attempt_status attempt elapsed=${asset_race_attempt_elapsed}s"
+  if [[ "$asset_race_attempt_elapsed" -lt 1 ]]; then
+    echo "ASSET REGISTRATION RACE FAILED [$label]: concurrent operation did not block, so catalogue/registration serialization is unproved." >&2
+    cat "$holder_out" "$attempt_out" >&2
+    exit 1
+  fi
+}
+
+echo "Equipment registration/catalogue concurrency regression:"
+
+# Registration commits first. Deactivation must wait and then fail because the
+# newly registered asset is unresolved.
+run_asset_race \
+  "inventory_asset_registration_holds_lock.sql" \
+  "inventory_item_deactivation_attempt.sql" \
+  "00000000-0000-0000-0000-0000009230c1" \
+  "RACE-ASSET-A" \
+  "C-registration-wins"
+if [[ "$asset_race_holder_status" -ne 0 || "$asset_race_attempt_status" -eq 0 ]]; then
+  echo "ASSET REGISTRATION RACE FAILED [C]: registration should commit and deactivation should be refused." >&2
+  cat "$race_dir/C-registration-wins.holder.out" "$race_dir/C-registration-wins.attempt.out" >&2
+  exit 1
+fi
+assert_sql "C-item-stays-active" \
+  "select is_active::text from public.inventory_items where id='00000000-0000-0000-0000-0000009230c1'" "true"
+assert_sql "C-one-asset-registered" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='00000000-0000-0000-0000-0000009230c1'" "1"
+
+# Deactivation commits first. Registration must wait and then fail against the
+# now-inactive catalogue item.
+run_asset_race \
+  "inventory_item_deactivation_holds_lock.sql" \
+  "inventory_asset_registration_attempt.sql" \
+  "00000000-0000-0000-0000-0000009230c2" \
+  "RACE-ASSET-B" \
+  "D-deactivation-wins"
+if [[ "$asset_race_holder_status" -ne 0 || "$asset_race_attempt_status" -eq 0 ]]; then
+  echo "ASSET REGISTRATION RACE FAILED [D]: deactivation should commit and registration should be refused." >&2
+  cat "$race_dir/D-deactivation-wins.holder.out" "$race_dir/D-deactivation-wins.attempt.out" >&2
+  exit 1
+fi
+assert_sql "D-item-is-inactive" \
+  "select is_active::text from public.inventory_items where id='00000000-0000-0000-0000-0000009230c2'" "false"
+assert_sql "D-no-asset-registered" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='00000000-0000-0000-0000-0000009230c2'" "0"
+
+echo "Equipment registration/catalogue concurrency: both orderings confirmed — impossible asset/catalogue states cannot race into existence."
