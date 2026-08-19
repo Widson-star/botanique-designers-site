@@ -19,7 +19,7 @@ const assignments = [
   { id: "assign-2", relationshipId: "rel-2", personId: "person-2", personName: "Martine Lotom", role: "supervisor", startDate: "2026-08-01", endDate: "", version: 1 },
 ];
 const entries = [
-  { id: "dsr-1", siteId: "s1", projectId: "p1", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 1, workPlanned: "Maintenance", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T10:58:00Z" },
+  { id: "dsr-1", siteId: "s1", projectId: "p1", maintenanceVisitId: "", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 1, workPlanned: "Maintenance", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T10:58:00Z" },
 ];
 const people = [
   { id: "person-1", fullName: "Kefa Nyamari Ochenge", isActive: true },
@@ -123,6 +123,32 @@ describe("Maintenance workboard", () => {
     expect(screen.queryByRole("combobox", { name: "" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "View register" }));
     expect(screen.getByRole("columnheader", { name: "Arrangement" })).toBeInTheDocument();
+  });
+
+  it("asks the operator to identify the field record when a Site has two same-date candidates", () => {
+    // One physical Site may hold several Projects, so two unlinked records can
+    // share a date. The Hub must not pick one.
+    const context = values({
+      daily: { entries: [
+        { id: "dsr-a", siteId: "s1", projectId: "p1", maintenanceVisitId: "", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 1, workPlanned: "Maintenance", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T10:00:00Z" },
+        { id: "dsr-b", siteId: "s1", projectId: "p9", maintenanceVisitId: "", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 2, workPlanned: "Remedial works", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T11:00:00Z" },
+      ] },
+    });
+    wrap(context);
+    expect(screen.getAllByText("Identify field record").length).toBeGreaterThan(0);
+  });
+
+  it("uses the durable Maintenance visit link ahead of any same-date candidate", () => {
+    const context = values({
+      daily: { entries: [
+        { id: "dsr-linked", siteId: "s1", projectId: "", maintenanceVisitId: "visit-1", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 1, workPlanned: "Maintenance", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T10:00:00Z" },
+        { id: "dsr-other", siteId: "s1", projectId: "p9", maintenanceVisitId: "", workDate: "2026-08-17", disposition: "working", expectedWorkerCount: 2, workPlanned: "Remedial works", evidenceStatus: "none", state: "accepted", updatedAt: "2026-08-17T11:00:00Z" },
+      ] },
+    });
+    wrap(context);
+    // Unambiguous: the linked record is this visit's execution truth.
+    expect(screen.queryByText("Identify field record")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Needs closure").length).toBeGreaterThan(0);
   });
 
   it("leads a maintenance-only Site with its Site name and invents no Project", () => {

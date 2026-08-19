@@ -35,7 +35,7 @@ async function rpc(accessToken, name, body) {
 }
 
 const ENTRY_COLUMNS = [
-  "id", "site_id", "project_id", "work_date", "disposition", "no_work_reason", "reason_detail",
+  "id", "site_id", "project_id", "maintenance_visit_id", "work_date", "disposition", "no_work_reason", "reason_detail",
   "expected_worker_count", "crew_reference", "rate_per_worker", "agreed_labour_total",
   "planned_labour_cost", "work_planned", "funds_available", "additional_amount_requested",
   "notes", "evidence_status", "state", "version", "supersedes_entry_id",
@@ -122,6 +122,7 @@ export function createDailySiteEntryDraft(accessToken, values) {
   return rpc(accessToken, "create_daily_site_entry_draft_for_site", {
     target_site_id: values.siteId,
     target_project_id: values.projectId || null,
+    target_maintenance_visit_id: values.maintenanceVisitId || null,
     target_work_date: values.workDate,
     ...planParams(values),
   });

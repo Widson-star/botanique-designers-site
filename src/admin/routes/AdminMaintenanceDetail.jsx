@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { useDailySiteOperations } from "../context/dailySiteOperations";
 import { useMaintenance } from "../context/maintenance";
 import { maintenanceRecordLabel } from "../utils/maintenancePresentation";
+import { entryForMaintenanceVisit } from "../utils/maintenanceExecution";
 import { usePeople } from "../context/people";
 import {
   MAINTENANCE_ASSIGNMENT_ROLES,
@@ -99,10 +100,18 @@ export default function AdminMaintenanceDetail() {
     return entries.filter((entry) => entry.siteId === relationship.siteId && entry.workDate >= relationship.startDate && liveEntryStates.has(entry.state))
       .slice().sort((a, b) => b.workDate.localeCompare(a.workDate) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")));
   }, [entries, relationship]);
-  const fieldByDate = useMemo(() => new Map(fieldActivity.map((entry) => [entry.workDate, entry])), [fieldActivity]);
+  // Site + date is not a unique key once a Site holds several Projects, so the
+  // association is resolved deterministically and identically to the workboard.
+  const executionForVisit = useCallback(
+    (visit) => entryForMaintenanceVisit(visit, relationship, fieldActivity),
+    [relationship, fieldActivity],
+  );
   const currentVisit = scheduledVisits.find((visit) => visit.scheduledDate <= today()) || scheduledVisits[0] || null;
-  const currentEntry = currentVisit ? fieldByDate.get(currentVisit.scheduledDate) || null : null;
-  const currentState = currentVisit ? visitWorkState(currentVisit, currentEntry) : followUp ? "follow_up" : "not_scheduled";
+  const currentMatch = currentVisit ? executionForVisit(currentVisit) : { status: "none", entry: null };
+  const currentEntry = currentMatch.entry;
+  const currentState = currentVisit
+    ? (currentMatch.status === "ambiguous" ? "ambiguous_execution" : visitWorkState(currentVisit, currentEntry))
+    : followUp ? "follow_up" : "not_scheduled";
 
   if (!canSeeMaintenance(role)) return <section><h1 className="text-2xl font-semibold">Maintenance unavailable</h1></section>;
   if (status === "loading") return <p className="text-sm text-gray-600">Loading…</p>;
@@ -149,7 +158,11 @@ export default function AdminMaintenanceDetail() {
     if (result.ok) setActingOnVisit(null);
   }
   function startCompletion(visit) {
-    const execution = fieldByDate.get(visit.scheduledDate) || null;
+    const match = executionForVisit(visit);
+    if (match.status === "ambiguous") {
+      return setActionError("Several field records share this Site and date. Open the correct one and record it against this visit before closing.");
+    }
+    const execution = match.entry;
     if (!execution || execution.state !== "accepted") return setActionError("Accept the Daily Site Record before closing this visit.");
     setCycleForm({
       visit, execution, outcome: "completed", completionNote: execution.workPlanned || "",
@@ -236,7 +249,7 @@ export default function AdminMaintenanceDetail() {
         {currentState === "follow_up" && <button onClick={() => openVisitForm(followUp.followUpNote || followUp.purpose)} className="min-h-11 rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Schedule follow-up</button>}
         {currentState === "needs_closure" && <button onClick={() => startCompletion(currentVisit)} className="min-h-11 rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Complete visit</button>}
         {["awaiting_review", "correction_needed", "draft_field_record"].includes(currentState) && currentEntry && <Link to={`/admin/daily-site-operations/${currentEntry.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Open site record</Link>}
-        {["due", "overdue", "upcoming"].includes(currentState) && currentVisit && !currentEntry && <Link to={`/admin/daily-site-operations/new?site=${relationship.siteId}${relationship.projectId ? `&project=${relationship.projectId}` : ""}&date=${currentVisit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Record field work</Link>}
+        {["due", "overdue", "upcoming"].includes(currentState) && currentVisit && !currentEntry && <Link to={`/admin/daily-site-operations/new?site=${relationship.siteId}${relationship.projectId ? `&project=${relationship.projectId}` : ""}&maintenanceVisit=${currentVisit.id}&date=${currentVisit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Record field work</Link>}
         {currentState === "not_scheduled" && <button onClick={() => openVisitForm(relationship.scope)} className="min-h-11 rounded-lg bg-botanique-green px-4 text-[12px] font-semibold text-white">Schedule visit</button>}
       </div>}
     </section>
@@ -260,13 +273,16 @@ export default function AdminMaintenanceDetail() {
           {showVisitForm && relationship.status === "active" && <form onSubmit={submitVisit} className="mb-3 grid gap-3 rounded-lg bg-stone-50 p-3 sm:grid-cols-3"><label className="text-[12px] font-medium">Date<input type="date" value={visitForm.scheduledDate} onChange={(e) => setVisitForm({ ...visitForm, scheduledDate: e.target.value })} className="mt-1 block min-h-11 w-full rounded-lg border border-stone-300 px-3" required /></label><label className="text-[12px] font-medium sm:col-span-2">Work planned<input value={visitForm.purpose} onChange={(e) => setVisitForm({ ...visitForm, purpose: e.target.value })} className="mt-1 block min-h-11 w-full rounded-lg border border-stone-300 px-3" required /></label><button className="min-h-11 rounded-lg bg-botanique-green px-3 text-[12px] font-semibold text-white sm:col-span-3 sm:w-fit">Save visit</button></form>}
           {!scheduledVisits.length && <p className="text-[12.5px] text-gray-500">No scheduled visit.</p>}
           <ul className="divide-y divide-stone-100">{scheduledVisits.map((visit) => {
-            const execution = fieldByDate.get(visit.scheduledDate);
-            const workState = visitWorkState(visit, execution);
-            const primary = workState === "needs_closure"
+            const match = executionForVisit(visit);
+            const execution = match.entry;
+            const workState = match.status === "ambiguous" ? "ambiguous_execution" : visitWorkState(visit, execution);
+            const primary = workState === "ambiguous_execution"
+              ? <span className="inline-flex min-h-11 items-center text-[11.5px] font-semibold text-amber-700">Identify field record</span>
+              : workState === "needs_closure"
               ? <button onClick={() => startCompletion(visit)} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Complete</button>
               : execution
                 ? <Link to={`/admin/daily-site-operations/${execution.id}`} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Open DSR</Link>
-                : <Link to={`/admin/daily-site-operations/new?site=${relationship.siteId}${relationship.projectId ? `&project=${relationship.projectId}` : ""}&date=${visit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Record field work</Link>;
+                : <Link to={`/admin/daily-site-operations/new?site=${relationship.siteId}${relationship.projectId ? `&project=${relationship.projectId}` : ""}&maintenanceVisit=${visit.id}&date=${visit.scheduledDate}`} className="inline-flex min-h-11 items-center rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-botanique-green">Record field work</Link>;
             return <li key={visit.id} className="py-3">
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <div><p className="text-[12.5px] font-semibold">{showDate(visit.scheduledDate)}</p><p className="mt-0.5 text-[11.5px] text-gray-500">{visit.purpose}</p>{execution && <Link to={`/admin/daily-site-operations/${execution.id}`} className="mt-1 block text-[10.5px] font-semibold text-botanique-green">DSR: {entryLabel(execution.state)} →</Link>}</div>

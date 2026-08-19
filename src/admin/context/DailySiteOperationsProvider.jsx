@@ -41,6 +41,7 @@ function buildDemoEntry(values, currentUserId, overrides = {}) {
     id: `demo-entry-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     siteId: values.siteId || "",
     projectId: values.projectId || "",
+    maintenanceVisitId: values.maintenanceVisitId || "",
     workDate: values.workDate,
     disposition: values.disposition,
     noWorkReason: values.disposition === "no_work" ? values.noWorkReason || "" : "",
@@ -162,6 +163,8 @@ export default function DailySiteOperationsProvider({ children, session, role, i
         location: project.location || "",
         county: project.county || "",
         projects: [],
+        hasActiveMaintenance: false,
+        maintenanceRelationshipId: "",
       };
       current.projects.push({ id: project.id, projectName: project.projectName, status: project.status });
       bySite.set(id, current);
@@ -197,6 +200,9 @@ export default function DailySiteOperationsProvider({ children, session, role, i
         projects: (row.projects || []).map((project) => ({
           id: project.id, projectName: project.project_name, status: project.status,
         })),
+        // Stated by the database, never inferred from the absence of a Project.
+        hasActiveMaintenance: row.has_active_maintenance === true,
+        maintenanceRelationshipId: row.maintenance_relationship_id || "",
       })));
       setEntries(entryRows.map(mapDailySiteEntry));
       setWaivers(waiverRows.map(mapDailySiteWaiver));

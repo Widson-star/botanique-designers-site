@@ -26,9 +26,15 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
     () => [...(authorisedSites || [])].sort((a, b) => a.siteName.localeCompare(b.siteName)),
     [authorisedSites],
   );
-  const [siteId, setSiteId] = useState(() => searchParams.get("site") || existing?.siteId || selectableSites[0]?.id || "");
+  // Never silently adopt the first Site: authorised Sites load asynchronously,
+  // so a positional default can leave an empty siteId behind a populated-looking
+  // selector. A manual record requires a deliberate choice.
+  const [siteId, setSiteId] = useState(() => searchParams.get("site") || existing?.siteId || "");
   const [projectId, setProjectId] = useState(() => searchParams.get("project") || existing?.projectId || "");
   const selectedSite = selectableSites.find((site) => site.id === siteId) || null;
+  // Fixed context when opened from a Maintenance visit — never an editable
+  // free-form selector in this flow.
+  const maintenanceVisitId = searchParams.get("maintenanceVisit") || existing?.maintenanceVisitId || "";
   const [workDate, setWorkDate] = useState(() => existing?.workDate || todayIso());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -51,6 +57,8 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
   ) : [];
 
   async function persist(values, thenSubmit) {
+    // Guard the deliberate-Site rule before any write.
+    if (!editing && !siteId) { setError("Choose the Site / property this record belongs to."); return; }
     setBusy(true); setError("");
     try {
       let result;
@@ -58,7 +66,7 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
         result = await updateDraft(existing.id, values);
         if (result.ok && thenSubmit) result = await submitEntry(existing.id);
       } else {
-        result = await createDraft({ ...values, siteId, projectId, workDate });
+        result = await createDraft({ ...values, siteId, projectId, maintenanceVisitId, workDate });
         if (result.ok && thenSubmit) {
           const newId = result.entry?.id;
           if (newId) result = await submitEntry(newId);
@@ -75,7 +83,7 @@ export default function AdminDailySiteEntryForm({ mode = "create" }) {
       <div><Link to="/admin/daily-site-operations" className="text-sm text-gray-500 hover:text-botanique-green">← Daily Site Record</Link><h1 className="mt-2 text-2xl font-semibold">{editing ? "Edit site entry" : "New site entry"}</h1></div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</div>}
 
-      {!editing && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div><label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-site">Site / property</label><select id="dse-site" value={siteId} onChange={(event)=>{setSiteId(event.target.value); setProjectId("");}} className={fieldClass}>{selectableSites.map((site)=><option key={site.id} value={site.id}>{site.siteName}</option>)}</select></div><div><label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-date">Work date</label><input id="dse-date" type="date" value={workDate} onChange={(event)=>setWorkDate(event.target.value)} className={fieldClass}/></div>{selectedSite && selectedSite.projects.length > 0 && <div className="sm:col-span-2"><label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-project">Botanique Project (optional)</label><select id="dse-project" value={projectId} onChange={(event)=>setProjectId(event.target.value)} className={fieldClass}><option value="">None — maintenance only</option>{selectedSite.projects.map((project)=><option key={project.id} value={project.id}>{project.projectName}</option>)}</select></div>}</div>}
+      {!editing && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div><label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-site">Site / property</label><select id="dse-site" value={siteId} onChange={(event)=>{setSiteId(event.target.value); setProjectId("");}} className={fieldClass}><option value="">Choose Site / property</option>{selectableSites.map((site)=><option key={site.id} value={site.id}>{site.siteName}</option>)}</select></div><div><label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-date">Work date</label><input id="dse-date" type="date" value={workDate} onChange={(event)=>setWorkDate(event.target.value)} className={fieldClass}/></div>{selectedSite && selectedSite.projects.length > 0 && <div className="sm:col-span-2"><label className="block text-sm font-medium text-botanique-charcoal" htmlFor="dse-project">{selectedSite.hasActiveMaintenance ? "Botanique Project (optional)" : "Botanique Project"}</label><select id="dse-project" value={projectId} onChange={(event)=>setProjectId(event.target.value)} className={fieldClass}>{selectedSite.hasActiveMaintenance && <option value="">None — maintenance only</option>}{selectedSite.projects.map((project)=><option key={project.id} value={project.id}>{project.projectName}</option>)}</select></div>}</div>}
       {editing && <div className="rounded-lg border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-gray-600">Editing the draft for <span className="font-medium text-botanique-charcoal">{projectName}</span> on {formatWorkDate(existing.workDate)}.</div>}
 
       {assignedStaff.length > 0 && <section className="rounded-lg border border-stone-200 bg-white px-4 py-3"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Assigned Botanique staff</p><div className="mt-2 space-y-1">{assignedStaff.map((assignment)=><div key={assignment.id} className="flex items-center justify-between gap-3 text-sm"><span className="font-semibold text-botanique-charcoal">{assignment.personName || "Staff member"}</span><span className="text-gray-500">{String(assignment.role || "assigned staff").replaceAll("_", " ")}</span></div>)}</div><p className="mt-2 border-t border-stone-100 pt-2 text-xs leading-5 text-gray-500">These people are named staff and are paid through Staff Pay. Do not count them again in the casual / site crew fields below.</p></section>}

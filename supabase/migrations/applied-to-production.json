@@ -243,7 +243,26 @@
     "Principal exactly as the Site foundation backfill did.",
     "maintenance_relationship_site_derivation (20260818191600) lets a caller that",
     "names only a Project have its Site resolved, instead of failing with a bare",
-    "Site not found; Site is still stored and still NOT NULL."
+    "Site not found; Site is still stored and still NOT NULL.",
+    "",
+    "MAINTENANCE EXECUTION LINK INTEGRITY, 19 Aug 2026.",
+    "maintenance_execution_link_integrity (production version 20260819100629)",
+    "closes three gaps found in final control review. A project-less Daily Site",
+    "Record now requires an ACTIVE Maintenance relationship at that Site: an",
+    "Ongoing Botanique Project alone is NOT authority to drop Project context, so",
+    "ordinary implementation work keeps its Project. daily_site_entries.",
+    "maintenance_visit_id makes visit-to-record association a durable fact rather",
+    "than a same-date guess, because one Site may hold several Projects and",
+    "therefore several records on one date; a partial unique index allows one LIVE",
+    "record per visit, and closure now refuses a record linked to a different",
+    "visit. Authority follows the record's nature: Maintenance-linked records",
+    "answer to Maintenance Site authority, ordinary Project records keep unchanged",
+    "Project authority, so no manager gains access to unrelated Project records at",
+    "the same Site. The legacy backfill copied ONLY the two pairs production had",
+    "already recorded at closure time in maintenance_visits.daily_site_entry_id,",
+    "each verified same-Site and same-date; nothing was inferred. All 54 records",
+    "kept an identical state/version/actor/timestamp fingerprint and the event",
+    "count stayed at 166."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-18",
@@ -294,6 +313,7 @@
     { "name": "site_owned_maintenance_actions", "productionVersion": "20260818185702" },
     { "name": "project_site_identity_migration_actor", "productionVersion": "20260818191536" },
     { "name": "maintenance_relationship_site_derivation", "productionVersion": "20260818191600" },
-    { "name": "site_aware_daily_site_records", "productionVersion": "20260818191740" }
+    { "name": "site_aware_daily_site_records", "productionVersion": "20260818191740" },
+    { "name": "maintenance_execution_link_integrity", "productionVersion": "20260819100629" }
   ]
 }

@@ -16,6 +16,7 @@ import {
   maintenanceRecordLabel,
   maintenanceSiteChoiceLabel,
 } from "../utils/maintenancePresentation";
+import { entryForMaintenanceVisit } from "../utils/maintenanceExecution";
 
 const showDate = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${String(value).slice(0, 10)}T00:00:00`))
@@ -58,6 +59,9 @@ const stateInfo = {
   due: { label: "Due today", className: "bg-stone-100 text-gray-700", priority: 5 },
   draft_field_record: { label: "Draft field record", className: "bg-stone-100 text-gray-700", priority: 6 },
   schedule_next: { label: "No visit scheduled", className: "bg-stone-100 text-gray-700", priority: 7 },
+  // Several unlinked field records share this Site and date: the operator must
+  // say which one executed this visit rather than the Hub choosing one.
+  ambiguous_execution: { label: "Identify field record", className: "bg-amber-50 text-amber-800", priority: 2 },
   upcoming: { label: "Upcoming", className: "bg-[#eef3f0] text-botanique-green", priority: 8 },
 };
 
@@ -109,7 +113,6 @@ export default function AdminMaintenance() {
     const rows = [];
     for (const relationship of register.filter((item) => item.status === "active")) {
       const activity = activityByRelationship.get(relationship.id) || [];
-      const byDate = new Map(activity.map((entry) => [entry.workDate, entry]));
       const scheduled = visits
         .filter((visit) => visit.relationshipId === relationship.id && visit.status === "scheduled")
         .slice()
@@ -118,8 +121,12 @@ export default function AdminMaintenance() {
       const followUp = outstandingFollowUp(relationship.id, visits);
 
       if (currentVisit) {
-        const entry = byDate.get(currentVisit.scheduledDate) || null;
-        const state = workState(currentVisit, entry, nowDate);
+        // Site + date is not a unique key, so never guess by date alone.
+        const match = entryForMaintenanceVisit(currentVisit, relationship, activity);
+        const entry = match.entry;
+        const state = match.status === "ambiguous"
+          ? "ambiguous_execution"
+          : workState(currentVisit, entry, nowDate);
         rows.push({ relationship, visit: currentVisit, entry, followUp: null, state, info: stateInfo[state] });
       } else if (followUp) {
         rows.push({ relationship, visit: null, entry: null, followUp, state: "follow_up", info: stateInfo.follow_up });

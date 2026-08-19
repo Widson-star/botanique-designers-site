@@ -76,7 +76,7 @@ begin
   select id into only_site from public.sites where site_name = 'Maintained Grounds';
   entry := public.create_daily_site_entry_draft_for_site(
     only_site, null, date '2026-08-12', 'working',
-    null, null, 3, 'Maintenance crew', 400, null, 'Weeding and pruning', null, null, null, 'none'
+    null, null, 3, 'Maintenance crew', 400, null, 'Weeding and pruning', null, null, null, 'none', null
   );
   perform pg_temp.assert_true(entry.site_id = only_site, '21. maintenance-only record belongs to its Site');
   perform pg_temp.assert_true(entry.project_id is null, '21. maintenance-only record needs no Project');
@@ -88,7 +88,7 @@ $$;
 do $$
 begin
   perform public.create_daily_site_entry_draft_for_site(
-    null, null, date '2026-08-13', 'working', null, null, 2, 'Crew', 300, null, 'Work', null, null, null, 'none'
+    null, null, date '2026-08-13', 'working', null, null, 2, 'Crew', 300, null, 'Work', null, null, null, 'none', null
   );
   raise exception 'ASSERTION FAILED: 22. a Site must be required';
 exception when check_violation then null;
@@ -102,7 +102,7 @@ begin
   select id into only_site from public.sites where site_name = 'Maintained Grounds';
   perform public.create_daily_site_entry_draft_for_site(
     only_site, '00000000-0000-0000-0000-00000000e002', date '2026-08-14', 'working',
-    null, null, 2, 'Crew', 300, null, 'Work', null, null, null, 'none'
+    null, null, 2, 'Crew', 300, null, 'Work', null, null, null, 'none', null
   );
   raise exception 'ASSERTION FAILED: 23/24. a Project from another Site must be refused';
 exception when check_violation then null;
@@ -186,7 +186,7 @@ begin
   -- 28 / 29. a same-Site record on the wrong date, still only a draft
   wrong_date_entry := public.create_daily_site_entry_draft_for_site(
     only_site, null, date '2026-08-21', 'working',
-    null, null, 2, 'Crew', 400, null, 'Different day', null, null, null, 'none'
+    null, null, 2, 'Crew', 400, null, 'Different day', null, null, null, 'none', null
   );
   begin
     perform public.complete_maintenance_visit_cycle(
@@ -219,6 +219,146 @@ begin
     visit.id, visit.version, entry.id, 'completed', 'Closed with the Project-backed record', false, null, null, null
   );
   perform pg_temp.assert_true(visit.status = 'completed', '30. project-backed Maintenance closes unchanged');
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Project-less records require ACTIVE Maintenance, never a mere Ongoing Project
+-- ---------------------------------------------------------------------
+
+-- 1. A Site with an Ongoing Project but NO Maintenance cannot drop the Project.
+do $$
+declare project_site uuid;
+begin
+  select site_id into project_site from public.projects where id = '00000000-0000-0000-0000-00000000e002';
+  perform pg_temp.assert_true(
+    not public.private_site_has_active_maintenance(project_site),
+    'fixture: the unrelated property runs no Maintenance');
+  begin
+    perform public.create_daily_site_entry_draft_for_site(
+      project_site, null, date '2026-08-25', 'working',
+      null, null, 2, 'Crew', 300, null, 'Implementation work', null, null, null, 'none', null
+    );
+    raise exception 'ASSERTION FAILED: an Ongoing Project alone must not authorise a project-less record';
+  exception when check_violation then null;
+  end;
+end;
+$$;
+
+-- 2. The same Site still accepts an ordinary Project-backed record.
+do $$
+declare project_site uuid; entry public.daily_site_entries;
+begin
+  select site_id into project_site from public.projects where id = '00000000-0000-0000-0000-00000000e002';
+  entry := public.create_daily_site_entry_draft_for_site(
+    project_site, '00000000-0000-0000-0000-00000000e002', date '2026-08-25', 'working',
+    null, null, 2, 'Crew', 300, null, 'Implementation work', null, null, null, 'none', null
+  );
+  perform pg_temp.assert_true(entry.project_id is not null, '2. ordinary Project work keeps its Project');
+  perform pg_temp.assert_true(entry.maintenance_visit_id is null, '11. an ordinary record has no Maintenance visit link');
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Maintenance visit link integrity (4, 5, 6, 7, 8, 9, 10)
+-- ---------------------------------------------------------------------
+do $$
+declare only_site uuid; rel public.maintenance_relationships; visit public.maintenance_visits;
+        other_visit public.maintenance_visits; entry public.daily_site_entries; superseded public.daily_site_entries;
+        project_site uuid; project_rel public.maintenance_relationships;
+begin
+  select id into only_site from public.sites where site_name = 'Maintained Grounds';
+  select * into rel from public.maintenance_relationships where site_id = only_site and status <> 'ended';
+
+  insert into public.maintenance_visits (maintenance_relationship_id, scheduled_date, purpose)
+  values (rel.id, date '2026-09-01', 'Linked upkeep') returning * into visit;
+
+  -- 4. A Maintenance-visit record accepts a null Project.
+  entry := public.create_daily_site_entry_draft_for_site(
+    only_site, null, date '2026-09-01', 'working',
+    null, null, 3, 'Crew', 400, null, 'Upkeep', null, null, null, 'none', visit.id
+  );
+  perform pg_temp.assert_true(entry.maintenance_visit_id = visit.id, '4. the record states which visit it executed');
+  perform pg_temp.assert_true(entry.project_id is null, '4. a maintenance-only record needs no Project');
+
+  -- 9. Only one LIVE record may claim that visit.
+  begin
+    perform public.create_daily_site_entry_draft_for_site(
+      only_site, null, date '2026-09-01', 'working',
+      null, null, 2, 'Second crew', 400, null, 'Duplicate', null, null, null, 'none', visit.id
+    );
+    raise exception 'ASSERTION FAILED: 9. one live field record per Maintenance visit';
+  exception when unique_violation then null;
+  end;
+
+  -- 6. A visit belonging to another Site is refused.
+  select site_id into project_site from public.projects where id = '00000000-0000-0000-0000-00000000e001';
+  select * into project_rel from public.maintenance_relationships where site_id = project_site and status <> 'ended';
+  select * into other_visit from public.maintenance_visits
+   where maintenance_relationship_id = project_rel.id limit 1;
+  begin
+    perform public.create_daily_site_entry_draft_for_site(
+      only_site, null, date '2026-09-01', 'working',
+      null, null, 2, 'Crew', 400, null, 'Wrong site', null, null, null, 'none', other_visit.id
+    );
+    raise exception 'ASSERTION FAILED: 6. a visit from another Site must be refused';
+  exception when check_violation then null;
+  end;
+
+  -- 7. A work date that does not match the scheduled visit is refused.
+  begin
+    perform public.create_daily_site_entry_draft_for_site(
+      only_site, null, date '2026-09-02', 'working',
+      null, null, 2, 'Crew', 400, null, 'Wrong date', null, null, null, 'none', visit.id
+    );
+    raise exception 'ASSERTION FAILED: 7. the work date must match the scheduled visit date';
+  exception when check_violation then null;
+  end;
+
+  -- 10. Supersession carries Site, Project and Maintenance visit forward.
+  entry := public.submit_daily_site_entry(entry.id);
+  entry := public.accept_daily_site_entry(entry.id, 'Verified');
+  superseded := public.supersede_daily_site_entry(
+    entry.id, 'Corrected crew size', 'working',
+    null, null, 4, 'Crew', 400, null, 'Upkeep', null, null, null, 'none'
+  );
+  perform pg_temp.assert_true(superseded.maintenance_visit_id = visit.id, '10. supersession keeps the Maintenance visit link');
+  perform pg_temp.assert_true(superseded.site_id = only_site, '10. supersession keeps the Site');
+
+  -- 15. A record linked to this visit cannot close a DIFFERENT visit.
+  begin
+    perform public.complete_maintenance_visit_cycle(
+      other_visit.id, other_visit.version, superseded.id, 'completed', 'Wrong visit', false, null, null, null
+    );
+    raise exception 'ASSERTION FAILED: 15. a linked record must not close another visit';
+  exception when invalid_parameter_value then null;
+  end;
+
+  -- 16. It closes its own visit.
+  visit := public.complete_maintenance_visit_cycle(
+    visit.id, visit.version, superseded.id, 'completed', 'Upkeep complete', false, null, null, null
+  );
+  perform pg_temp.assert_true(visit.status = 'completed', '16. a linked record closes its own visit');
+end;
+$$;
+
+-- 8. A cancelled or completed visit cannot receive a NEW field record.
+do $$
+declare only_site uuid; rel public.maintenance_relationships; visit public.maintenance_visits;
+begin
+  select id into only_site from public.sites where site_name = 'Maintained Grounds';
+  select * into rel from public.maintenance_relationships where site_id = only_site and status <> 'ended';
+  insert into public.maintenance_visits (maintenance_relationship_id, scheduled_date, purpose)
+  values (rel.id, date '2026-09-10', 'To be cancelled') returning * into visit;
+  visit := public.cancel_maintenance_visit(visit.id, visit.version, 'Client postponed');
+  begin
+    perform public.create_daily_site_entry_draft_for_site(
+      only_site, null, date '2026-09-10', 'working',
+      null, null, 2, 'Crew', 400, null, 'Work', null, null, null, 'none', visit.id
+    );
+    raise exception 'ASSERTION FAILED: 8. a cancelled visit must not receive a new field record';
+  exception when check_violation then null;
+  end;
 end;
 $$;
 
