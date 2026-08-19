@@ -4,6 +4,12 @@ import { useAdminData } from "../context/adminData";
 import { usePeople } from "../context/people";
 import { useStaffCompensation } from "../context/staffCompensation";
 import { Chip, Disc, Glyph } from "../components/ui/Surfaces";
+import {
+  STAFF_PAY_STATUS_FILTERS,
+  matchesStaffPayStatus,
+  staffPayBalanceEmphasis,
+  staffPayRegisterStatus,
+} from "../utils/staffPayStatus";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", {
   style: "currency", currency: "KES", currencyDisplay: "code", maximumFractionDigits: 2,
@@ -11,14 +17,6 @@ const money = (amount) => new Intl.NumberFormat("en-KE", {
 const date = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`))
   : "—";
-const labels = {
-  draft: "Draft", awaiting_review: "Awaiting review", amendment_requested: "Amendment requested",
-  approved: "Approved", rejected: "Rejected", withdrawn: "Withdrawn", cancelled: "Cancelled",
-};
-const tones = {
-  draft: "neutral", awaiting_review: "decision", amendment_requested: "waiting",
-  approved: "settled", rejected: "attention", withdrawn: "neutral", cancelled: "neutral",
-};
 const typeLabels = { compensation: "Pay", allowance: "Allowance", bonus: "Bonus", other: "Other" };
 const methodLabels = { mpesa: "M-Pesa", bank_transfer: "Bank transfer", cash: "Cash", other: "Other" };
 
@@ -27,15 +25,17 @@ export default function AdminStaffCompensation() {
   const { people } = usePeople();
   const { compensations, payments, paymentPositionForCompensation, status, error } = useStaffCompensation();
   const [personId, setPersonId] = useState("all");
-  const [lifecycle, setLifecycle] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [projectId, setProjectId] = useState("all");
   const [openMenu, setOpenMenu] = useState(null);
 
   const personMap = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
   const projectMap = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
+  // Status filters on the derived register status, so an operator filtering for
+  // Partially Paid gets exactly the rows the register shows as Partially Paid.
   const visible = compensations.filter((item) =>
     (personId === "all" || item.personId === personId) &&
-    (lifecycle === "all" || item.lifecycle === lifecycle) &&
+    matchesStaffPayStatus(statusFilter, item, paymentPositionForCompensation(item.id)) &&
     (projectId === "all" || item.projectId === projectId));
 
   const approved = compensations.filter((item) => item.lifecycle === "approved");
@@ -72,7 +72,7 @@ export default function AdminStaffCompensation() {
     });
 
   function resetFilters() {
-    setPersonId("all"); setLifecycle("all"); setProjectId("all");
+    setPersonId("all"); setStatusFilter("all"); setProjectId("all");
   }
 
   return (
@@ -89,8 +89,8 @@ export default function AdminStaffCompensation() {
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon="check" tone="settled" label="Approved" value={money(totalApproved)} hint={`${approved.length} ${approved.length === 1 ? "record" : "records"}`} />
+      <div role="group" aria-label="Staff Pay summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric icon="check" tone="settled" label="Payable" value={money(totalApproved)} hint={`${approved.length} payable ${approved.length === 1 ? "record" : "records"}`} />
         <Metric icon="wallet" tone="brand" label="Paid" value={knownApproved.length ? money(totalPaid) : "—"} hint={knownApproved.length ? "Confirmed paid position" : historyUnknown.length ? "History to confirm" : "No approved records"} />
         <Metric icon="balance" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Approved balance"} />
         <Metric icon="people" tone="decision" label="Awaiting decision" value={String(awaiting.length)} hint={`${awaiting.length} ${awaiting.length === 1 ? "record" : "records"}`} />
@@ -100,7 +100,7 @@ export default function AdminStaffCompensation() {
         <div className="min-w-0 overflow-visible rounded-xl border border-stone-200 bg-white">
           <div className="grid gap-3 border-b border-stone-100 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
             <Filter label="Person" value={personId} onChange={setPersonId}><option value="all">All people</option>{people.slice().sort((a,b)=>a.fullName.localeCompare(b.fullName)).map((person)=><option key={person.id} value={person.id}>{person.fullName}</option>)}</Filter>
-            <Filter label="Status" value={lifecycle} onChange={setLifecycle}><option value="all">All statuses</option>{Object.entries(labels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</Filter>
+            <Filter label="Status" value={statusFilter} onChange={setStatusFilter}><option value="all">All statuses</option>{STAFF_PAY_STATUS_FILTERS.map(({value,label})=><option key={value} value={value}>{label}</option>)}</Filter>
             <Filter label="Project (optional)" value={projectId} onChange={setProjectId}><option value="all">All projects</option>{projects.slice().sort((a,b)=>a.projectName.localeCompare(b.projectName)).map((project)=><option key={project.id} value={project.id}>{project.projectName}</option>)}</Filter>
             <div className="flex items-end gap-2"><button type="button" onClick={resetFilters} className="min-h-10 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-gray-600 hover:bg-stone-50">Reset filters</button><button type="button" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-stone-300 px-3 text-[11.5px] font-semibold text-gray-600"><Glyph name="filter" className="h-3.5 w-3.5" /> Filters</button></div>
           </div>
@@ -111,30 +111,33 @@ export default function AdminStaffCompensation() {
 
           {visible.length > 0 && <>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left text-[12.5px]">
+              <table aria-label="Staff pay register" className="w-full text-left text-[12.5px]">
                 <thead className="border-b border-stone-100 bg-[#fbfbfa] text-[10.5px] uppercase tracking-wide text-gray-500"><tr>{['#','Date','Person','Type','Project','Status'].map((heading)=><th key={heading} className="px-3.5 py-3 font-medium">{heading}</th>)}{['Total','Paid','Balance','Action'].map((heading)=><th key={heading} className="px-3.5 py-3 text-right font-medium">{heading}</th>)}</tr></thead>
                 <tbody className="divide-y divide-stone-100">{visible.map((item,index)=>{
                   const position = paymentPositionForCompensation(item.id);
                   const person = personMap.get(item.personId);
                   const unknown = position?.paymentStatus === "payment_history_unknown";
+                  const registerStatus = staffPayRegisterStatus(item, position);
+                  const emphasis = staffPayBalanceEmphasis(position);
                   const dropUp = index >= Math.max(visible.length - 2, 1);
-                  return <tr key={item.id} className="hover:bg-[#fbfbfa]"><td className="px-3.5 py-3 text-gray-500">{index+1}</td><td className="whitespace-nowrap px-3.5 py-3 text-gray-600">{date(item.serviceDate)}</td><td className="px-3.5 py-3 font-medium"><Link to={`/admin/finance/staff-compensation/${item.id}`} className="text-botanique-green hover:underline">{person?.fullName || "Person"}</Link></td><td className="px-3.5 py-3 text-gray-600">{typeLabels[item.compensationType] || "Other"}</td><td className="max-w-[180px] px-3.5 py-3 text-gray-600"><span className="line-clamp-2">{item.projectId ? projectMap.get(item.projectId)?.projectName || "Project" : "—"}</span></td><td className="px-3.5 py-3"><Chip tone={tones[item.lifecycle]}>{labels[item.lifecycle]}</Chip></td><td className="whitespace-nowrap px-3.5 py-3 text-right font-semibold tabular-nums">{money(item.lifecycle === "approved" ? item.approvedAmount : item.submittedAmount)}</td><td className="whitespace-nowrap px-3.5 py-3 text-right tabular-nums text-gray-600">{unknown || position?.paidAmount == null ? "—" : money(position.paidAmount)}</td><td className="whitespace-nowrap px-3.5 py-3 text-right font-semibold tabular-nums">{unknown || position?.balanceAmount == null ? "—" : money(position.balanceAmount)}</td><td className="px-3.5 py-3 text-right"><PayActionMenu item={item} position={position} role={role} currentUserId={currentUserId} open={openMenu===item.id} dropUp={dropUp} onToggle={()=>setOpenMenu(openMenu===item.id?null:item.id)}/></td></tr>;
+                  return <tr key={item.id} className="hover:bg-[#fbfbfa]"><td className="px-3.5 py-3 text-gray-500">{index+1}</td><td className="whitespace-nowrap px-3.5 py-3 text-gray-600">{date(item.serviceDate)}</td><td className="px-3.5 py-3 font-medium"><Link to={`/admin/finance/staff-compensation/${item.id}`} className="text-botanique-green hover:underline">{person?.fullName || "Person"}</Link></td><td className="px-3.5 py-3 text-gray-600">{typeLabels[item.compensationType] || "Other"}</td><td className="max-w-[180px] px-3.5 py-3 text-gray-600"><span className="line-clamp-2">{item.projectId ? projectMap.get(item.projectId)?.projectName || "Project" : "—"}</span></td><td className="px-3.5 py-3"><Chip data-register-status={registerStatus.key} tone={registerStatus.tone}>{registerStatus.label}</Chip></td><td className="whitespace-nowrap px-3.5 py-3 text-right font-semibold tabular-nums">{money(item.lifecycle === "approved" ? item.approvedAmount : item.submittedAmount)}</td><td className="whitespace-nowrap px-3.5 py-3 text-right font-normal tabular-nums text-gray-600">{unknown || position?.paidAmount == null ? "—" : money(position.paidAmount)}</td><td data-balance-emphasis={emphasis} className={`whitespace-nowrap px-3.5 py-3 text-right tabular-nums ${emphasis==="strong"?"font-bold text-botanique-charcoal":"font-normal text-gray-600"}`}>{unknown || position?.balanceAmount == null ? "—" : money(position.balanceAmount)}</td><td className="px-3.5 py-3 text-right"><PayActionMenu item={item} position={position} role={role} currentUserId={currentUserId} open={openMenu===item.id} dropUp={dropUp} onToggle={()=>setOpenMenu(openMenu===item.id?null:item.id)}/></td></tr>;
                 })}</tbody>
               </table>
             </div>
 
-            <ul className="space-y-2.5 p-3 md:hidden">{visible.map((item,index)=>{
+            <ul aria-label="Staff pay records" className="space-y-2.5 p-3 md:hidden">{visible.map((item,index)=>{
               const position = paymentPositionForCompensation(item.id); const person = personMap.get(item.personId); const unknown = position?.paymentStatus === "payment_history_unknown";
-              return <li key={item.id} className="rounded-xl border border-stone-200 bg-white p-3.5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><Link to={`/admin/finance/staff-compensation/${item.id}`} className="font-semibold text-botanique-green hover:underline">{person?.fullName || "Person"}</Link><p className="mt-1 text-[11.5px] text-gray-500">#{index+1} · {date(item.serviceDate)} · {typeLabels[item.compensationType]}</p></div><Chip tone={tones[item.lifecycle]}>{labels[item.lifecycle]}</Chip></div><p className="mt-2 line-clamp-2 text-[12px] text-gray-600">{item.projectId ? projectMap.get(item.projectId)?.projectName || "Project" : "No Project context"}</p><dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[11.5px]"><div><dt className="text-gray-500">Total</dt><dd className="font-semibold tabular-nums">{money(item.lifecycle === "approved" ? item.approvedAmount : item.submittedAmount)}</dd></div><div><dt className="text-gray-500">Paid</dt><dd>{unknown || position?.paidAmount == null ? "—" : money(position.paidAmount)}</dd></div><div><dt className="text-gray-500">Balance</dt><dd>{unknown || position?.balanceAmount == null ? "—" : money(position.balanceAmount)}</dd></div></dl><div className="mt-2.5 flex justify-end"><PayActionMenu item={item} position={position} role={role} currentUserId={currentUserId} open={openMenu===item.id} dropUp={index===visible.length-1} onToggle={()=>setOpenMenu(openMenu===item.id?null:item.id)}/></div></li>;
+              const registerStatus = staffPayRegisterStatus(item, position); const emphasis = staffPayBalanceEmphasis(position);
+              return <li key={item.id} className="rounded-xl border border-stone-200 bg-white p-3.5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><Link to={`/admin/finance/staff-compensation/${item.id}`} className="font-semibold text-botanique-green hover:underline">{person?.fullName || "Person"}</Link><p className="mt-1 text-[11.5px] text-gray-500">#{index+1} · {date(item.serviceDate)} · {typeLabels[item.compensationType]}</p></div><Chip data-register-status={registerStatus.key} className="shrink-0 whitespace-nowrap" tone={registerStatus.tone}>{registerStatus.label}</Chip></div><p className="mt-2 line-clamp-2 text-[12px] text-gray-600">{item.projectId ? projectMap.get(item.projectId)?.projectName || "Project" : "No Project context"}</p><dl className="mt-2.5 grid grid-cols-3 gap-2 border-t border-stone-100 pt-2.5 text-[11.5px]"><div className="min-w-0"><dt className="text-gray-500">Total</dt><dd className="truncate font-semibold tabular-nums">{money(item.lifecycle === "approved" ? item.approvedAmount : item.submittedAmount)}</dd></div><div className="min-w-0"><dt className="text-gray-500">Paid</dt><dd className="truncate font-normal tabular-nums text-gray-600">{unknown || position?.paidAmount == null ? "—" : money(position.paidAmount)}</dd></div><div className="min-w-0"><dt className="text-gray-500">Balance</dt><dd data-balance-emphasis={emphasis} className={`truncate tabular-nums ${emphasis==="strong"?"font-bold text-botanique-charcoal":"font-normal text-gray-600"}`}>{unknown || position?.balanceAmount == null ? "—" : money(position.balanceAmount)}</dd></div></dl><div className="mt-2.5 flex justify-end"><PayActionMenu item={item} position={position} role={role} currentUserId={currentUserId} open={openMenu===item.id} dropUp={index===visible.length-1} onToggle={()=>setOpenMenu(openMenu===item.id?null:item.id)}/></div></li>;
             })}</ul>
 
             <div className="border-t border-stone-100 px-4 py-3">
               <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-gray-500">
                 <span>Showing 1 to {visible.length} of {visible.length} {visible.length===1?"record":"records"}</span>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-botanique-charcoal">
-                  <span>Approved <strong className="tabular-nums">{money(visibleApprovedTotal)}</strong></span>
-                  <span>Paid <strong className="tabular-nums">{visibleUnknown.length ? "—" : money(visiblePaidTotal)}</strong></span>
-                  <span>Balance <strong className="tabular-nums">{visibleUnknown.length ? "—" : money(visibleBalanceTotal)}</strong></span>
+                <div role="group" aria-label="Register totals" className="flex flex-wrap items-center gap-x-5 gap-y-1 text-botanique-charcoal">
+                  <span>Payable <strong className="tabular-nums">{money(visibleApprovedTotal)}</strong></span>
+                  <span>Paid <strong className="font-normal tabular-nums">{visibleUnknown.length ? "—" : money(visiblePaidTotal)}</strong></span>
+                  <span>Balance <strong className={`tabular-nums ${!visibleUnknown.length && visibleBalanceTotal > 0 ? "font-bold" : "font-normal"}`}>{visibleUnknown.length ? "—" : money(visibleBalanceTotal)}</strong></span>
                 </div>
                 <div className="flex items-center gap-2"><button disabled className="h-8 w-8 rounded-lg border border-stone-200 text-gray-300">‹</button><span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg border border-botanique-green px-2 font-semibold text-botanique-green">1</span><button disabled className="h-8 w-8 rounded-lg border border-stone-200 text-gray-300">›</button><span className="rounded-lg border border-stone-200 px-3 py-2">10 / page</span></div>
               </div>
@@ -144,7 +147,7 @@ export default function AdminStaffCompensation() {
         </div>
 
         <aside className="space-y-4">
-          <section className="rounded-xl border border-stone-200 bg-white p-4"><div className="flex items-center gap-2.5"><Disc name="bell" tone="waiting" size="h-8 w-8"/><h2 className="text-[13.5px] font-semibold">Needs attention</h2></div><div className="mt-3 divide-y divide-stone-100"><Attention icon="people" tone="decision" label="Awaiting Principal decision" hint="Staff pay pending review" count={awaiting.length} to="/admin/approvals"/><Attention icon="balance" tone="waiting" label="Part-paid staff pay" hint="Have outstanding balances" count={partPaid.length} to="/admin/finance/staff-compensation"/><Attention icon="doc" tone="brand" label="Drafts pending submission" hint="Complete and submit for review" count={drafts.length} to="/admin/finance/staff-compensation"/>{historyUnknown.length>0&&<Attention icon="wallet" tone="neutral" label="Payment history to confirm" hint="Imported historical records" count={historyUnknown.length} to="/admin/finance/staff-compensation"/>}</div><Link to="/admin/finance/staff-compensation" className="mt-3 flex items-center justify-between text-[11.5px] font-semibold text-botanique-green">View all <span>→</span></Link></section>
+          <section className="rounded-xl border border-stone-200 bg-white p-4"><div className="flex items-center gap-2.5"><Disc name="bell" tone="waiting" size="h-8 w-8"/><h2 className="text-[13.5px] font-semibold">Needs attention</h2></div><div className="mt-3 divide-y divide-stone-100"><Attention icon="people" tone="decision" label="Awaiting Principal decision" hint="Staff pay pending review" count={awaiting.length} to="/admin/approvals"/><Attention icon="balance" tone="waiting" label="Partially Paid staff pay" hint="Have outstanding balances" count={partPaid.length} to="/admin/finance/staff-compensation"/><Attention icon="doc" tone="brand" label="Drafts pending submission" hint="Complete and submit for review" count={drafts.length} to="/admin/finance/staff-compensation"/>{historyUnknown.length>0&&<Attention icon="wallet" tone="neutral" label="Payment history to confirm" hint="Imported historical records" count={historyUnknown.length} to="/admin/finance/staff-compensation"/>}</div><Link to="/admin/finance/staff-compensation" className="mt-3 flex items-center justify-between text-[11.5px] font-semibold text-botanique-green">View all <span>→</span></Link></section>
           <section className="rounded-xl border border-stone-200 bg-white p-4"><div className="flex items-center gap-2.5"><Disc name="bank" tone="brand" size="h-8 w-8"/><h2 className="text-[13.5px] font-semibold">Recent payment activity</h2></div>{recordedPayments.length?<ul className="mt-3 divide-y divide-stone-100">{recordedPayments.map(({payment,person,project})=><li key={payment.id} className="py-3 first:pt-0"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[12px] font-semibold">{person?.fullName || "Person"}</p><p className="mt-0.5 truncate text-[10.5px] text-gray-500">{project?.projectName || "No Project context"}</p><p className="mt-0.5 text-[10px] text-gray-400">{methodLabels[payment.paymentChannel] || "Payment"} · {date(payment.paidAt)}</p></div><span className="shrink-0 text-[11px] font-semibold text-emerald-700">+{money(payment.amount)}</span></div></li>)}</ul>:<p className="mt-3 text-[11.5px] text-gray-500">{hasHistoricalSettlement ? "Historical settlement is included in Paid; no dated Staff Pay payment transaction has been recorded yet." : "No Staff Pay payment has been recorded yet."}</p>}<Link to="/admin/finance/staff-compensation" className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3 text-[11.5px] font-semibold text-botanique-green">View all activity <span>→</span></Link></section>
         </aside>
       </div>

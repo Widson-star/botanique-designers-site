@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminData } from "./adminData";
 import { MaintenanceContext } from "./maintenance";
 import {
@@ -108,6 +108,20 @@ function buildDemoRegister(relationships, visits, assignments, projects) {
 
 // Sites a demo operator may start Maintenance at: every Project-backed Site with
 // no live relationship, plus a free maintenance-only Site.
+// Which authorised Sites the database would offer depends on Project/Site
+// identity, so this key changes exactly when a refetch could return something
+// different. It is content-derived, so a re-render that changes nothing
+// material produces the same key and triggers nothing.
+function projectEligibilityKey(projects) {
+  return (projects || [])
+    .map((project) => [
+      project.id, project.siteId || "", project.status || "", project.stage || "",
+      project.archived ? "1" : "0", project.projectName || "", project.clientSiteName || "",
+    ].join("~"))
+    .sort()
+    .join("|");
+}
+
 function buildDemoEligibleSites(relationships, projects) {
   const taken = new Set(relationships.filter((item) => item.status !== "ended").map((item) => item.siteId));
   const fromProjects = projects
@@ -155,6 +169,35 @@ export default function MaintenanceProvider({ children, session, role, isDemo })
   }, [accessToken, isDemo]);
 
   useEffect(() => { if (!isDemo && accessToken && role) refresh(); }, [accessToken, isDemo, role, refresh]);
+
+  // Only the authorised-Site list, so a Project created elsewhere in the SPA
+  // cannot leave Start Maintenance offering the list this provider happened to
+  // load at mount. Relationships, visits and assignments are untouched: this
+  // never overwrites live Maintenance truth, and a failure leaves the loaded
+  // list in place rather than blanking a working page.
+  const refreshAuthorisedSites = useCallback(async () => {
+    if (isDemo || !accessToken || !role) return;
+    try {
+      const siteRows = await fetchMaintenanceAuthorisedSites(accessToken);
+      setAuthorisedSites((siteRows || []).map(mapAuthorisedSite));
+    } catch {
+      // The initial load owns the visible error state; a background top-up
+      // that fails should not replace what the operator can already see.
+    }
+  }, [accessToken, isDemo, role]);
+
+  const eligibilityKey = useMemo(() => projectEligibilityKey(projects), [projects]);
+  const loadedEligibilityKey = useRef(null);
+
+  useEffect(() => {
+    if (isDemo || !accessToken || !role) return;
+    // The mount refresh already fetched this key's Sites; only a later change
+    // in Project/Site identity needs another fetch.
+    if (loadedEligibilityKey.current === eligibilityKey) return;
+    const isFirstRun = loadedEligibilityKey.current === null;
+    loadedEligibilityKey.current = eligibilityKey;
+    if (!isFirstRun) refreshAuthorisedSites();
+  }, [accessToken, eligibilityKey, isDemo, refreshAuthorisedSites, role]);
 
   const run = useCallback(async (operation, staleMessage) => {
     try {

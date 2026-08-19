@@ -4,6 +4,7 @@ import { useAdminData } from "../context/adminData";
 import { usePeople } from "../context/people";
 import { useStaffCompensation } from "../context/staffCompensation";
 import { Chip } from "../components/ui/Surfaces";
+import { STAFF_PAY_PAYMENT_LABELS } from "../utils/staffPayStatus";
 
 const money = (amount) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", currencyDisplay: "code", maximumFractionDigits: 2 }).format(Number(amount || 0));
 const shortDate = (value) => value ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${value}T00:00:00`)) : "—";
@@ -11,7 +12,9 @@ const when = (value) => value ? new Intl.DateTimeFormat("en-KE", { dateStyle: "m
 const labels = { draft: "Draft", awaiting_review: "Awaiting review", amendment_requested: "Amendment requested", approved: "Approved", rejected: "Rejected", withdrawn: "Withdrawn", cancelled: "Cancelled" };
 const tones = { draft: "neutral", awaiting_review: "decision", amendment_requested: "waiting", approved: "settled", rejected: "attention", withdrawn: "neutral", cancelled: "neutral" };
 const eventLabels = { created: "Draft created", amended: "Record amended", submitted: "Submitted for review", amendment_requested: "Amendment requested", resubmitted: "Resubmitted", approved: "Approved", rejected: "Rejected", withdrawn: "Withdrawn", cancelled: "Cancelled", principal_authorised: "Principal authorised directly", payment_history_confirmed: "Historical payment position confirmed", payment_history_corrected: "Historical payment position corrected", legacy_imported: "Imported from Project Costs" };
-const paymentLabels = { unpaid: "Unpaid", part_paid: "Part-paid", paid: "Paid", payment_history_unknown: "Payment history unconfirmed" };
+// One record must never read "Partially Paid" on the register and "Part-paid"
+// here, so the detail chip uses the same settled payment-position wording.
+const paymentLabels = STAFF_PAY_PAYMENT_LABELS;
 const methodLabels = { mpesa: "M-Pesa", bank_transfer: "Bank transfer", cash: "Cash", other: "Other" };
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Nairobi" });
 

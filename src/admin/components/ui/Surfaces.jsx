@@ -125,9 +125,11 @@ const CHIP_TONES = {
   info: "bg-sky-100 text-sky-900",
 };
 
-export function Chip({ children, tone = "neutral", className = "" }) {
+// Remaining props are forwarded so a caller can attach the identity behind the
+// label — a derived status key, for instance — without wrapping the chip.
+export function Chip({ children, tone = "neutral", className = "", ...rest }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${CHIP_TONES[tone] || CHIP_TONES.neutral} ${className}`}>
+    <span {...rest} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${CHIP_TONES[tone] || CHIP_TONES.neutral} ${className}`}>
       {children}
     </span>
   );
