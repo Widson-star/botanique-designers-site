@@ -18,6 +18,9 @@ function resolveLeadName(leadPersonId, profilesById) {
 export function mapDatabaseProject(project, profilesById = {}) {
   return {
     id: project.id,
+    // Durable physical Site the Project belongs to. Read-only here: Site identity
+    // is resolved by the database on insert, never edited through the Project form.
+    siteId: project.site_id || "",
     projectName: project.project_name,
     clientSiteName: project.client_site_name || "",
     location: project.location || "",

@@ -1,48 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
-  dedupeMaintenanceEligibleProjects,
-  maintenanceProjectChoiceLabel,
+  maintenanceRecordLabel,
+  maintenanceSiteChoiceLabel,
 } from "./maintenancePresentation";
 
-describe("maintenance project choice presentation", () => {
-  it("does not append Project lifecycle status to the Maintenance choice", () => {
-    expect(maintenanceProjectChoiceLabel({
+describe("maintenance site presentation", () => {
+  it("leads with the Site name and never a client name or Project status", () => {
+    expect(maintenanceRecordLabel({
+      siteName: "Alego Usonga",
       projectName: "Alego Usonga",
-      clientSiteName: "Allan Ouma",
-      status: "Completed",
-    })).toBe("Alego Usonga — Allan Ouma");
+      projectStatus: "Completed",
+    })).toBe("Alego Usonga");
   });
 
-  it("keeps a clean project name when there is no distinct client/site label", () => {
-    expect(maintenanceProjectChoiceLabel({
-      projectName: "Muthithi Gardens Estate",
-      clientSiteName: "",
-      status: "Completed",
-    })).toBe("Muthithi Gardens Estate");
+  it("names a maintenance-only Site without inventing a Project placeholder", () => {
+    const label = maintenanceRecordLabel({ siteName: "Riverside Court", projectId: "", projectName: "" });
+    expect(label).toBe("Riverside Court");
+    expect(label).not.toMatch(/unknown/i);
   });
 
-  it("collapses indistinguishable duplicate project names and prefers the richer canonical row", () => {
-    const rows = dedupeMaintenanceEligibleProjects([
-      {
-        id: "duplicate-lugulu",
-        projectName: "Lugulu Residential Home",
-        clientSiteName: "",
-        status: "Completed",
-      },
-      {
-        id: "canonical-lugulu",
-        projectName: "Lugulu Residential Home",
-        clientSiteName: "Eugen Awori",
-        status: "Completed",
-      },
-      {
-        id: "alego",
-        projectName: "Alego Usonga",
-        clientSiteName: "Allan Ouma",
-        status: "Completed",
-      },
-    ]);
+  it("disambiguates two properties that share a name by location", () => {
+    expect(maintenanceSiteChoiceLabel({ siteName: "Lugulu Residential Home", location: "Lugulu" }))
+      .toBe("Lugulu Residential Home — Lugulu");
+  });
 
-    expect(rows.map((row) => row.id)).toEqual(["alego", "canonical-lugulu"]);
+  it("keeps a clean Site name when there is no location", () => {
+    expect(maintenanceSiteChoiceLabel({ siteName: "Muthithi Gardens Estate", location: "" }))
+      .toBe("Muthithi Gardens Estate");
   });
 });

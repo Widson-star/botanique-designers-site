@@ -13,9 +13,10 @@ import {
   relationshipStatusLabel,
 } from "../utils/maintenanceCapabilities";
 import {
-  dedupeMaintenanceEligibleProjects,
-  maintenanceProjectChoiceLabel,
+  maintenanceRecordLabel,
+  maintenanceSiteChoiceLabel,
 } from "../utils/maintenancePresentation";
+import { entryForMaintenanceVisit } from "../utils/maintenanceExecution";
 
 const showDate = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium" }).format(new Date(`${String(value).slice(0, 10)}T00:00:00`))
@@ -58,6 +59,9 @@ const stateInfo = {
   due: { label: "Due today", className: "bg-stone-100 text-gray-700", priority: 5 },
   draft_field_record: { label: "Draft field record", className: "bg-stone-100 text-gray-700", priority: 6 },
   schedule_next: { label: "No visit scheduled", className: "bg-stone-100 text-gray-700", priority: 7 },
+  // Several unlinked field records share this Site and date: the operator must
+  // say which one executed this visit rather than the Hub choosing one.
+  ambiguous_execution: { label: "Identify field record", className: "bg-amber-50 text-amber-800", priority: 2 },
   upcoming: { label: "Upcoming", className: "bg-[#eef3f0] text-botanique-green", priority: 8 },
 };
 
@@ -71,19 +75,20 @@ function Metric({ label, value }) {
 export default function AdminMaintenance() {
   const { role } = useAdminData();
   const { entries = [], status: dailyStatus } = useDailySiteOperations();
-  const { register, visits = [], eligibleProjects, status, error, addRelationship } = useMaintenance();
+  const { register, visits = [], eligibleSites = [], status, error, addRelationship, addMaintenanceSite } = useMaintenance();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
-  const [form, setForm] = useState({ projectId: "", scope: "", startDate: today(), frequency: "monthly" });
+  const [form, setForm] = useState({ siteId: "", projectId: "", scope: "", startDate: today(), frequency: "monthly" });
+  const [newSite, setNewSite] = useState(null);
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const statusFilter = searchParams.get("status") || "active";
   const nowDate = today();
 
-  const maintenanceChoices = useMemo(
-    () => dedupeMaintenanceEligibleProjects(eligibleProjects),
-    [eligibleProjects],
+  const selectedSite = useMemo(
+    () => eligibleSites.find((site) => site.id === form.siteId) || null,
+    [eligibleSites, form.siteId],
   );
   const visible = useMemo(
     () => register.filter((relationship) => statusFilter === "all" || relationship.status === statusFilter),
@@ -96,7 +101,7 @@ export default function AdminMaintenance() {
       result.set(
         relationship.id,
         entries
-          .filter((entry) => entry.projectId === relationship.projectId && entry.workDate >= relationship.startDate && liveEntryStates.has(entry.state))
+          .filter((entry) => entry.siteId === relationship.siteId && entry.workDate >= relationship.startDate && liveEntryStates.has(entry.state))
           .slice()
           .sort((a, b) => b.workDate.localeCompare(a.workDate) || String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""))),
       );
@@ -108,7 +113,6 @@ export default function AdminMaintenance() {
     const rows = [];
     for (const relationship of register.filter((item) => item.status === "active")) {
       const activity = activityByRelationship.get(relationship.id) || [];
-      const byDate = new Map(activity.map((entry) => [entry.workDate, entry]));
       const scheduled = visits
         .filter((visit) => visit.relationshipId === relationship.id && visit.status === "scheduled")
         .slice()
@@ -117,8 +121,12 @@ export default function AdminMaintenance() {
       const followUp = outstandingFollowUp(relationship.id, visits);
 
       if (currentVisit) {
-        const entry = byDate.get(currentVisit.scheduledDate) || null;
-        const state = workState(currentVisit, entry, nowDate);
+        // Site + date is not a unique key, so never guess by date alone.
+        const match = entryForMaintenanceVisit(currentVisit, relationship, activity);
+        const entry = match.entry;
+        const state = match.status === "ambiguous"
+          ? "ambiguous_execution"
+          : workState(currentVisit, entry, nowDate);
         rows.push({ relationship, visit: currentVisit, entry, followUp: null, state, info: stateInfo[state] });
       } else if (followUp) {
         rows.push({ relationship, visit: null, entry: null, followUp, state: "follow_up", info: stateInfo.follow_up });
@@ -126,7 +134,7 @@ export default function AdminMaintenance() {
         rows.push({ relationship, visit: null, entry: activity[0] || null, followUp: null, state: "schedule_next", info: stateInfo.schedule_next });
       }
     }
-    return rows.sort((a, b) => a.info.priority - b.info.priority || String(a.visit?.scheduledDate || "9999").localeCompare(String(b.visit?.scheduledDate || "9999")) || a.relationship.projectName.localeCompare(b.relationship.projectName));
+    return rows.sort((a, b) => a.info.priority - b.info.priority || String(a.visit?.scheduledDate || "9999").localeCompare(String(b.visit?.scheduledDate || "9999")) || maintenanceRecordLabel(a.relationship).localeCompare(maintenanceRecordLabel(b.relationship)));
   }, [activityByRelationship, nowDate, register, visits]);
 
   const needsClosure = workboard.filter((row) => row.state === "needs_closure").length;
@@ -144,7 +152,7 @@ export default function AdminMaintenance() {
           sites: [],
         };
         current.roles.add(member.role);
-        current.sites.push({ id: relationship.id, name: relationship.projectName });
+        current.sites.push({ id: relationship.id, name: maintenanceRecordLabel(relationship) });
         byPerson.set(member.person_id, current);
       }
     }
@@ -168,14 +176,27 @@ export default function AdminMaintenance() {
   async function submit(event) {
     event.preventDefault();
     setFormError("");
-    if (!form.projectId) return setFormError("Choose a project or site.");
+    if (!form.siteId) return setFormError("Choose the Site / property this Maintenance belongs to.");
     if (!form.scope.trim()) return setFormError("Describe the maintenance scope.");
     setSaving(true);
     const result = await addRelationship({ ...form, scope: form.scope.trim() });
     setSaving(false);
     if (!result.ok) return setFormError(result.error || "Maintenance could not be started.");
-    setForm({ projectId: "", scope: "", startDate: today(), frequency: "monthly" });
+    setForm({ siteId: "", projectId: "", scope: "", startDate: today(), frequency: "monthly" });
+    setNewSite(null);
     setShowForm(false);
+  }
+
+  // A maintenance-only client needs a Site that no Botanique Project created.
+  async function submitNewSite() {
+    setFormError("");
+    setSaving(true);
+    const result = await addMaintenanceSite(newSite);
+    setSaving(false);
+    if (!result.ok) return setFormError(result.error || "The Site could not be created.");
+    // Selectable immediately, with no related Project.
+    setForm((current) => ({ ...current, siteId: result.record.id, projectId: "" }));
+    setNewSite(null);
   }
 
   if (!canSeeMaintenance(role)) {
@@ -199,12 +220,41 @@ export default function AdminMaintenance() {
 
     {showForm && canManageMaintenance(role) && <form onSubmit={submit} className="rounded-xl border border-stone-200 bg-white p-5">
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-medium sm:col-span-2">Project / site
-          <select value={form.projectId} onChange={(event) => setForm({ ...form, projectId: event.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5" required>
-            <option value="">Choose project or site</option>
-            {maintenanceChoices.map((project) => <option key={project.id} value={project.id}>{maintenanceProjectChoiceLabel(project)}</option>)}
+        {newSite
+          ? <div className="sm:col-span-2 rounded-lg border border-stone-200 bg-stone-50 p-3">
+              <p className="text-sm font-semibold">New Maintenance Site</p>
+              <p className="mt-0.5 text-xs text-gray-500">For a property Botanique maintains but did not design or build.</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <label className="text-xs font-medium sm:col-span-3">Site / property name
+                  <input value={newSite.siteName} onChange={(event) => setNewSite({ ...newSite, siteName: event.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm" maxLength={160} />
+                </label>
+                <label className="text-xs font-medium sm:col-span-2">Location
+                  <input value={newSite.location} onChange={(event) => setNewSite({ ...newSite, location: event.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm" maxLength={120} />
+                </label>
+                <label className="text-xs font-medium">County
+                  <input value={newSite.county} onChange={(event) => setNewSite({ ...newSite, county: event.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm" maxLength={80} />
+                </label>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={submitNewSite} disabled={saving} className="inline-flex min-h-10 items-center rounded-lg bg-botanique-green px-3 text-xs font-semibold text-white disabled:opacity-60">Create Site</button>
+                <button type="button" onClick={() => setNewSite(null)} className="inline-flex min-h-10 items-center rounded-lg border border-stone-300 px-3 text-xs font-semibold text-gray-600">Cancel</button>
+              </div>
+            </div>
+          : <label className="text-sm font-medium sm:col-span-2">Site / property
+              <select value={form.siteId} onChange={(event) => setForm({ ...form, siteId: event.target.value, projectId: "" })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5" required>
+                <option value="">Choose the Site / property</option>
+                {eligibleSites.map((site) => <option key={site.id} value={site.id}>{maintenanceSiteChoiceLabel(site)}</option>)}
+              </select>
+              <button type="button" onClick={() => { setNewSite({ siteName: "", location: "", county: "" }); setFormError(""); }} className="mt-1.5 text-xs font-semibold text-botanique-green">Add a Site Botanique did not build</button>
+            </label>}
+
+        {/* Origin context only — a maintenance-only Site legitimately has none. */}
+        {selectedSite && selectedSite.projects.length > 0 && <label className="text-sm font-medium sm:col-span-2">Related Botanique Project (optional)
+          <select value={form.projectId} onChange={(event) => setForm({ ...form, projectId: event.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5">
+            <option value="">None — maintenance only</option>
+            {selectedSite.projects.map((project) => <option key={project.id} value={project.id}>{project.projectName}{project.status ? ` — ${project.status}` : ""}</option>)}
           </select>
-        </label>
+        </label>}
         <label className="text-sm font-medium sm:col-span-2">Scope
           <input value={form.scope} onChange={(event) => setForm({ ...form, scope: event.target.value })} className="mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5" maxLength={2000} required />
         </label>
@@ -239,7 +289,7 @@ export default function AdminMaintenance() {
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link to={`/admin/maintenance/${row.relationship.id}`} className="text-[13px] font-semibold text-botanique-charcoal hover:text-botanique-green">{row.relationship.projectName}</Link>
+                    <Link to={`/admin/maintenance/${row.relationship.id}`} className="text-[13px] font-semibold text-botanique-charcoal hover:text-botanique-green">{maintenanceRecordLabel(row.relationship)}</Link>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${row.info.className}`}>{row.info.label}</span>
                   </div>
                   <p className="mt-1 text-[11.5px] text-gray-500">{frequencyLabel(row.relationship.frequency)} · {team.length ? team.map((member) => member.full_name).join(", ") : "Unassigned"}</p>
@@ -268,7 +318,7 @@ export default function AdminMaintenance() {
         <h2 className="text-sm font-semibold">Recently completed visits</h2>
         <ul className="mt-2 divide-y divide-stone-100">{recentCompleted.map((visit) => <li key={visit.id} className="py-3">
           <Link to={`/admin/maintenance/${visit.relationship.id}`} className="flex items-center justify-between gap-3">
-            <span><span className="block text-[12px] font-semibold">{visit.relationship.projectName}</span><span className="mt-0.5 block text-[10.5px] text-gray-500">{showDate(visit.scheduledDate)} · {visit.completionOutcome === "partial" ? "Partially completed" : "Completed"}</span></span>
+            <span><span className="block text-[12px] font-semibold">{maintenanceRecordLabel(visit.relationship)}</span><span className="mt-0.5 block text-[10.5px] text-gray-500">{showDate(visit.scheduledDate)} · {visit.completionOutcome === "partial" ? "Partially completed" : "Completed"}</span></span>
             <span className="text-botanique-green">→</span>
           </Link>
         </li>)}</ul>
@@ -290,7 +340,7 @@ export default function AdminMaintenance() {
             <table className="w-full text-left text-[12px]">
               <thead className="bg-[#fbfbfa] text-[10px] uppercase tracking-wide text-gray-500"><tr><th className="px-4 py-3 font-medium">Site</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Arrangement</th><th className="px-4 py-3 font-medium">Last visit</th><th className="px-4 py-3 font-medium">Next visit</th><th className="px-4 py-3 font-medium">Team</th><th className="px-4 py-3 text-right font-medium">Action</th></tr></thead>
               <tbody className="divide-y divide-stone-100">{visible.map((relationship) => <tr key={relationship.id}>
-                <td className="px-4 py-3 font-semibold">{relationship.projectName}</td>
+                <td className="px-4 py-3 font-semibold">{maintenanceRecordLabel(relationship)}</td>
                 <td className="px-4 py-3">{relationshipStatusLabel(relationship.status)}</td>
                 <td className="px-4 py-3">{frequencyLabel(relationship.frequency)}</td>
                 <td className="px-4 py-3">{showDate(relationship.lastVisitDate)}</td>

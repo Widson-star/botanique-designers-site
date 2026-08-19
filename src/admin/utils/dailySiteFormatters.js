@@ -80,7 +80,13 @@ export const LIVE_ENTRY_STATES = [
 export function mapDailySiteEntry(row) {
   return {
     id: row.id,
-    projectId: row.project_id,
+    // Site is the durable owner of the field record; Project is optional context
+    // and is absent for maintenance-only work.
+    siteId: row.site_id || "",
+    projectId: row.project_id || "",
+    // Durable statement that this record is execution truth for one Maintenance
+    // visit. Null means an ordinary field record.
+    maintenanceVisitId: row.maintenance_visit_id || "",
     workDate: row.work_date || "",
     disposition: row.disposition,
     noWorkReason: row.no_work_reason || "",

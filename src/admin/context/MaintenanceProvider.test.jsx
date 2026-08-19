@@ -16,7 +16,8 @@ vi.mock("../lib/maintenance", () => ({
   fetchMaintenanceRegister: vi.fn(),
   fetchMaintenanceVisits: vi.fn(),
   fetchMaintenanceAssignments: vi.fn(),
-  fetchMaintenanceAuthorisedProjects: vi.fn(),
+  fetchMaintenanceAuthorisedSites: vi.fn(),
+  createMaintenanceSite: vi.fn(),
   createMaintenanceRelationship: vi.fn(),
   updateMaintenanceRelationship: vi.fn(),
   pauseMaintenanceRelationship: vi.fn(),
@@ -38,9 +39,12 @@ import * as api from "../lib/maintenance";
 // during the reconciliation audit.
 const LIVE_REGISTER_ROW = {
   id: "09ae13f0-6482-48bc-8768-0f559d7d52aa",
+  site_id: "1c978f6e-6166-4a35-a86a-274f0bb7d314",
+  site_name: "Kitusuru Residence House 0.8A",
+  site_location: "Kitusuru",
+  site_county: "Nairobi",
   project_id: "f427ec01-8d83-4fc9-9eb3-2db297597d2b",
   project_name: "Kitusuru Residence House 0.8A",
-  client_site_name: "Priya Shah",
   project_status: "Ongoing",
   status: "active",
   scope: "Three times a week",
@@ -86,8 +90,12 @@ function renderProvider({ registerRows = [LIVE_REGISTER_ROW], assignmentRows = [
   api.fetchMaintenanceRegister.mockResolvedValue(registerRows);
   api.fetchMaintenanceVisits.mockResolvedValue([]);
   api.fetchMaintenanceAssignments.mockResolvedValue(assignmentRows);
-  api.fetchMaintenanceAuthorisedProjects.mockResolvedValue([
-    { id: "f427ec01-8d83-4fc9-9eb3-2db297597d2b", project_name: "Kitusuru Residence House 0.8A", client_site_name: "Priya Shah", status: "Ongoing" },
+  api.fetchMaintenanceAuthorisedSites.mockResolvedValue([
+    {
+      id: "1c978f6e-6166-4a35-a86a-274f0bb7d314",
+      site_name: "Kitusuru Residence House 0.8A", location: "Kitusuru", county: "Nairobi",
+      projects: [{ id: "f427ec01-8d83-4fc9-9eb3-2db297597d2b", project_name: "Kitusuru Residence House 0.8A", status: "Ongoing" }],
+    },
   ]);
 
   return render(
@@ -127,8 +135,11 @@ describe("MaintenanceProvider — authenticated register mapping", () => {
     expect(row).toMatchObject({
       id: "09ae13f0-6482-48bc-8768-0f559d7d52aa",
       projectId: "f427ec01-8d83-4fc9-9eb3-2db297597d2b",
+      siteId: "1c978f6e-6166-4a35-a86a-274f0bb7d314",
+      siteName: "Kitusuru Residence House 0.8A",
+      siteLocation: "Kitusuru",
+      siteCounty: "Nairobi",
       projectName: "Kitusuru Residence House 0.8A",
-      clientSiteName: "Priya Shah",
       projectStatus: "Ongoing",
       status: "active",
       scope: "Three times a week",
@@ -148,8 +159,8 @@ describe("MaintenanceProvider — authenticated register mapping", () => {
     const row = holder.value.register[0];
 
     // Blank site heading and "Project status: —" in production.
-    expect(row.projectName).toBeDefined();
-    expect(row.projectName).not.toBe("");
+    expect(row.siteName).toBeDefined();
+    expect(row.siteName).not.toBe("");
     expect(row.projectStatus).toBeDefined();
     expect(row.projectStatus).not.toBe("");
 
@@ -165,11 +176,11 @@ describe("MaintenanceProvider — authenticated register mapping", () => {
     expect(row.assignedTeam).not.toHaveLength(0);
 
     // Site line was empty in production.
-    expect(row.clientSiteName).toBe("Priya Shah");
+    expect(row.siteName).toBe("Kitusuru Residence House 0.8A");
 
     // A second mapping would have produced exactly this object; assert we are
     // not it, so re-introducing the double map fails loudly here.
-    expect(row).not.toMatchObject({ projectName: undefined, projectStatus: undefined, startDate: undefined });
+    expect(row).not.toMatchObject({ siteName: undefined, projectStatus: undefined, startDate: undefined });
   });
 
   it("preserves derived last/next visit dates through the mapping", async () => {

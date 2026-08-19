@@ -51,6 +51,27 @@ export async function fetchMaintenanceAuthorisedProjects(accessToken) {
   }));
 }
 
+// Sites eligible to START Maintenance, each carrying any related Botanique
+// Projects as optional origin context. A Site with no Project is a valid choice.
+export async function fetchMaintenanceAuthorisedSites(accessToken) {
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/maintenance_authorised_sites`, {
+    method: "POST", headers: headers(accessToken), body: JSON.stringify({}),
+  }));
+}
+
+// Controlled Site creation for Maintenance. This does NOT give a manager generic
+// Site-update authority; the database RPC owns that boundary.
+export async function createMaintenanceSite(accessToken, values) {
+  return read(await fetch(`${SUPABASE_URL}/rest/v1/rpc/create_maintenance_site`, {
+    method: "POST", headers: headers(accessToken),
+    body: JSON.stringify({
+      target_site_name: values.siteName,
+      target_location: values.location || null,
+      target_county: values.county || null,
+    }),
+  }));
+}
+
 export async function fetchMaintenanceVisits(accessToken) {
   const params = new URLSearchParams({ select: VISIT_COLUMNS, order: "scheduled_date.desc,id.asc" });
   return read(await fetch(`${SUPABASE_URL}/rest/v1/maintenance_visits?${params}`, { headers: headers(accessToken) }));
@@ -64,7 +85,12 @@ export async function fetchMaintenanceAssignments(accessToken) {
 export async function createMaintenanceRelationship(accessToken, values) {
   const rows = await read(await fetch(`${SUPABASE_URL}/rest/v1/maintenance_relationships`, {
     method: "POST", headers: { ...headers(accessToken), Prefer: "return=representation" },
-    body: JSON.stringify({ project_id: values.projectId, scope: values.scope, start_date: values.startDate, frequency: values.frequency }),
+    // Site is the durable owner; the originating Project is optional context.
+    body: JSON.stringify({
+      site_id: values.siteId,
+      project_id: values.projectId || null,
+      scope: values.scope, start_date: values.startDate, frequency: values.frequency,
+    }),
   }));
   return Array.isArray(rows) ? rows[0] : rows;
 }
