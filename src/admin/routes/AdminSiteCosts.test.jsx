@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import { SiteCostsContext } from "../context/siteCosts";
+import { StaffCompensationContext } from "../context/staffCompensation";
 import { FundRequestsContext } from "../context/fundRequests";
 import { costReference } from "../utils/costReference";
 import AdminSiteCosts from "./AdminSiteCosts";
@@ -44,11 +45,14 @@ function positionFor(claimId, { paid, total, count = paid > 0 ? 1 : 0 } = {}) {
 
 function contexts({
   role = "owner", claims = [claim], decideClaim = vi.fn(), dailyEntries = [],
-  finance = {}, positions = [], payments = [],
+  finance = {}, positions = [], payments = [], compensations = [],
 } = {}) {
   return {
     admin: { role, currentUserId: role === "owner" ? "o1" : "m1", projects, profiles },
     daily: { entries: dailyEntries },
+    // The register reads Staff Pay only to exclude Project Costs that have been
+    // canonically migrated into it, via legacySourceClaimId.
+    staffPay: { compensations, payments: [], paymentPositionForCompensation: () => null, status: "ready", error: "" },
     costs: {
       claims, lines, eventsByClaim: { c1: events }, authorisedProjects: projects, status: "ready", error: "",
       payments, paymentPositions: positions,
@@ -66,7 +70,7 @@ function contexts({
 }
 
 function wrap(element, values, initial = "/admin/site-costs") {
-  return render(<MemoryRouter initialEntries={[initial]}><AdminDataContext.Provider value={values.admin}><DailySiteOperationsContext.Provider value={values.daily}><SiteCostsContext.Provider value={values.costs}><FundRequestsContext.Provider value={values.finance}>{element}</FundRequestsContext.Provider></SiteCostsContext.Provider></DailySiteOperationsContext.Provider></AdminDataContext.Provider></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[initial]}><AdminDataContext.Provider value={values.admin}><DailySiteOperationsContext.Provider value={values.daily}><StaffCompensationContext.Provider value={values.staffPay}><SiteCostsContext.Provider value={values.costs}><FundRequestsContext.Provider value={values.finance}>{element}</FundRequestsContext.Provider></SiteCostsContext.Provider></StaffCompensationContext.Provider></DailySiteOperationsContext.Provider></AdminDataContext.Provider></MemoryRouter>);
 }
 
 describe("Project Costs admin surfaces", () => {
@@ -651,5 +655,269 @@ describe("Project Costs register — Cancelled hidden by default", () => {
     // The cancelled record is still the exact same row from the data model —
     // reachable, not deleted, not rewritten.
     expect(values.costs.claims.find((c) => c.id === cancelledCost.id)).toEqual(cancelledCost);
+  });
+});
+
+// The Founder's at-a-glance Project Costs position, added alongside the one
+// already live on Staff Pay.
+//
+// These four cards answer a PORTFOLIO question and the existing footer answers
+// a FILTERED-REGISTER question. They are deliberately not the same number: the
+// footer's Total reconciles whatever the register currently shows, which can
+// include drafts, costs awaiting review and withdrawn costs, none of which are
+// accepted Botanique obligations. "Approved costs" counts only approval, which
+// is the point at which a Project Cost becomes an obligation.
+describe("Project Costs at-a-glance position", () => {
+  const cost = (id, lifecycle, extra = {}) => ({ ...claim, id, lifecycle, ...extra });
+
+  const approvedPartPaid = cost("11111111-0000-0000-0000-000000000001", "approved", { submittedTotal: 6000, approvedTotal: 6000 });
+  const approvedSettled = cost("22222222-0000-0000-0000-000000000002", "approved", { submittedTotal: 4000, approvedTotal: 4000 });
+  const approvedUnknown = cost("33333333-0000-0000-0000-000000000003", "approved", { submittedTotal: 5000, approvedTotal: 5000 });
+  const awaitingOne = cost("44444444-0000-0000-0000-000000000004", "awaiting_review", { submittedTotal: 3350, approvedTotal: null });
+  const awaitingTwo = cost("55555555-0000-0000-0000-000000000005", "awaiting_review", { submittedTotal: 1000, approvedTotal: null });
+  const draftCost = cost("66666666-0000-0000-0000-000000000006", "draft", { submittedTotal: null, approvedTotal: null });
+  const withdrawnCost = cost("77777777-0000-0000-0000-000000000007", "withdrawn", { submittedTotal: 8000, approvedTotal: null });
+  const rejectedCost = cost("88888888-0000-0000-0000-000000000008", "rejected", { submittedTotal: 7000, approvedTotal: null });
+  const cancelledCost = cost("99999999-0000-0000-0000-000000000009", "cancelled", { submittedTotal: 9999, approvedTotal: 9999 });
+  const amendmentCost = cost("aaaaaaaa-0000-0000-0000-00000000000a", "amendment_requested", { submittedTotal: 2500, approvedTotal: null });
+  // Canonically migrated into Staff Pay: still addressable for audit, but no
+  // longer a working Project Cost and never a second obligation.
+  const migratedCost = cost("bbbbbbbb-0000-0000-0000-00000000000b", "approved", { submittedTotal: 12000, approvedTotal: 12000 });
+
+  const portfolio = [
+    approvedPartPaid, approvedSettled, approvedUnknown, awaitingOne, awaitingTwo,
+    draftCost, withdrawnCost, rejectedCost, cancelledCost, amendmentCost, migratedCost,
+  ];
+  const draftLines = { [draftCost.id]: [{ id: "dl1", claimId: draftCost.id, lineNumber: 1, description: "Mason", rateType: "fixed", quantity: 1, unit: "job", unitRate: 1500, lineTotal: 1500 }] };
+  const positions = [
+    positionFor(approvedPartPaid.id, { paid: 2000, total: 6000 }),
+    positionFor(approvedSettled.id, { paid: 4000, total: 4000 }),
+    // approvedUnknown deliberately has NO position: the Hub does not hold its
+    // payment history, which is not the same fact as "KES 0 paid".
+  ];
+  const migratedIntoStaffPay = [{ id: "sp1", personId: "m1", lifecycle: "approved", legacySourceClaimId: migratedCost.id }];
+
+  function register(initial = "/admin/site-costs", overrides = {}) {
+    const values = contexts({
+      claims: portfolio, positions, compensations: migratedIntoStaffPay, ...overrides,
+    });
+    values.costs.linesForClaim = (id) => draftLines[id] || [];
+    return { values, ...wrap(<AdminSiteCosts />, values, initial) };
+  }
+
+  function summaryCard(label) {
+    const group = screen.getByRole("group", { name: "Project Costs summary" });
+    const paragraphs = within(group).getByText(label).parentElement.querySelectorAll("p");
+    return { value: paragraphs[1].textContent, hint: paragraphs[2].textContent };
+  }
+
+  const balanceCell = (claimRow) => screen.getAllByRole("link", { name: costReference(claimRow) })
+    .map((node) => node.closest("tr")).find(Boolean).querySelector("[data-balance-emphasis]");
+  const mobileBalance = (claimRow) => screen.getAllByRole("link", { name: costReference(claimRow) })
+    .map((node) => node.closest("li")).find(Boolean).querySelector("dd[data-balance-emphasis]");
+
+  it("renders the four at-a-glance cards above the register", () => {
+    register();
+    const group = screen.getByRole("group", { name: "Project Costs summary" });
+    ["Approved costs", "Paid", "Outstanding", "Awaiting decision"].forEach((label) =>
+      expect(within(group).getByText(label)).toBeInTheDocument());
+  });
+
+  // 6,000 + 4,000 + 5,000. Approval is what makes a cost an obligation, so the
+  // approved total is the sum of approvedTotal across approved canonical costs.
+  it("totals Approved costs from approved canonical costs only", () => {
+    register();
+    expect(summaryCard("Approved costs").value).toMatch(/KES\s*15,000\.00/);
+    expect(summaryCard("Approved costs").hint).toBe("3 approved costs");
+  });
+
+  it("excludes costs still awaiting review from Approved costs", () => {
+    register();
+    // 3,350 + 1,000 of submitted-but-undecided cost is not an obligation.
+    expect(summaryCard("Approved costs").value).not.toMatch(/19,350|4,350/);
+  });
+
+  it("excludes withdrawn costs from Approved costs", () => {
+    register();
+    expect(summaryCard("Approved costs").value).not.toMatch(/23,000/);
+  });
+
+  it("excludes rejected, cancelled, draft and amendment-requested costs from Approved costs", () => {
+    register("/admin/site-costs", { claims: [rejectedCost, cancelledCost, draftCost, amendmentCost], positions: [] });
+    expect(summaryCard("Approved costs").value).toMatch(/KES\s*0\.00/);
+    expect(summaryCard("Approved costs").hint).toBe("0 approved costs");
+  });
+
+  // A Project Cost migrated into Staff Pay is answered by Staff Pay. Counting
+  // it here as well would state the same obligation twice.
+  it("excludes a Project Cost canonically migrated into Staff Pay", () => {
+    register();
+    expect(summaryCard("Approved costs").value).not.toMatch(/27,000/);
+    expect(summaryCard("Approved costs").hint).toBe("3 approved costs");
+  });
+
+  it("falls back to the structured line total only where costTotal already does", () => {
+    // An approved cost carries approvedTotal, so lines never override it.
+    register("/admin/site-costs", { claims: [{ ...approvedPartPaid, approvedTotal: 6000 }] });
+    expect(summaryCard("Approved costs").value).toMatch(/KES\s*6,000\.00/);
+  });
+
+  it("takes Paid from known canonical payment positions only", () => {
+    register();
+    // 2,000 + 4,000. The third approved cost has no confirmed history and is
+    // not read as another KES 0.
+    expect(summaryCard("Paid").value).toMatch(/KES\s*6,000\.00/);
+  });
+
+  it("takes Outstanding from known balances only", () => {
+    register();
+    // 4,000 still owed on the part-paid cost, nil on the settled one.
+    expect(summaryCard("Outstanding").value).toMatch(/KES\s*4,000\.00/);
+  });
+
+  it("never counts an unconfirmed payment history as KES 0 paid", () => {
+    register();
+    // Folding the unknown cost in as nil paid would read 6,000 paid against an
+    // 11,000 known obligation and 9,000 outstanding. It does neither.
+    expect(summaryCard("Outstanding").value).not.toMatch(/9,000/);
+    expect(summaryCard("Paid").hint).toBe("1 payment history to confirm");
+  });
+
+  it("shows Paid as unknown when no approved cost has a confirmed history", () => {
+    register("/admin/site-costs", { claims: [approvedUnknown], positions: [] });
+    expect(summaryCard("Approved costs").value).toMatch(/KES\s*5,000\.00/);
+    expect(summaryCard("Paid").value).toBe("—");
+    expect(summaryCard("Paid").hint).toBe("1 payment history to confirm");
+  });
+
+  it("shows Outstanding as unknown when no approved cost has a confirmed history", () => {
+    register("/admin/site-costs", { claims: [approvedUnknown], positions: [] });
+    expect(summaryCard("Outstanding").value).toBe("—");
+    expect(summaryCard("Outstanding").hint).toBe("1 payment history to confirm");
+  });
+
+  it("states the known totals and names the unconfirmed remainder when histories are mixed", () => {
+    register();
+    expect(summaryCard("Paid").value).toMatch(/KES\s*6,000\.00/);
+    expect(summaryCard("Outstanding").value).toMatch(/KES\s*4,000\.00/);
+    expect(summaryCard("Outstanding").hint).toBe("Excludes 1 unconfirmed cost");
+  });
+
+  it("says so plainly when every approved history is confirmed", () => {
+    register("/admin/site-costs", { claims: [approvedPartPaid, approvedSettled] });
+    expect(summaryCard("Paid").hint).toBe("Confirmed paid position");
+    expect(summaryCard("Outstanding").hint).toBe("Balance still payable");
+  });
+
+  it("reports nothing payable when no cost has been approved", () => {
+    register("/admin/site-costs", { claims: [awaitingOne], positions: [] });
+    expect(summaryCard("Approved costs").value).toMatch(/KES\s*0\.00/);
+    expect(summaryCard("Paid").value).toBe("—");
+    expect(summaryCard("Outstanding").value).toBe("—");
+    expect(summaryCard("Awaiting decision").value).toBe("1");
+  });
+
+  it("counts Awaiting decision from costs awaiting the Principal's review", () => {
+    register();
+    expect(summaryCard("Awaiting decision").value).toBe("2");
+    expect(summaryCard("Awaiting decision").hint).toBe("2 costs pending review");
+  });
+
+  // amendment_requested is back with the requester, exactly as canDecideSiteCost
+  // already states, so it is not waiting on the Principal.
+  it("leaves approved, draft and amendment-requested costs out of Awaiting decision", () => {
+    register("/admin/site-costs", { claims: [approvedPartPaid, draftCost, amendmentCost], positions: [] });
+    expect(summaryCard("Awaiting decision").value).toBe("0");
+    expect(summaryCard("Awaiting decision").hint).toBe("0 costs pending review");
+  });
+
+  // The cards are the portfolio position. Narrowing the register below them is
+  // a question about the register, not about what Botanique owes.
+  it("holds the top cards steady under every register filter", () => {
+    const expected = {
+      approved: /KES\s*15,000\.00/, paid: /KES\s*6,000\.00/, outstanding: /KES\s*4,000\.00/, awaiting: "2",
+    };
+    ["/admin/site-costs",
+     "/admin/site-costs?status=approved",
+     "/admin/site-costs?status=awaiting_review",
+     "/admin/site-costs?payment=part_paid",
+     "/admin/site-costs?project=p1&status=approved&from=2026-07-01&to=2026-07-31",
+    ].forEach((url) => {
+      const view = register(url);
+      expect(summaryCard("Approved costs").value).toMatch(expected.approved);
+      expect(summaryCard("Paid").value).toMatch(expected.paid);
+      expect(summaryCard("Outstanding").value).toMatch(expected.outstanding);
+      expect(summaryCard("Awaiting decision").value).toBe(expected.awaiting);
+      view.unmount();
+    });
+  });
+
+  it("keeps the footer reconciling the visible register, which does move with the filters", () => {
+    const all = register();
+    // Ten canonical costs; the cancelled one is hidden by default.
+    expect(screen.getByText("9 of 10 costs")).toBeInTheDocument();
+    all.unmount();
+
+    register("/admin/site-costs?status=approved");
+    expect(screen.getByText("3 of 10 costs")).toBeInTheDocument();
+    // The footer's own Total is the visible reconciliation and coincides with
+    // the approved obligation only because the filter happens to be Approved.
+    expect(summaryCard("Approved costs").value).toMatch(/KES\s*15,000\.00/);
+  });
+
+  it("gives a known balance still owing the strongest weight in the row", () => {
+    register();
+    const cell = balanceCell(approvedPartPaid);
+    expect(cell).toHaveAttribute("data-balance-emphasis", "strong");
+    expect(cell.className).toContain("font-bold");
+    expect(cell.className).toContain("text-botanique-charcoal");
+    // Restrained, not alarmed: no warning colour and no blue for ordinary debt.
+    expect(cell.className).not.toContain("text-sky-800");
+  });
+
+  it("keeps a settled balance quiet", () => {
+    register();
+    const cell = balanceCell(approvedSettled);
+    expect(cell).toHaveAttribute("data-balance-emphasis", "quiet");
+    expect(cell.className).not.toContain("font-bold");
+  });
+
+  it("leaves an unknown balance as a quiet em dash", () => {
+    register();
+    const cell = balanceCell(approvedUnknown);
+    expect(cell).toHaveAttribute("data-balance-emphasis", "quiet");
+    expect(cell.textContent).toBe("—");
+  });
+
+  it("gives the mobile card the same Balance emphasis as the desktop row", () => {
+    register();
+    expect(mobileBalance(approvedPartPaid)).toHaveAttribute("data-balance-emphasis", "strong");
+    expect(mobileBalance(approvedPartPaid).className).toContain("font-bold");
+    expect(mobileBalance(approvedSettled)).toHaveAttribute("data-balance-emphasis", "quiet");
+    expect(mobileBalance(approvedUnknown).textContent).toBe("—");
+  });
+
+  it("leaves the row action menu exactly as it was", async () => {
+    register();
+    await userEvent.click(screen.getAllByRole("button", { name: `Actions for ${costReference(approvedPartPaid)}` })[0]);
+    const menu = screen.getAllByRole("menu")[0];
+    expect(within(menu).getByRole("menuitem", { name: "View cost" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Mark paid" })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: "Record payment" })).toBeInTheDocument();
+  });
+
+  it("leaves the payment filters working exactly as they were", () => {
+    const part = register("/admin/site-costs?payment=part_paid");
+    expect(screen.getByText("1 of 10 costs")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: costReference(approvedPartPaid) }).length).toBeGreaterThan(0);
+    part.unmount();
+
+    const paid = register("/admin/site-costs?payment=paid");
+    expect(screen.getAllByRole("link", { name: costReference(approvedSettled) }).length).toBeGreaterThan(0);
+    paid.unmount();
+
+    const unrecorded = register("/admin/site-costs?payment=unrecorded");
+    expect(screen.getAllByRole("link", { name: costReference(approvedUnknown) }).length).toBeGreaterThan(0);
+    unrecorded.unmount();
   });
 });

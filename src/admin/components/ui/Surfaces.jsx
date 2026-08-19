@@ -77,6 +77,26 @@ export function Metric({ icon, label, value, hint, tone = "neutral", className =
   );
 }
 
+// The Finance registers' at-a-glance card. Staff Pay established the treatment
+// — one number, a quiet label, and a hint that names any limitation behind the
+// number — and Project Costs now reads the same way rather than restating it.
+export function MetricCard({ icon, tone = "neutral", label, value, hint }) {
+  return (
+    <div className="flex min-h-[112px] items-center gap-3 rounded-xl border border-stone-200 bg-white p-4">
+      <Disc name={icon} tone={tone} size="h-10 w-10" />
+      <div className="min-w-0">
+        <p className="text-[11.5px] text-gray-500">{label}</p>
+        {/* 19px, not 20: at the 1280px four-column layout a six-figure KES
+            amount breaks mid-number at 20px, and "KES 128,500.0 / 0" is not a
+            number anyone can read at a glance. break-words stays as the guard
+            for the rare seven-figure total. */}
+        <p className="mt-1 break-words text-[19px] font-semibold tabular-nums text-botanique-charcoal">{value}</p>
+        <p className="mt-1 text-[10.5px] text-gray-500">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
 export function MetricBand({ children, columns = 4, className = "" }) {
   const cols = {
     2: "sm:grid-cols-2",

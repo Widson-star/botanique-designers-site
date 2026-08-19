@@ -12,6 +12,7 @@ import { AdminDataContext } from "../context/adminData";
 import { AdminApprovalsContext } from "../context/adminApprovals";
 import { DailySiteOperationsContext } from "../context/dailySiteOperations";
 import { SiteCostsContext } from "../context/siteCosts";
+import { StaffCompensationContext } from "../context/staffCompensation";
 import { FundRequestsContext } from "../context/fundRequests";
 import AdminApprovals from "./AdminApprovals";
 import AdminDailySiteOperations from "./AdminDailySiteOperations";
@@ -97,18 +98,20 @@ function wrap(element, initial) {
                 fund release, and it never pro-rates one across costs. No cost
                 here has a confirmed payment history, so Paid and Balance stay
                 unknown rather than being reported as nil. */}
-            <SiteCostsContext.Provider
-              value={{
-                claims, status: "ready", error: "",
-                payments: [], paymentPositions: [],
-                paymentsForClaim: () => [],
-                paymentPositionForClaim: () => null,
-              }}
-            >
-              <FundRequestsContext.Provider value={{ requests: fundRequests, releases: [], acquittals: [], status: "ready", error: "" }}>
-                <Routes>{element}</Routes>
-              </FundRequestsContext.Provider>
-            </SiteCostsContext.Provider>
+            <StaffCompensationContext.Provider value={{ compensations: [], payments: [], paymentPositionForCompensation: () => null, status: "ready", error: "" }}>
+              <SiteCostsContext.Provider
+                value={{
+                  claims, status: "ready", error: "",
+                  payments: [], paymentPositions: [],
+                  paymentsForClaim: () => [],
+                  paymentPositionForClaim: () => null,
+                }}
+              >
+                <FundRequestsContext.Provider value={{ requests: fundRequests, releases: [], acquittals: [], status: "ready", error: "" }}>
+                  <Routes>{element}</Routes>
+                </FundRequestsContext.Provider>
+              </SiteCostsContext.Provider>
+            </StaffCompensationContext.Provider>
           </DailySiteOperationsContext.Provider>
         </AdminApprovalsContext.Provider>
       </AdminDataContext.Provider>

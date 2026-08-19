@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAdminData } from "../context/adminData";
 import { usePeople } from "../context/people";
 import { useStaffCompensation } from "../context/staffCompensation";
-import { Chip, Disc, Glyph } from "../components/ui/Surfaces";
+import { Chip, Disc, Glyph, MetricCard } from "../components/ui/Surfaces";
 import {
   STAFF_PAY_STATUS_FILTERS,
   matchesStaffPayStatus,
@@ -90,10 +90,10 @@ export default function AdminStaffCompensation() {
       </header>
 
       <div role="group" aria-label="Staff Pay summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon="check" tone="settled" label="Payable" value={money(totalApproved)} hint={`${approved.length} payable ${approved.length === 1 ? "record" : "records"}`} />
-        <Metric icon="wallet" tone="brand" label="Paid" value={knownApproved.length ? money(totalPaid) : "—"} hint={knownApproved.length ? "Confirmed paid position" : historyUnknown.length ? "History to confirm" : "No payable records"} />
-        <Metric icon="balance" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Payable balance"} />
-        <Metric icon="people" tone="decision" label="Awaiting decision" value={String(awaiting.length)} hint={`${awaiting.length} ${awaiting.length === 1 ? "record" : "records"}`} />
+        <MetricCard icon="check" tone="settled" label="Payable" value={money(totalApproved)} hint={`${approved.length} payable ${approved.length === 1 ? "record" : "records"}`} />
+        <MetricCard icon="wallet" tone="brand" label="Paid" value={knownApproved.length ? money(totalPaid) : "—"} hint={knownApproved.length ? "Confirmed paid position" : historyUnknown.length ? "History to confirm" : "No payable records"} />
+        <MetricCard icon="balance" tone="waiting" label="Outstanding" value={knownApproved.length ? money(outstanding) : "—"} hint={historyUnknown.length ? `${historyUnknown.length} historical ${historyUnknown.length === 1 ? "record" : "records"} unconfirmed` : "Payable balance"} />
+        <MetricCard icon="people" tone="decision" label="Awaiting decision" value={String(awaiting.length)} hint={`${awaiting.length} ${awaiting.length === 1 ? "record" : "records"}`} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
@@ -167,6 +167,5 @@ function PayActionMenu({ item, position, role, currentUserId, open, dropUp = fal
   return <div className="relative inline-block text-left" onClick={(event)=>event.stopPropagation()}><button type="button" onClick={onToggle} aria-haspopup="menu" aria-expanded={open} aria-label="Staff pay actions" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-stone-200 bg-white text-gray-600 transition hover:border-botanique-green hover:text-botanique-green"><span aria-hidden="true" className="text-[15px] leading-none tracking-widest">···</span></button>{open&&<div role="menu" className={`absolute right-0 z-40 w-56 overflow-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg ${menuPosition}`}>{items.map((action)=><Link key={action.label} role="menuitem" to={action.to} className="block px-3 py-2 text-left text-[12.5px] text-botanique-charcoal transition hover:bg-stone-50">{action.label}</Link>)}</div>}</div>;
 }
 
-function Metric({ icon, tone, label, value, hint }) { return <div className="flex min-h-[112px] items-center gap-3 rounded-xl border border-stone-200 bg-white p-4"><Disc name={icon} tone={tone} size="h-10 w-10"/><div><p className="text-[11.5px] text-gray-500">{label}</p><p className="mt-1 text-[20px] font-semibold tabular-nums text-botanique-charcoal">{value}</p><p className="mt-1 text-[10.5px] text-gray-500">{hint}</p></div></div>; }
 function Filter({ label, value, onChange, children }) { return <label className="text-[11.5px] font-medium text-gray-600">{label}<select value={value} onChange={(event)=>onChange(event.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-stone-300 bg-white px-3 text-[12.5px]">{children}</select></label>; }
 function Attention({ icon, tone, label, hint, count, to }) { return <Link to={to} className="flex min-h-[68px] items-center gap-2.5 py-2.5"><Disc name={icon} tone={tone} size="h-8 w-8"/><span className="min-w-0 flex-1"><span className="block text-[11.5px] font-semibold text-botanique-charcoal">{label}</span><span className="mt-0.5 block text-[10px] text-gray-500">{hint}</span></span><strong className="text-[12px] tabular-nums">{count}</strong><span className="text-gray-400">›</span></Link>; }
