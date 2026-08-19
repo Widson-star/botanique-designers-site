@@ -259,5 +259,125 @@ do $$ declare a public.equipment_assets; begin
   perform pg_temp.assert_eq(a.condition,'good','repair return records resulting condition');
 end $$;
 
+-- 6. Even the PRINCIPAL cannot forge the marker past a deactivation invariant.
+--
+-- 20260820003200_inventory_item_deactivation_invariant.sql exists precisely for
+-- this: the marker authorises an exceptional change, it never waives the
+-- business invariant. Section 3 above proves the invariant through the RPC;
+-- this proves it at the table boundary, where a Principal issuing a raw UPDATE
+-- with a hand-set marker would otherwise strand real physical truth.
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',true);
+do $$
+declare i public.inventory_items;
+begin
+  insert into public.inventory_items(item_name,category,tracking_method,unit_of_measure)
+  values('Principal Forge Stock','consumables','stock','unit') returning * into i;
+  perform pg_temp.fxset('forge_stock',i.id);
+  perform public.record_stock_receipt(i.id,4);
+end $$;
+
+do $$
+begin
+  perform set_config('app.inventory_item_controlled_change','true',true);
+  perform set_config('app.inventory_item_change_reason','Principal forcing a deactivation',true);
+  update public.inventory_items set is_active=false where id=pg_temp.fx('forge_stock');
+  raise exception 'ASSERTION FAILED: Principal forged marker stranded live stock';
+exception when invalid_parameter_value then
+  perform set_config('app.inventory_item_controlled_change','false',true);
+  perform set_config('app.inventory_item_change_reason','',true);
+end $$;
+
+do $$
+declare i public.inventory_items; a public.equipment_assets;
+begin
+  insert into public.inventory_items(item_name,category,tracking_method,unit_of_measure)
+  values('Principal Forge Asset','equipment','asset','unit') returning * into i;
+  perform pg_temp.fxset('forge_asset_item',i.id);
+  a := public.register_equipment_asset(i.id,'HARD-FORGE-001');
+  a := public.report_equipment_asset_lost(a.id,a.version,'Missing during forge test');
+end $$;
+
+do $$
+begin
+  perform set_config('app.inventory_item_controlled_change','true',true);
+  perform set_config('app.inventory_item_change_reason','Principal forcing a deactivation',true);
+  update public.inventory_items set is_active=false where id=pg_temp.fx('forge_asset_item');
+  raise exception 'ASSERTION FAILED: Principal forged marker hid an unresolved lost asset';
+exception when invalid_parameter_value then
+  perform set_config('app.inventory_item_controlled_change','false',true);
+  perform set_config('app.inventory_item_change_reason','',true);
+end $$;
+
+-- And the invariant is a real reconciliation, not a permanent lock: once the
+-- stock genuinely reaches zero the same forged path is still refused for
+-- authority reasons only when the caller is not the Principal, while the
+-- intended RPC succeeds.
+do $$
+declare i public.inventory_items;
+begin
+  perform public.record_stock_usage(pg_temp.fx('forge_stock'),'consumed',4,null);
+  select * into i from public.inventory_items where id=pg_temp.fx('forge_stock');
+  i := public.deactivate_inventory_item(i.id,i.version,'Reconciled to zero, line withdrawn');
+  perform pg_temp.assert_true(not i.is_active,'reconciled stock still deactivates through the RPC');
+end $$;
+
+-- 7. Equipment transfer may change Site, custodian, or BOTH.
+--
+-- Unlike quantity stock, individually tracked equipment carries a custody
+-- dimension, so a same-Site hand-over from one person to another is a real
+-- transfer event and must be recordable. Every other transfer test in this
+-- suite changes the Site, so without this the custodian-only case is unproven.
+do $$
+declare i public.inventory_items; a public.equipment_assets;
+begin
+  insert into public.people(id,full_name,relationship_type)
+  values('10000000-0000-0000-0000-000000002002','Hardening Custodian Two','site_representative');
+
+  insert into public.inventory_items(item_name,category,tracking_method,unit_of_measure)
+  values('Handover Equipment','power_tools','asset','unit') returning * into i;
+  a := public.register_equipment_asset(i.id,'HARD-HANDOVER-001');
+  a := public.issue_equipment_asset(a.id,a.version,pg_temp.fx('alpha_site'),
+    '10000000-0000-0000-0000-000000002001',null,null,null,'Issued to the first custodian');
+  perform pg_temp.fxset('handover_asset',a.id);
+end $$;
+
+-- Custodian only, same Site — allowed.
+do $$
+declare a public.equipment_assets;
+begin
+  select * into a from public.equipment_assets where id=pg_temp.fx('handover_asset');
+  a := public.transfer_equipment_asset(a.id,a.version,pg_temp.fx('alpha_site'),
+    '10000000-0000-0000-0000-000000002002',null,null,null,'Same-Site hand-over');
+  perform pg_temp.assert_eq(a.current_site_id,pg_temp.fx('alpha_site'),'hand-over keeps the Site');
+  perform pg_temp.assert_eq(a.current_custodian_person_id,'10000000-0000-0000-0000-000000002002'::uuid,
+    'hand-over moves custody to the second person');
+  perform pg_temp.assert_eq(
+    (select event_type from public.equipment_asset_events
+     where equipment_asset_id=a.id order by resulting_version desc limit 1),
+    'transferred','a same-Site hand-over is recorded as a transfer');
+end $$;
+
+-- Site only, custodian unchanged — also allowed.
+do $$
+declare a public.equipment_assets;
+begin
+  select * into a from public.equipment_assets where id=pg_temp.fx('handover_asset');
+  a := public.transfer_equipment_asset(a.id,a.version,pg_temp.fx('beta_site'),
+    '10000000-0000-0000-0000-000000002002',null,null,null,'Same custodian, new Site');
+  perform pg_temp.assert_eq(a.current_site_id,pg_temp.fx('beta_site'),'transfer moves the Site');
+  perform pg_temp.assert_eq(a.current_custodian_person_id,'10000000-0000-0000-0000-000000002002'::uuid,
+    'while custody is unchanged');
+end $$;
+
+-- Neither changed — refused, because that is not a transfer of anything.
+do $$
+declare a public.equipment_assets;
+begin
+  select * into a from public.equipment_assets where id=pg_temp.fx('handover_asset');
+  perform public.transfer_equipment_asset(a.id,a.version,pg_temp.fx('beta_site'),
+    '10000000-0000-0000-0000-000000002002',null,null,null,'Nothing actually moves');
+  raise exception 'ASSERTION FAILED: a transfer that changes nothing was accepted';
+exception when invalid_parameter_value then null; end $$;
+
 reset role;
 rollback;
