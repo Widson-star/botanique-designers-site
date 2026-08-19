@@ -130,7 +130,15 @@ export default function AdminMaintenance() {
         rows.push({ relationship, visit: currentVisit, entry, followUp: null, state, info: stateInfo[state] });
       } else if (followUp) {
         rows.push({ relationship, visit: null, entry: null, followUp, state: "follow_up", info: stateInfo.follow_up });
+      } else if (relationship.frequency === "as_needed") {
+        // An Active As-needed relationship with nothing scheduled and nothing
+        // outstanding is an ordinary quiet state, not unfinished work: Botanique
+        // still holds the relationship, but nobody is due there until a visit is
+        // deliberately scheduled. It stays in the Register, the assigned-team
+        // truth, its own detail page and history — it just leaves the workboard.
+        continue;
       } else {
+        // A cadence relationship with unexpectedly no next visit is a real gap.
         rows.push({ relationship, visit: null, entry: activity[0] || null, followUp: null, state: "schedule_next", info: stateInfo.schedule_next });
       }
     }

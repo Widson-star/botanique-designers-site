@@ -239,6 +239,196 @@ describe("MaintenanceProvider — authenticated register mapping", () => {
   });
 });
 
+// A Project created elsewhere in the SPA used to leave an already-mounted
+// MaintenanceProvider serving the authorised-Site list it happened to fetch at
+// mount, so Start Maintenance could not see the new Site until a hard browser
+// reload. Fixtures here are deliberately generic: the refresh is driven by
+// Project/Site identity changing, never by any particular Site or Project name.
+const SITE_ONGOING = {
+  id: "site-ongoing", site_name: "Harbour View Estate", location: "Harbour View", county: "Nairobi",
+  projects: [{ id: "project-ongoing", project_name: "Harbour View Estate", status: "Ongoing" }],
+};
+const SITE_COMPLETED = {
+  id: "site-completed", site_name: "Northfield Terrace", location: "Northfield", county: "Kiambu",
+  projects: [{ id: "project-completed", project_name: "Northfield Terrace Courtyard", status: "Completed" }],
+};
+const SITE_MAINTENANCE_ONLY = {
+  id: "site-maintenance-only", site_name: "Cedar Walk", location: "Cedar Road", county: "Nairobi", projects: [],
+};
+
+const PROJECT_ONGOING = {
+  id: "project-ongoing", siteId: "site-ongoing", projectName: "Harbour View Estate",
+  clientSiteName: "Harbour View Estate", status: "Ongoing", stage: "Build", archived: false,
+};
+const PROJECT_COMPLETED = {
+  id: "project-completed", siteId: "site-completed", projectName: "Northfield Terrace Courtyard",
+  clientSiteName: "Northfield Terrace", status: "Completed", stage: "Completed", archived: false,
+};
+
+// Counts child mounts, so a "refresh" that quietly remounted the provider
+// subtree instead of updating it in place would fail loudly.
+const mounts = { count: 0 };
+function MountProbe() {
+  useEffect(() => { mounts.count += 1; }, []);
+  return null;
+}
+
+function tree(projects) {
+  return (
+    <AdminDataContext.Provider value={{ projects }}>
+      <MaintenanceProvider session={{ access_token: "token" }} role="owner" isDemo={false}>
+        <Probe />
+        <MountProbe />
+      </MaintenanceProvider>
+    </AdminDataContext.Provider>
+  );
+}
+
+function renderWithProjects(projects, siteRows) {
+  mounts.count = 0;
+  api.fetchMaintenanceRegister.mockResolvedValue([LIVE_REGISTER_ROW]);
+  api.fetchMaintenanceVisits.mockResolvedValue([]);
+  api.fetchMaintenanceAssignments.mockResolvedValue([LIVE_ASSIGNMENT_ROW]);
+  api.fetchMaintenanceAuthorisedSites.mockResolvedValue(siteRows);
+  return render(tree(projects));
+}
+
+async function withProjects(view, projects, siteRows) {
+  if (siteRows) api.fetchMaintenanceAuthorisedSites.mockResolvedValue(siteRows);
+  await act(async () => { view.rerender(tree(projects)); });
+}
+
+const siteIds = () => holder.value.eligibleSites.map((site) => site.id);
+
+describe("MaintenanceProvider — authorised Sites follow Project/Site identity", () => {
+  it("loads the eligible Sites the database authorises at mount", async () => {
+    renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+    await loaded();
+
+    expect(siteIds()).toEqual(["site-ongoing"]);
+    expect(holder.value.eligibleSites[0]).toMatchObject({
+      siteName: "Harbour View Estate", location: "Harbour View", county: "Nairobi",
+    });
+    expect(holder.value.eligibleSites[0].projects[0]).toMatchObject({
+      id: "project-ongoing", projectName: "Harbour View Estate", status: "Ongoing",
+    });
+    expect(api.fetchMaintenanceAuthorisedSites).toHaveBeenCalledTimes(1);
+  });
+
+  it("refetches authorised Sites when a new Project and Site reach AdminData", async () => {
+    const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+    await loaded();
+    expect(siteIds()).toEqual(["site-ongoing"]);
+
+    await withProjects(view, [PROJECT_ONGOING, PROJECT_COMPLETED], [SITE_ONGOING, SITE_COMPLETED]);
+
+    await waitFor(() => expect(siteIds()).toEqual(["site-ongoing", "site-completed"]));
+    expect(api.fetchMaintenanceAuthorisedSites).toHaveBeenCalledTimes(2);
+  });
+
+  it("supports a Completed Project's Site as a Maintenance choice", async () => {
+    const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+    await loaded();
+
+    await withProjects(view, [PROJECT_ONGOING, PROJECT_COMPLETED], [SITE_ONGOING, SITE_COMPLETED]);
+
+    await waitFor(() => expect(siteIds()).toContain("site-completed"));
+    const site = holder.value.eligibleSites.find((item) => item.id === "site-completed");
+    expect(site.projects[0]).toMatchObject({ projectName: "Northfield Terrace Courtyard", status: "Completed" });
+  });
+
+  it("makes the new Site available without remounting the provider", async () => {
+    const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+    await loaded();
+    expect(mounts.count).toBe(1);
+
+    await withProjects(view, [PROJECT_ONGOING, PROJECT_COMPLETED], [SITE_ONGOING, SITE_COMPLETED]);
+    await waitFor(() => expect(siteIds()).toContain("site-completed"));
+
+    // No remount, and no second full reload: only the Site list was topped up.
+    expect(mounts.count).toBe(1);
+    expect(api.fetchMaintenanceRegister).toHaveBeenCalledTimes(1);
+    expect(api.fetchMaintenanceVisits).toHaveBeenCalledTimes(1);
+    expect(api.fetchMaintenanceAssignments).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not refetch when a re-render changes nothing material", async () => {
+    const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+    await loaded();
+    expect(api.fetchMaintenanceAuthorisedSites).toHaveBeenCalledTimes(1);
+
+    // New array and new object identities, identical eligibility content.
+    for (let round = 0; round < 3; round += 1) {
+      await withProjects(view, [{ ...PROJECT_ONGOING }]);
+    }
+
+    expect(api.fetchMaintenanceAuthorisedSites).toHaveBeenCalledTimes(1);
+    expect(siteIds()).toEqual(["site-ongoing"]);
+  });
+
+  it("leaves relationships, visits and assignments untouched by the Site refresh", async () => {
+    const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+    await loaded();
+    const before = holder.value.register[0];
+
+    await withProjects(view, [PROJECT_ONGOING, PROJECT_COMPLETED], [SITE_ONGOING, SITE_COMPLETED]);
+    await waitFor(() => expect(siteIds()).toContain("site-completed"));
+
+    expect(holder.value.register).toHaveLength(1);
+    expect(holder.value.register[0]).toEqual(before);
+    expect(holder.value.assignmentsForRelationship("09ae13f0-6482-48bc-8768-0f559d7d52aa")).toHaveLength(1);
+    expect(holder.value.visits).toEqual([]);
+    expect(holder.value.status).toBe("ready");
+    expect(holder.value.error).toBe("");
+  });
+
+  it("keys the refresh on identity, not on any particular Project name", async () => {
+    const counts = [];
+    for (const projectName of ["Northfield Terrace Courtyard", "Zzz Placeholder 42"]) {
+      const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING]);
+      await loaded();
+      await withProjects(view, [PROJECT_ONGOING, { ...PROJECT_COMPLETED, projectName }], [SITE_ONGOING, SITE_COMPLETED]);
+      await waitFor(() => expect(siteIds()).toContain("site-completed"));
+      counts.push(api.fetchMaintenanceAuthorisedSites.mock.calls.length);
+      view.unmount();
+      vi.clearAllMocks();
+      holder.value = null;
+    }
+    expect(counts).toEqual([2, 2]);
+  });
+
+  it("keeps a maintenance-only Site selectable, with no Project attached", async () => {
+    const view = renderWithProjects([PROJECT_ONGOING], [SITE_ONGOING, SITE_MAINTENANCE_ONLY]);
+    await loaded();
+    expect(siteIds()).toContain("site-maintenance-only");
+
+    await withProjects(view, [PROJECT_ONGOING, PROJECT_COMPLETED], [SITE_ONGOING, SITE_MAINTENANCE_ONLY, SITE_COMPLETED]);
+    await waitFor(() => expect(siteIds()).toContain("site-completed"));
+
+    const site = holder.value.eligibleSites.find((item) => item.id === "site-maintenance-only");
+    expect(site.projects).toEqual([]);
+    expect(site.siteName).toBe("Cedar Walk");
+  });
+
+  it("never re-offers a Site the database withheld for having live Maintenance", async () => {
+    // The live register row's own Site is excluded by maintenance_authorised_
+    // sites(); the refresh must not invent it back from AdminData's Projects.
+    const projectOnLiveSite = {
+      id: "f427ec01-8d83-4fc9-9eb3-2db297597d2b", siteId: "1c978f6e-6166-4a35-a86a-274f0bb7d314",
+      projectName: "Kitusuru Residence House 0.8A", clientSiteName: "Kitusuru Residence House 0.8A",
+      status: "Ongoing", stage: "Build", archived: false,
+    };
+    const view = renderWithProjects([projectOnLiveSite], [SITE_ONGOING]);
+    await loaded();
+    expect(siteIds()).toEqual(["site-ongoing"]);
+
+    await withProjects(view, [projectOnLiveSite, PROJECT_COMPLETED], [SITE_ONGOING, SITE_COMPLETED]);
+    await waitFor(() => expect(siteIds()).toContain("site-completed"));
+
+    expect(siteIds()).not.toContain("1c978f6e-6166-4a35-a86a-274f0bb7d314");
+  });
+});
+
 describe("MaintenanceProvider — relationship detail edits", () => {
   it("sends only scope, start date and frequency with the loaded version", async () => {
     api.updateMaintenanceRelationship.mockResolvedValue({ ...LIVE_REGISTER_ROW, scope: "Corrected scope" });
