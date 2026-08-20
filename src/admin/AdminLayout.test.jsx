@@ -93,8 +93,8 @@ describe("Operating-model navigation domains", () => {
 
   it.each([
     ["Projects", ["Project Register", "Project Proposals"], ["/admin/projects", "/admin/project-intakes"]],
-    ["Operations", ["Daily Site Record", "People", "Maintenance"],
-      ["/admin/daily-site-operations", "/admin/people", "/admin/maintenance"]],
+    ["Operations", ["Daily Site Record", "People", "Maintenance", "Tools & Equipment"],
+      ["/admin/daily-site-operations", "/admin/people", "/admin/maintenance", "/admin/tools-equipment"]],
     // Finance's five business areas. Money issued beforehand to an accountable
     // person is an Advance; accounting for it happens inside that Advance, so
     // there is no Funding, Payments or Reconciliation destination.
@@ -123,7 +123,7 @@ describe("Operating-model navigation domains", () => {
     // One group opens at a time, so each is inspected while it is the open one.
     const expected = {
       Projects: ["Project Register", "Project Proposals"],
-      Operations: ["Daily Site Record", "People", "Maintenance"],
+      Operations: ["Daily Site Record", "People", "Maintenance", "Tools & Equipment"],
       Finance: ["Project Financials", "Project Costs", "Company Expenses", "Staff Compensation", "Advances"],
     };
     for (const [domain, labels] of Object.entries(expected)) {
@@ -166,6 +166,7 @@ describe("Operating-model navigation domains", () => {
     expect(within(nav).queryByRole("link", { name: "People" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Daily Site Record" })).not.toBeInTheDocument();
     expect(within(nav).queryByRole("link", { name: "Maintenance" })).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("link", { name: "Tools & Equipment" })).not.toBeInTheDocument();
   });
 
   it("introduces no dead, disabled or placeholder navigation item", () => {
@@ -175,13 +176,12 @@ describe("Operating-model navigation domains", () => {
       expect(link).not.toHaveAttribute("aria-disabled");
       expect(link.textContent).not.toMatch(/soon|coming|todo|placeholder/i);
     }
-    // Maintenance is now genuinely functional (this tranche) — see the
-    // "maps %s to exactly its approved children" and "shows the Principal
-    // every domain" cases above, which assert it as a real Operations link.
-    // Tools & Equipment remains its own, later, unbuilt Operations
-    // destination and stays absent, alongside every other still-unbuilt area.
+    // Maintenance and Tools & Equipment are both genuinely functional — see
+    // the "maps %s to exactly its approved children" and "shows the Principal
+    // every domain" cases above, which assert each as a real Operations link.
+    // The areas below remain unbuilt and must stay absent.
     expect(
-      screen.queryByRole("link", { name: /Work Overview|Labour|Suppliers|Documents|Tools and Equipment/i })
+      screen.queryByRole("link", { name: /Work Overview|Labour|Suppliers|Documents/i })
     ).not.toBeInTheDocument();
   });
 });
@@ -198,6 +198,7 @@ describe("Operating-model active and expanded state", () => {
     ["/admin/people/p1", "Operations", "People"],
     ["/admin/maintenance", "Operations", "Maintenance"],
     ["/admin/maintenance/m1", "Operations", "Maintenance"],
+    ["/admin/tools-equipment", "Operations", "Tools & Equipment"],
     ["/admin/site-costs", "Finance", "Project Costs"],
   ])("opens the owning domain and marks the right child on %s", (path, domain, child) => {
     renderLayout({ path });

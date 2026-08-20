@@ -25,8 +25,10 @@ import FundRequestsProvider from "./context/FundRequestsProvider";
 import PeopleProvider from "./context/PeopleProvider";
 import StaffCompensationProvider from "./context/StaffCompensationProvider";
 import MaintenanceProvider from "./context/MaintenanceProvider";
+import InventoryProvider from "./context/InventoryProvider";
 import AdminMaintenance from "./routes/AdminMaintenance";
 import AdminMaintenanceDetail from "./routes/AdminMaintenanceDetail";
+import AdminInventory from "./routes/AdminInventory";
 import AdminSiteCosts from "./routes/AdminSiteCosts";
 import AdminSiteCostForm from "./routes/AdminSiteCostForm";
 import AdminSiteCostDetail from "./routes/AdminSiteCostDetail";
@@ -215,6 +217,7 @@ export default function AdminApp() {
         <PeopleProvider session={session} role={role} isDemo={isDemo}>
         <StaffCompensationProvider session={session} role={role} isDemo={isDemo}>
         <MaintenanceProvider session={session} role={role} isDemo={isDemo}>
+        <InventoryProvider session={session} role={role} isDemo={isDemo}>
           <Routes>
             <Route
               element={
@@ -261,10 +264,12 @@ export default function AdminApp() {
               <Route path="/admin/people/:personId" element={<AdminPersonDetail />} />
               <Route path="/admin/maintenance" element={<AdminMaintenance />} />
               <Route path="/admin/maintenance/:relationshipId" element={<AdminMaintenanceDetail />} />
+              <Route path="/admin/tools-equipment" element={<AdminInventory />} />
               <Route path="/admin/reports" element={<AdminReports />} />
               <Route path="/admin/*" element={<AdminDashboard />} />
             </Route>
           </Routes>
+        </InventoryProvider>
         </MaintenanceProvider>
         </StaffCompensationProvider>
         </PeopleProvider>
