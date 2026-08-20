@@ -7098,7 +7098,15 @@ Founder's visual review.
 ## BD-OPERATIONS-HUB-01 — Inventory / Tools & Equipment V1 database foundation — 19 August 2026
 
 **Database only. No navigation, route, provider, component or page was added, and the destination
-remains invisible.** Status: **NOT `ACTIVE_VERIFIED`** — see "What is not done" below.
+remains invisible.**
+
+| Layer | Status |
+| --- | --- |
+| Database / domain | **`ACTIVE_VERIFIED` — 20 August 2026** |
+| UI / navigation | **NOT IMPLEMENTED** — no route, provider, component or page exists |
+
+The database gate is now open for a separate, explicitly authorised UI tranche. Until that ships,
+**the capability is not usable by anyone**: the schema is live, the destination is not.
 
 ### What was built
 
@@ -7162,28 +7170,60 @@ so they are a pre-existing baseline this tranche neither caused nor fixed. (`app
 `material-approvals` are the only two runners that do not `export LC_ALL`; they need `LC_ALL=C` to
 start their cluster on this host. Also pre-existing, and left alone as unrelated cleanup.)
 
-JavaScript suite: 10 failures, against a 9-failure baseline measured on this same tree with the new
-migration temporarily removed. The single new failure is
-`src/test/migrationDrift.test.js > holds for the real repository`, which is **the drift guard
-working correctly** — see below.
+JavaScript suite: while the migration was pending, the only new failure was
+`src/test/migrationDrift.test.js > holds for the real repository` — the drift guard working
+correctly, isolated by a paired run with the migration temporarily removed. **Now that the
+migration is applied and recorded, that test passes** and `npm run check:migrations` reports 49
+repository migrations all recorded as applied. The remaining JavaScript failures are the
+pre-existing baseline, unrelated to this tranche.
 
-### What is not done
+### Production deployment — 20 August 2026
 
-**Nothing was applied to the production Supabase project, and no production data was created,
-changed or read for a test.** `supabase/migrations/applied-to-production.json` is therefore
-deliberately **not** updated: recording a migration that nobody applied would defeat the guard the
-ledger exists to be. As a result `npm run check:migrations` fails and names the pending file, and
-the real-repository assertion in `src/test/migrationDrift.test.js` fails with it. That is the
-designed behaviour documented in `docs/ui-authority/operations-hub/MIGRATION-DEPLOYMENT.md` step 1:
-apply to production by hand, record the version Supabase reports, then the build passes.
+Applied cleanly in **one transaction**, production version **`20260820071700`**, name
+`inventory_tools_equipment_v1`. It went in as a **single consolidated migration**: control review
+and a Codex P1 had produced four follow-ups, none of them ever applied, so they were folded back
+into the original file first and equivalence proved by structural fingerprint — every column,
+constraint, index, trigger, policy, RLS flag, grant and function body — before anything touched
+production.
 
-Hosted apply and authenticated verification as both Principal and Operations Manager remain
-outstanding. **`ACTIVE_VERIFIED` must not be claimed before both.**
+Verified live, and independently re-queried afterwards: five tables
+(`inventory_items`, `inventory_item_events`, `equipment_assets`, `equipment_asset_events`,
+`inventory_stock_movements`), **all RLS-enabled**, **zero rows in all five**. Only the final 3-arg
+`private_assert_inventory_context` exists; the dead 4-arg overload and the weaker
+`equipment_asset_issued_position` constraint are absent. No Inventory `SECURITY DEFINER` function
+lacks an explicit `search_path`. No Finance or procurement field, no stored balance column, no
+fabricated store, warehouse, workshop or depot Site.
+
+**The Codex P1 fix is verified in production**: hosted `register_equipment_asset()` takes
+`SELECT … FROM public.inventory_items WHERE id = target_item_id FOR UPDATE` before inserting, so
+registration cannot race a catalogue deactivation or a `tracking_method` change into a state that —
+because the new asset makes the item history-bearing — nobody, including the Principal, could
+afterwards repair.
+
+Before apply, the whole runner was green locally, including six genuine two-session races:
+negative stock in both orderings, registration versus deactivation, and registration versus a
+`tracking_method` PATCH. Each was mutation-checked — remove the lock and the suite goes red.
+
+**No existing operational row changed.** Projects, Sites, People, Maintenance relationships,
+Maintenance visits and Daily Site Records held identical row counts and `max(updated_at)`
+fingerprints immediately before and after.
+
+One apply note, recorded because it is a real difference: the migration was transmitted as
+executable SQL **without the file's SQL comments**. Thirty-three of thirty-eight hosted function
+bodies are byte-identical to the repository file; the five that differ do so only by in-body
+comments, proved equivalent by comparing comment-stripped, normalised definitions. Postgres stores
+in-body comments in `prosrc`, so those five will not byte-match the file on a re-derivation.
+
+### What is still not built
+
+**No UI.** No navigation entry, route, React provider, component or page. The Tools & Equipment
+destination does not exist for any user, and building it is a separate authorised tranche against
+the approved authority.
 
 Also not built, and not to be inferred from image `11`: reorder thresholds and "purchase needs"
 (illustrative, and the first step of purchasing logic), staff acknowledgement/receipt, reservation
-and booking, barcodes, attachments, batch/lot and bin logistics. The full deferral list is in the
-architecture record.
+and booking, barcodes, attachments, batch/lot and bin logistics, and the Finance acquisition →
+inventory hand-off. The full deferral list is in the architecture record.
 
 ### Migration posture at the time of this work
 
@@ -7193,5 +7233,9 @@ discrepancy: `project_cost_payments` was applied in five transactions and
 `project_cost_historical_settlement` in four, both documented in the ledger header, contributing
 seven extra rows (48 + 4 + 3 = 55). Every ledger `productionVersion` matches the first hosted row
 for its name, every repository migration is present in production, and the latest applied version
-`20260819100629 / maintenance_execution_link_integrity` matches the ledger tail exactly. This
-tranche makes it 49 repository migrations against 48 applied, by design.
+`20260819100629 / maintenance_execution_link_integrity` matched the ledger tail exactly.
+
+**Settled on deployment:** 49 repository migrations against 49 ledger entries, reconciling by name
+and in order — no drift. Production now reports **56** rows, the seven split-application extras
+still accounting for the difference (49 + 4 + 3 = 56), with
+`20260820071700 / inventory_tools_equipment_v1` as the tail.

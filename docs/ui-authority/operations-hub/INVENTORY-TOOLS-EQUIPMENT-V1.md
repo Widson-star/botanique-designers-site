@@ -182,12 +182,18 @@ logic that is out of scope.
 
 ## Status
 
-**NOT `ACTIVE_VERIFIED`.** The migration is implemented and proved against a disposable local
-PostgreSQL 17 cluster only. Nothing has been applied to the production Supabase project, and the
-`applied-to-production.json` ledger is deliberately **not** updated, so
-`scripts/check-migration-drift.mjs` correctly reports the repository as ahead of production and
-`src/test/migrationDrift.test.js`'s real-repository assertion correctly fails. That is the guard
-working, and the controlled manual step is documented in `MIGRATION-DEPLOYMENT.md`.
+| Layer | Status |
+| --- | --- |
+| Database / domain | **`ACTIVE_VERIFIED` — 20 August 2026** |
+| UI / navigation | **NOT IMPLEMENTED** |
 
-Hosted apply and authenticated verification as both Principal and Operations Manager remain
-outstanding, and are a separate authorised step.
+Applied to the production Supabase project (`wcacyfyxjiysfibuuhgf`) on 20 August 2026 in one
+transaction, as a single consolidated migration, production version **`20260820071700`**. Five
+tables live, all RLS-enabled, **zero rows**. Hosted verification confirmed the schema, the
+privilege surface, the domain boundary and the catalogue-row registration lock, and every existing
+Projects, Sites, People, Maintenance and Daily Site Record row was unchanged. Recorded in
+`../../../supabase/migrations/applied-to-production.json`.
+
+**The capability is still not usable by anyone.** There is no navigation entry, route, provider,
+component or page — building the Tools & Equipment destination is a separate authorised tranche.
+The database gate for it is now open.
