@@ -7094,3 +7094,148 @@ Maintenance/Tools and Approvals untouched.
 
 **Stage 6 remains NOT `ACTIVE_VERIFIED`.** PR #102 remains OPEN. The acceptance gate is the
 Founder's visual review.
+
+## BD-OPERATIONS-HUB-01 — Inventory / Tools & Equipment V1 database foundation — 19 August 2026
+
+**Database only. No navigation, route, provider, component or page was added, and the destination
+remains invisible.**
+
+| Layer | Status |
+| --- | --- |
+| Database / domain | **`ACTIVE_VERIFIED` — 20 August 2026** |
+| UI / navigation | **NOT IMPLEMENTED** — no route, provider, component or page exists |
+
+The database gate is now open for a separate, explicitly authorised UI tranche. Until that ships,
+**the capability is not usable by anyone**: the schema is live, the destination is not.
+
+### What was built
+
+The smallest sound schema for the Founder-approved model settled on 19 August 2026: **one shared
+catalogue** with **two truth models** beneath it — individually identified equipment with an
+immutable event history, and quantity stock that exists only as the sum of an immutable movement
+ledger. The full architecture record, including every boundary and every deferral, is
+`docs/ui-authority/operations-hub/INVENTORY-TOOLS-EQUIPMENT-V1.md`.
+
+Five new tables, all purely additive: `inventory_items`, `inventory_item_events`,
+`equipment_assets`, `equipment_asset_events`, `inventory_stock_movements`. Thirty-eight functions:
+eighteen `authenticated`-callable actions (including the derived read model
+`inventory_stock_position()` — a function, not a view, so it cannot bypass RLS the way a view
+without `security_invoker` would) and twenty internal helpers and trigger functions.
+
+**Maintenance and Tools & Equipment stayed distinct**, as the Founder ruled on 9 August 2026.
+Working-authority image `11` draws them together; that is composition guidance, and no
+`maintenance_*` table was touched. Image `11`'s 214 items, 162 assigned, purchase-needs count,
+custodians, reorder statuses and "Operations Hub Store" location are illustrative sample content
+and none of them was written anywhere.
+
+**Site is the primary physical context and Project is optional.** A maintenance-only Site — one
+with no Botanique Project at all — is a fully usable position for both equipment and stock, proved
+in the tests. No Project is ever fabricated to hold inventory. A **nullable Site means Botanique
+custody**, and no "Main Store", warehouse, office or depot row was invented to represent it.
+
+**There is no current-quantity column anywhere.** Nobody can silently change 50 to 33; they record
+what happened and the position follows. Quantities are always positive and the movement type
+decides direction. Negative stock is prevented by a `FOR UPDATE` lock on the catalogue row taken
+before the source balance is read, which serialises concurrent movements for that item and no
+other.
+
+**Finance owns the money, and none of it leaked in.** No supplier, cost, price, currency, invoice,
+depreciation, warranty or accounting-value column exists in the domain, and there is no foreign key
+to any Finance table. The acquisition → inventory hand-off is deliberately deferred, because the
+Company Expense acquisition truth it would hang from is not yet complete.
+
+### Authority
+
+Portfolio-wide for both operational roles, following the shape of `public.people` rather than the
+project-scoped shape of Daily Site Operations. Principal and Operations Manager both run every
+ordinary operation; the Principal alone holds the three exceptional powers — catalogue identity
+correction and deactivation, equipment correction and retirement, and stock-taking adjustment.
+**Project Team and Read-only reach nothing at all**, by RLS and by an in-function role check, not
+by UI. Equipment and all three ledgers carry no INSERT or UPDATE grant for any client.
+
+### Evidence
+
+`./scripts/test-inventory-db.sh` — new. Disposable PostgreSQL 17 cluster, full migration chain,
+then the A–H matrix in `supabase/tests/inventory_tools_equipment_v1_test.sql` (schema and RLS;
+Principal authority; Manager can-and-cannot; staff/viewer no access; asset audit integrity; stock
+truth and reconciliation; Site/Project/Maintenance boundary; catalogue identity hardening), all
+passing. Then a **genuine two-session concurrency regression** against negative stock: both
+orderings blocked for a real 2s and resolved correctly — an overdraw refused with the position left
+at 2 rather than −6, and a within-balance draw allowed to exactly 0.
+
+Regression: every other database suite was run. `daily-site`, `fund-release`, `people`, `reports`,
+`site-owned-maintenance`, `work-inbox`, `approvals` and `material-approvals` pass. `fund-requests`,
+`internal-cost-claims` and `maintenance` fail — **byte-identically on `origin/main` (e6b843a)**,
+so they are a pre-existing baseline this tranche neither caused nor fixed. (`approvals` and
+`material-approvals` are the only two runners that do not `export LC_ALL`; they need `LC_ALL=C` to
+start their cluster on this host. Also pre-existing, and left alone as unrelated cleanup.)
+
+JavaScript suite: while the migration was pending, the only new failure was
+`src/test/migrationDrift.test.js > holds for the real repository` — the drift guard working
+correctly, isolated by a paired run with the migration temporarily removed. **Now that the
+migration is applied and recorded, that test passes** and `npm run check:migrations` reports 49
+repository migrations all recorded as applied. The remaining JavaScript failures are the
+pre-existing baseline, unrelated to this tranche.
+
+### Production deployment — 20 August 2026
+
+Applied cleanly in **one transaction**, production version **`20260820071700`**, name
+`inventory_tools_equipment_v1`. It went in as a **single consolidated migration**: control review
+and a Codex P1 had produced four follow-ups, none of them ever applied, so they were folded back
+into the original file first and equivalence proved by structural fingerprint — every column,
+constraint, index, trigger, policy, RLS flag, grant and function body — before anything touched
+production.
+
+Verified live, and independently re-queried afterwards: five tables
+(`inventory_items`, `inventory_item_events`, `equipment_assets`, `equipment_asset_events`,
+`inventory_stock_movements`), **all RLS-enabled**, **zero rows in all five**. Only the final 3-arg
+`private_assert_inventory_context` exists; the dead 4-arg overload and the weaker
+`equipment_asset_issued_position` constraint are absent. No Inventory `SECURITY DEFINER` function
+lacks an explicit `search_path`. No Finance or procurement field, no stored balance column, no
+fabricated store, warehouse, workshop or depot Site.
+
+**The Codex P1 fix is verified in production**: hosted `register_equipment_asset()` takes
+`SELECT … FROM public.inventory_items WHERE id = target_item_id FOR UPDATE` before inserting, so
+registration cannot race a catalogue deactivation or a `tracking_method` change into a state that —
+because the new asset makes the item history-bearing — nobody, including the Principal, could
+afterwards repair.
+
+Before apply, the whole runner was green locally, including six genuine two-session races:
+negative stock in both orderings, registration versus deactivation, and registration versus a
+`tracking_method` PATCH. Each was mutation-checked — remove the lock and the suite goes red.
+
+**No existing operational row changed.** Projects, Sites, People, Maintenance relationships,
+Maintenance visits and Daily Site Records held identical row counts and `max(updated_at)`
+fingerprints immediately before and after.
+
+One apply note, recorded because it is a real difference: the migration was transmitted as
+executable SQL **without the file's SQL comments**. Thirty-three of thirty-eight hosted function
+bodies are byte-identical to the repository file; the five that differ do so only by in-body
+comments, proved equivalent by comparing comment-stripped, normalised definitions. Postgres stores
+in-body comments in `prosrc`, so those five will not byte-match the file on a re-derivation.
+
+### What is still not built
+
+**No UI.** No navigation entry, route, React provider, component or page. The Tools & Equipment
+destination does not exist for any user, and building it is a separate authorised tranche against
+the approved authority.
+
+Also not built, and not to be inferred from image `11`: reorder thresholds and "purchase needs"
+(illustrative, and the first step of purchasing logic), staff acknowledgement/receipt, reservation
+and booking, barcodes, attachments, batch/lot and bin logistics, and the Finance acquisition →
+inventory hand-off. The full deferral list is in the architecture record.
+
+### Migration posture at the time of this work
+
+48 repository migrations reconciled by name, in order, with all 48 ledger entries — no drift. The
+production project reports **55** rows in `supabase_migrations.schema_migrations`, which is not a
+discrepancy: `project_cost_payments` was applied in five transactions and
+`project_cost_historical_settlement` in four, both documented in the ledger header, contributing
+seven extra rows (48 + 4 + 3 = 55). Every ledger `productionVersion` matches the first hosted row
+for its name, every repository migration is present in production, and the latest applied version
+`20260819100629 / maintenance_execution_link_integrity` matched the ledger tail exactly.
+
+**Settled on deployment:** 49 repository migrations against 49 ledger entries, reconciling by name
+and in order — no drift. Production now reports **56** rows, the seven split-application extras
+still accounting for the difference (49 + 4 + 3 = 56), with
+`20260820071700 / inventory_tools_equipment_v1` as the tail.
