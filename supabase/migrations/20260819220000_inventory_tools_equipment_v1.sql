@@ -7,6 +7,47 @@
 -- row. The destination stays invisible until a separate, explicitly
 -- authorised UI tranche exposes it.
 --
+-- CONSOLIDATED 20 August 2026, before any hosted application. Control review of
+-- PR #149 produced four correction migrations, and a Codex P1 produced a fifth.
+-- None of the five was ever applied to production — verified against
+-- supabase_migrations.schema_migrations, which still ends at
+-- 20260819100629 / maintenance_execution_link_integrity. They are therefore
+-- folded into this one file so production receives the FINAL DESIGN as a single
+-- coherent initial authority, rather than replaying five historical correction
+-- steps in which the second reverses a deadlock the first would have
+-- introduced and the third rewrites a trigger the first had just written. This
+-- is the same treatment operations_hub_maintenance_v1 received before its own
+-- first apply.
+--
+-- What the corrections settled, now materialised directly below:
+--
+--   1. The custom marker is not authority. app.inventory_item_controlled_change
+--      says HOW a change is being made and never WHO may make it; sensitive
+--      catalogue changes require the marker AND the caller's real Principal
+--      role AND a reason. Deactivation invariants sit on the table itself, so
+--      even a Principal forging the marker cannot strand physical truth.
+--   2. Deactivation cannot hide anything unresolved: any non-retired asset
+--      blocks it (a LOST asset is an open exception, not a resolved one), and
+--      so does any non-zero stock position anywhere, Botanique custody
+--      included.
+--   3. Movement labels mean exactly one thing each, and optional Project /
+--      Maintenance context must match the ONE operational Site of the event
+--      rather than either endpoint.
+--   4. Category and unit of measure are extensible normalised tokens, not a
+--      taxonomy frozen from an illustrative composition.
+--   5. Repair leaves no false physical position, and registration locks the
+--      catalogue row so an asset can never attach to an item that is
+--      concurrently deactivated or flipped to stock tracking — the Codex P1,
+--      whose damage would have been permanent, because the new asset makes the
+--      item history-bearing and the history guard then freezes tracking_method
+--      against everyone.
+--
+-- Two remnants of that history are deliberately NOT reproduced here: the dead
+-- four-argument private_assert_inventory_context overload, superseded by the
+-- three-argument operational-Site form, and the weaker
+-- equipment_asset_issued_position constraint, superseded by
+-- equipment_asset_issued_site.
+--
 -- SETTLED PRODUCT MODEL (Founder-approved, recorded in
 -- docs/ui-authority/operations-hub/INVENTORY-TOOLS-EQUIPMENT-V1.md):
 --
@@ -114,10 +155,24 @@ create table public.inventory_items (
   -- asset-oriented and stock-tracked things (irrigation fittings, cement,
   -- fertiliser) need a home. 'other' is the escape hatch, explained in
   -- `notes` rather than by inventing a free-text sibling column.
-  category text not null check (category in (
-    'equipment', 'power_tools', 'manual_tools', 'access_equipment',
-    'ppe', 'measuring_tools', 'materials', 'consumables', 'irrigation', 'other'
-  )),
+  -- Bounded, normalised, EXTENSIBLE — deliberately not a closed enumeration.
+  --
+  -- The Founder approved one catalogue, asset-versus-stock tracking, and unit of
+  -- measure as a business attribute. The Founder did NOT approve a category
+  -- taxonomy, and working-authority image 11 is composition guidance with
+  -- illustrative content, not domain authority. Freezing its visible chips into
+  -- a CHECK would have made every future landscaping category — hardscape
+  -- materials, plant stock, irrigation controllers — a schema migration.
+  --
+  -- Integrity comes from normalisation instead: the audit trigger lower-cases
+  -- and collapses whitespace to underscores, and this constraint holds the
+  -- result to a canonical token, so "Power Tools", "power  tools" and
+  -- "POWER_TOOLS" are one category with no lookup table to administer.
+  category text not null constraint inventory_items_category_format check (
+    char_length(category) between 2 and 80
+    and category = lower(category)
+    and category ~ '^[a-z0-9]+(_[a-z0-9]+)*$'
+  ),
 
   -- FUNDAMENTAL IDENTITY, not a preference. It decides which truth model the
   -- item lives under for the rest of its life: an individually identifiable
@@ -126,9 +181,18 @@ create table public.inventory_items (
   -- item has any operational history.
   tracking_method text not null check (tracking_method in ('asset', 'stock')),
 
-  unit_of_measure text not null check (unit_of_measure in (
-    'unit', 'set', 'pair', 'metre', 'litre', 'kilogram', 'bag', 'roll', 'box', 'pack'
-  )),
+  -- Extensible for the same reason. A landscaping operation measures in cubic
+  -- metres of topsoil, rolls of turf, trays of seedlings and lengths of edging;
+  -- no list written today survives the next season. Normalised identically.
+  --
+  -- The ONE structural rule kept is below: an individually tracked asset is
+  -- counted in individual units, and `unit` is the settled canonical name for
+  -- that. It is the only unit value the schema knows by name.
+  unit_of_measure text not null constraint inventory_items_unit_of_measure_format check (
+    char_length(unit_of_measure) between 1 and 40
+    and unit_of_measure = lower(unit_of_measure)
+    and unit_of_measure ~ '^[a-z0-9]+(_[a-z0-9]+)*$'
+  ),
 
   -- Deactivation, never deletion. An item Botanique stops carrying is made
   -- inactive so its history stays readable and every asset and movement that
@@ -233,14 +297,28 @@ create table public.equipment_assets (
 
   -- An issued asset is somewhere or with someone; "issued to nobody, nowhere"
   -- is not a position.
-  constraint equipment_asset_issued_position check (
-    status <> 'issued'
-    or current_site_id is not null
-    or current_custodian_person_id is not null
+  -- Issued means out AT A SITE, mirroring stock exactly. "Issued to a person at
+  -- no place" is not a position, so a custodian alone does not satisfy it.
+  constraint equipment_asset_issued_site check (
+    status <> 'issued' or current_site_id is not null
+  ),
+  -- Custody exists only while the thing is out. An available, repairing, lost
+  -- or retired asset is in nobody's hands.
+  constraint equipment_asset_custodian_status check (
+    current_custodian_person_id is null or status = 'issued'
   ),
   -- An expected return date only means anything while the thing is out.
   constraint equipment_asset_expected_return check (
     expected_return_date is null or status = 'issued'
+  ),
+  -- Away for repair is not at a client Site. Enforced structurally so no action
+  -- can leave an asset claiming to be in a garden it was collected from; the
+  -- originating Site lives on in the 'sent_for_repair' event snapshot.
+  constraint equipment_asset_repair_position check (
+    status <> 'under_repair'
+    or (current_site_id is null
+        and current_custodian_person_id is null
+        and expected_return_date is null)
   ),
   -- Lost and retired are terminal: the asset has no current position at all.
   -- Where it was last seen is not erased — it is preserved in the
@@ -319,9 +397,9 @@ create index equipment_asset_events_visit_idx
 --   type              from_site_id            to_site_id              effect
 --   received          FORCED NULL (unused)    position                + at to
 --   adjustment_in     FORCED NULL (unused)    position                + at to
---   issued            position                position                - from, + to
---   transferred       position                position                - from, + to
---   returned          position                position                - from, + to
+--   issued            FORCED NULL (custody)   Site, REQUIRED          - custody, + Site
+--   transferred       Site, REQUIRED          different Site, REQ'D   - from, + to
+--   returned          Site, REQUIRED          FORCED NULL (custody)   - Site, + custody
 --   consumed          position                FORCED NULL (unused)    - at from
 --   damaged           position                FORCED NULL (unused)    - at from
 --   lost              position                FORCED NULL (unused)    - at from
@@ -362,15 +440,27 @@ create table public.inventory_stock_movements (
   actor_profile_id uuid not null references public.profiles(id) on delete restrict,
   occurred_at timestamptz not null default now(),
 
+  -- Each label means ONE thing, and the schema enforces which. A generic
+  -- "the two ends differ" rule would let 'issued' describe a Site-to-Site move
+  -- and 'transferred' describe a return to the store, which makes the
+  -- vocabulary decorative. The settled meanings:
+  --
+  --   issued      Botanique custody -> a Site
+  --   transferred Site A            -> a different Site B
+  --   returned    a Site            -> Botanique custody
   constraint inventory_stock_movement_sides check (
     case movement_type
       when 'received'       then from_site_id is null
       when 'adjustment_in'  then from_site_id is null
+      when 'issued'         then from_site_id is null and to_site_id is not null
+      when 'transferred'    then from_site_id is not null and to_site_id is not null
+                                   and from_site_id is distinct from to_site_id
+      when 'returned'       then from_site_id is not null and to_site_id is null
       when 'consumed'       then to_site_id is null
       when 'damaged'        then to_site_id is null
       when 'lost'           then to_site_id is null
       when 'adjustment_out' then to_site_id is null
-      else from_site_id is distinct from to_site_id
+      else false
     end
   ),
   -- Stock that shrinks for a reason other than ordinary use, and every
@@ -457,12 +547,7 @@ $$;
 -- Both positions may legitimately be NULL (Botanique custody with no Site at
 -- either end). Context is then refused rather than silently accepted,
 -- because there is no Site for it to agree with.
-create or replace function public.private_assert_inventory_context(
-  target_project_id uuid,
-  target_maintenance_visit_id uuid,
-  position_a uuid,
-  position_b uuid
-)
+create or replace function public.private_assert_inventory_context(target_project_id uuid, target_maintenance_visit_id uuid, operational_site_id uuid)
 returns void
 language plpgsql
 stable
@@ -475,39 +560,18 @@ declare
   visit_site_id uuid;
 begin
   if target_project_id is not null then
+    if operational_site_id is null then raise exception 'Project context requires a Site' using errcode = '22023'; end if;
     select * into context_project from public.projects where id = target_project_id;
-    if not found then
-      raise exception 'Project not found' using errcode = 'P0002';
-    end if;
-    if position_a is null and position_b is null then
-      raise exception 'A Project cannot be recorded against stock or equipment held by Botanique with no Site'
-        using errcode = '22023';
-    end if;
-    if context_project.site_id is distinct from position_a
-       and context_project.site_id is distinct from position_b then
-      raise exception 'That Project belongs to a different Site' using errcode = '22023';
-    end if;
+    if not found then raise exception 'Project not found' using errcode = 'P0002'; end if;
+    if context_project.site_id is distinct from operational_site_id then raise exception 'That Project belongs to a different Site' using errcode = '22023'; end if;
   end if;
-
   if target_maintenance_visit_id is not null then
+    if operational_site_id is null then raise exception 'Maintenance context requires a Site' using errcode = '22023'; end if;
     select * into context_visit from public.maintenance_visits where id = target_maintenance_visit_id;
-    if not found then
-      raise exception 'Maintenance visit not found' using errcode = 'P0002';
-    end if;
-    select r.site_id into visit_site_id
-    from public.maintenance_relationships r
-    where r.id = context_visit.maintenance_relationship_id;
-    if visit_site_id is null then
-      raise exception 'Maintenance visit not found' using errcode = 'P0002';
-    end if;
-    if position_a is null and position_b is null then
-      raise exception 'A Maintenance visit cannot be recorded against stock or equipment held by Botanique with no Site'
-        using errcode = '22023';
-    end if;
-    if visit_site_id is distinct from position_a
-       and visit_site_id is distinct from position_b then
-      raise exception 'That Maintenance visit belongs to a different Site' using errcode = '22023';
-    end if;
+    if not found then raise exception 'Maintenance visit not found' using errcode = 'P0002'; end if;
+    select r.site_id into visit_site_id from public.maintenance_relationships r where r.id = context_visit.maintenance_relationship_id;
+    if visit_site_id is null then raise exception 'Maintenance visit Site not found' using errcode = 'P0002'; end if;
+    if visit_site_id is distinct from operational_site_id then raise exception 'That Maintenance visit belongs to a different Site' using errcode = '22023'; end if;
   end if;
 end;
 $$;
@@ -571,8 +635,6 @@ begin
     new.created_at := now();
     new.updated_at := now();
     new.version := 1;
-    -- A catalogue item is always created active. Deactivation is the
-    -- Principal's controlled action, never an insert-time state.
     new.is_active := true;
   else
     new.created_by := old.created_by;
@@ -581,7 +643,9 @@ begin
     new.updated_at := now();
     new.version := old.version + 1;
   end if;
-  new.item_name := regexp_replace(trim(new.item_name), '\s+', ' ', 'g');
+  new.item_name := regexp_replace(trim(new.item_name), '[[:space:]]+', ' ', 'g');
+  new.category := lower(regexp_replace(trim(new.category), '[[:space:]]+', '_', 'g'));
+  new.unit_of_measure := lower(regexp_replace(trim(new.unit_of_measure), '[[:space:]]+', '_', 'g'));
   new.notes := nullif(trim(coalesce(new.notes, '')), '');
   return new;
 end;
@@ -616,28 +680,86 @@ set search_path = pg_catalog, public
 as $$
 declare
   controlled boolean := coalesce(
-    nullif(current_setting('app.inventory_item_controlled_change', true), ''), 'false'
+    nullif(current_setting('app.inventory_item_controlled_change', true), ''),
+    'false'
   )::boolean;
+  supplied_reason text := nullif(trim(coalesce(
+    current_setting('app.inventory_item_change_reason', true), ''
+  )), '');
   has_history boolean := public.private_inventory_item_has_history(old.id);
+  is_principal boolean := public.private_inventory_is_principal();
+  unresolved_assets integer := 0;
+  has_live_stock boolean := false;
 begin
-  if new.is_active is distinct from old.is_active and not controlled then
-    raise exception 'Use the deactivate or reactivate action to change this catalogue item'
+  -- The custom marker can never manufacture authority.
+  if controlled and not is_principal then
+    raise exception 'Only the Principal can perform a controlled catalogue correction'
       using errcode = '42501';
+  end if;
+
+  if controlled and supplied_reason is null then
+    raise exception 'A reason is required for a controlled catalogue change'
+      using errcode = '22023';
+  end if;
+
+  if new.is_active is distinct from old.is_active then
+    if not controlled or not is_principal then
+      raise exception 'Use the Principal deactivate or reactivate action to change catalogue availability'
+        using errcode = '42501';
+    end if;
+
+    -- Deactivation is exceptional but never allowed to hide unresolved
+    -- physical truth, regardless of whether the caller reached the row through
+    -- the intended RPC or a manually-forged session marker.
+    if old.is_active and not new.is_active then
+      if old.tracking_method = 'asset' then
+        select count(*) into unresolved_assets
+        from public.equipment_assets a
+        where a.inventory_item_id = old.id
+          and a.status <> 'retired';
+
+        if unresolved_assets > 0 then
+          raise exception 'This item still has unresolved equipment assets. Resolve or retire them first.'
+            using errcode = '22023';
+        end if;
+      else
+        select exists (
+          select 1
+          from (
+            select m.from_site_id as site_id
+            from public.inventory_stock_movements m
+            where m.inventory_item_id = old.id
+            union
+            select m.to_site_id as site_id
+            from public.inventory_stock_movements m
+            where m.inventory_item_id = old.id
+          ) positions
+          where public.private_inventory_stock_balance(old.id, positions.site_id) <> 0
+        ) into has_live_stock;
+
+        if has_live_stock then
+          raise exception 'This stock item still has quantity on hand. Reconcile every position to zero first.'
+            using errcode = '22023';
+        end if;
+      end if;
+    end if;
   end if;
 
   if has_history then
     if new.tracking_method is distinct from old.tracking_method then
-      raise exception 'This item already has equipment or stock history, so it cannot change between asset and stock tracking. Create a new catalogue item instead.'
+      raise exception 'This item already has operational history; create a new catalogue item for a different tracking method'
         using errcode = '22023';
     end if;
+
     if new.unit_of_measure is distinct from old.unit_of_measure then
-      raise exception 'This item already has stock or equipment history recorded in % , so its unit cannot change. Create a new catalogue item instead.', old.unit_of_measure
+      raise exception 'This item already has operational history; create a new catalogue item for a different unit'
         using errcode = '22023';
     end if;
+
     if (new.item_name is distinct from old.item_name
         or new.category is distinct from old.category)
-       and not controlled then
-      raise exception 'This item already has operational history. Only the Principal can correct its name or category.'
+       and (not controlled or not is_principal) then
+      raise exception 'Only the Principal can make a reasoned identity correction after operational history exists'
         using errcode = '42501';
     end if;
   end if;
@@ -1102,9 +1224,7 @@ begin
 end;
 $$;
 
-create or replace function public.deactivate_inventory_item(
-  target_item_id uuid, expected_version integer, reason text
-)
+create or replace function public.deactivate_inventory_item(target_item_id uuid, expected_version integer, reason text)
 returns public.inventory_items
 language plpgsql
 security definer
@@ -1113,7 +1233,8 @@ as $$
 declare
   existing public.inventory_items;
   clean_reason text := nullif(trim(coalesce(reason, '')), '');
-  live_assets integer;
+  unresolved_assets integer := 0;
+  has_live_stock boolean := false;
 begin
   if not public.private_inventory_is_principal() then
     raise exception 'Only the Principal can deactivate a catalogue item' using errcode = '42501';
@@ -1121,36 +1242,33 @@ begin
   if clean_reason is null then
     raise exception 'A reason is required to deactivate a catalogue item' using errcode = '22023';
   end if;
-
   select * into existing from public.inventory_items where id = target_item_id for update;
-  if not found then
-    raise exception 'Catalogue item not found' using errcode = 'P0002';
-  end if;
-  if existing.version <> expected_version then
-    raise exception 'This catalogue item was changed elsewhere. Reload and try again.' using errcode = '40001';
-  end if;
-  if not existing.is_active then
-    raise exception 'This catalogue item is already inactive' using errcode = '22023';
-  end if;
+  if not found then raise exception 'Catalogue item not found' using errcode = 'P0002'; end if;
+  if existing.version <> expected_version then raise exception 'This catalogue item was changed elsewhere. Reload and try again.' using errcode = '40001'; end if;
+  if not existing.is_active then raise exception 'This catalogue item is already inactive' using errcode = '22023'; end if;
 
-  -- Deactivating a catalogue item whose equipment is still in circulation
-  -- would hide live assets from the register that is supposed to account for
-  -- them.
-  select count(*) into live_assets
-  from public.equipment_assets a
-  where a.inventory_item_id = existing.id and a.status not in ('lost', 'retired');
-  if live_assets > 0 then
-    raise exception 'This item still has % piece(s) of equipment in circulation. Retire or account for them first.', live_assets
-      using errcode = '22023';
+  if existing.tracking_method = 'asset' then
+    select count(*) into unresolved_assets from public.equipment_assets a
+    where a.inventory_item_id = existing.id and a.status <> 'retired';
+    if unresolved_assets > 0 then
+      raise exception 'This item still has unresolved equipment assets. Resolve or retire them first.' using errcode = '22023';
+    end if;
+  else
+    select exists (
+      select 1 from (
+        select m.from_site_id as site_id from public.inventory_stock_movements m where m.inventory_item_id = existing.id
+        union
+        select m.to_site_id as site_id from public.inventory_stock_movements m where m.inventory_item_id = existing.id
+      ) p where public.private_inventory_stock_balance(existing.id, p.site_id) <> 0
+    ) into has_live_stock;
+    if has_live_stock then
+      raise exception 'This stock item still has quantity on hand. Reconcile every position to zero first.' using errcode = '22023';
+    end if;
   end if;
 
   perform set_config('app.inventory_item_controlled_change', 'true', true);
   perform set_config('app.inventory_item_change_reason', clean_reason, true);
-
-  update public.inventory_items set is_active = false
-  where id = existing.id and version = expected_version
-  returning * into existing;
-
+  update public.inventory_items set is_active = false where id = existing.id and version = expected_version returning * into existing;
   perform set_config('app.inventory_item_controlled_change', 'false', true);
   perform set_config('app.inventory_item_change_reason', '', true);
   return existing;
@@ -1284,6 +1402,7 @@ security definer
 set search_path = pg_catalog, public
 as $$
 declare
+  item public.inventory_items;
   created public.equipment_assets;
   clean_code text := nullif(regexp_replace(trim(coalesce(target_asset_code, '')), '\s+', ' ', 'g'), '');
 begin
@@ -1293,9 +1412,29 @@ begin
   if clean_code is null then
     raise exception 'An asset code is required' using errcode = '22023';
   end if;
-  perform public.private_assert_inventory_site(target_site_id);
 
+  -- This is the concurrency boundary. Catalogue UPDATE/deactivation also takes
+  -- a row lock, so registration and catalogue identity changes cannot both
+  -- validate against stale pre-commit state.
+  select * into item
+  from public.inventory_items
+  where id = target_item_id
+  for update;
+
+  if not found then
+    raise exception 'Catalogue item not found' using errcode = 'P0002';
+  end if;
+  if item.tracking_method <> 'asset' then
+    raise exception 'That catalogue item is stock-tracked, so it has quantities rather than individual assets'
+      using errcode = '22023';
+  end if;
+  if not item.is_active then
+    raise exception 'That catalogue item is inactive' using errcode = '22023';
+  end if;
+
+  perform public.private_assert_inventory_site(target_site_id);
   perform public.private_set_equipment_asset_event('registered');
+
   insert into public.equipment_assets (
     inventory_item_id, asset_code, ownership_type, condition,
     current_site_id, acquired_on, notes
@@ -1303,8 +1442,8 @@ begin
     target_item_id, clean_code, coalesce(target_ownership_type, 'owned'),
     coalesce(target_condition, 'good'), target_site_id, target_acquired_on, target_notes
   ) returning * into created;
-  perform public.private_clear_equipment_asset_event();
 
+  perform public.private_clear_equipment_asset_event();
   return created;
 end;
 $$;
@@ -1328,21 +1467,22 @@ declare
   existing public.equipment_assets := public.private_lock_equipment_asset(target_asset_id, expected_version);
 begin
   if existing.status <> 'available' then
-    raise exception 'Only available equipment can be issued. This asset is %.', existing.status
-      using errcode = '22023';
+    raise exception 'Only available equipment can be issued' using errcode = '22023';
   end if;
-  if target_site_id is null and target_custodian_person_id is null then
-    raise exception 'Choose a Site, a custodian, or both' using errcode = '22023';
+  if target_site_id is null then
+    raise exception 'A Site is required when equipment is issued' using errcode = '22023';
   end if;
+
   perform public.private_assert_inventory_site(target_site_id);
   perform public.private_assert_inventory_person(target_custodian_person_id);
   perform public.private_assert_inventory_context(
-    target_project_id, target_maintenance_visit_id, target_site_id, existing.current_site_id
+    target_project_id, target_maintenance_visit_id, target_site_id
   );
 
   perform public.private_set_equipment_asset_event(
     'issued', null, note, target_project_id, target_maintenance_visit_id
   );
+
   update public.equipment_assets
   set status = 'issued',
       current_site_id = target_site_id,
@@ -1350,8 +1490,8 @@ begin
       expected_return_date = target_expected_return_date
   where id = existing.id and version = expected_version
   returning * into existing;
-  perform public.private_clear_equipment_asset_event();
 
+  perform public.private_clear_equipment_asset_event();
   return existing;
 end;
 $$;
@@ -1375,80 +1515,58 @@ declare
   existing public.equipment_assets := public.private_lock_equipment_asset(target_asset_id, expected_version);
 begin
   if existing.status <> 'issued' then
-    raise exception 'Only issued equipment can be transferred. This asset is %.', existing.status
-      using errcode = '22023';
+    raise exception 'Only issued equipment can be transferred' using errcode = '22023';
   end if;
-  if target_site_id is null and target_custodian_person_id is null then
-    raise exception 'Choose a Site, a custodian, or both' using errcode = '22023';
+  if target_site_id is null then
+    raise exception 'A destination Site is required' using errcode = '22023';
   end if;
   if target_site_id is not distinct from existing.current_site_id
      and target_custodian_person_id is not distinct from existing.current_custodian_person_id then
     raise exception 'A transfer must change the Site, the custodian, or both' using errcode = '22023';
   end if;
+
   perform public.private_assert_inventory_site(target_site_id);
   perform public.private_assert_inventory_person(target_custodian_person_id);
   perform public.private_assert_inventory_context(
-    target_project_id, target_maintenance_visit_id, target_site_id, existing.current_site_id
+    target_project_id, target_maintenance_visit_id, target_site_id
   );
 
   perform public.private_set_equipment_asset_event(
     'transferred', null, note, target_project_id, target_maintenance_visit_id
   );
+
   update public.equipment_assets
   set current_site_id = target_site_id,
       current_custodian_person_id = target_custodian_person_id,
       expected_return_date = target_expected_return_date
   where id = existing.id and version = expected_version
   returning * into existing;
-  perform public.private_clear_equipment_asset_event();
 
+  perform public.private_clear_equipment_asset_event();
   return existing;
 end;
 $$;
 
 create or replace function public.return_equipment_asset(
-  target_asset_id uuid,
-  expected_version integer,
-  target_site_id uuid default null,
-  target_condition text default null,
-  target_project_id uuid default null,
-  target_maintenance_visit_id uuid default null,
-  note text default null
+  target_asset_id uuid, expected_version integer, target_site_id uuid default null,
+  target_condition text default null, target_project_id uuid default null,
+  target_maintenance_visit_id uuid default null, note text default null
 )
 returns public.equipment_assets
-language plpgsql
-security definer
-set search_path = pg_catalog, public
+language plpgsql security definer set search_path = pg_catalog, public
 as $$
-declare
-  existing public.equipment_assets := public.private_lock_equipment_asset(target_asset_id, expected_version);
-  previous_site uuid;
+declare existing public.equipment_assets := public.private_lock_equipment_asset(target_asset_id, expected_version); previous_site uuid;
 begin
-  if existing.status <> 'issued' then
-    raise exception 'Only issued equipment can be returned. This asset is %.', existing.status
-      using errcode = '22023';
-  end if;
+  if existing.status <> 'issued' then raise exception 'Only issued equipment can be returned' using errcode = '22023'; end if;
+  if target_site_id is not null then raise exception 'Return goes to Botanique custody; use transfer for Site-to-Site movement' using errcode = '22023'; end if;
   previous_site := existing.current_site_id;
-  perform public.private_assert_inventory_site(target_site_id);
-  perform public.private_assert_inventory_context(
-    target_project_id, target_maintenance_visit_id, target_site_id, previous_site
-  );
-
-  -- Returning clears custody and the expected return date. Where it goes back
-  -- to is a position like any other: a Site, or NULL for Botanique custody.
-  perform public.private_set_equipment_asset_event(
-    'returned', null, note, target_project_id, target_maintenance_visit_id
-  );
-  update public.equipment_assets
-  set status = 'available',
-      current_site_id = target_site_id,
-      current_custodian_person_id = null,
-      expected_return_date = null,
-      condition = coalesce(target_condition, existing.condition)
-  where id = existing.id and version = expected_version
-  returning * into existing;
+  perform public.private_assert_inventory_context(target_project_id, target_maintenance_visit_id, previous_site);
+  perform public.private_set_equipment_asset_event('returned', null, note, target_project_id, target_maintenance_visit_id);
+  update public.equipment_assets set status='available', current_site_id=null,
+    current_custodian_person_id=null, expected_return_date=null,
+    condition=coalesce(target_condition, existing.condition)
+  where id=existing.id and version=expected_version returning * into existing;
   perform public.private_clear_equipment_asset_event();
-
   return existing;
 end;
 $$;
@@ -1488,35 +1606,18 @@ begin
 end;
 $$;
 
-create or replace function public.send_equipment_asset_for_repair(
-  target_asset_id uuid,
-  expected_version integer,
-  note text default null
-)
+create or replace function public.send_equipment_asset_for_repair(target_asset_id uuid, expected_version integer, note text default null)
 returns public.equipment_assets
-language plpgsql
-security definer
-set search_path = pg_catalog, public
+language plpgsql security definer set search_path = pg_catalog, public
 as $$
-declare
-  existing public.equipment_assets := public.private_lock_equipment_asset(target_asset_id, expected_version);
+declare existing public.equipment_assets := public.private_lock_equipment_asset(target_asset_id, expected_version);
 begin
-  if existing.status not in ('available', 'issued') then
-    raise exception 'This asset is %, so it cannot be sent for repair.', existing.status
-      using errcode = '22023';
-  end if;
-
-  -- Repair takes the thing out of circulation: no custodian holds it and no
-  -- return is expected until it comes back.
+  if existing.status not in ('available','issued') then raise exception 'This equipment cannot be sent for repair from its current state' using errcode = '22023'; end if;
   perform public.private_set_equipment_asset_event('sent_for_repair', null, note);
-  update public.equipment_assets
-  set status = 'under_repair',
-      current_custodian_person_id = null,
-      expected_return_date = null
-  where id = existing.id and version = expected_version
-  returning * into existing;
+  update public.equipment_assets set status='under_repair', current_site_id=null,
+    current_custodian_person_id=null, expected_return_date=null
+  where id=existing.id and version=expected_version returning * into existing;
   perform public.private_clear_equipment_asset_event();
-
   return existing;
 end;
 $$;
@@ -1539,17 +1640,23 @@ begin
   if existing.status <> 'under_repair' then
     raise exception 'This asset is not under repair' using errcode = '22023';
   end if;
-  perform public.private_assert_inventory_site(target_site_id);
+  if target_condition is null or nullif(trim(target_condition), '') is null then
+    raise exception 'Record the equipment condition when it returns from repair' using errcode = '22023';
+  end if;
 
+  perform public.private_assert_inventory_site(target_site_id);
   perform public.private_set_equipment_asset_event('returned_from_repair', null, note);
+
   update public.equipment_assets
   set status = 'available',
       current_site_id = target_site_id,
-      condition = coalesce(target_condition, existing.condition)
+      current_custodian_person_id = null,
+      expected_return_date = null,
+      condition = target_condition
   where id = existing.id and version = expected_version
   returning * into existing;
-  perform public.private_clear_equipment_asset_event();
 
+  perform public.private_clear_equipment_asset_event();
   return existing;
 end;
 $$;
@@ -1706,79 +1813,48 @@ $$;
 -- advisory lock, no SERIALIZABLE isolation change and no second balance
 -- ledger to fall out of step with the first.
 create or replace function public.private_record_inventory_stock_movement(
-  target_item_id uuid,
-  target_movement_type text,
-  target_quantity numeric,
-  target_from_site_id uuid,
-  target_to_site_id uuid,
-  target_person_id uuid,
-  target_project_id uuid,
-  target_maintenance_visit_id uuid,
-  target_reason text,
-  target_note text
+  target_item_id uuid, target_movement_type text, target_quantity numeric,
+  target_from_site_id uuid, target_to_site_id uuid, target_person_id uuid,
+  target_project_id uuid, target_maintenance_visit_id uuid, target_reason text, target_note text
 )
 returns public.inventory_stock_movements
-language plpgsql
-security definer
-set search_path = pg_catalog, public
+language plpgsql security definer set search_path = pg_catalog, public
 as $$
 declare
-  item public.inventory_items;
-  available numeric;
-  created public.inventory_stock_movements;
-  clean_reason text := nullif(trim(coalesce(target_reason, '')), '');
-  decreases boolean := target_movement_type in (
-    'issued', 'transferred', 'returned', 'consumed', 'damaged', 'lost', 'adjustment_out'
-  );
+  item public.inventory_items; available numeric; created public.inventory_stock_movements;
+  clean_reason text := nullif(trim(coalesce(target_reason,'')), '');
+  decreases boolean := target_movement_type in ('issued','transferred','returned','consumed','damaged','lost','adjustment_out');
+  operational_site_id uuid;
 begin
-  if target_quantity is null or target_quantity <= 0 then
-    raise exception 'A quantity greater than zero is required' using errcode = '22023';
-  end if;
-
-  -- Serialise this item's movements before reading its balance.
-  select * into item from public.inventory_items where id = target_item_id for update;
-  if not found then
-    raise exception 'Catalogue item not found' using errcode = 'P0002';
-  end if;
-  if item.tracking_method <> 'stock' then
-    raise exception 'That catalogue item is tracked as individual equipment, so it has no stock quantity'
-      using errcode = '22023';
-  end if;
-  if not item.is_active then
-    raise exception 'That catalogue item is inactive' using errcode = '22023';
-  end if;
-
+  if target_quantity is null or target_quantity <= 0 then raise exception 'A quantity greater than zero is required' using errcode = '22023'; end if;
+  select * into item from public.inventory_items where id=target_item_id for update;
+  if not found then raise exception 'Catalogue item not found' using errcode='P0002'; end if;
+  if item.tracking_method <> 'stock' then raise exception 'That catalogue item is not stock-tracked' using errcode='22023'; end if;
+  if not item.is_active then raise exception 'That catalogue item is inactive' using errcode='22023'; end if;
   perform public.private_assert_inventory_site(target_from_site_id);
   perform public.private_assert_inventory_site(target_to_site_id);
   perform public.private_assert_inventory_person(target_person_id);
-  perform public.private_assert_inventory_context(
-    target_project_id, target_maintenance_visit_id, target_from_site_id, target_to_site_id
-  );
-
+  operational_site_id := case target_movement_type
+    when 'received' then target_to_site_id
+    when 'issued' then target_to_site_id
+    when 'transferred' then target_to_site_id
+    when 'returned' then target_from_site_id
+    when 'consumed' then target_from_site_id
+    when 'damaged' then target_from_site_id
+    when 'lost' then target_from_site_id
+    else null end;
+  perform public.private_assert_inventory_context(target_project_id, target_maintenance_visit_id, operational_site_id);
   if decreases then
-    available := public.private_inventory_stock_balance(target_item_id, target_from_site_id);
-    if available < target_quantity then
-      raise exception 'Only % % of % are recorded %. Record what is actually there before moving % out.',
-        available, item.unit_of_measure, item.item_name,
-        case when target_from_site_id is null then 'in Botanique custody'
-             else 'at that Site' end,
-        target_quantity
-        using errcode = '22023';
-    end if;
+    available := public.private_inventory_stock_balance(target_item_id,target_from_site_id);
+    if available < target_quantity then raise exception 'Insufficient recorded stock at the source position' using errcode='22023'; end if;
   end if;
-
-  insert into public.inventory_stock_movements (
-    inventory_item_id, movement_type, quantity,
-    from_site_id, to_site_id, person_id,
-    project_id, maintenance_visit_id,
-    reason, note, actor_profile_id
+  insert into public.inventory_stock_movements(
+    inventory_item_id,movement_type,quantity,from_site_id,to_site_id,person_id,
+    project_id,maintenance_visit_id,reason,note,actor_profile_id
   ) values (
-    target_item_id, target_movement_type, target_quantity,
-    target_from_site_id, target_to_site_id, target_person_id,
-    target_project_id, target_maintenance_visit_id,
-    clean_reason, nullif(trim(coalesce(target_note, '')), ''), auth.uid()
+    target_item_id,target_movement_type,target_quantity,target_from_site_id,target_to_site_id,target_person_id,
+    target_project_id,target_maintenance_visit_id,clean_reason,nullif(trim(coalesce(target_note,'')),''),auth.uid()
   ) returning * into created;
-
   return created;
 end;
 $$;
@@ -1816,35 +1892,28 @@ $$;
 -- 'transferred' is Site to Site. None of them changes the total Botanique
 -- holds, only where it is.
 create or replace function public.record_stock_transfer(
-  target_item_id uuid,
-  target_movement_type text,
-  target_quantity numeric,
-  target_from_site_id uuid default null,
-  target_to_site_id uuid default null,
-  target_person_id uuid default null,
-  target_project_id uuid default null,
-  target_maintenance_visit_id uuid default null,
-  note text default null
+  target_item_id uuid, target_movement_type text, target_quantity numeric,
+  target_from_site_id uuid default null, target_to_site_id uuid default null,
+  target_person_id uuid default null, target_project_id uuid default null,
+  target_maintenance_visit_id uuid default null, note text default null
 )
 returns public.inventory_stock_movements
-language plpgsql
-security definer
-set search_path = pg_catalog, public
+language plpgsql security definer set search_path = pg_catalog, public
 as $$
 begin
-  if public.private_inventory_role() is null then
-    raise exception 'You are not authorised to manage Tools & Equipment' using errcode = '42501';
-  end if;
-  if target_movement_type not in ('issued', 'transferred', 'returned') then
-    raise exception 'Choose issued, transferred or returned' using errcode = '22023';
-  end if;
-  if target_from_site_id is not distinct from target_to_site_id then
-    raise exception 'Stock must move between two different positions' using errcode = '22023';
+  if public.private_inventory_role() is null then raise exception 'You are not authorised to manage Tools & Equipment' using errcode='42501'; end if;
+  if target_movement_type = 'issued' and not (target_from_site_id is null and target_to_site_id is not null) then
+    raise exception 'Issued stock must move from Botanique custody to a Site' using errcode='22023';
+  elsif target_movement_type = 'transferred' and not (target_from_site_id is not null and target_to_site_id is not null and target_from_site_id is distinct from target_to_site_id) then
+    raise exception 'Transferred stock must move between two different Sites' using errcode='22023';
+  elsif target_movement_type = 'returned' and not (target_from_site_id is not null and target_to_site_id is null) then
+    raise exception 'Returned stock must move from a Site to Botanique custody' using errcode='22023';
+  elsif target_movement_type not in ('issued','transferred','returned') then
+    raise exception 'Choose issued, transferred or returned' using errcode='22023';
   end if;
   return public.private_record_inventory_stock_movement(
-    target_item_id, target_movement_type, target_quantity,
-    target_from_site_id, target_to_site_id, target_person_id,
-    target_project_id, target_maintenance_visit_id, null, note
+    target_item_id,target_movement_type,target_quantity,target_from_site_id,target_to_site_id,target_person_id,
+    target_project_id,target_maintenance_visit_id,null,note
   );
 end;
 $$;
@@ -1974,7 +2043,7 @@ grant execute on function public.private_inventory_role() to authenticated;
 
 revoke execute on function public.private_inventory_is_principal() from public, anon, authenticated;
 revoke execute on function public.private_inventory_item_has_history(uuid) from public, anon, authenticated;
-revoke execute on function public.private_assert_inventory_context(uuid, uuid, uuid, uuid) from public, anon, authenticated;
+revoke execute on function public.private_assert_inventory_context(uuid, uuid, uuid) from public, anon, authenticated;
 revoke execute on function public.private_assert_inventory_site(uuid) from public, anon, authenticated;
 revoke execute on function public.private_assert_inventory_person(uuid) from public, anon, authenticated;
 revoke execute on function public.private_inventory_stock_balance(uuid, uuid) from public, anon, authenticated;
