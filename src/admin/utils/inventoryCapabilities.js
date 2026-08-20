@@ -31,6 +31,16 @@ export function canUsePrincipalInventoryActions(role) {
 // absent: the schema does not know them.
 // ---------------------------------------------------------------------------
 
+// The four approved summary cards: label, supporting line and pictogram. The
+// supporting line explains what the number counts, which is what stops
+// "Assets in circulation" being read as "assets we own".
+export const INVENTORY_SUMMARY_CARDS = [
+  { id: "catalogueItems", label: "Catalogue items", support: "Active items in catalogue", glyph: "catalogue" },
+  { id: "assetsInCirculation", label: "Assets in circulation", support: "Issued to sites or people", glyph: "circulation" },
+  { id: "underRepair", label: "Under repair", support: "Awaiting repair completion", glyph: "repair" },
+  { id: "activeStockPositions", label: "Active stock positions", support: "Sites and custody locations", glyph: "positions" },
+];
+
 export const TRACKING_METHODS = ["asset", "stock"];
 
 export const TRACKING_METHOD_LABELS = {
@@ -48,12 +58,17 @@ export const EQUIPMENT_STATUS_LABELS = {
   retired: "Retired",
 };
 
-// No amber anywhere. Green for available, stone for neutral/terminal, blue for
-// in-progress repair, restrained rose for the two exception states.
+// No amber anywhere. Green for available, restrained blue for equipment out in
+// service, and muted rose for the states that need attention — repair, loss and
+// damage. Retired is neutral stone because it is settled, not a problem.
+//
+// under_repair is deliberately NOT blue: blue reads as "out working", and a
+// machine in the workshop is not working. The settled correction to the old
+// amber treatment is rose or stone, never a new semantic colour.
 export const EQUIPMENT_STATUS_CLASSES = {
   available: "bg-[#eef3f0] text-botanique-green",
   issued: "bg-sky-50 text-sky-800",
-  under_repair: "bg-sky-50 text-sky-800",
+  under_repair: "bg-rose-50 text-rose-700",
   lost: "bg-rose-50 text-rose-700",
   retired: "bg-stone-100 text-gray-600",
 };

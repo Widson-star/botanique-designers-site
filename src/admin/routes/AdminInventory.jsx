@@ -2,8 +2,10 @@ import { useMemo, useState } from "react";
 import { useAdminData } from "../context/adminData";
 import { useInventory } from "../context/inventory";
 import ToolVisual from "../components/ToolVisual";
+import InventoryPictogram from "../components/InventoryPictogram";
 import {
   BOTANIQUE_CUSTODY, CATALOGUE_EVENT_LABELS, EQUIPMENT_CONDITIONS,
+  INVENTORY_SUMMARY_CARDS,
   EQUIPMENT_CONDITION_CLASSES, EQUIPMENT_EVENT_LABELS, EQUIPMENT_STATUS_CLASSES,
   OWNERSHIP_TYPES, canManageInventory, canSeeInventory, canUsePrincipalInventoryActions,
   conditionLabel, equipmentActionsFor, movementLabel, ownershipLabel, positionLabel,
@@ -32,12 +34,53 @@ const showQuantity = (value) => {
   return Number.isInteger(number) ? String(number) : String(number).replace(/0+$/, "").replace(/\.$/, "");
 };
 
-function Metric({ label, value }) {
+function SummaryCard({ label, value, support, glyph }) {
   return (
     <div className="min-w-0 rounded-xl border border-stone-200 bg-white px-4 py-4">
-      <p className="text-[11px] font-medium text-gray-500">{label}</p>
-      <p className="mt-1 text-[22px] font-semibold tabular-nums text-botanique-charcoal">{value}</p>
+      <div className="flex items-start gap-3">
+        <InventoryPictogram glyph={glyph} />
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-gray-500">{label}</p>
+          <p className="mt-0.5 text-[22px] font-semibold leading-tight tabular-nums text-botanique-charcoal">{value}</p>
+          <p className="mt-0.5 text-[11px] leading-snug text-gray-500">{support}</p>
+        </div>
+      </div>
     </div>
+  );
+}
+
+// A compact ellipsis affordance, as the authority uses, rather than a button
+// competing with the row's own content. Labelled by asset code so it is not
+// nine identical "More" controls to a screen reader.
+function RowActions({ assetCode, onOpen }) {
+  return (
+    <button
+      type="button" onClick={onOpen}
+      aria-label={`Actions for ${assetCode}`}
+      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-stone-100 hover:text-botanique-charcoal"
+    >
+      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
+        <circle cx="3" cy="8" r="1.4" fill="currentColor" />
+        <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+        <circle cx="13" cy="8" r="1.4" fill="currentColor" />
+      </svg>
+    </button>
+  );
+}
+
+// One glyph per activity kind, so the stream is scannable without colour.
+function ActivityIcon({ kind }) {
+  const paths = {
+    equipment: "M3 8.5 6.5 12l6.5-8",
+    catalogue: "M2.5 5 8 2.5 13.5 5 8 7.5Zm0 3L8 10.5 13.5 8",
+    stock: "M2.5 12h11M5 12V6.5M8 12V4.5M11 12V7.5",
+  };
+  return (
+    <span aria-hidden="true" data-activity-icon={kind} className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-gray-500">
+      <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+        <path d={paths[kind] || paths.equipment} />
+      </svg>
+    </span>
   );
 }
 
@@ -72,6 +115,37 @@ function Sheet({ title, onClose, children }) {
   );
 }
 
+const PAGE_SIZE = 10;
+
+// Truthful count posture. With no records it says 0 — it never manufactures
+// pagination over an empty register — and the prev/next controls appear only
+// when there is genuinely more than one page.
+function RegisterFooter({ total, page, pageSize, onPage, noun }) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const from = total === 0 ? 0 : page * pageSize + 1;
+  const to = Math.min(total, (page + 1) * pageSize);
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 px-4 py-2.5">
+      <p className="text-xs text-gray-500">
+        {total === 0 ? `0 ${noun}s` : `Showing ${from}–${to} of ${total} ${noun}${total === 1 ? "" : "s"}`}
+      </p>
+      {pages > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            type="button" disabled={page === 0} onClick={() => onPage(page - 1)}
+            className="min-h-8 rounded-lg border border-stone-300 px-2.5 text-xs font-semibold text-botanique-charcoal disabled:opacity-40"
+          >Previous</button>
+          <span className="px-1 text-xs tabular-nums text-gray-500">{page + 1} / {pages}</span>
+          <button
+            type="button" disabled={page >= pages - 1} onClick={() => onPage(page + 1)}
+            className="min-h-8 rounded-lg border border-stone-300 px-2.5 text-xs font-semibold text-botanique-charcoal disabled:opacity-40"
+          >Next</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const field = "mt-1 block w-full rounded-lg border border-stone-300 px-3 py-2.5 text-sm";
 const primary = "inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-botanique-green px-4 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto";
 
@@ -83,6 +157,7 @@ export default function AdminInventory() {
   } = useInventory();
 
   const [tab, setTab] = useState("assets");
+  const [page, setPage] = useState(0);
   const [sheet, setSheet] = useState(null);
   const [form, setForm] = useState({});
   const [formError, setFormError] = useState("");
@@ -104,6 +179,11 @@ export default function AdminInventory() {
       custodianLabel: asset.custodianPersonId ? personName(asset.custodianPersonId) : "",
     };
   }), [assets, itemFor, siteName, personName]);
+
+  const pagedAssets = useMemo(
+    () => assetRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
+    [assetRows, page],
+  );
 
   if (!canSeeInventory(role)) {
     return (
@@ -149,11 +229,10 @@ export default function AdminInventory() {
         )}
       </header>
 
-      <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
-        <Metric label="Catalogue items" value={summary.catalogueItems} />
-        <Metric label="Assets in circulation" value={summary.assetsInCirculation} />
-        <Metric label="Under repair" value={summary.underRepair} />
-        <Metric label="Active stock positions" value={summary.activeStockPositions} />
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+        {INVENTORY_SUMMARY_CARDS.map((card) => (
+          <SummaryCard key={card.id} label={card.label} support={card.support} glyph={card.glyph} value={summary[card.id]} />
+        ))}
       </div>
 
       {status === "loading" && <p className="text-sm text-gray-600">Loading…</p>}
@@ -174,8 +253,13 @@ export default function AdminInventory() {
             </div>
           </div>
 
+          {/* The footer belongs to the tab, not to the rows: an empty register
+              still truthfully reports 0 assets rather than hiding its count. */}
           {tab === "assets" && (assetRows.length === 0
-            ? <Empty>No equipment registered yet.</Empty>
+            ? <>
+              <Empty>No equipment registered yet.</Empty>
+              <RegisterFooter total={0} page={0} pageSize={PAGE_SIZE} onPage={setPage} noun="asset" />
+            </>
             : <>
               <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[860px] text-left text-sm">
@@ -192,7 +276,7 @@ export default function AdminInventory() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
-                    {assetRows.map((row) => (
+                    {pagedAssets.map((row) => (
                       <tr key={row.id}>
                         <td className="px-4 py-2.5">
                           <span className="flex items-center gap-2.5">
@@ -206,8 +290,8 @@ export default function AdminInventory() {
                         <td className="px-3 py-2.5 text-gray-700">{row.siteLabel}</td>
                         <td className="px-3 py-2.5 text-gray-700">{row.custodianLabel || "—"}</td>
                         <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">{showDate(row.expectedReturnDate)}</td>
-                        <td className="px-3 py-2.5">
-                          <button type="button" onClick={() => openSheet("asset", { asset: row })} className="min-h-9 rounded-lg border border-stone-300 px-3 text-xs font-semibold text-botanique-charcoal">View</button>
+                        <td className="px-3 py-2.5 text-right">
+                          <RowActions assetCode={row.assetCode} onOpen={() => openSheet("asset", { asset: row })} />
                         </td>
                       </tr>
                     ))}
@@ -216,7 +300,7 @@ export default function AdminInventory() {
               </div>
 
               <ul className="divide-y divide-stone-100 lg:hidden">
-                {assetRows.map((row) => (
+                {pagedAssets.map((row) => (
                   <li key={row.id} className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <ToolVisual name={row.itemName} size="md" />
@@ -238,6 +322,11 @@ export default function AdminInventory() {
                   </li>
                 ))}
               </ul>
+
+              <RegisterFooter
+                total={assetRows.length} page={page} pageSize={PAGE_SIZE}
+                onPage={setPage} noun="asset"
+              />
             </>)}
 
           {tab === "catalogue" && (items.length === 0
@@ -276,7 +365,7 @@ export default function AdminInventory() {
                     <p className="mt-0.5 truncate text-xs text-gray-500">{positionLabel(position.siteName)}</p>
                   </div>
                   <p className="shrink-0 text-sm font-semibold tabular-nums">
-                    {showQuantity(position.quantity)} <span className="text-xs font-normal text-gray-500">{position.unitOfMeasure.replace(/_/g, " ")}</span>
+                    {showQuantity(position.quantity)} <span className="text-xs font-normal text-gray-500">{unitLabel(position.unitOfMeasure)}</span>
                   </p>
                 </li>
               ))}
@@ -285,12 +374,19 @@ export default function AdminInventory() {
           {tab === "history" && (activity.length === 0
             ? <Empty>Activity appears here as you use the register.</Empty>
             : <ul className="divide-y divide-stone-100">
-              {activity.map((entry) => (
-                <li key={`${entry.kind}-${entry.id}`} className="px-4 py-3">
-                  <p className="text-sm font-medium text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">{showMoment(entry.occurredAt)}{entry.reason ? ` · ${entry.reason}` : ""}</p>
-                </li>
-              ))}
+              {activity.map((entry) => {
+                const detail = activityDetail(entry, { assets, itemFor, siteName, personName });
+                return (
+                  <li key={`${entry.kind}-${entry.id}`} className="flex gap-2.5 px-4 py-3">
+                    <ActivityIcon kind={entry.kind} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
+                      {detail && <p className="mt-0.5 text-xs text-gray-500">{detail}</p>}
+                      <p className="mt-0.5 text-[11px] text-gray-400">{showMoment(entry.occurredAt)}{entry.reason ? ` · ${entry.reason}` : ""}</p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>)}
         </section>
 
@@ -302,31 +398,50 @@ export default function AdminInventory() {
             </div>
             {positions.length === 0
               ? <p className="px-4 py-6 text-sm text-gray-500">No stock positions yet.</p>
-              : <ul className="divide-y divide-stone-100">
-                {positions.slice(0, 5).map((position) => (
-                  <li key={`panel-${position.itemId}-${position.siteId || "custody"}`} className="flex items-center gap-2.5 px-4 py-2.5">
-                    <ToolVisual name={position.itemName} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-botanique-charcoal">{position.itemName}</p>
-                      <p className="truncate text-xs text-gray-500">{positionLabel(position.siteName)}</p>
-                    </div>
-                    <p className="shrink-0 text-sm font-semibold tabular-nums">{showQuantity(position.quantity)}</p>
-                  </li>
-                ))}
-              </ul>}
+              : <>
+                <div className="grid grid-cols-[1fr_auto] gap-2 border-b border-stone-100 px-4 py-1.5 text-[10px] uppercase tracking-wide text-gray-400">
+                  <span>Item · Site / location</span>
+                  <span className="text-right">Unit · Qty</span>
+                </div>
+                <ul className="divide-y divide-stone-100">
+                  {positions.slice(0, 5).map((position) => (
+                    <li key={`panel-${position.itemId}-${position.siteId || "custody"}`} className="flex items-center gap-2.5 px-4 py-2.5">
+                      <ToolVisual name={position.itemName} size="sm" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-botanique-charcoal">{position.itemName}</p>
+                        <p className="truncate text-xs text-gray-500">{positionLabel(position.siteName)}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold tabular-nums text-botanique-charcoal">{showQuantity(position.quantity)}</p>
+                        <p className="text-[11px] text-gray-500">{unitLabel(position.unitOfMeasure)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>}
           </section>
 
           <section className="min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white">
-            <div className="border-b border-stone-200 px-4 py-3"><h2 className="text-sm font-semibold">Recent activity</h2></div>
+            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
+              <h2 className="text-sm font-semibold">Recent activity</h2>
+              {activity.length > 0 && <button type="button" onClick={() => setTab("history")} className="text-xs font-semibold text-botanique-green">View all</button>}
+            </div>
             {activity.length === 0
               ? <p className="px-4 py-6 text-sm text-gray-500">Activity appears here as you use the register.</p>
               : <ul className="divide-y divide-stone-100">
-                {activity.slice(0, 6).map((entry) => (
-                  <li key={`recent-${entry.kind}-${entry.id}`} className="px-4 py-2.5">
-                    <p className="truncate text-sm text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
-                    <p className="mt-0.5 text-xs text-gray-500">{showMoment(entry.occurredAt)}</p>
-                  </li>
-                ))}
+                {activity.slice(0, 6).map((entry) => {
+                  const detail = activityDetail(entry, { assets, itemFor, siteName, personName });
+                  return (
+                    <li key={`recent-${entry.kind}-${entry.id}`} className="flex gap-2.5 px-4 py-2.5">
+                      <ActivityIcon kind={entry.kind} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
+                        {detail && <p className="truncate text-xs text-gray-500">{detail}</p>}
+                        <p className="mt-0.5 text-[11px] text-gray-400">{showMoment(entry.occurredAt)}</p>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>}
           </section>
         </div>
@@ -472,6 +587,34 @@ export default function AdminInventory() {
       )}
     </section>
   );
+}
+
+// Units are stored as canonical tokens ("cubic_metre"); the register reads them
+// back as words without inventing an abbreviation the database does not hold.
+function unitLabel(unit) {
+  return String(unit || "").replace(/_/g, " ");
+}
+
+// A second line ONLY where canonical data supports one. No invented detail:
+// where a movement or event carries no Site, person or quantity, this returns
+// empty and the row simply has no description.
+function activityDetail(entry, { assets, itemFor, siteName, personName }) {
+  if (entry.kind === "equipment") {
+    const asset = assets.find((row) => row.id === entry.assetId);
+    if (!asset) return "";
+    const where = asset.currentSiteId ? siteName(asset.currentSiteId) : BOTANIQUE_CUSTODY;
+    const who = asset.custodianPersonId ? personName(asset.custodianPersonId) : "";
+    return [where, who].filter(Boolean).join(" · ");
+  }
+  if (entry.kind === "catalogue") {
+    const item = itemFor(entry.itemId);
+    return item ? [item.category.replace(/_/g, " "), trackingMethodLabel(item.trackingMethod)].filter(Boolean).join(" · ") : "";
+  }
+  const item = itemFor(entry.itemId);
+  const from = entry.fromSiteId ? siteName(entry.fromSiteId) : "";
+  const to = entry.toSiteId ? siteName(entry.toSiteId) : "";
+  const where = from && to ? `${from} → ${to}` : to ? `→ ${to}` : from ? `from ${from}` : BOTANIQUE_CUSTODY;
+  return [where, item ? unitLabel(item.unitOfMeasure) : ""].filter(Boolean).join(" · ");
 }
 
 function activityTitle(entry, { assets, itemFor }) {

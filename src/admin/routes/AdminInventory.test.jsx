@@ -73,6 +73,22 @@ describe("Tools & Equipment — approved composition", () => {
     expect(screen.getByRole("button", { name: "Equipment assets" })).toHaveAttribute("aria-current", "page");
   });
 
+  // The authority pairs every value with a line saying what it counts.
+  it("gives each summary card its pictogram and supporting line", () => {
+    const { container } = renderPage();
+    const expected = [
+      ["Catalogue items", "Active items in catalogue", "catalogue"],
+      ["Assets in circulation", "Issued to sites or people", "circulation"],
+      ["Under repair", "Awaiting repair completion", "repair"],
+      ["Active stock positions", "Sites and custody locations", "positions"],
+    ];
+    for (const [label, support, glyph] of expected) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+      expect(screen.getByText(support)).toBeInTheDocument();
+      expect(container.querySelector(`[data-pictogram="${glyph}"]`)).toBeTruthy();
+    }
+  });
+
   it("keeps both supporting panels", () => {
     renderPage();
     expect(screen.getByRole("heading", { name: "Stock positions", level: 2 })).toBeInTheDocument();
@@ -155,21 +171,42 @@ describe("equipment rows and lifecycle", () => {
     expect(within(screen.getByRole("table")).getByText("Botanique custody")).toBeInTheDocument();
   });
 
+  it("keeps a clearer text action in the mobile list", () => {
+    renderPage({ items, assets, sites, people });
+    const lists = screen.getAllByRole("list");
+    const mobileRow = lists.flatMap((list) => within(list).queryAllByRole("button", { name: "View" }));
+    expect(mobileRow.length).toBeGreaterThan(0);
+  });
+
   it("renders a real tool thumbnail rather than plain text", () => {
     const { container } = renderPage({ items, assets, sites, people });
     expect(container.querySelector('[data-tool-visual="mower"]')).toBeTruthy();
   });
 
+  // The authority uses a compact ellipsis affordance, not a competing button.
+  it("uses a labelled ellipsis action rather than a prominent View button", () => {
+    renderPage({ items, assets, sites, people });
+    const table = screen.getByRole("table");
+    expect(within(table).queryByRole("button", { name: "View" })).not.toBeInTheDocument();
+    expect(within(table).getByRole("button", { name: "Actions for BD-LM-001" })).toBeInTheDocument();
+    expect(within(table).getByRole("button", { name: "Actions for BD-LM-002" })).toBeInTheDocument();
+  });
+
+  it("opens the asset sheet from the ellipsis action", () => {
+    renderPage({ items, assets, sites, people });
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-LM-001" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("offers the Principal Retire but never offers it to the Operations Manager", () => {
     renderPage({ role: "owner", items, assets, sites, people });
-    fireEvent.click(within(screen.getByRole("table")).getAllByRole("button", { name: "View" })[0]);
-    const ownerDialog = screen.getByRole("dialog");
-    expect(within(ownerDialog).getByRole("button", { name: "Retire" })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-LM-001" }));
+    expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Retire" })).toBeInTheDocument();
     screen.getAllByRole("button", { name: "Close" })[0].click();
 
     renderPage({ role: "manager", items, assets, sites, people });
     const tables = screen.getAllByRole("table");
-    fireEvent.click(within(tables[tables.length - 1]).getAllByRole("button", { name: "View" })[0]);
+    fireEvent.click(within(tables[tables.length - 1]).getByRole("button", { name: "Actions for BD-LM-001" }));
     const dialogs = screen.getAllByRole("dialog");
     const managerDialog = dialogs[dialogs.length - 1];
     expect(within(managerDialog).queryByRole("button", { name: "Retire" })).not.toBeInTheDocument();
@@ -188,5 +225,78 @@ describe("quick-add catalogue", () => {
     expect(addItem).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
     expect(addItem).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("supporting panels and register footer", () => {
+  const items = [
+    { id: "i1", itemName: "Cement", category: "materials", trackingMethod: "stock", unitOfMeasure: "bag", isActive: true, version: 1 },
+    { id: "i2", itemName: "Screened Topsoil", category: "materials", trackingMethod: "stock", unitOfMeasure: "cubic_metre", isActive: true, version: 1 },
+  ];
+  const sites = [{ id: "s1", siteName: "Karen Residence" }];
+  const positions = [
+    { itemId: "i1", itemName: "Cement", category: "materials", unitOfMeasure: "bag", isActive: true, siteId: "s1", siteName: "Karen Residence", location: "", quantity: 25 },
+    { itemId: "i2", itemName: "Screened Topsoil", category: "materials", unitOfMeasure: "cubic_metre", isActive: true, siteId: "", siteName: "", location: "", quantity: 4 },
+  ];
+
+  it("shows the Unit alongside the Quantity in the Stock positions panel", () => {
+    renderPage({ items, positions, sites });
+    const panel = screen.getByRole("heading", { name: "Stock positions", level: 2 }).closest("section");
+    expect(within(panel).getByText("Item · Site / location")).toBeInTheDocument();
+    expect(within(panel).getByText("Unit · Qty")).toBeInTheDocument();
+    expect(within(panel).getByText("bag")).toBeInTheDocument();
+    // Canonical tokens are read back as words, not invented abbreviations.
+    expect(within(panel).getByText("cubic metre")).toBeInTheDocument();
+    expect(within(panel).getByText("Botanique custody")).toBeInTheDocument();
+  });
+
+  it("offers View all on Recent activity and switches to History", () => {
+    const activity = [{ kind: "catalogue", id: "e1", itemId: "i1", eventType: "created", reason: "", occurredAt: "2026-08-20T08:00:00Z" }];
+    renderPage({ items, activity });
+    const panel = screen.getByRole("heading", { name: "Recent activity", level: 2 }).closest("section");
+    fireEvent.click(within(panel).getByRole("button", { name: "View all" }));
+    expect(screen.getByRole("button", { name: "History" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("gives each activity row an icon and a canonical description", () => {
+    const activity = [{ kind: "catalogue", id: "e1", itemId: "i1", eventType: "created", reason: "", occurredAt: "2026-08-20T08:00:00Z" }];
+    const { container } = renderPage({ items, activity });
+    expect(container.querySelector('[data-activity-icon="catalogue"]')).toBeTruthy();
+    expect(screen.getAllByText(/materials · Quantity stock/).length).toBeGreaterThan(0);
+  });
+
+  // Never fabricate pagination over an empty register.
+  it("reports a truthful zero count when the register is empty", () => {
+    renderPage();
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    expect(within(register).getByText("0 assets")).toBeInTheDocument();
+    expect(within(register).queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+  });
+
+  it("pages the register only once there is more than one page", () => {
+    const assetItems = [{ id: "i3", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    const many = Array.from({ length: 12 }, (unused, index) => ({
+      id: `a${index}`, itemId: "i3", assetCode: `BD-LM-${String(index).padStart(3, "0")}`,
+      ownershipType: "owned", status: "available", condition: "good",
+      currentSiteId: "", custodianPersonId: "", expectedReturnDate: "", version: 1,
+    }));
+    renderPage({ items: assetItems, assets: many });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    expect(within(register).getByText("Showing 1–10 of 12 assets")).toBeInTheDocument();
+    expect(within(register).getByRole("table").querySelectorAll("tbody tr")).toHaveLength(10);
+    fireEvent.click(within(register).getByRole("button", { name: "Next" }));
+    expect(within(register).getByText("Showing 11–12 of 12 assets")).toBeInTheDocument();
+  });
+});
+
+describe("status colour treatment", () => {
+  it("uses no amber and no sky treatment for under_repair", () => {
+    const items = [{ id: "i1", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    const assets = [{ id: "a1", itemId: "i1", assetCode: "BD-LM-001", ownershipType: "owned", status: "under_repair", condition: "fair", currentSiteId: "", custodianPersonId: "", expectedReturnDate: "", version: 2 }];
+    renderPage({ items, assets });
+    const chip = within(screen.getByRole("table")).getByText("Under repair");
+    expect(chip.className).not.toMatch(/amber|yellow|orange/);
+    expect(chip.className).not.toMatch(/sky/);
+    expect(chip.className).toMatch(/rose|stone/);
   });
 });

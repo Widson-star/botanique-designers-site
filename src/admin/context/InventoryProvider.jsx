@@ -86,37 +86,68 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   // all — RLS would return nothing, but there is no reason to ask.
   const enabled = Boolean(!isDemo && accessToken && role && canSeeInventory(role));
 
+  // One canonical read, kept free of React state so it can be awaited from
+  // both the mount effect and a post-write refresh without either one
+  // touching state synchronously.
+  const load = useCallback(async () => {
+    const [itemRows, assetRows, positionRows, assetEventRows, itemEventRows, movementRows, siteRows, peopleRows] =
+      await Promise.all([
+        fetchInventoryItems(accessToken), fetchEquipmentAssets(accessToken), fetchStockPositions(accessToken),
+        fetchEquipmentAssetEvents(accessToken), fetchInventoryItemEvents(accessToken), fetchStockMovements(accessToken),
+        fetchInventorySites(accessToken), fetchInventoryPeople(accessToken),
+      ]);
+    return {
+      items: (itemRows || []).map(mapItem),
+      assets: (assetRows || []).map(mapAsset),
+      positions: (positionRows || []).map(mapPosition),
+      assetEvents: (assetEventRows || []).map(mapAssetEvent),
+      itemEvents: (itemEventRows || []).map(mapItemEvent),
+      movements: (movementRows || []).map(mapMovement),
+      sites: (siteRows || []).map((row) => ({ id: row.id, siteName: row.site_name, location: row.location || "", county: row.county || "" })),
+      people: (peopleRows || []).map((row) => ({ id: row.id, fullName: row.full_name, isActive: row.is_active === true })),
+    };
+  }, [accessToken]);
+
+  const apply = useCallback((next) => {
+    setItems(next.items); setAssets(next.assets); setPositions(next.positions);
+    setAssetEvents(next.assetEvents); setItemEvents(next.itemEvents); setMovements(next.movements);
+    setSites(next.sites); setPeople(next.people);
+    setLoadState("ready"); setError("");
+  }, []);
+
+  // The mount read owns its own cancellation, so a provider that unmounts (or
+  // whose session changes) mid-flight neither writes state afterwards nor lets
+  // a slow earlier response overwrite a newer one.
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const next = await load();
+        if (!cancelled) apply(next);
+      } catch (nextError) {
+        if (cancelled) return;
+        setLoadState("error");
+        setError(nextError.message || "Unable to load Tools & Equipment.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [enabled, load, apply]);
+
   const refresh = useCallback(async () => {
     if (!enabled) return { ok: true };
     try {
-      const [itemRows, assetRows, positionRows, assetEventRows, itemEventRows, movementRows, siteRows, peopleRows] =
-        await Promise.all([
-          fetchInventoryItems(accessToken), fetchEquipmentAssets(accessToken), fetchStockPositions(accessToken),
-          fetchEquipmentAssetEvents(accessToken), fetchInventoryItemEvents(accessToken), fetchStockMovements(accessToken),
-          fetchInventorySites(accessToken), fetchInventoryPeople(accessToken),
-        ]);
-      setItems((itemRows || []).map(mapItem));
-      setAssets((assetRows || []).map(mapAsset));
-      setPositions((positionRows || []).map(mapPosition));
-      setAssetEvents((assetEventRows || []).map(mapAssetEvent));
-      setItemEvents((itemEventRows || []).map(mapItemEvent));
-      setMovements((movementRows || []).map(mapMovement));
-      setSites((siteRows || []).map((row) => ({ id: row.id, siteName: row.site_name, location: row.location || "", county: row.county || "" })));
-      setPeople((peopleRows || []).map((row) => ({ id: row.id, fullName: row.full_name, isActive: row.is_active === true })));
-      setLoadState("ready"); setError(""); return { ok: true };
+      apply(await load());
+      return { ok: true };
     } catch (nextError) {
       setLoadState("error");
       setError(nextError.message || "Unable to load Tools & Equipment.");
       return { ok: false, error: nextError };
     }
-  }, [accessToken, enabled]);
-
-  useEffect(() => {
-    if (enabled) refresh();
-  }, [enabled, refresh]);
+  }, [enabled, load, apply]);
 
   // A provider that is switched off is not "loading" — it has nothing to load.
-  // Deriving this avoids a synchronous setState inside the effect above.
+  // Deriving this keeps the effect above free of a synchronous setState.
   const status = enabled ? loadState : "ready";
 
   // Never invent physical truth optimistically: re-read the canonical state
