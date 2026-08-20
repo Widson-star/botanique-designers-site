@@ -52,6 +52,10 @@ vi.mock("./context/MaintenanceProvider", () => ({
   default: ({ children }) => children,
 }));
 
+vi.mock("./context/InventoryProvider", () => ({
+  default: ({ children }) => children,
+}));
+
 vi.mock("./AdminLayout", () => ({
   default: ({ role, onSignOut }) => (
     <div>

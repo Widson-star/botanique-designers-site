@@ -30,6 +30,18 @@ describe("NAV_DOMAINS shape", () => {
   });
 });
 
+describe("Operations children", () => {
+  it("lists the four settled Operations destinations in order", () => {
+    const operations = NAV_DOMAINS.find((domain) => domain.id === "operations");
+    expect(operations.children.map((child) => child.label)).toEqual([
+      "Daily Site Record", "People", "Maintenance", "Tools & Equipment",
+    ]);
+    expect(operations.children.map((child) => child.to)).toEqual([
+      "/admin/daily-site-operations", "/admin/people", "/admin/maintenance", "/admin/tools-equipment",
+    ]);
+  });
+});
+
 describe("visibleDomains", () => {
   it("shows the Principal every domain", () => {
     const ids = visibleDomains(ROLES.OWNER).map((domain) => domain.id);
@@ -52,6 +64,14 @@ describe("visibleDomains", () => {
 });
 
 describe("resolveActive", () => {
+  it("resolves Operations for Tools & Equipment", () => {
+    expect(resolveActive("/admin/tools-equipment")).toEqual({
+      domainId: "operations",
+      to: "/admin/tools-equipment",
+    });
+  });
+
+
   it("resolves Finance for its landing and each Finance area", () => {
     expect(resolveActive("/admin/finance")).toEqual({ domainId: "finance", to: null });
     expect(resolveActive("/admin/finance/project-financials")).toEqual({ domainId: "finance", to: "/admin/finance/project-financials" });

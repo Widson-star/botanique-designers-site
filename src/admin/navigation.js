@@ -13,6 +13,7 @@ import { canSeeSiteCosts } from "./utils/siteCostCapabilities";
 import { canSeeFundRequests } from "./utils/fundRequestCapabilities";
 import { canSeeReports } from "./utils/reportCapabilities";
 import { canSeePeople } from "./utils/peopleCapabilities";
+import { canSeeInventory } from "./utils/inventoryCapabilities";
 
 export const NAV_DOMAINS = [
   { id: "dashboard", label: "Dashboard", to: "/admin", end: true, icon: "M3 10.4 10 4.2l7 6.2V16.6a1 1 0 0 1-1 1h-3.7v-4.9H7.7v4.9H4a1 1 0 0 1-1-1V10.4Z" },
@@ -29,6 +30,7 @@ export const NAV_DOMAINS = [
       { to: "/admin/daily-site-operations", label: "Daily Site Record", capability: canSeeDailySiteOperations },
       { to: "/admin/people", label: "People", capability: canSeePeople },
       { to: "/admin/maintenance", label: "Maintenance", capability: canSeeMaintenance },
+      { to: "/admin/tools-equipment", label: "Tools & Equipment", capability: canSeeInventory },
     ],
   },
   {
