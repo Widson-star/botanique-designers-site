@@ -41,10 +41,23 @@ describe("equipment lifecycle actions", () => {
     }
   });
 
-  it("offers the Principal Retire from every non-terminal status", () => {
-    for (const status of ["available", "issued", "under_repair", "lost"]) {
+  // Retirement is offered only where the live RPC actually permits it.
+  it("offers the Principal Retire from available, under_repair and lost", () => {
+    for (const status of ["available", "under_repair", "lost"]) {
       expect(equipmentActionsFor(status, ROLES.OWNER).map((action) => action.id)).toContain("retire");
     }
+  });
+
+  // retire_equipment_asset() raises "Return this equipment before retiring it"
+  // on an issued asset, so offering Retire there would invite a rejected call.
+  it("never offers Retire on an issued asset, not even to the Principal", () => {
+    expect(equipmentActionsFor("issued", ROLES.OWNER).map((action) => action.id)).not.toContain("retire");
+    expect(equipmentActionsFor("issued", ROLES.MANAGER).map((action) => action.id)).not.toContain("retire");
+  });
+
+  it("still offers every ordinary issued action to the Principal", () => {
+    expect(equipmentActionsFor("issued", ROLES.OWNER).map((action) => action.id))
+      .toEqual(["transfer", "return", "condition", "repair", "lost"]);
   });
 
   it("matches each status to its valid transitions", () => {

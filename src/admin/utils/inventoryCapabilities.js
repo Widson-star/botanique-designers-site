@@ -164,6 +164,9 @@ export function positionLabel(siteName) {
 // Which lifecycle actions the interface offers for a status. The database
 // refuses anything else regardless; this only decides what is shown, so an
 // operator is never invited into a call that will be rejected.
+// Retirement appears only where the database actually permits it: available,
+// under_repair and lost. It is not offered on issued (the RPC refuses it) or on
+// retired (terminal).
 export function equipmentActionsFor(status, role) {
   const principal = canUsePrincipalInventoryActions(role);
   if (!canManageInventory(role)) return [];
@@ -177,13 +180,16 @@ export function equipmentActionsFor(status, role) {
         ...(principal ? [{ id: "retire", label: "Retire", principal: true }] : []),
       ];
     case "issued":
+      // Retire is deliberately ABSENT here, for the Principal too. The live
+      // retire_equipment_asset RPC refuses an issued asset — "Return this
+      // equipment before retiring it" — so offering it would invite a call the
+      // database will reject. Equipment comes back first, then it is retired.
       return [
         { id: "transfer", label: "Transfer / hand over" },
         { id: "return", label: "Return to Botanique" },
         { id: "condition", label: "Update condition" },
         { id: "repair", label: "Send for repair" },
         { id: "lost", label: "Report lost" },
-        ...(principal ? [{ id: "retire", label: "Retire", principal: true }] : []),
       ];
     case "under_repair":
       return [

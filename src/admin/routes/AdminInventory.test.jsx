@@ -198,19 +198,30 @@ describe("equipment rows and lifecycle", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("offers the Principal Retire but never offers it to the Operations Manager", () => {
+  // BD-LM-002 is available, which is a status the RPC permits retiring from.
+  it("offers the Principal Retire on an available asset but never the Manager", () => {
     renderPage({ role: "owner", items, assets, sites, people });
-    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-LM-001" }));
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-LM-002" }));
     expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Retire" })).toBeInTheDocument();
     screen.getAllByRole("button", { name: "Close" })[0].click();
 
     renderPage({ role: "manager", items, assets, sites, people });
     const tables = screen.getAllByRole("table");
-    fireEvent.click(within(tables[tables.length - 1]).getByRole("button", { name: "Actions for BD-LM-001" }));
+    fireEvent.click(within(tables[tables.length - 1]).getByRole("button", { name: "Actions for BD-LM-002" }));
     const dialogs = screen.getAllByRole("dialog");
     const managerDialog = dialogs[dialogs.length - 1];
     expect(within(managerDialog).queryByRole("button", { name: "Retire" })).not.toBeInTheDocument();
-    expect(within(managerDialog).getByRole("button", { name: "Return to Botanique" })).toBeInTheDocument();
+    expect(within(managerDialog).getByRole("button", { name: "Issue to Site" })).toBeInTheDocument();
+  });
+
+  // BD-LM-001 is issued, and retire_equipment_asset() refuses that outright.
+  it("offers no Retire on an issued asset, and still offers its real actions", () => {
+    renderPage({ role: "owner", items, assets, sites, people });
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-LM-001" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: "Retire" })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Return to Botanique" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Transfer / hand over" })).toBeInTheDocument();
   });
 });
 

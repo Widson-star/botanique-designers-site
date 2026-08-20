@@ -86,6 +86,16 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   // all — RLS would return nothing, but there is no reason to ask.
   const enabled = Boolean(!isDemo && accessToken && role && canSeeInventory(role));
 
+  // Demo mode may DISPLAY the Tools & Equipment composition for visual review,
+  // but it has no Supabase behind it: VITE_SUPABASE_URL is empty, so any write
+  // would POST at the app's own origin. Every mutation is therefore refused
+  // before it can reach the REST client, with a controlled result the form
+  // shows like any other. Nothing fake is written to stand in for it.
+  const demoBlocked = useCallback(
+    () => ({ ok: false, error: "Tools & Equipment changes are unavailable in demo mode." }),
+    [],
+  );
+
   // One canonical read, kept free of React state so it can be awaited from
   // both the mount effect and a post-write refresh without either one
   // touching state synchronously.
@@ -154,6 +164,7 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   // after every successful write, so what the register shows is what the
   // database holds.
   const run = useCallback(async (operation, staleMessage) => {
+    if (isDemo) return demoBlocked();
     try {
       const result = await operation();
       await refresh();
@@ -167,13 +178,14 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
         stale: nextError.code === "40001",
       };
     }
-  }, [refresh]);
+  }, [refresh, isDemo, demoBlocked]);
 
   const siteName = useCallback((siteId) => sites.find((site) => site.id === siteId)?.siteName || "", [sites]);
   const personName = useCallback((personId) => people.find((person) => person.id === personId)?.fullName || "", [people]);
   const itemFor = useCallback((itemId) => items.find((item) => item.id === itemId) || null, [items]);
 
   const addItem = useCallback((values) => {
+    if (isDemo) return Promise.resolve(demoBlocked());
     const itemName = (values.itemName || "").trim();
     if (!itemName) return Promise.resolve({ ok: false, error: "An item name is required." });
     if (!(values.category || "").trim()) return Promise.resolve({ ok: false, error: "A category is required." });
@@ -181,25 +193,27 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       () => createInventoryItem(accessToken, { ...values, itemName, actorId: session?.user?.id }),
       "This catalogue item was changed elsewhere. Reload and try again.",
     );
-  }, [accessToken, run, session]);
+  }, [accessToken, run, session, isDemo, demoBlocked]);
 
   const deactivateItem = useCallback((itemId, version, reason) =>
-    run(() => deactivateInventoryItem(accessToken, itemId, version, reason),
-      "This catalogue item was changed elsewhere. Reload and try again."), [accessToken, run]);
+    isDemo ? Promise.resolve(demoBlocked()) : run(() => deactivateInventoryItem(accessToken, itemId, version, reason),
+      "This catalogue item was changed elsewhere. Reload and try again."), [accessToken, run, isDemo, demoBlocked]);
 
   const reactivateItem = useCallback((itemId, version, reason) =>
-    run(() => reactivateInventoryItem(accessToken, itemId, version, reason),
-      "This catalogue item was changed elsewhere. Reload and try again."), [accessToken, run]);
+    isDemo ? Promise.resolve(demoBlocked()) : run(() => reactivateInventoryItem(accessToken, itemId, version, reason),
+      "This catalogue item was changed elsewhere. Reload and try again."), [accessToken, run, isDemo, demoBlocked]);
 
   const registerAsset = useCallback((values) => {
+    if (isDemo) return Promise.resolve(demoBlocked());
     if (!values.itemId) return Promise.resolve({ ok: false, error: "Choose the equipment item." });
     if (!(values.assetCode || "").trim()) return Promise.resolve({ ok: false, error: "An asset code is required." });
     return run(() => registerEquipmentAsset(accessToken, values), "This equipment could not be registered.");
-  }, [accessToken, run]);
+  }, [accessToken, run, isDemo, demoBlocked]);
 
   const STALE_ASSET = "This equipment was changed elsewhere. Reload and try again.";
 
   const assetAction = useCallback((kind, assetId, version, values) => {
+    if (isDemo) return Promise.resolve(demoBlocked());
     switch (kind) {
       case "issue":
         if (!values.siteId) return Promise.resolve({ ok: false, error: "Choose the Site this equipment is going to." });
@@ -226,9 +240,10 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       default:
         return Promise.resolve({ ok: false, error: "Unknown equipment action." });
     }
-  }, [accessToken, run]);
+  }, [accessToken, run, isDemo, demoBlocked]);
 
   const recordStock = useCallback((kind, values) => {
+    if (isDemo) return Promise.resolve(demoBlocked());
     const quantity = Number(values.quantity);
     if (!values.itemId) return Promise.resolve({ ok: false, error: "Choose the stock item." });
     if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -253,7 +268,7 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       default:
         return Promise.resolve({ ok: false, error: "Unknown stock action." });
     }
-  }, [accessToken, run]);
+  }, [accessToken, run, isDemo, demoBlocked]);
 
   // Derived summary. Every number comes from canonical state — none is
   // invented to make the screen look populated.
@@ -272,13 +287,13 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
 
   const value = useMemo(() => ({
     items, assets, positions, movements, assetEvents, itemEvents, activity,
-    sites, people, summary, status, error, enabled, refresh,
+    sites, people, summary, status, error, enabled, canMutate: !isDemo, refresh,
     addItem, deactivateItem, reactivateItem, registerAsset, assetAction, recordStock,
     siteName, personName, itemFor,
     assetsForItem: (itemId) => assets.filter((asset) => asset.itemId === itemId),
     eventsForAsset: (assetId) => assetEvents.filter((event) => event.assetId === assetId),
   }), [items, assets, positions, movements, assetEvents, itemEvents, activity, sites, people,
-    summary, status, error, enabled, refresh, addItem, deactivateItem, reactivateItem,
+    summary, status, error, enabled, isDemo, refresh, addItem, deactivateItem, reactivateItem,
     registerAsset, assetAction, recordStock, siteName, personName, itemFor]);
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
