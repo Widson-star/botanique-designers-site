@@ -213,4 +213,48 @@ assert_sql "D-item-is-inactive" \
 assert_sql "D-no-asset-registered" \
   "select count(*)::text from public.equipment_assets where inventory_item_id='00000000-0000-0000-0000-0000009230c2'" "0"
 
-echo "Equipment registration/catalogue concurrency: both orderings confirmed — impossible asset/catalogue states cannot race into existence."
+# The Codex P1 names TWO concurrent counterparties: deactivate_inventory_item()
+# above, and "a PATCH that changes a fresh catalogue item's tracking_method".
+# The second half is the more dangerous one, because the resulting asset ->
+# stock-tracked-item association is then FROZEN by the history guard — once the
+# asset exists the item has history, so tracking_method can never be corrected,
+# by anyone. Without the catalogue-row lock both orderings below commit exactly
+# that state.
+
+# Registration commits first. The PATCH must wait, then fail because the newly
+# registered asset is now operational history.
+run_asset_race \
+  "inventory_asset_registration_holds_lock.sql" \
+  "inventory_item_tracking_patch_attempt.sql" \
+  "00000000-0000-0000-0000-0000009240d1" \
+  "RACE-ASSET-C" \
+  "E-registration-wins-vs-patch"
+if [[ "$asset_race_holder_status" -ne 0 || "$asset_race_attempt_status" -eq 0 ]]; then
+  echo "ASSET REGISTRATION RACE FAILED [E]: registration should commit and the tracking_method PATCH should be refused." >&2
+  cat "$race_dir/E-registration-wins-vs-patch.holder.out" "$race_dir/E-registration-wins-vs-patch.attempt.out" >&2
+  exit 1
+fi
+assert_sql "E-item-stays-asset-tracked" \
+  "select tracking_method from public.inventory_items where id='00000000-0000-0000-0000-0000009240d1'" "asset"
+assert_sql "E-one-asset-registered" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='00000000-0000-0000-0000-0000009240d1'" "1"
+
+# The PATCH commits first. Registration must wait, then fail against the
+# now-stock-tracked catalogue item.
+run_asset_race \
+  "inventory_item_tracking_patch_holds_lock.sql" \
+  "inventory_asset_registration_attempt.sql" \
+  "00000000-0000-0000-0000-0000009240d2" \
+  "RACE-ASSET-D" \
+  "F-patch-wins-vs-registration"
+if [[ "$asset_race_holder_status" -ne 0 || "$asset_race_attempt_status" -eq 0 ]]; then
+  echo "ASSET REGISTRATION RACE FAILED [F]: the PATCH should commit and registration should be refused." >&2
+  cat "$race_dir/F-patch-wins-vs-registration.holder.out" "$race_dir/F-patch-wins-vs-registration.attempt.out" >&2
+  exit 1
+fi
+assert_sql "F-item-is-stock-tracked" \
+  "select tracking_method from public.inventory_items where id='00000000-0000-0000-0000-0000009240d2'" "stock"
+assert_sql "F-no-asset-registered" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='00000000-0000-0000-0000-0000009240d2'" "0"
+
+echo "Equipment registration/catalogue concurrency: all four orderings confirmed — impossible asset/catalogue states cannot race into existence."
