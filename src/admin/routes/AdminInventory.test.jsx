@@ -16,6 +16,7 @@ function inventoryValue(overrides = {}) {
     movements: [], assetEvents: [], itemEvents: [],
     activity: overrides.activity || [],
     sites: overrides.sites || [],
+    selectableSites: overrides.selectableSites || overrides.sites || [],
     people: overrides.people || [],
     summary: {
       catalogueItems: items.filter((item) => item.isActive).length,
@@ -135,11 +136,14 @@ describe("role boundary", () => {
     expect(screen.queryByText("Catalogue items")).not.toBeInTheDocument();
   });
 
-  it("offers both operational roles the ordinary create actions", () => {
+  it("offers both operational roles the contextual create actions", () => {
     for (const role of ["owner", "manager"]) {
       const { unmount } = renderPage({ role });
-      expect(screen.getByRole("button", { name: "Add item" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Register equipment" })).toBeInTheDocument();
+      const register = screen.getByRole("region", { name: "Inventory register" });
+      // Equipment assets is the default tab, so its action shows first.
+      expect(within(register).getByRole("button", { name: "Register equipment" })).toBeInTheDocument();
+      fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+      expect(within(register).getByRole("button", { name: "Add item" })).toBeInTheDocument();
       unmount();
     }
   });
@@ -229,7 +233,9 @@ describe("quick-add catalogue", () => {
   it("only prefills the form and creates nothing until save", () => {
     const addItem = vi.fn().mockResolvedValue({ ok: true });
     renderPage({ extra: { addItem } });
-    fireEvent.click(screen.getByRole("button", { name: "Add item" }));
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    fireEvent.click(within(register).getByRole("button", { name: "Add item" }));
     fireEvent.click(screen.getByRole("button", { name: /Lawn Mower/ }));
     expect(screen.getByDisplayValue("Lawn Mower")).toBeInTheDocument();
     // The choice prefilled the form; nothing was written.
@@ -309,5 +315,88 @@ describe("status colour treatment", () => {
     expect(chip.className).not.toMatch(/amber|yellow|orange/);
     expect(chip.className).not.toMatch(/sky/);
     expect(chip.className).toMatch(/rose|stone/);
+  });
+});
+
+describe("authority header posture", () => {
+  it("carries no uppercase OPERATIONS eyebrow", () => {
+    renderPage();
+    expect(screen.queryByText("Operations")).not.toBeInTheDocument();
+    expect(screen.queryByText("OPERATIONS")).not.toBeInTheDocument();
+  });
+
+  // The approved screen has no page-level CTAs beside the heading.
+  it("puts no create button beside the heading", () => {
+    renderPage();
+    const heading = screen.getByRole("heading", { name: "Tools & Equipment", level: 1 });
+    const header = heading.closest("header");
+    expect(within(header).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("moves each create action into the register, per tab", () => {
+    const items = [
+      { id: "i1", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 },
+      { id: "i2", itemName: "Cement", category: "materials", trackingMethod: "stock", unitOfMeasure: "bag", isActive: true, version: 1 },
+    ];
+    renderPage({ items });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    expect(within(register).getByRole("button", { name: "Register equipment" })).toBeEnabled();
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    expect(within(register).getByRole("button", { name: "Add item" })).toBeInTheDocument();
+    fireEvent.click(within(register).getByRole("button", { name: "Stock positions" }));
+    expect(within(register).getByRole("button", { name: "Record stock" })).toBeEnabled();
+  });
+
+  // Never offer a primary control that can only dead-end.
+  it("disables Register equipment, with a reason, when no asset item exists", () => {
+    renderPage();
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    expect(within(register).getByRole("button", { name: "Register equipment" })).toBeDisabled();
+    expect(within(register).getByText("Add an equipment catalogue item first.")).toBeInTheDocument();
+  });
+
+  it("keeps View all on both panels even while they are empty", () => {
+    renderPage();
+    const stock = screen.getByRole("heading", { name: "Stock positions", level: 2 }).closest("section");
+    const recent = screen.getByRole("heading", { name: "Recent activity", level: 2 }).closest("section");
+    expect(within(stock).getByRole("button", { name: "View all" })).toBeInTheDocument();
+    expect(within(recent).getByRole("button", { name: "View all" })).toBeInTheDocument();
+
+    fireEvent.click(within(recent).getByRole("button", { name: "View all" }));
+    expect(screen.getByRole("button", { name: "History" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("uses the four authority pictogram semantics", () => {
+    const { container } = renderPage();
+    for (const glyph of ["catalogue", "circulation", "repair", "positions"]) {
+      expect(container.querySelector(`[data-pictogram="${glyph}"]`)).toBeTruthy();
+    }
+  });
+});
+
+describe("site selector", () => {
+  const items = [{ id: "i1", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  const sites = [
+    { id: "live", siteName: "Karen Residence" },
+    { id: "fixture", siteName: "Operations Hub Verification Fixture — PR44" },
+  ];
+
+  // The register must offer only what the provider deems operational; the
+  // fixture Site remains in `sites` for historical resolution.
+  it("offers only selectable Sites, not every Site that exists", () => {
+    renderPage({ items, sites, selectableSites: [sites[0]] });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Register equipment" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("option", { name: "Karen Residence" })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("option", { name: /Verification Fixture/ })).not.toBeInTheDocument();
+  });
+
+  it("uses a neutral asset-code example rather than a mower-specific one", () => {
+    renderPage({ items, sites, selectableSites: [sites[0]] });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Register equipment" }));
+    expect(screen.getByPlaceholderText("e.g. BD-EQP-001")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("e.g. BD-LM-001")).not.toBeInTheDocument();
   });
 });

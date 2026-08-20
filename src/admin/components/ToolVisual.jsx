@@ -1,18 +1,22 @@
 // Local equipment thumbnails for the Inventory register.
 //
-// The Founder approved the register including its equipment imagery, so these
-// are illustrations rather than line icons: each has a recognisable silhouette,
-// its own body/frame/wheel structure and several tones of shading, so a
-// generator reads as a generator and a drill as a drill at 40px.
+// Six of these are the Founder-approved product cut-outs taken from the
+// authority PNG itself and served from /public — the register should look like
+// the approved screen, not approximate it. The rest stay as local illustrations
+// until their own authority images exist.
 //
-// Local and inline on purpose — no remote URL, no stock-photo dependency, no
-// runtime image fetch, and nothing to go missing on a slow site connection.
-// Nothing here is persisted: Inventory V1 has no image column, and the mapping
-// is catalogue-name -> visual so the library can be expanded or replaced
-// without touching inventory truth.
+// EVERY visual falls back to its illustration if the image cannot be decoded,
+// so a missing or malformed asset degrades to a correct drawing instead of a
+// broken-image icon on the Founder's screen.
 //
-// Palette is deliberately restrained — Botanique green, slate and stone. No
-// amber anywhere, so a row of thumbnails stays quiet against the register.
+// Local only: no remote URL, no stock-photo dependency, no runtime fetch beyond
+// the app's own origin. Nothing is persisted — Inventory V1 has no image
+// column, and the mapping is catalogue-name -> visual so the library can be
+// expanded or replaced without touching inventory truth.
+//
+// Palette for the drawings is restrained — Botanique green, slate and stone.
+// No amber anywhere, so a row of thumbnails stays quiet against the register.
+import { useState } from "react";
 import { visualTypeForItem } from "../utils/toolVisuals";
 
 const G = "#3f6b52";        // Botanique green
@@ -203,7 +207,25 @@ const DRAWINGS = {
   ),
 };
 
-const SIZES = { sm: 30, md: 40, lg: 60 };
+// The six items visible in the approved authority, served locally.
+const AUTHORITY_IMAGES = {
+  generator: "/admin/inventory-tools/authority-generator.jpg",
+  drill: "/admin/inventory-tools/authority-drill.jpg",
+  wheelbarrow: "/admin/inventory-tools/authority-wheelbarrow.jpg",
+  brush_cutter: "/admin/inventory-tools/authority-brush-cutter.jpg",
+  hose: "/admin/inventory-tools/authority-hose-reel.jpg",
+  mower: "/admin/inventory-tools/authority-lawn-mower.jpg",
+};
+
+// Sizing is class-driven, not inline, so a caller can genuinely scale the
+// thumbnail down — a quick-add pill passing `!h-5 !w-5` now wins, which an
+// inline width/height would have silently defeated.
+const SIZE_CLASSES = {
+  xs: "h-6 w-6",      // quick-add pill
+  sm: "h-10 w-10",    // register / catalogue row
+  md: "h-12 w-12",
+  lg: "h-16 w-16",
+};
 
 /**
  * A catalogue item's thumbnail. `name` is the catalogue item name; the visual
@@ -211,24 +233,33 @@ const SIZES = { sm: 30, md: 40, lg: 60 };
  */
 export default function ToolVisual({ name, visual, size = "md", className = "" }) {
   const type = visual || visualTypeForItem(name);
-  const drawing = DRAWINGS[type] || DRAWINGS.generic;
-  const px = SIZES[size] || SIZES.md;
+  const [imageFailed, setImageFailed] = useState(false);
+  const source = AUTHORITY_IMAGES[type];
+  const useImage = Boolean(source) && !imageFailed;
+  const label = name ? `${name} thumbnail` : "Tool thumbnail";
+
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-stone-50 ${className}`}
-      style={{ width: px, height: px }}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-white ${SIZE_CLASSES[size] || SIZE_CLASSES.md} ${className}`}
       data-tool-visual={type}
+      data-visual-source={useImage ? "authority-image" : "illustration"}
     >
-      <svg
-        viewBox="0 0 36 36"
-        width={px - 4}
-        height={px - 4}
-        role="img"
-        aria-label={name ? `${name} thumbnail` : "Tool thumbnail"}
-        focusable="false"
-      >
-        {drawing}
-      </svg>
+      {useImage ? (
+        <img
+          src={source}
+          alt={label}
+          loading="lazy"
+          decoding="async"
+          onError={() => setImageFailed(true)}
+          className="h-full w-full object-contain p-0.5"
+        />
+      ) : (
+        <svg viewBox="0 0 36 36" className="h-full w-full p-0.5" role="img" aria-label={label} focusable="false">
+          {DRAWINGS[type] || DRAWINGS.generic}
+        </svg>
+      )}
     </span>
   );
 }
+
+export { AUTHORITY_IMAGES };

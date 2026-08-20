@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { InventoryContext } from "./inventory";
 import { canSeeInventory } from "../utils/inventoryCapabilities";
+import { selectableSitesFrom } from "../utils/inventorySites";
 import {
   createInventoryItem, deactivateInventoryItem, fetchEquipmentAssetEvents, fetchEquipmentAssets,
   fetchInventoryItemEvents, fetchInventoryItems, fetchInventoryPeople, fetchInventorySites,
+  fetchInventoryMaintenanceSites, fetchInventoryProjectSites,
   fetchStockMovements, fetchStockPositions, issueEquipmentAsset, reactivateInventoryItem,
   recordStockAdjustment, recordStockReceipt, recordStockTransfer, recordStockUsage,
   registerEquipmentAsset, reportEquipmentAssetLost, retireEquipmentAsset,
@@ -78,6 +80,8 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   const [movements, setMovements] = useState([]);
   const [sites, setSites] = useState([]);
   const [people, setPeople] = useState([]);
+  const [projectSites, setProjectSites] = useState([]);
+  const [maintenanceSites, setMaintenanceSites] = useState([]);
   const [loadState, setLoadState] = useState("loading");
   const [error, setError] = useState("");
 
@@ -100,11 +104,12 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   // both the mount effect and a post-write refresh without either one
   // touching state synchronously.
   const load = useCallback(async () => {
-    const [itemRows, assetRows, positionRows, assetEventRows, itemEventRows, movementRows, siteRows, peopleRows] =
+    const [itemRows, assetRows, positionRows, assetEventRows, itemEventRows, movementRows, siteRows, peopleRows, projectRows, maintenanceRows] =
       await Promise.all([
         fetchInventoryItems(accessToken), fetchEquipmentAssets(accessToken), fetchStockPositions(accessToken),
         fetchEquipmentAssetEvents(accessToken), fetchInventoryItemEvents(accessToken), fetchStockMovements(accessToken),
         fetchInventorySites(accessToken), fetchInventoryPeople(accessToken),
+        fetchInventoryProjectSites(accessToken), fetchInventoryMaintenanceSites(accessToken),
       ]);
     return {
       items: (itemRows || []).map(mapItem),
@@ -115,6 +120,8 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       movements: (movementRows || []).map(mapMovement),
       sites: (siteRows || []).map((row) => ({ id: row.id, siteName: row.site_name, location: row.location || "", county: row.county || "" })),
       people: (peopleRows || []).map((row) => ({ id: row.id, fullName: row.full_name, isActive: row.is_active === true })),
+      projectSites: (projectRows || []).map((row) => ({ id: row.id, siteId: row.site_id || "", status: row.status, archived: row.archived === true })),
+      maintenanceSites: (maintenanceRows || []).map((row) => ({ id: row.id, siteId: row.site_id || "", status: row.status })),
     };
   }, [accessToken]);
 
@@ -122,6 +129,7 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
     setItems(next.items); setAssets(next.assets); setPositions(next.positions);
     setAssetEvents(next.assetEvents); setItemEvents(next.itemEvents); setMovements(next.movements);
     setSites(next.sites); setPeople(next.people);
+    setProjectSites(next.projectSites); setMaintenanceSites(next.maintenanceSites);
     setLoadState("ready"); setError("");
   }, []);
 
@@ -270,6 +278,14 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
     }
   }, [accessToken, run, isDemo, demoBlocked]);
 
+  // Sites a NEW Inventory destination may offer. `sites` deliberately stays the
+  // FULL set so siteName() keeps resolving every historical reference; only the
+  // choice list is narrowed, and by operational state rather than by name.
+  const selectableSites = useMemo(
+    () => selectableSitesFrom({ sites, projects: projectSites, maintenanceRelationships: maintenanceSites, assets, positions }),
+    [sites, projectSites, maintenanceSites, assets, positions],
+  );
+
   // Derived summary. Every number comes from canonical state — none is
   // invented to make the screen look populated.
   const summary = useMemo(() => ({
@@ -287,12 +303,12 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
 
   const value = useMemo(() => ({
     items, assets, positions, movements, assetEvents, itemEvents, activity,
-    sites, people, summary, status, error, enabled, canMutate: !isDemo, refresh,
+    sites, selectableSites, people, summary, status, error, enabled, canMutate: !isDemo, refresh,
     addItem, deactivateItem, reactivateItem, registerAsset, assetAction, recordStock,
     siteName, personName, itemFor,
     assetsForItem: (itemId) => assets.filter((asset) => asset.itemId === itemId),
     eventsForAsset: (assetId) => assetEvents.filter((event) => event.assetId === assetId),
-  }), [items, assets, positions, movements, assetEvents, itemEvents, activity, sites, people,
+  }), [items, assets, positions, movements, assetEvents, itemEvents, activity, sites, selectableSites, people,
     summary, status, error, enabled, isDemo, refresh, addItem, deactivateItem, reactivateItem,
     registerAsset, assetAction, recordStock, siteName, personName, itemFor]);
 

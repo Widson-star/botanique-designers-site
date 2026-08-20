@@ -152,7 +152,7 @@ const primary = "inline-flex min-h-11 w-full items-center justify-center rounded
 export default function AdminInventory() {
   const { role } = useAdminData();
   const {
-    items, assets, positions, activity, sites, people, summary, status, error,
+    items, assets, positions, activity, selectableSites, people, summary, status, error,
     addItem, registerAsset, assetAction, recordStock, siteName, personName, itemFor,
   } = useInventory();
 
@@ -185,6 +185,27 @@ export default function AdminInventory() {
     [assetRows, page],
   );
 
+  // One quiet action per tab, beside the thing it acts on. Register equipment
+  // is disabled with a reason rather than opening a form that can only
+  // dead-end, because there is nothing to register equipment against yet.
+  const contextualAction = tab === "catalogue"
+    ? { label: "Add item", onClick: () => openSheet("addItem") }
+    : tab === "assets"
+      ? {
+        label: "Register equipment",
+        onClick: () => openSheet("registerAsset"),
+        disabled: assetItems.length === 0,
+        hint: assetItems.length === 0 ? "Add an equipment catalogue item first." : "",
+      }
+      : tab === "stock"
+        ? {
+          label: "Record stock",
+          onClick: () => openSheet("stock"),
+          disabled: stockItems.length === 0,
+          hint: stockItems.length === 0 ? "Add a quantity-stock catalogue item first." : "",
+        }
+        : null;
+
   if (!canSeeInventory(role)) {
     return (
       <section className="space-y-2">
@@ -215,18 +236,12 @@ export default function AdminInventory() {
 
   return (
     <section className="space-y-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-botanique-green">Operations</p>
-          <h1 className="mt-1 text-[28px] font-semibold leading-tight">Tools &amp; Equipment</h1>
-          <p className="mt-1 text-sm text-gray-600">Manage equipment assets and stock across all operational sites.</p>
-        </div>
-        {manage && (
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => openSheet("addItem")} className="inline-flex min-h-11 items-center justify-center rounded-lg border border-stone-300 px-4 text-sm font-semibold text-botanique-charcoal">Add item</button>
-            <button type="button" onClick={() => openSheet("registerAsset")} className="inline-flex min-h-11 items-center justify-center rounded-lg bg-botanique-green px-4 text-sm font-semibold text-white">Register equipment</button>
-          </div>
-        )}
+      {/* The authority has no uppercase domain eyebrow and no page-level CTAs
+          beside the heading — the actions live in the register, next to the
+          thing they act on. */}
+      <header className="min-w-0">
+        <h1 className="text-[28px] font-semibold leading-tight">Tools &amp; Equipment</h1>
+        <p className="mt-1 text-sm text-gray-600">Manage equipment assets and stock across all operational sites.</p>
       </header>
 
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
@@ -241,7 +256,21 @@ export default function AdminInventory() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <section aria-label="Inventory register" className="min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white">
           <div className="border-b border-stone-200 px-4 pt-4">
-            <h2 className="text-lg font-semibold">Inventory register</h2>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Inventory register</h2>
+              {manage && contextualAction && (
+                <button
+                  type="button"
+                  onClick={contextualAction.onClick}
+                  disabled={contextualAction.disabled}
+                  title={contextualAction.hint}
+                  className="inline-flex min-h-9 items-center rounded-lg border border-stone-300 px-3 text-xs font-semibold text-botanique-charcoal disabled:cursor-not-allowed disabled:opacity-50"
+                >{contextualAction.label}</button>
+              )}
+            </div>
+            {manage && contextualAction?.disabled && contextualAction.hint && (
+              <p className="mt-1 text-xs text-gray-500">{contextualAction.hint}</p>
+            )}
             <div className="mt-3 -mb-px flex gap-1 overflow-x-auto">
               {TABS.map((entry) => (
                 <button
@@ -394,7 +423,9 @@ export default function AdminInventory() {
           <section className="min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white">
             <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
               <h2 className="text-sm font-semibold">Stock positions</h2>
-              {positions.length > 0 && <button type="button" onClick={() => setTab("stock")} className="text-xs font-semibold text-botanique-green">View all</button>}
+              {/* Always offered, as the authority shows it: an empty panel still
+                  needs a way through to its tab. */}
+              <button type="button" onClick={() => setTab("stock")} className="text-xs font-semibold text-botanique-green">View all</button>
             </div>
             {positions.length === 0
               ? <p className="px-4 py-6 text-sm text-gray-500">No stock positions yet.</p>
@@ -424,7 +455,7 @@ export default function AdminInventory() {
           <section className="min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white">
             <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
               <h2 className="text-sm font-semibold">Recent activity</h2>
-              {activity.length > 0 && <button type="button" onClick={() => setTab("history")} className="text-xs font-semibold text-botanique-green">View all</button>}
+              <button type="button" onClick={() => setTab("history")} className="text-xs font-semibold text-botanique-green">View all</button>
             </div>
             {activity.length === 0
               ? <p className="px-4 py-6 text-sm text-gray-500">Activity appears here as you use the register.</p>
@@ -457,7 +488,7 @@ export default function AdminInventory() {
                 onClick={() => setForm({ itemName: choice.name, category: choice.category, trackingMethod: choice.trackingMethod, unitOfMeasure: choice.unitOfMeasure, notes: "" })}
                 className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-2.5 py-1 text-xs font-medium text-botanique-charcoal"
               >
-                <ToolVisual name={choice.name} size="sm" className="!h-5 !w-5 !border-0 !bg-transparent" />
+                <ToolVisual name={choice.name} size="xs" className="!border-0 !bg-transparent" />
                 {choice.name}
               </button>
             ))}
@@ -502,7 +533,7 @@ export default function AdminInventory() {
                   </select>
                 </label>
                 <label className="text-sm font-medium">Asset code
-                  <input value={form.assetCode || ""} onChange={(event) => setForm({ ...form, assetCode: event.target.value })} className={field} maxLength={64} placeholder="e.g. BD-LM-001" />
+                  <input value={form.assetCode || ""} onChange={(event) => setForm({ ...form, assetCode: event.target.value })} className={field} maxLength={64} placeholder="e.g. BD-EQP-001" />
                 </label>
                 <label className="text-sm font-medium">Condition
                   <select value={form.condition || "good"} onChange={(event) => setForm({ ...form, condition: event.target.value })} className={field}>
@@ -517,7 +548,7 @@ export default function AdminInventory() {
                 <label className="text-sm font-medium">Current Site (optional)
                   <select value={form.siteId || ""} onChange={(event) => setForm({ ...form, siteId: event.target.value })} className={field}>
                     <option value="">{BOTANIQUE_CUSTODY}</option>
-                    {sites.map((site) => <option key={site.id} value={site.id}>{site.siteName}</option>)}
+                    {selectableSites.map((site) => <option key={site.id} value={site.id}>{site.siteName}</option>)}
                   </select>
                 </label>
                 <label className="text-sm font-medium">Acquired on (optional)
@@ -554,7 +585,7 @@ export default function AdminInventory() {
 
           {sheet.action
             ? <AssetActionForm
-              action={sheet.action} asset={sheet.asset} sites={sites} people={people}
+              action={sheet.action} asset={sheet.asset} sites={selectableSites} people={people}
               form={form} setForm={setForm} formError={formError} saving={saving}
               onCancel={() => { setSheet({ ...sheet, action: null }); setFormError(""); }}
               onSubmit={() => submit(() => assetAction(sheet.action.id, sheet.asset.id, sheet.asset.version, form))}
@@ -579,7 +610,7 @@ export default function AdminInventory() {
           {stockItems.length === 0
             ? <p className="text-sm text-gray-600">Add a quantity-stock catalogue item first.</p>
             : <StockForm
-              items={stockItems} sites={sites} people={people} principal={principal}
+              items={stockItems} sites={selectableSites} people={people} principal={principal}
               form={form} setForm={setForm} formError={formError} saving={saving}
               onSubmit={() => submit(() => recordStock(form.mode, form))}
             />}
