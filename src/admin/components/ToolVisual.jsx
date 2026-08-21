@@ -207,9 +207,19 @@ const DRAWINGS = {
   ),
 };
 
-// The six items visible in the approved authority, served locally.
+// The items visible in the approved authority, served locally.
+//
+// GENERATOR IS DELIBERATELY ABSENT. The committed
+// public/admin/inventory-tools/authority-generator.jpg is truncated: it carries
+// no EOI marker (it ends a047ff64, not ffd9) and strict decoders reject it with
+// "premature end of data segment". Browsers do not reject it — they render the
+// partial scan, which is a flat grey rectangle, and because the decode does not
+// actually fail the onError fallback below never fires. So the only way the
+// Founder does not see a grey box labelled Generator is to not reference the
+// file. The generator DRAWING above is correct and stands in until a sound
+// image exists. The file is left untouched on disk; restoring the authority
+// image is re-adding the one line below, nothing more.
 const AUTHORITY_IMAGES = {
-  generator: "/admin/inventory-tools/authority-generator.jpg",
   drill: "/admin/inventory-tools/authority-drill.jpg",
   wheelbarrow: "/admin/inventory-tools/authority-wheelbarrow.jpg",
   brush_cutter: "/admin/inventory-tools/authority-brush-cutter.jpg",
@@ -248,7 +258,9 @@ export default function ToolVisual({ name, visual, size = "md", className = "" }
         <img
           src={source}
           alt={label}
-          loading="lazy"
+          // Deliberately NOT lazy: these are 24-40px thumbnails, so deferring
+          // them saves nothing, and inside a sheet the browser can decline to
+          // load them at all — which showed up as a register with no imagery.
           decoding="async"
           onError={() => setImageFailed(true)}
           className="h-full w-full object-contain p-0.5"

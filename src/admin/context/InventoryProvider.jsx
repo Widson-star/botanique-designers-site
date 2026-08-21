@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { InventoryContext } from "./inventory";
 import { canSeeInventory } from "../utils/inventoryCapabilities";
-import { selectableSitesFrom } from "../utils/inventorySites";
 import {
   createInventoryItem, deactivateInventoryItem, fetchEquipmentAssetEvents, fetchEquipmentAssets,
   fetchInventoryItemEvents, fetchInventoryItems, fetchInventoryPeople, fetchInventorySites,
-  fetchInventoryMaintenanceSites, fetchInventoryProjectSites,
   fetchStockMovements, fetchStockPositions, issueEquipmentAsset, reactivateInventoryItem,
   recordStockAdjustment, recordStockReceipt, recordStockTransfer, recordStockUsage,
   registerEquipmentAsset, reportEquipmentAssetLost, retireEquipmentAsset,
@@ -80,8 +78,6 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   const [movements, setMovements] = useState([]);
   const [sites, setSites] = useState([]);
   const [people, setPeople] = useState([]);
-  const [projectSites, setProjectSites] = useState([]);
-  const [maintenanceSites, setMaintenanceSites] = useState([]);
   const [loadState, setLoadState] = useState("loading");
   const [error, setError] = useState("");
 
@@ -104,12 +100,11 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   // both the mount effect and a post-write refresh without either one
   // touching state synchronously.
   const load = useCallback(async () => {
-    const [itemRows, assetRows, positionRows, assetEventRows, itemEventRows, movementRows, siteRows, peopleRows, projectRows, maintenanceRows] =
+    const [itemRows, assetRows, positionRows, assetEventRows, itemEventRows, movementRows, siteRows, peopleRows] =
       await Promise.all([
         fetchInventoryItems(accessToken), fetchEquipmentAssets(accessToken), fetchStockPositions(accessToken),
         fetchEquipmentAssetEvents(accessToken), fetchInventoryItemEvents(accessToken), fetchStockMovements(accessToken),
         fetchInventorySites(accessToken), fetchInventoryPeople(accessToken),
-        fetchInventoryProjectSites(accessToken), fetchInventoryMaintenanceSites(accessToken),
       ]);
     return {
       items: (itemRows || []).map(mapItem),
@@ -118,10 +113,15 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       assetEvents: (assetEventRows || []).map(mapAssetEvent),
       itemEvents: (itemEventRows || []).map(mapItemEvent),
       movements: (movementRows || []).map(mapMovement),
-      sites: (siteRows || []).map((row) => ({ id: row.id, siteName: row.site_name, location: row.location || "", county: row.county || "" })),
+      // Every Site, each carrying the server's eligibility verdict. The client
+      // never recomputes that verdict — there is one algorithm, and it lives
+      // where Inventory authority actually is.
+      sites: (siteRows || []).map((row) => ({
+        id: row.id, siteName: row.site_name,
+        location: row.location || "", county: row.county || "",
+        isSelectable: row.is_selectable === true,
+      })),
       people: (peopleRows || []).map((row) => ({ id: row.id, fullName: row.full_name, isActive: row.is_active === true })),
-      projectSites: (projectRows || []).map((row) => ({ id: row.id, siteId: row.site_id || "", status: row.status, archived: row.archived === true })),
-      maintenanceSites: (maintenanceRows || []).map((row) => ({ id: row.id, siteId: row.site_id || "", status: row.status })),
     };
   }, [accessToken]);
 
@@ -129,7 +129,6 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
     setItems(next.items); setAssets(next.assets); setPositions(next.positions);
     setAssetEvents(next.assetEvents); setItemEvents(next.itemEvents); setMovements(next.movements);
     setSites(next.sites); setPeople(next.people);
-    setProjectSites(next.projectSites); setMaintenanceSites(next.maintenanceSites);
     setLoadState("ready"); setError("");
   }, []);
 
@@ -280,10 +279,15 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
 
   // Sites a NEW Inventory destination may offer. `sites` deliberately stays the
   // FULL set so siteName() keeps resolving every historical reference; only the
-  // choice list is narrowed, and by operational state rather than by name.
+  // choice list narrows, and it narrows on the server's verdict rather than on
+  // anything reconstructed here.
+  //
+  // A Site already holding an asset or non-zero stock is selectable by rule (C)
+  // of the register, so an existing record can always be returned, transferred
+  // or moved out without the client needing to re-add its own current Site.
   const selectableSites = useMemo(
-    () => selectableSitesFrom({ sites, projects: projectSites, maintenanceRelationships: maintenanceSites, assets, positions }),
-    [sites, projectSites, maintenanceSites, assets, positions],
+    () => sites.filter((site) => site.isSelectable),
+    [sites],
   );
 
   // Derived summary. Every number comes from canonical state — none is
