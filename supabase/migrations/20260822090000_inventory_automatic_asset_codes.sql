@@ -47,17 +47,56 @@ create sequence if not exists public.equipment_asset_code_seq as bigint start wi
 -- equipment_assets_asset_code_unique on upper(trim(...)), so a stored 'eqp-0007'
 -- already occupies 'EQP-0007'. A case-sensitive scan would walk straight past it
 -- and hand the next registration a code the index then rejects.
-do $$
+--
+-- OVERFLOW. The suffix is parsed as NUMERIC, not bigint. asset_code allows 64
+-- characters, so a hand-entered 'EQP-99999999999999999999' is schema-valid and
+-- could genuinely be sitting in the data being migrated — and casting that
+-- straight to bigint raises "bigint out of range" and aborts the whole
+-- migration. numeric is arbitrary-precision, so the scan itself can never
+-- overflow; only values that actually fit in bigint are then considered.
+--
+-- Discarding the oversized ones is correct rather than merely convenient: the
+-- allocator is a bigint sequence, so it can never emit a number above
+-- 9223372036854775807, and a longer suffix therefore cannot collide with any
+-- code this system will ever generate. It stays in the table, keeps its
+-- identity, and simply has no bearing on where the counter starts.
+--
+-- (A pre-existing code at exactly bigint max would leave the sequence with
+-- nothing left to give and registration would fail loudly on the next attempt.
+-- That is the honest limit of a bigint allocator, not something to paper over.)
+--
+-- This lives in a function rather than inline so the initialisation that ships
+-- is the initialisation that gets tested, instead of a copy of it in a test
+-- file that can drift away from the real thing.
+create or replace function public.private_initialise_equipment_asset_code_seq()
+returns bigint
+language plpgsql
+volatile
+security definer
+set search_path = pg_catalog, public
+as $$
 declare
   highest bigint;
 begin
-  select coalesce(max((regexp_match(asset_code, '^EQP-([0-9]+)$', 'i'))[1]::bigint), 0)
+  select coalesce(max(suffix) filter (where suffix <= 9223372036854775807::numeric), 0)::bigint
     into highest
-  from public.equipment_assets
-  where asset_code ~* '^EQP-[0-9]+$';
+  from (
+    select (regexp_match(asset_code, '^EQP-([0-9]+)$', 'i'))[1]::numeric as suffix
+    from public.equipment_assets
+    where asset_code ~* '^EQP-[0-9]+$'
+  ) candidates;
 
   -- is_called = true means the NEXT nextval() returns highest + 1.
   perform setval('public.equipment_asset_code_seq', greatest(highest, 1), highest > 0);
+  return highest;
+end;
+$$;
+
+revoke execute on function public.private_initialise_equipment_asset_code_seq() from public, anon, authenticated;
+
+do $$
+begin
+  perform public.private_initialise_equipment_asset_code_seq();
 end;
 $$;
 

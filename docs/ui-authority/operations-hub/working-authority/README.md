@@ -1,9 +1,10 @@
-# Operations Hub — Working Authority (images 05–14)
+# Operations Hub — Working Authority (images 05–14, plus 16)
 
 Ten Founder-frozen composition screens, preserved on 9 August 2026. They **supplement** the four
 approved screens one directory up (`../01`–`../04`); they do not replace, supersede or retire any
 of them. Their numbering deliberately continues that sequence, so the programme now holds **14
-authority images in total**.
+authority images in total**, plus image `16` added on 21 August 2026 (see
+**Tools & Equipment authority hierarchy** below).
 
 ## Preservation rule — binding
 
@@ -29,6 +30,7 @@ Founder instruction naming that image.
 | `12-finance-overview-working-authority.png` | `b2316b187e274bae0e3dc8c58af3f46bcd01ad5a51af6073f6c7647669b796a8` |
 | `13-finance-children-working-authority.png` | `febbadedb1f9008cdf000147fb1e0afc001566c30a992293df0b6440fb829e26` |
 | `14-approvals-project-summary-working-authority.png` | `5f8be3e11b6d42695ac00d2c20106be42d75737499f4079de8e7a6f25353c725` |
+| `16-tools-equipment-inventory-working-authority.png` | `551c4ed34b8d8b71d6cd0ae39efa874f4f90485e59cf92899460ec96ecdc0c1a` |
 
 The transfer archive's own filename is **not** authoritative and must never be used to rename the
 product, the directory or any image. The individual filenames above are the authoritative names.
@@ -47,6 +49,40 @@ product, the directory or any image. The individual filenames above are the auth
 | `12` | Finance Overview: the five-area model, position summary, top expense categories, recent finance activity |
 | `13` | Finance children: Project Costs, Company Expenses, Staff Compensation, and Funding/Payments/Reconciliation — including the three-state approved → paid → reconciled truth model |
 | `14` | Approvals as one aggregated decision queue across request types, and the compact Project Summary |
+| `16` | **Tools & Equipment (standalone)** — the governing authority for that screen: KPI pictograms, Inventory register, Equipment assets tab, six-row density, product cut-outs, Stock positions rail, Recent activity rail, numbered pagination |
+
+## Tools & Equipment authority hierarchy
+
+`16-tools-equipment-inventory-working-authority.png` (1448 × 1086, SHA-256
+`551c4ed34b8d8b71d6cd0ae39efa874f4f90485e59cf92899460ec96ecdc0c1a`) is the **governing standalone
+Tools & Equipment authority**, approved by the Founder on 20 August 2026 and committed here on
+21 August 2026. Implement Tools & Equipment from image `16`.
+
+**For Tools & Equipment only, image `16` supersedes the Tools & Equipment portion of image `11`.**
+
+Image `11` is **not** deleted, **not** retired and **not** reduced in standing. It remains the
+frozen authority for **Maintenance**, which this tranche does not touch and does not change. Image
+`11` was a combined Maintenance + Tools & Equipment composition from 9 August 2026; image `16` is
+the later, standalone, Founder-approved Tools & Equipment screen. Where the two differ on Tools &
+Equipment, `16` wins. Where they concern Maintenance, `11` stands unchanged.
+
+### Settled semantic rules still override illustrative styling in `16`
+
+Image `16` is composition authority, not data or semantic authority. The following settled product
+decisions **override what the image happens to show**, and are not to be re-litigated from it:
+
+- **NO AMBER status treatment.** Image `16` renders the `Under repair` chip in amber. That is
+  illustrative styling. The settled treatment is the muted rose/stone family, enforced by the
+  passing regression `uses no amber and no sky treatment for under_repair`.
+- **Condition vocabulary remains `good` / `fair` / `damaged` / `unserviceable`.** Image `16` shows a
+  `Poor` condition. `Poor` is not a schema value and must not be added.
+- **Illustrative counts and rows are not production data.** The `86 / 27 / 3 / 14` KPI figures, the
+  sample asset rows, the stock quantities and the activity entries in `16` are sample content.
+  Production counts stay truthful and nothing from the image is ever seeded.
+
+The binary itself is **authority evidence and is never edited** to remove its amber chip or its
+`Poor` sample — the preservation rule above applies to `16` exactly as it does to `05`–`14`. The
+implementation carries the overrides; the image records what was approved.
 
 ## Authority status — read this before implementing from them
 
