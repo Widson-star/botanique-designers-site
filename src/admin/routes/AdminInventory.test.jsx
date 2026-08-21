@@ -699,3 +699,92 @@ describe("multi-asset handover", () => {
     expect(picker.getAttribute("min")).toBe(new Date().toLocaleDateString("en-CA"));
   });
 });
+
+describe("the companion selector is ordinary ISSUE only", () => {
+  const items = [{ id: "i1", itemName: "Secateurs", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  const sites = [{ id: "s1", siteName: "Kitisuru Residence House 0.8A" }, { id: "s2", siteName: "Alego Usonga" }];
+  const people = [{ id: "p1", fullName: "Kefa Nyamari Ochenge", isActive: true }, { id: "p2", fullName: "Lincoln Waweru", isActive: true }];
+  const asset = (id, code, status, siteId = "", custodian = "") => ({
+    id, itemId: "i1", assetCode: code, ownershipType: "owned", status, condition: "good",
+    currentSiteId: siteId, custodianPersonId: custodian, expectedReturnDate: "", version: 4,
+  });
+  const assets = [
+    asset("a1", "BD-TE-001", "issued", "s1", "p1"),
+    asset("a2", "BD-TE-002", "available"),
+    asset("a3", "BD-TE-006", "available"),
+  ];
+
+  const openAction = (code, actionLabel) => {
+    const table = screen.getByRole("table");
+    fireEvent.click(within(table).getByRole("button", { name: `Actions for ${code}` }));
+    fireEvent.click(screen.getByRole("button", { name: actionLabel }));
+    return screen.getByRole("dialog");
+  };
+
+  // A. Available asset, ordinary issue — the selector is offered.
+  it("offers companions when issuing an available asset", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openAction("BD-TE-002", "Issue to Site");
+    expect(within(dialog).getByText("Add another asset to this handover")).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("checkbox").length).toBeGreaterThan(0);
+  });
+
+  // B. Issued asset, transfer — the selector must NOT appear. Offering it here
+  // let the operator tick several tools, save, and believe the group had moved.
+  it("offers NO companions when transferring an issued asset", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openAction("BD-TE-001", "Transfer / hand over");
+    expect(within(dialog).queryByText("Add another asset to this handover")).not.toBeInTheDocument();
+    expect(within(dialog).queryAllByRole("checkbox")).toHaveLength(0);
+    // Still a real transfer form.
+    expect(within(dialog).getByLabelText(/Destination Site/)).toBeInTheDocument();
+  });
+
+  // Nor on any other action that reaches this form.
+  it.each([
+    ["BD-TE-001", "Return to Botanique"],
+    ["BD-TE-001", "Update condition"],
+    ["BD-TE-001", "Send for repair"],
+    ["BD-TE-001", "Report lost"],
+  ])("offers no companions for %s → %s", (code, label) => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openAction(code, label);
+    expect(within(dialog).queryByText("Add another asset to this handover")).not.toBeInTheDocument();
+    expect(within(dialog).queryAllByRole("checkbox")).toHaveLength(0);
+  });
+
+  // C. A transfer can never carry companions into the call.
+  it("submits a transfer as exactly one asset, never a group", async () => {
+    const assetAction = vi.fn(() => Promise.resolve({ ok: true }));
+    const issueAssets = vi.fn(() => Promise.resolve({ ok: true }));
+    renderPage({ items, assets, sites, selectableSites: sites, people, extra: { assetAction }, issueAssets });
+    const dialog = openAction("BD-TE-001", "Transfer / hand over");
+    fireEvent.change(within(dialog).getByLabelText(/Destination Site/), { target: { value: "s2" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Transfer / hand over" }));
+
+    await waitFor(() => expect(assetAction).toHaveBeenCalledTimes(1));
+    const [kind, assetId, version, values] = assetAction.mock.calls[0];
+    expect(kind).toBe("transfer");
+    expect(assetId).toBe("a1");
+    expect(version).toBe(4);
+    expect(values.siteId).toBe("s2");
+    // No group was ever assembled, and the bulk RPC was not used.
+    expect(values.alsoAssetIds || []).toEqual([]);
+    expect(issueAssets).not.toHaveBeenCalled();
+  });
+
+  // D. Ordinary single-asset reassignment still works, and identity is not a
+  // thing the form can change.
+  it("still performs an ordinary single transfer to a new Site and custodian", async () => {
+    const assetAction = vi.fn(() => Promise.resolve({ ok: true }));
+    renderPage({ items, assets, sites, selectableSites: sites, people, extra: { assetAction } });
+    const dialog = openAction("BD-TE-001", "Transfer / hand over");
+    fireEvent.change(within(dialog).getByLabelText(/Destination Site/), { target: { value: "s2" } });
+    fireEvent.change(within(dialog).getByLabelText(/Custodian/), { target: { value: "p2" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Transfer / hand over" }));
+
+    await waitFor(() => expect(assetAction).toHaveBeenCalledTimes(1));
+    expect(assetAction.mock.calls[0][3]).toMatchObject({ siteId: "s2", custodianPersonId: "p2" });
+    expect(within(dialog).queryByLabelText(/Asset code|Asset ID/)).not.toBeInTheDocument();
+  });
+});

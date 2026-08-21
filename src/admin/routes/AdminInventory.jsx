@@ -299,6 +299,9 @@ export default function AdminInventory() {
   // same operation and cannot drift apart.
   function submitAssetAction(asset, action) {
     if (action.id !== "issue") {
+      // Every other action is single-asset. alsoAssetIds is deliberately not
+      // read here AND cannot be populated there — the selector is issue-only —
+      // so the two halves agree rather than one silently discarding the other.
       return assetAction(action.id, asset.id, asset.version, form);
     }
     const chosen = form.alsoAssetIds || [];
@@ -870,6 +873,16 @@ function AssetActionForm({
 }) {
   const activePeople = people.filter((person) => person.isActive);
   const needsSite = action.id === "issue" || action.id === "transfer";
+
+  // MULTI-ASSET IS ORDINARY ISSUE ONLY — not needsSite, which is also true for
+  // transfer. Offering companions on a transfer let the operator tick several
+  // tools, save successfully, and believe the whole group had moved when only
+  // the original one did: a false success, which is worse than a refusal.
+  //
+  // This does not narrow reassignment. BD-TE-001 still moves Kefa/Kitisuru →
+  // Botanique custody → Lincoln/Alego → onward, one asset at a time, keeping
+  // its identity throughout. Only the bulk ISSUE workflow is multi-asset.
+  const allowsCompanions = action.id === "issue";
   const needsCondition = action.id === "condition" || action.id === "return_repair";
   const needsReason = action.id === "lost" || action.id === "retire";
 
@@ -892,7 +905,7 @@ function AssetActionForm({
   return (
     <div className="mt-4 border-t border-stone-200 pt-4">
       <p className="text-sm font-semibold">{action.label}</p>
-      {needsSite && companions.length > 0 && (
+      {allowsCompanions && companions.length > 0 && (
         <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
           <p className="text-xs font-semibold text-botanique-charcoal">Add another asset to this handover</p>
           <p className="mt-0.5 text-[11px] text-gray-500">

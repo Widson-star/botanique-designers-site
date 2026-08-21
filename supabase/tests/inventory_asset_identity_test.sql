@@ -522,4 +522,188 @@ begin
 end;
 $$;
 
+-- =====================================================================
+-- 14. The operational day is Africa/Nairobi, not the database's
+-- =====================================================================
+-- Supabase production runs TimeZone = UTC, so between 00:00 and 02:59 EAT the
+-- server's current_date is still the PREVIOUS Kenyan day. The helper must not
+-- inherit the session or server zone.
+--
+-- This exercises the REAL helper rather than grepping its definition, and it
+-- is deterministic without controlling the wall clock: Etc/GMT+12 (UTC-12) and
+-- Pacific/Kiritimati (UTC+14) are twenty-six hours apart, so their calendar
+-- dates ALWAYS differ. A helper that followed the session zone would therefore
+-- return two different answers; one that is genuinely pinned to Nairobi
+-- returns the same answer in both, and that answer can match at most one of
+-- their current_date values.
+do $$
+declare
+  under_utc date;
+  under_west date;
+  under_east date;
+  west_current date;
+  east_current date;
+  nairobi_now date;
+begin
+  set local timezone = 'UTC';
+  under_utc := public.private_inventory_operational_date();
+
+  set local timezone = 'Etc/GMT+12';
+  under_west := public.private_inventory_operational_date();
+  west_current := current_date;
+
+  set local timezone = 'Pacific/Kiritimati';
+  under_east := public.private_inventory_operational_date();
+  east_current := current_date;
+
+  set local timezone = 'UTC';
+
+  -- Same answer regardless of the session timezone.
+  perform pg_temp.assert_eq(under_west, under_utc,
+    '14. the operational date does not follow a UTC-12 session timezone');
+  perform pg_temp.assert_eq(under_east, under_utc,
+    '14. the operational date does not follow a UTC+14 session timezone');
+
+  -- Those two sessions genuinely disagree about the date, so this is a real
+  -- test and not two identical readings.
+  perform pg_temp.assert_true(west_current <> east_current,
+    '14. the two extreme session timezones do disagree about today');
+
+  -- And the answer is Nairobi's day, computed independently.
+  nairobi_now := (current_timestamp at time zone 'Africa/Nairobi')::date;
+  perform pg_temp.assert_eq(under_utc, nairobi_now,
+    '14. the operational date is the Africa/Nairobi calendar day');
+
+  -- Therefore it cannot be silently falling back to current_date in both.
+  perform pg_temp.assert_true(
+    under_utc <> west_current or under_utc <> east_current,
+    '14. the operational date differs from at least one session current_date');
+end;
+$$;
+
+-- The expected-return rule is measured in that Nairobi day.
+do $$
+declare
+  nairobi_today date := public.private_inventory_operational_date();
+  refused boolean := false;
+begin
+  perform public.private_assert_expected_return_date(nairobi_today);
+  perform public.private_assert_expected_return_date(nairobi_today + 1);
+  perform public.private_assert_expected_return_date(null);
+
+  begin
+    perform public.private_assert_expected_return_date(nairobi_today - 1);
+  exception when others then
+    refused := true;
+  end;
+  perform pg_temp.assert_true(refused,
+    '15. the day before the Nairobi operational day is refused');
+end;
+$$;
+
+-- =====================================================================
+-- 16. Principal correction cannot recreate a past expected return
+-- =====================================================================
+do $$
+declare
+  item_a uuid := '00000000-0000-0000-0000-0000009320b1';
+  site_a uuid;
+  tool public.equipment_assets;
+  today date := public.private_inventory_operational_date();
+  refused boolean;
+begin
+  select site_id into site_a from public.projects where id = '00000000-0000-0000-0000-0000009330c1';
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f1', true);
+  tool := public.register_equipment_asset(item_a);
+
+  -- The exact state this migration exists to prevent: issued, due back
+  -- yesterday — previously reachable through the correction path.
+  refused := false;
+  begin
+    perform public.correct_equipment_asset(
+      tool.id, tool.version, 'issued', 'good', site_a,
+      '00000000-0000-0000-0000-0000009310a1', today - 1, 'restating history'
+    );
+  exception when others then
+    refused := true;
+  end;
+  perform pg_temp.assert_true(refused,
+    '16. a Principal correction cannot set an expected return date in the past');
+  perform pg_temp.assert_eq(
+    (select status from public.equipment_assets where id = tool.id), 'available',
+    '16. the refused correction changed nothing');
+
+  -- Today is accepted where otherwise valid.
+  tool := public.correct_equipment_asset(
+    tool.id, tool.version, 'issued', 'good', site_a,
+    '00000000-0000-0000-0000-0000009310a1', today, 'correcting to today'
+  );
+  perform pg_temp.assert_eq(tool.expected_return_date, today,
+    '16. today is accepted by correction');
+
+  -- A future date is accepted.
+  tool := public.correct_equipment_asset(
+    tool.id, tool.version, 'issued', 'good', site_a,
+    '00000000-0000-0000-0000-0000009310a1', today + 14, 'correcting to a future date'
+  );
+  perform pg_temp.assert_eq(tool.expected_return_date, today + 14,
+    '16. a future date is accepted by correction');
+
+  -- NULL remains valid where the lifecycle permits it.
+  tool := public.correct_equipment_asset(
+    tool.id, tool.version, 'available', 'good', null, null, null, 'back to stores'
+  );
+  perform pg_temp.assert_true(tool.expected_return_date is null,
+    '16. a null expected return remains valid');
+  perform pg_temp.assert_eq(tool.status, 'available',
+    '16. ordinary correction behaviour is not weakened');
+
+  -- A reason is still required.
+  refused := false;
+  begin
+    perform public.correct_equipment_asset(
+      tool.id, tool.version, 'available', 'good', null, null, null, '   '
+    );
+  exception when others then
+    refused := true;
+  end;
+  perform pg_temp.assert_true(refused, '16. correction still requires a reason');
+end;
+$$;
+
+-- Correction stays Principal-only.
+do $$
+declare
+  item_a uuid := '00000000-0000-0000-0000-0000009320b1';
+  tool public.equipment_assets;
+  refused boolean;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f1', true);
+  tool := public.register_equipment_asset(item_a);
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f2', true);
+  refused := false;
+  begin
+    perform public.correct_equipment_asset(tool.id, tool.version, 'available', 'good', null, null, null, 'nope');
+  exception when others then refused := true; end;
+  perform pg_temp.assert_true(refused, '17. the Operations Manager cannot correct equipment');
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f3', true);
+  refused := false;
+  begin
+    perform public.correct_equipment_asset(tool.id, tool.version, 'available', 'good', null, null, null, 'nope');
+  exception when others then refused := true; end;
+  perform pg_temp.assert_true(refused, '17. Staff cannot correct equipment');
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000dead', true);
+  refused := false;
+  begin
+    perform public.correct_equipment_asset(tool.id, tool.version, 'available', 'good', null, null, null, 'nope');
+  exception when others then refused := true; end;
+  perform pg_temp.assert_true(refused, '17. an unauthorised caller cannot correct equipment');
+
+  perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f1', true);
+end;
+$$;
+
 rollback;

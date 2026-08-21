@@ -216,12 +216,37 @@ $$;
 -- demonstrates the failure this prevents: Secateurs issued 21 Aug 2026 with an
 -- expected return of 20 Aug 2026 — a tool due back before it left.
 --
--- Today is valid, the future is valid, the past is not. Deliberately a shared
--- helper rather than a CHECK constraint on the column: the existing production
--- row is already in the invalid state, and a table constraint would either
--- reject it retroactively or have to be added NOT VALID. This refuses the
--- invalid value at the moment somebody tries to SET one, and leaves recorded
--- history alone.
+-- WHAT DAY IS IT, FOR BOTANIQUE?
+--
+-- Not what day it is for the database. Supabase production runs with TimeZone
+-- = UTC, so between 00:00 and 02:59 EAT the server's current_date is still the
+-- PREVIOUS Kenyan calendar day. At 01:00 on 22 August in Nairobi the database
+-- believes it is 21 August, and a return date of 21 August — genuinely
+-- yesterday to everyone actually holding the tools — would be waved through as
+-- "today".
+--
+-- Botanique operates in Kenya, so the operational day is Africa/Nairobi, said
+-- once, explicitly, and never inherited from a session or server setting that
+-- can be changed underneath it.
+create or replace function public.private_inventory_operational_date()
+returns date
+language sql
+stable
+security definer
+set search_path = pg_catalog, public
+as $$
+  select (current_timestamp at time zone 'Africa/Nairobi')::date
+$$;
+
+revoke execute on function public.private_inventory_operational_date() from public, anon;
+grant execute on function public.private_inventory_operational_date() to authenticated;
+
+-- Today is valid, the future is valid, the past is not — measured in Nairobi.
+-- Deliberately a shared helper rather than a CHECK constraint on the column:
+-- the existing production row is already in the invalid state, and a table
+-- constraint would either reject it retroactively or have to be added NOT
+-- VALID. This refuses the invalid value at the moment somebody tries to SET
+-- one, and leaves recorded history alone.
 create or replace function public.private_assert_expected_return_date(target_date date)
 returns void
 language plpgsql
@@ -230,7 +255,7 @@ security definer
 set search_path = pg_catalog, public
 as $$
 begin
-  if target_date is not null and target_date < current_date then
+  if target_date is not null and target_date < public.private_inventory_operational_date() then
     raise exception 'An expected return date cannot be in the past'
       using errcode = '22023';
   end if;
@@ -439,6 +464,78 @@ begin
   returning * into existing;
 
   perform public.private_clear_equipment_asset_event();
+  return existing;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- 6. PRINCIPAL CORRECTION
+-- ---------------------------------------------------------------------------
+-- correct_equipment_asset is the Principal's exceptional, audited authority to
+-- restate an asset's history. It sets expected_return_date directly, and until
+-- now it did so with no date rule at all — so the very state this migration
+-- exists to prevent (issued, due back yesterday) could still be created
+-- through the correction path.
+--
+-- The SAME canonical helper is applied. Deliberately not a second date rule
+-- written out again here: two copies of a rule are two rules, and they drift.
+--
+-- Everything else about correction is unchanged — Principal-only, reason
+-- required, status and condition required, the controlled-correction marker
+-- that alone can reopen a retired asset, and the audited 'corrected' event.
+-- Redefined in full because a plpgsql body cannot be partially patched.
+--
+-- This does NOT touch any existing row. Production's Secateurs keeps its
+-- recorded expected return date; the rule applies to what somebody tries to
+-- SET from here on.
+create or replace function public.correct_equipment_asset(
+  target_asset_id uuid,
+  expected_version integer,
+  target_status text,
+  target_condition text,
+  target_site_id uuid,
+  target_custodian_person_id uuid,
+  target_expected_return_date date,
+  reason text
+)
+returns public.equipment_assets
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  existing public.equipment_assets;
+  clean_reason text := nullif(trim(coalesce(reason, '')), '');
+begin
+  if not public.private_inventory_is_principal() then
+    raise exception 'Only the Principal can correct equipment history' using errcode = '42501';
+  end if;
+  if clean_reason is null then
+    raise exception 'A reason is required to correct equipment' using errcode = '22023';
+  end if;
+  if target_status is null or target_condition is null then
+    raise exception 'A status and a condition are required' using errcode = '22023';
+  end if;
+  perform public.private_assert_inventory_site(target_site_id);
+  perform public.private_assert_inventory_person(target_custodian_person_id);
+  perform public.private_assert_expected_return_date(target_expected_return_date);
+
+  existing := public.private_lock_equipment_asset(target_asset_id, expected_version);
+
+  perform public.private_set_equipment_asset_event('corrected', clean_reason);
+  -- The correction marker is what allows a retired asset to be reopened at
+  -- all; the transition guard refuses every other path into a retired row.
+  perform set_config('app.inventory_asset_controlled_correction', 'true', true);
+  update public.equipment_assets
+  set status = target_status,
+      condition = target_condition,
+      current_site_id = target_site_id,
+      current_custodian_person_id = target_custodian_person_id,
+      expected_return_date = target_expected_return_date
+  where id = existing.id and version = expected_version
+  returning * into existing;
+  perform public.private_clear_equipment_asset_event();
+
   return existing;
 end;
 $$;
