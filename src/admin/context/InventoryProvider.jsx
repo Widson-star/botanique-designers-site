@@ -113,7 +113,14 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       assetEvents: (assetEventRows || []).map(mapAssetEvent),
       itemEvents: (itemEventRows || []).map(mapItemEvent),
       movements: (movementRows || []).map(mapMovement),
-      sites: (siteRows || []).map((row) => ({ id: row.id, siteName: row.site_name, location: row.location || "", county: row.county || "" })),
+      // Every Site, each carrying the server's eligibility verdict. The client
+      // never recomputes that verdict — there is one algorithm, and it lives
+      // where Inventory authority actually is.
+      sites: (siteRows || []).map((row) => ({
+        id: row.id, siteName: row.site_name,
+        location: row.location || "", county: row.county || "",
+        isSelectable: row.is_selectable === true,
+      })),
       people: (peopleRows || []).map((row) => ({ id: row.id, fullName: row.full_name, isActive: row.is_active === true })),
     };
   }, [accessToken]);
@@ -270,6 +277,19 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
     }
   }, [accessToken, run, isDemo, demoBlocked]);
 
+  // Sites a NEW Inventory destination may offer. `sites` deliberately stays the
+  // FULL set so siteName() keeps resolving every historical reference; only the
+  // choice list narrows, and it narrows on the server's verdict rather than on
+  // anything reconstructed here.
+  //
+  // A Site already holding an asset or non-zero stock is selectable by rule (C)
+  // of the register, so an existing record can always be returned, transferred
+  // or moved out without the client needing to re-add its own current Site.
+  const selectableSites = useMemo(
+    () => sites.filter((site) => site.isSelectable),
+    [sites],
+  );
+
   // Derived summary. Every number comes from canonical state — none is
   // invented to make the screen look populated.
   const summary = useMemo(() => ({
@@ -287,12 +307,12 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
 
   const value = useMemo(() => ({
     items, assets, positions, movements, assetEvents, itemEvents, activity,
-    sites, people, summary, status, error, enabled, canMutate: !isDemo, refresh,
+    sites, selectableSites, people, summary, status, error, enabled, canMutate: !isDemo, refresh,
     addItem, deactivateItem, reactivateItem, registerAsset, assetAction, recordStock,
     siteName, personName, itemFor,
     assetsForItem: (itemId) => assets.filter((asset) => asset.itemId === itemId),
     eventsForAsset: (assetId) => assetEvents.filter((event) => event.assetId === assetId),
-  }), [items, assets, positions, movements, assetEvents, itemEvents, activity, sites, people,
+  }), [items, assets, positions, movements, assetEvents, itemEvents, activity, sites, selectableSites, people,
     summary, status, error, enabled, isDemo, refresh, addItem, deactivateItem, reactivateItem,
     registerAsset, assetAction, recordStock, siteName, personName, itemFor]);
 

@@ -83,6 +83,76 @@ describe("InventoryProvider in demo mode", () => {
   });
 });
 
+describe("InventoryProvider Site eligibility", () => {
+  let fetchSpy;
+  const register = [
+    { id: "s-live", site_name: "Live Ongoing Property", location: "Karen", county: "Nairobi", is_selectable: true },
+    { id: "s-history", site_name: "Closed Historical Property", location: "", county: "", is_selectable: false },
+  ];
+
+  beforeEach(() => {
+    fetchSpy = vi.fn((url) => Promise.resolve({
+      ok: true,
+      text: () => Promise.resolve(JSON.stringify(String(url).includes("inventory_site_register") ? register : [])),
+    }));
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  // Eligibility must come from Inventory's own authority, not from another
+  // domain's manager-scoped table ACL.
+  it("reads Sites through the Inventory Site register RPC", async () => {
+    mount({ isDemo: false, role: "manager" });
+    await waitFor(() => {
+      const called = fetchSpy.mock.calls.map(([url]) => String(url));
+      expect(called.some((url) => url.includes("/rpc/inventory_site_register"))).toBe(true);
+    });
+  });
+
+  it("never derives eligibility from the ordinary projects or maintenance endpoints", async () => {
+    mount({ isDemo: false, role: "manager" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const called = fetchSpy.mock.calls.map(([url]) => String(url));
+    expect(called.some((url) => /\/rest\/v1\/projects/.test(url))).toBe(false);
+    expect(called.some((url) => /\/rest\/v1\/maintenance_relationships/.test(url))).toBe(false);
+    expect(called.some((url) => /\/rest\/v1\/sites/.test(url))).toBe(false);
+  });
+
+  it("offers only the selectable Sites for a new destination", async () => {
+    const get = mount({ isDemo: false, role: "manager" });
+    await waitFor(() => expect(get().selectableSites.length).toBe(1));
+    expect(get().selectableSites.map((site) => site.id)).toEqual(["s-live"]);
+  });
+
+  // A non-selectable Site must still resolve, or an old record loses its name.
+  it("keeps every Site for historical name resolution", async () => {
+    const get = mount({ isDemo: false, role: "manager" });
+    await waitFor(() => expect(get().sites.length).toBe(2));
+    expect(get().siteName("s-history")).toBe("Closed Historical Property");
+    expect(get().siteName("s-live")).toBe("Live Ongoing Property");
+    expect(get().selectableSites.map((site) => site.id)).not.toContain("s-history");
+  });
+
+  it("re-reads the register after a write, so eligibility follows the truth", async () => {
+    const get = mount({ isDemo: false, role: "manager" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    fetchSpy.mockClear();
+    await get().registerAsset({ itemId: "i1", assetCode: "BD-EQP-001" });
+    const called = fetchSpy.mock.calls.map(([url]) => String(url));
+    expect(called.some((url) => url.includes("/rpc/inventory_site_register"))).toBe(true);
+  });
+
+  it("touches no Finance endpoint", async () => {
+    mount({ isDemo: false, role: "owner" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const called = fetchSpy.mock.calls.map(([url]) => String(url));
+    for (const finance of ["internal_cost_claims", "fund_requests", "staff_compensations", "fund_releases"]) {
+      expect(called.some((url) => url.includes(finance))).toBe(false);
+    }
+  });
+});
+
 describe("InventoryProvider outside demo mode", () => {
   let fetchSpy;
 

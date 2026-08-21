@@ -91,10 +91,17 @@ export async function fetchStockPositions(accessToken) {
   return read(await rpc(accessToken, "inventory_stock_position", { target_item_id: null }));
 }
 
-// Reference truth for mapping current_site_id / current_custodian_person_id.
+// The Inventory-authorised Site read model. Deliberately an RPC and NOT a
+// direct /sites + /projects read: the projects SELECT policy is manager-scoped
+// (a manager sees only Projects they lead or are assigned to), while Inventory
+// grants the Operations Manager full portfolio authority. Deriving eligibility
+// client-side from that read hid valid operational Sites from the very person
+// who runs the portfolio.
+//
+// Returns EVERY Site — so historical names still resolve — each carrying
+// is_selectable for new Inventory destinations.
 export async function fetchInventorySites(accessToken) {
-  const params = new URLSearchParams({ select: "id,site_name,location,county", order: "site_name.asc" });
-  return read(await fetch(`${SUPABASE_URL}/rest/v1/sites?${params}`, { headers: headers(accessToken) }));
+  return read(await rpc(accessToken, "inventory_site_register", {}));
 }
 
 export async function fetchInventoryPeople(accessToken) {

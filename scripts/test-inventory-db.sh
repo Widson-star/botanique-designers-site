@@ -33,6 +33,10 @@ echo "Inventory / Tools & Equipment V1 — schema, authority, audit and stock tr
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_tools_equipment_v1_test.sql" >/dev/null
 echo "  foundation assertions passed"
 
+echo "Inventory / Tools & Equipment V1 — Site register authority:"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_site_register_test.sql" >/dev/null
+echo "  Site register assertions passed"
+
 echo "Inventory / Tools & Equipment V1 — control-review hardening:"
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_tools_equipment_v1_hardening_test.sql" >/dev/null
 echo "  hardening assertions passed"

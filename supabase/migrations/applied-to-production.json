@@ -298,10 +298,30 @@
     "comments inside their bodies, proved equivalent by comparing",
     "comment-stripped, whitespace-normalised definitions. Executable logic is the",
     "same. Postgres stores in-body comments in prosrc, so a byte-exact",
-    "re-derivation of those five from production will not match the file."
+    "re-derivation of those five from production will not match the file.",
+    "",
+    "INVENTORY SITE REGISTER, 21 August 2026.",
+    "inventory_site_register applied cleanly in one transaction (production",
+    "version 20260821073611). It adds one Inventory-owned SECURITY DEFINER read",
+    "model and nothing else — no table, no column, no seed, no delete.",
+    "",
+    "It closes a Codex P1: the Site selector derived eligibility from a",
+    "manager-scoped public.projects read, so an Operations Manager lost valid",
+    "operational Sites even though Inventory grants full portfolio authority.",
+    "Eligibility is now answered server-side with the definer's rights, gated on",
+    "private_inventory_role(), and returns Sites plus a boolean — never Project or",
+    "Maintenance rows, so no ordinary access is widened.",
+    "",
+    "Verified live against the active production Principal and Operations Manager",
+    "profiles: both receive the SAME 16-Site portfolio register and the SAME",
+    "is_selectable truth, six selectable. Archived intake/PR44 fixture Sites and",
+    "the archived duplicate Lugulu Residential Home remain readable history but",
+    "are not selectable — excluded operationally, not deleted. No Site was",
+    "deleted. Eligibility is ongoing Project OR active Maintenance OR existing",
+    "Inventory physical truth, the last derived from the movement ledger."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
-  "verifiedAt": "2026-08-20",
+  "verifiedAt": "2026-08-21",
   "applied": [
     { "name": "admin_foundation", "productionVersion": "20260614000100" },
     { "name": "operations_hub_phase_1a_lead_data_rls", "productionVersion": "20260726000100" },
@@ -351,6 +371,7 @@
     { "name": "maintenance_relationship_site_derivation", "productionVersion": "20260818191600" },
     { "name": "site_aware_daily_site_records", "productionVersion": "20260818191740" },
     { "name": "maintenance_execution_link_integrity", "productionVersion": "20260819100629" },
-    { "name": "inventory_tools_equipment_v1", "productionVersion": "20260820071700" }
+    { "name": "inventory_tools_equipment_v1", "productionVersion": "20260820071700" },
+    { "name": "inventory_site_register", "productionVersion": "20260821073611" }
   ]
 }
