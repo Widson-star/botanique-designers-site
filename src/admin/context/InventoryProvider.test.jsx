@@ -234,3 +234,140 @@ describe("automatic asset codes", () => {
     expect(result.error).toBe("Choose the equipment item.");
   });
 });
+
+describe("atomic multi-asset handover", () => {
+  let fetchSpy;
+  const calls = [];
+
+  beforeEach(() => {
+    calls.length = 0;
+    fetchSpy = vi.fn((url, options) => {
+      if (options?.body) calls.push({ url: String(url), body: JSON.parse(options.body) });
+      return Promise.resolve({ ok: true, text: () => Promise.resolve("[]") });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const ready = async () => {
+    const get = mount({ isDemo: false, role: "owner" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    calls.length = 0;
+    return get;
+  };
+
+  // ONE call, not N. Several browser calls could half-succeed.
+  it("hands several assets over in a single request", async () => {
+    const get = await ready();
+    const result = await get().issueAssets(
+      [{ assetId: "a1", version: 2 }, { assetId: "a2", version: 5 }],
+      { siteId: "s1", custodianPersonId: "p1" },
+    );
+    expect(result.ok).toBe(true);
+    const issues = calls.filter(({ url }) => url.includes("/rpc/issue_equipment_assets"));
+    expect(issues).toHaveLength(1);
+    expect(issues[0].body.target_assets).toEqual([
+      { asset_id: "a1", expected_version: 2 },
+      { asset_id: "a2", expected_version: 5 },
+    ]);
+    expect(issues[0].body.target_site_id).toBe("s1");
+    // The legacy single-asset RPC is not used as well.
+    expect(calls.some(({ url }) => url.includes("/rpc/issue_equipment_asset?"))).toBe(false);
+  });
+
+  // A single handover is an array of one, not a second code path.
+  it("routes a single-asset issue through the same canonical RPC", async () => {
+    const get = await ready();
+    await get().assetAction("issue", "a1", 3, { siteId: "s1" });
+    const issues = calls.filter(({ url }) => url.includes("/rpc/issue_equipment_assets"));
+    expect(issues).toHaveLength(1);
+    expect(issues[0].body.target_assets).toEqual([{ asset_id: "a1", expected_version: 3 }]);
+  });
+
+  it("refuses an empty handover without calling the database", async () => {
+    const get = await ready();
+    const result = await get().issueAssets([], { siteId: "s1" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("Choose at least one asset to hand over.");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("requires a destination Site", async () => {
+    const get = await ready();
+    const result = await get().issueAssets([{ assetId: "a1", version: 1 }], {});
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("Choose the Site this equipment is going to.");
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("expected return date", () => {
+  let fetchSpy;
+  const calls = [];
+
+  beforeEach(() => {
+    calls.length = 0;
+    fetchSpy = vi.fn((url, options) => {
+      if (options?.body) calls.push({ url: String(url), body: JSON.parse(options.body) });
+      return Promise.resolve({ ok: true, text: () => Promise.resolve("[]") });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  const dayOffset = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toLocaleDateString("en-CA");
+  };
+
+  const ready = async () => {
+    const get = mount({ isDemo: false, role: "owner" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    calls.length = 0;
+    return get;
+  };
+
+  it.each([[0, "today"], [1, "tomorrow"], [30, "next month"]])(
+    "accepts %s days away (%s)",
+    async (days) => {
+      const get = await ready();
+      const result = await get().issueAssets(
+        [{ assetId: "a1", version: 1 }],
+        { siteId: "s1", expectedReturnDate: dayOffset(days) },
+      );
+      expect(result.ok).toBe(true);
+    },
+  );
+
+  // Production shows why: Secateurs issued 21 Aug with an expected return of
+  // 20 Aug — due back before they left.
+  it("refuses a past date, before any request is made", async () => {
+    const get = await ready();
+    const result = await get().issueAssets(
+      [{ assetId: "a1", version: 1 }],
+      { siteId: "s1", expectedReturnDate: dayOffset(-1) },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("An expected return date cannot be in the past.");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("applies the same rule to a transfer", async () => {
+    const get = await ready();
+    const result = await get().assetAction("transfer", "a1", 1, {
+      siteId: "s1", expectedReturnDate: dayOffset(-3),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("An expected return date cannot be in the past.");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("leaves an empty expected return alone", async () => {
+    const get = await ready();
+    const result = await get().issueAssets([{ assetId: "a1", version: 1 }], { siteId: "s1" });
+    expect(result.ok).toBe(true);
+  });
+});

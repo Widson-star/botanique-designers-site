@@ -163,10 +163,17 @@ export async function registerEquipmentAsset(accessToken, values) {
   }));
 }
 
-export async function issueEquipmentAsset(accessToken, assetId, expectedVersion, values) {
-  return read(await rpc(accessToken, "issue_equipment_asset", {
-    target_asset_id: assetId,
-    expected_version: expectedVersion,
+// ONE issue behaviour. A handover of a single tool is an array of one, so the
+// single and multi paths cannot drift apart — and the whole group either lands
+// or none of it does, because the database does it in one transaction.
+//
+// `members` is [{ assetId, version }, ...].
+export async function issueEquipmentAssets(accessToken, members, values) {
+  return read(await rpc(accessToken, "issue_equipment_assets", {
+    target_assets: (members || []).map((member) => ({
+      asset_id: member.assetId,
+      expected_version: member.version,
+    })),
     target_site_id: values.siteId || null,
     target_custodian_person_id: values.custodianPersonId || null,
     target_expected_return_date: values.expectedReturnDate || null,
@@ -174,6 +181,10 @@ export async function issueEquipmentAsset(accessToken, assetId, expectedVersion,
     target_maintenance_visit_id: values.maintenanceVisitId || null,
     note: values.note || null,
   }));
+}
+
+export async function issueEquipmentAsset(accessToken, assetId, expectedVersion, values) {
+  return issueEquipmentAssets(accessToken, [{ assetId, version: expectedVersion }], values);
 }
 
 export async function transferEquipmentAsset(accessToken, assetId, expectedVersion, values) {

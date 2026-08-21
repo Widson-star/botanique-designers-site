@@ -55,20 +55,20 @@ begin
   -- 1. Registration succeeds with NO asset code supplied at all.
   first_asset := public.register_equipment_asset(item_a);
   perform pg_temp.assert_true(
-    first_asset.asset_code ~ '^EQP-[0-9]{4,}$',
-    format('1. a registration with no code supplied receives a generated EQP code (got %s)', first_asset.asset_code));
+    first_asset.asset_code ~ '^BD-TE-[0-9]{3,}$',
+    format('1. a registration with no code supplied receives a generated BD-TE code (got %s)', first_asset.asset_code));
 
   -- 2. A second registration receives a DIFFERENT, later code.
   second_asset := public.register_equipment_asset(item_a);
   perform pg_temp.assert_true(
-    second_asset.asset_code ~ '^EQP-[0-9]{4,}$',
-    '2. the second registration is also EQP-formatted');
+    second_asset.asset_code ~ '^BD-TE-[0-9]{3,}$',
+    '2. the second registration is also BD-TE-formatted');
   perform pg_temp.assert_true(
     second_asset.asset_code <> first_asset.asset_code,
     format('2. the second registration receives a different code (both were %s)', first_asset.asset_code));
   perform pg_temp.assert_true(
-    (regexp_match(second_asset.asset_code, '^EQP-([0-9]+)$'))[1]::bigint
-      > (regexp_match(first_asset.asset_code, '^EQP-([0-9]+)$'))[1]::bigint,
+    (regexp_match(second_asset.asset_code, '^BD-TE-([0-9]+)$'))[1]::bigint
+      > (regexp_match(first_asset.asset_code, '^BD-TE-([0-9]+)$'))[1]::bigint,
     '2. codes advance rather than being reused');
 
   -- 3. A STALE CLIENT CANNOT NAME AN ASSET. Supplying target_asset_code — the
@@ -78,7 +78,7 @@ begin
     third_asset.asset_code <> 'BD-EQP-001',
     '3. a manually supplied asset code does not become the asset identity');
   perform pg_temp.assert_true(
-    third_asset.asset_code ~ '^EQP-[0-9]{4,}$',
+    third_asset.asset_code ~ '^BD-TE-[0-9]{3,}$',
     format('3. the supplied code is ignored and a generated one is used instead (got %s)', third_asset.asset_code));
 
   -- 4. There is no manual escape hatch anywhere in the signature: the only
@@ -209,16 +209,16 @@ begin
 
   -- C. Ordinary registration still works, and continues ABOVE the existing code.
   generated := public.register_equipment_asset(item_a);
-  perform pg_temp.assert_eq(generated.asset_code, 'EQP-0008',
+  perform pg_temp.assert_eq(generated.asset_code, 'BD-TE-008',
     'C. the next generated code continues above the highest representable existing code');
-  perform pg_temp.assert_true(generated.asset_code ~ '^EQP-[0-9]{4,}$',
-    'C. the generated code is still EQP-formatted');
+  perform pg_temp.assert_true(generated.asset_code ~ '^BD-TE-[0-9]{3,}$',
+    'C. the generated code is still BD-TE-formatted');
 
   -- D. A manually supplied code remains inert even now.
   generated := public.register_equipment_asset(item_a, 'EQP-99999999999999999999');
   perform pg_temp.assert_true(generated.asset_code <> 'EQP-99999999999999999999',
     'D. a manually supplied code is still inert after initialisation');
-  perform pg_temp.assert_eq(generated.asset_code, 'EQP-0009',
+  perform pg_temp.assert_eq(generated.asset_code, 'BD-TE-009',
     'D. allocation simply continues, ignoring what the caller passed');
 
   -- E. Uniqueness holds across the whole table, case-insensitively.
@@ -230,26 +230,26 @@ begin
 end;
 $$;
 
--- With nothing in the EQP namespace at all, initialisation must report
+-- With nothing in either namespace at all, initialisation must report
 -- "nothing allocated yet" rather than a number, so the very first generated
 -- code on a fresh database is EQP-0001.
 --
--- Achieved by moving every code OUT of the namespace rather than by deleting
+-- Achieved by moving every code OUT of both namespaces rather than by deleting
 -- rows: equipment_asset_events references these assets, and the immutable
 -- event ledger is not something a test gets to tear down.
 do $$
 declare
   scratch bigint;
 begin
-  perform public.private_set_equipment_asset_event('corrected', 'clearing the EQP namespace');
+  perform public.private_set_equipment_asset_event('corrected', 'clearing the code namespaces');
   update public.equipment_assets set asset_code = 'LEGACY-' || left(id::text, 8);
   perform public.private_clear_equipment_asset_event();
 
   scratch := public.private_initialise_equipment_asset_code_seq();
   perform pg_temp.assert_eq(scratch, 0::bigint,
-    'F. an empty EQP namespace initialises to zero, so the first code is EQP-0001');
-  perform pg_temp.assert_eq(public.private_next_equipment_asset_code(), 'EQP-0001',
-    'F. the first code on a fresh database is EQP-0001');
+    'F. an empty namespace initialises to zero, so the first code is BD-TE-001');
+  perform pg_temp.assert_eq(public.private_next_equipment_asset_code(), 'BD-TE-001',
+    'F. the first code on a fresh database is BD-TE-001');
 end;
 $$;
 

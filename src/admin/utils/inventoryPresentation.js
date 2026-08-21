@@ -50,3 +50,59 @@ export function activityGlyphFor(entry) {
   const event = entry.eventType || entry.movementType;
   return GLYPH_FOR_EVENT[event] || GLYPH_FOR_KIND[entry.kind] || "cube";
 }
+
+// What a CATALOGUE row should say about the physical assets registered against
+// it.
+//
+// The catalogue is the TYPE ("Secateurs"); the Equipment assets register holds
+// the individual physical items (BD-TE-001, BD-TE-008, BD-TE-014). A catalogue
+// row that only ever offers "Register asset" hides the difference — it reads as
+// though nothing has been registered even when three tools exist.
+//
+// REGISTERED is not ISSUED. A registered asset keeps its identity whether it is
+// available, issued, under repair, lost or retired, so the count of registered
+// assets is the total and the statuses are a breakdown of it, never a
+// replacement for it.
+const ASSET_STATUS_SUMMARY_ORDER = [
+  ["availableCount", "available"],
+  ["issuedCount", "issued"],
+  ["underRepairCount", "under repair"],
+  ["lostCount", "lost"],
+  ["retiredCount", "retired"],
+];
+
+export function assetCountsForItem(assets) {
+  const rows = assets || [];
+  const countOf = (status) => rows.filter((asset) => asset.status === status).length;
+  return {
+    registeredCount: rows.length,
+    availableCount: countOf("available"),
+    issuedCount: countOf("issued"),
+    underRepairCount: countOf("under_repair"),
+    lostCount: countOf("lost"),
+    retiredCount: countOf("retired"),
+  };
+}
+
+// "0 registered" · "1 registered · 1 issued" · "4 registered · 2 available · 2 issued".
+//
+// Zero-valued fragments are dropped: a row saying "1 registered · 0 available ·
+// 1 issued · 0 under repair · 0 lost · 0 retired" is noise, and the reader has
+// to subtract to find the fact. The registered total is always kept, including
+// when it is zero, because "0 registered" is the answer to the question the row
+// is being asked.
+export function assetSummaryLine(counts) {
+  const parts = [`${counts.registeredCount} registered`];
+  if (counts.registeredCount > 0) {
+    for (const [key, label] of ASSET_STATUS_SUMMARY_ORDER) {
+      if (counts[key] > 0) parts.push(`${counts[key]} ${label}`);
+    }
+  }
+  return parts.join(" · ");
+}
+
+// The action always means "register another PHYSICAL INSTANCE of this type",
+// so the wording has to say which one it is.
+export function registerActionLabel(registeredCount) {
+  return registeredCount > 0 ? "Add another asset" : "Register first asset";
+}

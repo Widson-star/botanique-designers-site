@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { AdminDataContext } from "../context/adminData";
 import { InventoryContext } from "../context/inventory";
@@ -27,6 +27,7 @@ function inventoryValue(overrides = {}) {
     status: "ready", error: "", enabled: true,
     refresh: vi.fn(), addItem: vi.fn(), deactivateItem: vi.fn(), reactivateItem: vi.fn(),
     registerAsset: vi.fn(), assetAction: vi.fn(), recordStock: vi.fn(),
+    issueAssets: overrides.issueAssets || vi.fn(() => Promise.resolve({ ok: true })),
     siteName: (id) => (overrides.sites || []).find((site) => site.id === id)?.siteName || "",
     personName: (id) => (overrides.people || []).find((person) => person.id === id)?.fullName || "",
     itemFor: (id) => items.find((item) => item.id === id) || null,
@@ -470,7 +471,10 @@ describe("site selector", () => {
 function openRegisterAsset() {
   const register = screen.getByRole("region", { name: "Inventory register" });
   fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
-  fireEvent.click(within(register).getAllByRole("button", { name: "Register asset" })[0]);
+  // The wording now depends on whether any physical asset already exists.
+  const action = within(register).queryAllByRole("button", { name: "Register first asset" })[0]
+    || within(register).getAllByRole("button", { name: "Add another asset" })[0];
+  fireEvent.click(action);
 }
 
 describe("automatic asset codes", () => {
@@ -542,5 +546,156 @@ describe("custom catalogue items", () => {
     fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
     expect(within(register).getByText(/Site consumables/)).toBeInTheDocument();
     expect(within(register).queryByText(/site_consumables/)).not.toBeInTheDocument();
+  });
+});
+
+describe("catalogue makes registered assets clear", () => {
+  const items = [
+    { id: "i1", itemName: "Secateurs", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 },
+    { id: "i2", itemName: "Cement", category: "materials", trackingMethod: "stock", unitOfMeasure: "bag", isActive: true, version: 1 },
+  ];
+  const asset = (id, status) => ({
+    id, itemId: "i1", assetCode: `BD-TE-${id}`, ownershipType: "owned", status,
+    condition: "good", currentSiteId: "", custodianPersonId: "", expectedReturnDate: "", version: 1,
+  });
+
+  const catalogue = () => {
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    return register;
+  };
+
+  it("says 0 registered and offers Register first asset", () => {
+    renderPage({ items });
+    const register = catalogue();
+    expect(within(register).getByText("0 registered")).toBeInTheDocument();
+    expect(within(register).getByRole("button", { name: "Register first asset" })).toBeInTheDocument();
+    expect(within(register).queryByRole("button", { name: "Add another asset" })).not.toBeInTheDocument();
+  });
+
+  // Registered is not issued: a tool in somebody's custody is still registered.
+  it("says 1 registered · 1 issued and offers Add another asset", () => {
+    renderPage({ items, assets: [asset("001", "issued")] });
+    const register = catalogue();
+    expect(within(register).getByText("1 registered · 1 issued")).toBeInTheDocument();
+    expect(within(register).getByRole("button", { name: "Add another asset" })).toBeInTheDocument();
+    expect(within(register).queryByRole("button", { name: "Register first asset" })).not.toBeInTheDocument();
+  });
+
+  it("summarises a mixed set truthfully", () => {
+    renderPage({
+      items,
+      assets: [asset("001", "available"), asset("002", "available"), asset("003", "issued"), asset("004", "issued")],
+    });
+    expect(within(catalogue()).getByText("4 registered · 2 available · 2 issued")).toBeInTheDocument();
+  });
+
+  // A stock item is a quantity, not a set of individually identified things.
+  it("gives a stock item no asset-instance counts", () => {
+    const { container } = renderPage({ items, assets: [asset("001", "issued")] });
+    catalogue();
+    expect(container.querySelector('[data-asset-summary="i1"]')).toBeTruthy();
+    expect(container.querySelector('[data-asset-summary="i2"]')).toBeNull();
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    expect(within(register).getByRole("button", { name: "Record stock" })).toBeInTheDocument();
+  });
+});
+
+describe("multi-asset handover", () => {
+  const items = [{ id: "i1", itemName: "Secateurs", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  const sites = [{ id: "s1", siteName: "Kitisuru Residence House 0.8A" }];
+  const people = [{ id: "p1", fullName: "Kefa Nyamari Ochenge", isActive: true }];
+  const asset = (id, code, status) => ({
+    id, itemId: "i1", assetCode: code, ownershipType: "owned", status, condition: "good",
+    currentSiteId: "", custodianPersonId: "", expectedReturnDate: "", version: 2,
+  });
+  const assets = [
+    asset("a1", "BD-TE-001", "available"),
+    asset("a2", "BD-TE-002", "available"),
+    asset("a3", "BD-TE-006", "available"),
+    asset("a4", "BD-TE-010", "issued"),
+    asset("a5", "BD-TE-011", "under_repair"),
+  ];
+
+  const openIssue = () => {
+    const table = screen.getByRole("table");
+    fireEvent.click(within(table).getByRole("button", { name: "Actions for BD-TE-001" }));
+    fireEvent.click(screen.getByRole("button", { name: "Issue to Site" }));
+    return screen.getByRole("dialog");
+  };
+
+  it("offers the other AVAILABLE assets, named by item and asset ID", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openIssue();
+    expect(within(dialog).getByText("Add another asset to this handover")).toBeInTheDocument();
+    expect(within(dialog).getByText(/BD-TE-002/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/BD-TE-006/)).toBeInTheDocument();
+    // Item name AND asset id, so the operator can tell two Secateurs apart.
+    expect(within(dialog).getAllByText(/Secateurs/).length).toBeGreaterThan(0);
+  });
+
+  // Something already issued, under repair, lost or retired is not the
+  // Founder's to hand over.
+  it("never offers an unavailable asset", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openIssue();
+    expect(within(dialog).queryByText(/BD-TE-010/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/BD-TE-011/)).not.toBeInTheDocument();
+    // Nor the asset already being acted on.
+    const checkboxes = within(dialog).getAllByRole("checkbox");
+    expect(checkboxes).toHaveLength(2);
+  });
+
+  it("sends every chosen asset in ONE call with one shared context", async () => {
+    const issueAssets = vi.fn(() => Promise.resolve({ ok: true }));
+    renderPage({ items, assets, sites, selectableSites: sites, people, issueAssets });
+    const dialog = openIssue();
+
+    fireEvent.click(within(dialog).getAllByRole("checkbox")[0]);
+    fireEvent.change(within(dialog).getByLabelText(/Site this equipment is going to/), { target: { value: "s1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Custodian/), { target: { value: "p1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Issue to Site" }));
+
+    await waitFor(() => expect(issueAssets).toHaveBeenCalledTimes(1));
+    const [members, values] = issueAssets.mock.calls[0];
+    expect(members).toHaveLength(2);
+    expect(members.map((member) => member.assetId).sort()).toEqual(["a1", "a2"]);
+    expect(members.every((member) => member.version === 2)).toBe(true);
+    expect(values.siteId).toBe("s1");
+    expect(values.custodianPersonId).toBe("p1");
+  });
+
+  it("counts the whole handover for the operator", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openIssue();
+    fireEvent.click(within(dialog).getAllByRole("checkbox")[0]);
+    expect(within(dialog).getByText("2 assets in this handover")).toBeInTheDocument();
+  });
+
+  // A single handover is the same operation, not a second code path.
+  it("uses the same canonical call for one asset", async () => {
+    const issueAssets = vi.fn(() => Promise.resolve({ ok: true }));
+    renderPage({ items, assets, sites, selectableSites: sites, people, issueAssets });
+    const dialog = openIssue();
+    fireEvent.change(within(dialog).getByLabelText(/Site this equipment is going to/), { target: { value: "s1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Issue to Site" }));
+    await waitFor(() => expect(issueAssets).toHaveBeenCalledTimes(1));
+    expect(issueAssets.mock.calls[0][0]).toEqual([{ assetId: "a1", version: 2 }]);
+  });
+
+  // The register itself keeps the authority's posture.
+  it("adds no bulk toolbar or checkbox column to the register", () => {
+    const { container } = renderPage({ items, assets, sites, selectableSites: sites, people });
+    const table = screen.getByRole("table");
+    expect(within(table).queryAllByRole("checkbox")).toHaveLength(0);
+    expect(container.querySelectorAll("thead th")).toHaveLength(8);
+  });
+
+  it("will not offer a past expected return date", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openIssue();
+    const picker = within(dialog).getByLabelText(/Expected return/);
+    expect(picker.getAttribute("min")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(picker.getAttribute("min")).toBe(new Date().toLocaleDateString("en-CA"));
   });
 });
