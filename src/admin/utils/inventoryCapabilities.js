@@ -153,6 +153,34 @@ export function movementLabel(movementType) {
   return STOCK_MOVEMENT_LABELS[movementType] || movementType;
 }
 
+// Categories and units are free text stored as canonical normalised tokens
+// ("manual_tools", "cubic_metre"). That storage form must never reach the
+// screen: "manual_tools" is a database detail, and showing it makes the
+// taxonomy look like a fixed enum the operator has to match exactly.
+//
+// Deliberately NOT a lookup table. The taxonomy is extensible and a custom
+// category must not require a migration, so this derives the display form from
+// whatever token exists rather than recognising a closed list — an operator who
+// types "Site consumables" gets it back as "Site consumables", with no code
+// change and no new deployment.
+//
+// Sentence case, not title case: the authority reads "Power tools", not "Power
+// Tools", so only the first word is lifted and the rest keeps its own casing —
+// which also preserves a genuine proper noun in a custom category.
+export function displayToken(token) {
+  const words = String(token || "").replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!words) return "";
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export function categoryLabel(category) {
+  return displayToken(category);
+}
+
+export function unitLabel(unit) {
+  return displayToken(unit);
+}
+
 // A NULL Site is Botanique custody. It is never a fabricated store, warehouse
 // or depot, so it is named rather than blanked.
 export const BOTANIQUE_CUSTODY = "Botanique custody";

@@ -187,3 +187,50 @@ describe("InventoryProvider outside demo mode", () => {
     expect(fetchSpy).toHaveBeenCalled();
   });
 });
+
+describe("automatic asset codes", () => {
+  let fetchSpy;
+  const bodies = [];
+
+  beforeEach(() => {
+    bodies.length = 0;
+    fetchSpy = vi.fn((url, options) => {
+      if (options?.body) bodies.push({ url: String(url), body: JSON.parse(options.body) });
+      return Promise.resolve({ ok: true, text: () => Promise.resolve("[]") });
+    });
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+
+  // The operator must never choose a Botanique asset code, so the client must
+  // not demand one before it will call.
+  it("registers without an asset code", async () => {
+    const get = mount({ isDemo: false, role: "owner" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const result = await get().registerAsset({ itemId: "i1" });
+    expect(result.ok).toBe(true);
+    expect(bodies.some(({ url }) => url.includes("/rpc/register_equipment_asset"))).toBe(true);
+  });
+
+  // A browser must have no say in a Botanique asset's identity. Even when a
+  // caller passes one, it must not travel — the server ignores it too, but the
+  // client should not be the thing relying on that.
+  it("never sends an asset code, even when one is supplied", async () => {
+    const get = mount({ isDemo: false, role: "owner" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    await get().registerAsset({ itemId: "i1", assetCode: "BD-EQP-001" });
+    const call = bodies.find(({ url }) => url.includes("/rpc/register_equipment_asset"));
+    expect(call).toBeTruthy();
+    expect(call.body).not.toHaveProperty("target_asset_code");
+    expect(JSON.stringify(call.body)).not.toMatch(/BD-EQP-001/);
+  });
+
+  it("still refuses a registration with no catalogue item", async () => {
+    const get = mount({ isDemo: false, role: "owner" });
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const result = await get().registerAsset({ itemId: "" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe("Choose the equipment item.");
+  });
+});

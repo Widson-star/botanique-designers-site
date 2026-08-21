@@ -143,3 +143,24 @@ describe("sizing", () => {
     expect(container.firstChild.className).toContain("!h-5");
   });
 });
+
+describe("authority thumbnail treatment", () => {
+  // The authority's cut-outs FLOAT beside the item name. A bordered, filled,
+  // rounded tile around each one turns the register into a grid of framed
+  // chips competing with the text.
+  it("puts no frame, border or ground around a register thumbnail", () => {
+    const { container } = render(<ToolVisual name="Generator" size="sm" />);
+    const wrapper = container.firstChild;
+    expect(wrapper.className).not.toMatch(/border/);
+    expect(wrapper.className).not.toMatch(/bg-white/);
+    expect(wrapper.className).not.toMatch(/rounded/);
+    expect(wrapper.getAttribute("data-visual-framed")).toBe("false");
+  });
+
+  it("still offers a contained figure where the visual is the subject", () => {
+    const { container } = render(<ToolVisual name="Generator" size="lg" framed />);
+    const wrapper = container.firstChild;
+    expect(wrapper.className).toMatch(/border/);
+    expect(wrapper.getAttribute("data-visual-framed")).toBe("true");
+  });
+});

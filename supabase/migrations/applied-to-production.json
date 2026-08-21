@@ -318,7 +318,26 @@
     "the archived duplicate Lugulu Residential Home remain readable history but",
     "are not selectable — excluded operationally, not deleted. No Site was",
     "deleted. Eligibility is ongoing Project OR active Maintenance OR existing",
-    "Inventory physical truth, the last derived from the movement ledger."
+    "Inventory physical truth, the last derived from the movement ledger.",
+    "",
+    "AUTOMATIC INVENTORY ASSET CODES, 21 August 2026.",
+    "inventory_automatic_asset_codes applied cleanly in one transaction",
+    "(production version 20260821120725).",
+    "",
+    "Ordinary owner/manager registration now receives a database-issued internal",
+    "Botanique identity in the form EQP-0001. The operator never chooses it. A",
+    "manually supplied target_asset_code survives only for API compatibility with",
+    "a stale client and is inert — it cannot choose the identity.",
+    "",
+    "Allocation is a concurrency-safe PostgreSQL sequence, so two overlapping",
+    "registrations can never draw the same number. Initialisation parses legacy",
+    "EQP suffixes through NUMERIC and safely ignores any numeric suffix outside",
+    "bigint sequence range instead of crashing: such a code can never be generated",
+    "by a bigint sequence, so it cannot collide, and it keeps its own identity.",
+    "",
+    "Production held ZERO equipment assets before and after the apply, and the",
+    "sequence remained fresh at last_value=1, is_called=false. No catalogue item,",
+    "Site, Project, Maintenance, Finance or other operational row was rewritten."
   ],
   "project": "botanique-admin (wcacyfyxjiysfibuuhgf)",
   "verifiedAt": "2026-08-21",
@@ -372,6 +391,7 @@
     { "name": "site_aware_daily_site_records", "productionVersion": "20260818191740" },
     { "name": "maintenance_execution_link_integrity", "productionVersion": "20260819100629" },
     { "name": "inventory_tools_equipment_v1", "productionVersion": "20260820071700" },
-    { "name": "inventory_site_register", "productionVersion": "20260821073611" }
+    { "name": "inventory_site_register", "productionVersion": "20260821073611" },
+    { "name": "inventory_automatic_asset_codes", "productionVersion": "20260821120725" }
   ]
 }

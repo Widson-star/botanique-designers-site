@@ -41,6 +41,10 @@ echo "Inventory / Tools & Equipment V1 — control-review hardening:"
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_tools_equipment_v1_hardening_test.sql" >/dev/null
 echo "  hardening assertions passed"
 
+echo "Inventory / Tools & Equipment V1 — automatic asset codes:"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_asset_code_test.sql" >/dev/null
+echo "  asset-code allocation assertions passed"
+
 # =====================================================================
 # Negative-stock concurrency regression.
 # =====================================================================
@@ -262,3 +266,63 @@ assert_sql "F-no-asset-registered" \
   "select count(*)::text from public.equipment_assets where inventory_item_id='00000000-0000-0000-0000-0000009240d2'" "0"
 
 echo "Equipment registration/catalogue concurrency: all four orderings confirmed — impossible asset/catalogue states cannot race into existence."
+
+# =====================================================================
+# Automatic asset-code concurrency regression.
+# =====================================================================
+# Two LEGITIMATE registrations against the same catalogue item, overlapping in
+# time. Both must succeed and both must end up with distinct EQP identities.
+# Each session also supplies a manual code, so the same run proves a stale
+# client cannot name an asset.
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_asset_code_race_fixture.sql" >/dev/null
+
+echo "Automatic asset-code concurrency regression:"
+
+code_item="00000000-0000-0000-0000-0000009250e1"
+
+"${psql_cmd[@]}" -v "itemid=$code_item" \
+  -f "$repo_dir/supabase/tests/inventory_asset_code_holds_lock.sql" >"$race_dir/G.holder.out" 2>&1 &
+code_holder_pid=$!
+sleep 0.4
+
+code_attempt_start=$(date +%s)
+set +e
+"${psql_cmd[@]}" -v "itemid=$code_item" \
+  -f "$repo_dir/supabase/tests/inventory_asset_code_attempt.sql" >"$race_dir/G.attempt.out" 2>&1
+code_attempt_status=$?
+set -e
+code_attempt_elapsed=$(( $(date +%s) - code_attempt_start ))
+
+set +e
+wait "$code_holder_pid"
+code_holder_status=$?
+set -e
+
+echo "  [G-concurrent-codes] holder exit=$code_holder_status attempt exit=$code_attempt_status attempt elapsed=${code_attempt_elapsed}s"
+if [[ "$code_attempt_elapsed" -lt 1 ]]; then
+  echo "ASSET CODE RACE FAILED [G]: the second registration did not block, so this proves nothing about concurrent allocation." >&2
+  cat "$race_dir/G.holder.out" "$race_dir/G.attempt.out" >&2
+  exit 1
+fi
+# BOTH must succeed: these are two valid registrations, not a conflict.
+if [[ "$code_holder_status" -ne 0 || "$code_attempt_status" -ne 0 ]]; then
+  echo "ASSET CODE RACE FAILED [G]: both concurrent registrations should have succeeded." >&2
+  cat "$race_dir/G.holder.out" "$race_dir/G.attempt.out" >&2
+  exit 1
+fi
+
+assert_sql "G-both-assets-registered" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='$code_item'" "2"
+assert_sql "G-two-distinct-codes" \
+  "select count(distinct asset_code)::text from public.equipment_assets where inventory_item_id='$code_item'" "2"
+assert_sql "G-both-conform-to-EQP-format" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='$code_item' and asset_code ~ '^EQP-[0-9]{4,}\$'" "2"
+# Neither session's manually supplied code became an identity.
+assert_sql "G-no-manual-code-survived" \
+  "select count(*)::text from public.equipment_assets where asset_code in ('MANUAL-OVERRIDE-A','MANUAL-OVERRIDE-B')" "0"
+# And the older race scripts, which still pass RACE-ASSET-* codes, prove the
+# same thing across every earlier ordering.
+assert_sql "G-no-legacy-manual-code-anywhere" \
+  "select count(*)::text from public.equipment_assets where asset_code like 'RACE-ASSET-%'" "0"
+
+echo "Automatic asset-code concurrency: two competing registrations both succeeded with distinct generated identities, and no manually supplied code was honoured."

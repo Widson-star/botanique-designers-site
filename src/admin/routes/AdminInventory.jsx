@@ -4,14 +4,14 @@ import { useInventory } from "../context/inventory";
 import ToolVisual from "../components/ToolVisual";
 import InventoryPictogram from "../components/InventoryPictogram";
 import {
-  BOTANIQUE_CUSTODY, CATALOGUE_EVENT_LABELS, EQUIPMENT_CONDITIONS,
-  INVENTORY_SUMMARY_CARDS,
-  EQUIPMENT_CONDITION_CLASSES, EQUIPMENT_EVENT_LABELS, EQUIPMENT_STATUS_CLASSES,
+  BOTANIQUE_CUSTODY, EQUIPMENT_CONDITIONS, INVENTORY_SUMMARY_CARDS,
+  EQUIPMENT_CONDITION_CLASSES, EQUIPMENT_STATUS_CLASSES,
   OWNERSHIP_TYPES, canManageInventory, canSeeInventory, canUsePrincipalInventoryActions,
-  conditionLabel, equipmentActionsFor, movementLabel, ownershipLabel, positionLabel,
-  statusLabel, trackingMethodLabel,
+  categoryLabel, conditionLabel, equipmentActionsFor, ownershipLabel,
+  positionLabel, statusLabel, trackingMethodLabel, unitLabel,
 } from "../utils/inventoryCapabilities";
 import { QUICK_ADD_ITEMS } from "../utils/toolVisuals";
+import { activityGlyphFor, paginationSlots } from "../utils/inventoryPresentation";
 
 const TABS = [
   { id: "catalogue", label: "Catalogue" },
@@ -27,6 +27,11 @@ const showDate = (value) => value
 const showMoment = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value))
   : "—";
+
+// 24-hour, as the authority shows it (10:42, 09:18, 16:05).
+const showTime = (value) => value
+  ? new Intl.DateTimeFormat("en-KE", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value))
+  : "";
 
 const showQuantity = (value) => {
   const number = Number(value);
@@ -50,8 +55,9 @@ function SummaryCard({ label, value, support, glyph }) {
 }
 
 // A compact ellipsis affordance, as the authority uses, rather than a button
-// competing with the row's own content. Labelled by asset code so it is not
-// nine identical "More" controls to a screen reader.
+// competing with the row's own content. VERTICAL, as the authority draws it.
+// Labelled by asset code so it is not nine identical "More" controls to a
+// screen reader.
 function RowActions({ assetCode, onOpen }) {
   return (
     <button
@@ -60,25 +66,41 @@ function RowActions({ assetCode, onOpen }) {
       className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 hover:bg-stone-100 hover:text-botanique-charcoal"
     >
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false">
-        <circle cx="3" cy="8" r="1.4" fill="currentColor" />
+        <circle cx="8" cy="3" r="1.4" fill="currentColor" />
         <circle cx="8" cy="8" r="1.4" fill="currentColor" />
-        <circle cx="13" cy="8" r="1.4" fill="currentColor" />
+        <circle cx="8" cy="13" r="1.4" fill="currentColor" />
       </svg>
     </button>
   );
 }
 
-// One glyph per activity kind, so the stream is scannable without colour.
-function ActivityIcon({ kind }) {
-  const paths = {
-    equipment: "M3 8.5 6.5 12l6.5-8",
-    catalogue: "M2.5 5 8 2.5 13.5 5 8 7.5Zm0 3L8 10.5 13.5 8",
-    stock: "M2.5 12h11M5 12V6.5M8 12V4.5M11 12V7.5",
-  };
+// Activity pictograms, in the authority's larger pale-green circle at the same
+// weight as the summary cards — not the small grey 24px dots this previously
+// used, which read as disabled bullets rather than as events.
+//
+// The authority keys these on WHAT HAPPENED, not on which table it happened in:
+// it shows an out-arrow for "issued", a cube for "transferred", a spanner for
+// "sent for repair" and a down-arrow for "consumed". So the mapping below is by
+// event, with the row's kind only as the fallback. Event types the authority
+// does not literally show reuse the nearest of those four forms rather than
+// introducing a fifth drawing.
+const ACTIVITY_GLYPHS = {
+  // Leaving Botanique's hands.
+  out: <><path d="M11 4h5v5" /><path d="M16 4 9.5 10.5" /><path d="M14 12.4V15a1.6 1.6 0 0 1-1.6 1.6H5A1.6 1.6 0 0 1 3.4 15V7.6A1.6 1.6 0 0 1 5 6h2.6" /></>,
+  // Moving between places, or a catalogue item itself.
+  cube: <><path d="M10 3.2 16.4 6.8 10 10.4 3.6 6.8Z" /><path d="M3.6 6.8v6.4L10 16.8l6.4-3.6V6.8" /><path d="M10 10.4v6.4" /></>,
+  // In the workshop.
+  repair: <path d="M12.6 3.6a3.4 3.4 0 0 0-3.1 4.7L4.4 13.4a1.5 1.5 0 0 0 2.2 2.2l5.1-5.1a3.4 3.4 0 1 0 .9-6.9Z" />,
+  // Coming in, or being used up.
+  in: <><path d="M10 3.4v8.2" /><path d="M6.6 8.2 10 11.6l3.4-3.4" /><path d="M3.6 15.2h12.8" /></>,
+};
+
+function ActivityIcon({ entry }) {
+  const glyph = activityGlyphFor(entry);
   return (
-    <span aria-hidden="true" data-activity-icon={kind} className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-gray-500">
-      <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" focusable="false">
-        <path d={paths[kind] || paths.equipment} />
+    <span aria-hidden="true" data-activity-icon={glyph} data-activity-kind={entry.kind} className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eef3f0] text-botanique-green">
+      <svg viewBox="0 0 20 20" width="19" height="19" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" focusable="false">
+        {ACTIVITY_GLYPHS[glyph]}
       </svg>
     </span>
   );
@@ -115,32 +137,43 @@ function Sheet({ title, onClose, children }) {
   );
 }
 
-const PAGE_SIZE = 10;
+// The authority shows six asset rows to a desktop page.
+const PAGE_SIZE = 6;
 
 // Truthful count posture. With no records it says 0 — it never manufactures
-// pagination over an empty register — and the prev/next controls appear only
+// pagination over an empty register — and the numbered controls appear only
 // when there is genuinely more than one page.
 function RegisterFooter({ total, page, pageSize, onPage, noun }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : page * pageSize + 1;
   const to = Math.min(total, (page + 1) * pageSize);
+  const arrow = "inline-flex h-7 min-w-7 items-center justify-center rounded-md border border-stone-300 px-1.5 text-xs text-botanique-charcoal disabled:opacity-40";
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-stone-200 px-4 py-2.5">
       <p className="text-xs text-gray-500">
-        {total === 0 ? `0 ${noun}s` : `Showing ${from}–${to} of ${total} ${noun}${total === 1 ? "" : "s"}`}
+        {total === 0 ? `0 ${noun}s` : `Showing ${from} to ${to} of ${total} ${noun}${total === 1 ? "" : "s"}`}
       </p>
       {pages > 1 && (
-        <div className="flex items-center gap-1">
-          <button
-            type="button" disabled={page === 0} onClick={() => onPage(page - 1)}
-            className="min-h-8 rounded-lg border border-stone-300 px-2.5 text-xs font-semibold text-botanique-charcoal disabled:opacity-40"
-          >Previous</button>
-          <span className="px-1 text-xs tabular-nums text-gray-500">{page + 1} / {pages}</span>
-          <button
-            type="button" disabled={page >= pages - 1} onClick={() => onPage(page + 1)}
-            className="min-h-8 rounded-lg border border-stone-300 px-2.5 text-xs font-semibold text-botanique-charcoal disabled:opacity-40"
-          >Next</button>
-        </div>
+        <nav aria-label={`${noun} pages`} className="flex items-center gap-1">
+          <button type="button" disabled={page === 0} onClick={() => onPage(page - 1)} aria-label="Previous page" className={arrow}>
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5" /></svg>
+          </button>
+          {paginationSlots(page, pages).map((slot) => (slot.gap
+            ? <span key={slot.key} aria-hidden="true" className="px-1 text-xs text-gray-400">…</span>
+            : <button
+              key={slot.key} type="button" onClick={() => onPage(slot.page)}
+              aria-label={`Page ${slot.page + 1}`}
+              aria-current={slot.page === page ? "page" : undefined}
+              className={`inline-flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-xs tabular-nums ${
+                slot.page === page
+                  ? "bg-botanique-green font-semibold text-white"
+                  : "border border-stone-300 text-botanique-charcoal"}`}
+            >{slot.page + 1}</button>
+          ))}
+          <button type="button" disabled={page >= pages - 1} onClick={() => onPage(page + 1)} aria-label="Next page" className={arrow}>
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 3 5 5-5 5" /></svg>
+          </button>
+        </nav>
       )}
     </div>
   );
@@ -175,6 +208,13 @@ export default function AdminInventory() {
     return {
       ...asset,
       itemName: item?.itemName || "Unknown item",
+      // The authority's second line ("Petrol", "Bosch GBH 2-26 DRE", "25m").
+      // It is REAL stored truth or it is absent: the asset's own note first,
+      // since it describes this individual machine, then the catalogue item's.
+      // Nothing is derived from the name and nothing is invented, so an item
+      // recorded without a note simply has one line — which is correct, not a
+      // gap to fill.
+      description: (asset.notes || item?.notes || "").trim(),
       siteLabel: asset.currentSiteId ? siteName(asset.currentSiteId) : BOTANIQUE_CUSTODY,
       custodianLabel: asset.custodianPersonId ? personName(asset.custodianPersonId) : "",
     };
@@ -185,26 +225,21 @@ export default function AdminInventory() {
     [assetRows, page],
   );
 
-  // One quiet action per tab, beside the thing it acts on. Register equipment
-  // is disabled with a reason rather than opening a form that can only
-  // dead-end, because there is nothing to register equipment against yet.
+  // The authority's Equipment assets header carries NO action — just the title
+  // and the tabs. Registration is not a header verb there because it is not a
+  // header idea: an asset is always an instance OF a catalogue item, so it
+  // originates from that item's own row in Catalogue → Register asset, where
+  // the item is already known and the operator is never asked to pick it twice.
   const contextualAction = tab === "catalogue"
     ? { label: "Add item", onClick: () => openSheet("addItem") }
-    : tab === "assets"
+    : tab === "stock"
       ? {
-        label: "Register equipment",
-        onClick: () => openSheet("registerAsset"),
-        disabled: assetItems.length === 0,
-        hint: assetItems.length === 0 ? "Add an equipment catalogue item first." : "",
+        label: "Record stock",
+        onClick: () => openSheet("stock"),
+        disabled: stockItems.length === 0,
+        hint: stockItems.length === 0 ? "Add a quantity-stock catalogue item first." : "",
       }
-      : tab === "stock"
-        ? {
-          label: "Record stock",
-          onClick: () => openSheet("stock"),
-          disabled: stockItems.length === 0,
-          hint: stockItems.length === 0 ? "Add a quantity-stock catalogue item first." : "",
-        }
-        : null;
+      : null;
 
   if (!canSeeInventory(role)) {
     return (
@@ -219,7 +254,7 @@ export default function AdminInventory() {
     setFormError("");
     setSheet({ kind, ...context });
     if (kind === "addItem") setForm({ itemName: "", category: "", trackingMethod: "asset", unitOfMeasure: "unit", notes: "" });
-    else if (kind === "registerAsset") setForm({ itemId: context.itemId || "", assetCode: "", ownershipType: "owned", condition: "good", siteId: "", acquiredOn: "", notes: "" });
+    else if (kind === "registerAsset") setForm({ itemId: context.itemId || "", ownershipType: "owned", condition: "good", siteId: "", acquiredOn: "", notes: "" });
     else if (kind === "stock") setForm({ itemId: context.itemId || "", mode: "receipt", movementType: "received", quantity: "", fromSiteId: "", toSiteId: "", siteId: "", personId: "", reason: "", note: "" });
     else setForm({ siteId: "", custodianPersonId: "", expectedReturnDate: "", condition: "", reason: "", note: "" });
   }
@@ -253,7 +288,7 @@ export default function AdminInventory() {
       {status === "loading" && <p className="text-sm text-gray-600">Loading…</p>}
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p>}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
         <section aria-label="Inventory register" className="min-w-0 overflow-hidden rounded-xl border border-stone-200 bg-white">
           <div className="border-b border-stone-200 px-4 pt-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -286,40 +321,63 @@ export default function AdminInventory() {
               still truthfully reports 0 assets rather than hiding its count. */}
           {tab === "assets" && (assetRows.length === 0
             ? <>
-              <Empty>No equipment registered yet.</Empty>
+              <div className="px-4 py-10 text-center">
+                <p className="text-sm text-gray-500">No equipment registered yet.</p>
+                {/* A quiet route back rather than a permanent control the
+                    authority does not have: equipment is registered from the
+                    catalogue item it is an instance of. */}
+                {/* Named "Go to Catalogue", not "Catalogue": a second control
+                    with the tab's exact accessible name is ambiguous to anyone
+                    navigating by name. */}
+                {manage && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    Equipment is registered from its catalogue item.{" "}
+                    <button type="button" onClick={() => setTab("catalogue")} className="font-semibold text-botanique-green underline underline-offset-2">Go to Catalogue</button>
+                  </p>
+                )}
+              </div>
               <RegisterFooter total={0} page={0} pageSize={PAGE_SIZE} onPage={setPage} noun="asset" />
             </>
             : <>
               <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[860px] text-left text-sm">
-                  <thead className="bg-stone-50 text-[11px] uppercase tracking-wide text-gray-500">
+                <table className="w-full min-w-[720px] text-left text-sm">
+                  {/* Sentence case, not uppercase: the authority's headers read "Asset /
+                        item", "Current site". They also never wrap — the values
+                        below may run to three lines, but a wrapped header makes
+                        the whole row look broken. */}
+                  <thead className="bg-stone-50 text-xs text-gray-500 [&_th]:whitespace-nowrap">
                     <tr>
                       <th scope="col" className="px-4 py-2 font-medium">Asset / item</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Asset code</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Status</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Condition</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Current Site</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Custodian</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Expected return</th>
-                      <th scope="col" className="px-3 py-2 font-medium">Action</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Asset code</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Status</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Condition</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Current site</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Custodian</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Expected return</th>
+                      <th scope="col" className="px-2.5 py-2 font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
                     {pagedAssets.map((row) => (
                       <tr key={row.id}>
-                        <td className="px-4 py-2.5">
-                          <span className="flex items-center gap-2.5">
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-3">
                             <ToolVisual name={row.itemName} size="sm" />
-                            <span className="font-medium text-botanique-charcoal">{row.itemName}</span>
+                            <span className="min-w-0">
+                              <span className="block font-semibold text-botanique-charcoal">{row.itemName}</span>
+                              {row.description && <span className="mt-0.5 block text-xs text-gray-500">{row.description}</span>}
+                            </span>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums text-gray-700">{row.assetCode}</td>
-                        <td className="px-3 py-2.5"><StatusChip status={row.status} /></td>
-                        <td className="px-3 py-2.5"><ConditionChip condition={row.condition} /></td>
-                        <td className="px-3 py-2.5 text-gray-700">{row.siteLabel}</td>
-                        <td className="px-3 py-2.5 text-gray-700">{row.custodianLabel || "—"}</td>
-                        <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">{showDate(row.expectedReturnDate)}</td>
-                        <td className="px-3 py-2.5 text-right">
+                        <td className="whitespace-nowrap px-2.5 py-3 tabular-nums text-gray-700">{row.assetCode}</td>
+                        <td className="px-2.5 py-3"><StatusChip status={row.status} /></td>
+                        {/* Plain text, as the authority has it — a second chip
+                            beside Status turns every row into two badges. */}
+                        <td className="whitespace-nowrap px-2.5 py-3 text-gray-700">{conditionLabel(row.condition)}</td>
+                        <td className="px-2.5 py-3 text-gray-700">{row.siteLabel}</td>
+                        <td className="px-2.5 py-3 text-gray-700">{row.custodianLabel || "—"}</td>
+                        <td className="whitespace-nowrap px-2.5 py-3 text-gray-700">{showDate(row.expectedReturnDate)}</td>
+                        <td className="px-2 py-3 text-right">
                           <RowActions assetCode={row.assetCode} onOpen={() => openSheet("asset", { asset: row })} />
                         </td>
                       </tr>
@@ -334,7 +392,8 @@ export default function AdminInventory() {
                     <div className="flex items-start gap-3">
                       <ToolVisual name={row.itemName} size="md" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-botanique-charcoal">{row.itemName}</p>
+                        <p className="truncate font-semibold text-botanique-charcoal">{row.itemName}</p>
+                        {row.description && <p className="truncate text-xs text-gray-500">{row.description}</p>}
                         <p className="mt-0.5 text-xs tabular-nums text-gray-500">{row.assetCode}</p>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           <StatusChip status={row.status} />
@@ -365,10 +424,11 @@ export default function AdminInventory() {
                 <li key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                   <ToolVisual name={item.itemName} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-botanique-charcoal">{item.itemName}</p>
+                    <p className="truncate font-semibold text-botanique-charcoal">{item.itemName}</p>
+                    {item.notes && <p className="truncate text-xs text-gray-500">{item.notes}</p>}
                     <p className="mt-0.5 text-xs text-gray-500">
-                      {item.category.replace(/_/g, " ")} · {trackingMethodLabel(item.trackingMethod)}
-                      {item.trackingMethod === "stock" ? ` · ${item.unitOfMeasure.replace(/_/g, " ")}` : ""}
+                      {categoryLabel(item.category)} · {trackingMethodLabel(item.trackingMethod)}
+                      {item.trackingMethod === "stock" ? ` · ${unitLabel(item.unitOfMeasure)}` : ""}
                     </p>
                   </div>
                   {!item.isActive && <Chip className="bg-stone-100 text-gray-600">Inactive</Chip>}
@@ -406,10 +466,10 @@ export default function AdminInventory() {
               {activity.map((entry) => {
                 const detail = activityDetail(entry, { assets, itemFor, siteName, personName });
                 return (
-                  <li key={`${entry.kind}-${entry.id}`} className="flex gap-2.5 px-4 py-3">
-                    <ActivityIcon kind={entry.kind} />
+                  <li key={`${entry.kind}-${entry.id}`} className="flex gap-3 px-4 py-3">
+                    <ActivityIcon entry={entry} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
+                      <p className="text-sm font-semibold text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
                       {detail && <p className="mt-0.5 text-xs text-gray-500">{detail}</p>}
                       <p className="mt-0.5 text-[11px] text-gray-400">{showMoment(entry.occurredAt)}{entry.reason ? ` · ${entry.reason}` : ""}</p>
                     </div>
@@ -427,28 +487,41 @@ export default function AdminInventory() {
                   needs a way through to its tab. */}
               <button type="button" onClick={() => setTab("stock")} className="text-xs font-semibold text-botanique-green">View all</button>
             </div>
+            {/* A four-column table, as the authority has it — and deliberately
+                WITHOUT thumbnails. This rail answers "how much, and where",
+                and a column of product cut-outs beside five short rows crowds
+                the quantity, which is the number the reader came for. The
+                cut-outs belong in the register, where the subject is the
+                individual machine. */}
             {positions.length === 0
               ? <p className="px-4 py-6 text-sm text-gray-500">No stock positions yet.</p>
               : <>
-                <div className="grid grid-cols-[1fr_auto] gap-2 border-b border-stone-100 px-4 py-1.5 text-[10px] uppercase tracking-wide text-gray-400">
-                  <span>Item · Site / location</span>
-                  <span className="text-right">Unit · Qty</span>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-stone-50 text-[11px] font-medium text-gray-500">
+                    <tr>
+                      <th scope="col" className="px-4 py-2 font-medium">Item</th>
+                      <th scope="col" className="px-2 py-2 font-medium">Site / location</th>
+                      <th scope="col" className="px-2 py-2 font-medium">Unit</th>
+                      <th scope="col" className="px-4 py-2 text-right font-medium">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {positions.slice(0, 5).map((position) => (
+                      <tr key={`panel-${position.itemId}-${position.siteId || "custody"}`}>
+                        <td className="px-4 py-2.5 text-botanique-charcoal">{position.itemName}</td>
+                        <td className="px-2 py-2.5 text-gray-600">{positionLabel(position.siteName)}</td>
+                        <td className="px-2 py-2.5 text-gray-600">{unitLabel(position.unitOfMeasure)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-botanique-charcoal">{showQuantity(position.quantity)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="flex items-center justify-between border-t border-stone-200 px-4 py-2.5">
+                  <p className="text-xs text-gray-500">
+                    Showing 1 to {Math.min(5, positions.length)} of {positions.length} stock item{positions.length === 1 ? "" : "s"}
+                  </p>
+                  <button type="button" onClick={() => setTab("stock")} className="text-xs font-semibold text-botanique-green">View all</button>
                 </div>
-                <ul className="divide-y divide-stone-100">
-                  {positions.slice(0, 5).map((position) => (
-                    <li key={`panel-${position.itemId}-${position.siteId || "custody"}`} className="flex items-center gap-2.5 px-4 py-2.5">
-                      <ToolVisual name={position.itemName} size="sm" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-botanique-charcoal">{position.itemName}</p>
-                        <p className="truncate text-xs text-gray-500">{positionLabel(position.siteName)}</p>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-sm font-semibold tabular-nums text-botanique-charcoal">{showQuantity(position.quantity)}</p>
-                        <p className="text-[11px] text-gray-500">{unitLabel(position.unitOfMeasure)}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
               </>}
           </section>
 
@@ -459,16 +532,20 @@ export default function AdminInventory() {
             </div>
             {activity.length === 0
               ? <p className="px-4 py-6 text-sm text-gray-500">Activity appears here as you use the register.</p>
-              : <ul className="divide-y divide-stone-100">
-                {activity.slice(0, 6).map((entry) => {
+              : <ul>
+                {activity.slice(0, 4).map((entry) => {
                   const detail = activityDetail(entry, { assets, itemFor, siteName, personName });
                   return (
-                    <li key={`recent-${entry.kind}-${entry.id}`} className="flex gap-2.5 px-4 py-2.5">
-                      <ActivityIcon kind={entry.kind} />
+                    <li key={`recent-${entry.kind}-${entry.id}`} className="flex items-start gap-3 px-4 py-3">
+                      <ActivityIcon entry={entry} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
+                        <p className="truncate text-sm font-semibold text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
                         {detail && <p className="truncate text-xs text-gray-500">{detail}</p>}
-                        <p className="mt-0.5 text-[11px] text-gray-400">{showMoment(entry.occurredAt)}</p>
+                      </div>
+                      {/* Date over time, right-aligned, as the authority sets it. */}
+                      <div className="shrink-0 text-right text-xs text-gray-500">
+                        <p className="whitespace-nowrap">{showDate(entry.occurredAt)}</p>
+                        <p className="whitespace-nowrap tabular-nums">{showTime(entry.occurredAt)}</p>
                       </div>
                     </li>
                   );
@@ -480,7 +557,12 @@ export default function AdminInventory() {
 
       {sheet?.kind === "addItem" && (
         <Sheet title="Add catalogue item" onClose={closeSheet}>
-          <p className="text-xs text-gray-500">Choose a common item to prefill this form, then save to create it. Nothing is created until you save.</p>
+          {/* The chips are NOT the catalogue. They are eleven shortcuts over a
+              form that accepts any name at all, and the wording has to say so
+              — read as a closed list, they make the Founder think a new kind
+              of tool needs a code change, which it does not. */}
+          <p className="text-sm font-medium">Common items — optional shortcuts</p>
+          <p className="mt-0.5 text-xs text-gray-500">These only prefill the form. You can add any tool, equipment or stock item by typing its name below. Nothing is created until you save.</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {QUICK_ADD_ITEMS.map((choice) => (
               <button
@@ -488,14 +570,18 @@ export default function AdminInventory() {
                 onClick={() => setForm({ itemName: choice.name, category: choice.category, trackingMethod: choice.trackingMethod, unitOfMeasure: choice.unitOfMeasure, notes: "" })}
                 className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-2.5 py-1 text-xs font-medium text-botanique-charcoal"
               >
-                <ToolVisual name={choice.name} size="xs" className="!border-0 !bg-transparent" />
+                <ToolVisual name={choice.name} size="xs" />
                 {choice.name}
               </button>
             ))}
           </div>
           <div className="mt-4 grid gap-3">
             <label className="text-sm font-medium">Item name
-              <input value={form.itemName || ""} onChange={(event) => setForm({ ...form, itemName: event.target.value })} className={field} maxLength={160} />
+              <input
+                value={form.itemName || ""} onChange={(event) => setForm({ ...form, itemName: event.target.value })}
+                className={field} maxLength={160}
+                placeholder="Any tool, equipment or stock item"
+              />
             </label>
             <label className="text-sm font-medium">Tracking method
               <select value={form.trackingMethod || "asset"} onChange={(event) => setForm({ ...form, trackingMethod: event.target.value, unitOfMeasure: event.target.value === "asset" ? "unit" : (form.unitOfMeasure || "") })} className={field}>
@@ -526,15 +612,31 @@ export default function AdminInventory() {
             ? <p className="text-sm text-gray-600">Add an equipment catalogue item first — equipment is registered against a catalogue item.</p>
             : <>
               <div className="grid gap-3">
-                <label className="text-sm font-medium">Equipment item
-                  <select value={form.itemId || ""} onChange={(event) => setForm({ ...form, itemId: event.target.value })} className={field}>
-                    <option value="">Choose the item</option>
-                    {assetItems.map((item) => <option key={item.id} value={item.id}>{item.itemName}</option>)}
-                  </select>
-                </label>
-                <label className="text-sm font-medium">Asset code
-                  <input value={form.assetCode || ""} onChange={(event) => setForm({ ...form, assetCode: event.target.value })} className={field} maxLength={64} placeholder="e.g. BD-EQP-001" />
-                </label>
+                {/* Opened from a catalogue row, the item is already settled —
+                    showing a dropdown here would ask the operator to choose
+                    the thing they just chose, and would let them choose a
+                    different one by accident. */}
+                {sheet.itemId
+                  ? <div className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5">
+                    <p className="text-xs text-gray-500">Equipment item</p>
+                    <p className="mt-0.5 flex items-center gap-2 text-sm font-semibold text-botanique-charcoal">
+                      <ToolVisual name={itemFor(sheet.itemId)?.itemName} size="xs" />
+                      {itemFor(sheet.itemId)?.itemName || "Selected item"}
+                    </p>
+                  </div>
+                  : <label className="text-sm font-medium">Equipment item
+                    <select value={form.itemId || ""} onChange={(event) => setForm({ ...form, itemId: event.target.value })} className={field}>
+                      <option value="">Choose the item</option>
+                      {assetItems.map((item) => <option key={item.id} value={item.id}>{item.itemName}</option>)}
+                    </select>
+                  </label>}
+                {/* No input. The asset code is a Botanique identifier the
+                    database allocates from a sequence on registration, so
+                    there is nothing here to type, mistype or duplicate. */}
+                <div>
+                  <p className="text-sm font-medium">Asset code</p>
+                  <p className="mt-1 text-sm text-gray-500">Assigned automatically when registered</p>
+                </div>
                 <label className="text-sm font-medium">Condition
                   <select value={form.condition || "good"} onChange={(event) => setForm({ ...form, condition: event.target.value })} className={field}>
                     {EQUIPMENT_CONDITIONS.map((value) => <option key={value} value={value}>{conditionLabel(value)}</option>)}
@@ -545,7 +647,10 @@ export default function AdminInventory() {
                     {OWNERSHIP_TYPES.map((value) => <option key={value} value={value}>{ownershipLabel(value)}</option>)}
                   </select>
                 </label>
-                <label className="text-sm font-medium">Current Site (optional)
+                {/* "Current location", not "Current Site": the default here is
+                    Botanique custody, which is not a Site and must not be
+                    presented as though one had to be chosen. */}
+                <label className="text-sm font-medium">Current location
                   <select value={form.siteId || ""} onChange={(event) => setForm({ ...form, siteId: event.target.value })} className={field}>
                     <option value="">{BOTANIQUE_CUSTODY}</option>
                     {selectableSites.map((site) => <option key={site.id} value={site.id}>{site.siteName}</option>)}
@@ -567,7 +672,7 @@ export default function AdminInventory() {
       {sheet?.kind === "asset" && (
         <Sheet title={sheet.asset.itemName} onClose={closeSheet}>
           <div className="flex items-start gap-3">
-            <ToolVisual name={sheet.asset.itemName} size="lg" />
+            <ToolVisual name={sheet.asset.itemName} size="lg" framed />
             <div className="min-w-0">
               <p className="text-sm font-semibold">{sheet.asset.assetCode}</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
@@ -620,47 +725,69 @@ export default function AdminInventory() {
   );
 }
 
-// Units are stored as canonical tokens ("cubic_metre"); the register reads them
-// back as words without inventing an abbreviation the database does not hold.
-function unitLabel(unit) {
-  return String(unit || "").replace(/_/g, " ");
-}
-
 // A second line ONLY where canonical data supports one. No invented detail:
 // where a movement or event carries no Site, person or quantity, this returns
 // empty and the row simply has no description.
+// Past-tense phrases that complete "<item> …". Deliberately separate from the
+// LABELS vocabularies, which name a movement type in a form list ("Issued to
+// Site") where a noun phrase is right and a sentence ending is not.
+const EQUIPMENT_EVENT_PHRASES = {
+  registered: "registered", issued: "issued", transferred: "transferred",
+  returned: "returned to Botanique", condition_changed: "condition updated",
+  sent_for_repair: "sent for repair", returned_from_repair: "returned from repair",
+  lost: "reported lost", retired: "retired", corrected: "corrected",
+};
+
+const CATALOGUE_EVENT_PHRASES = {
+  created: "added to the catalogue", updated: "updated", corrected: "corrected",
+  deactivated: "deactivated", reactivated: "reactivated",
+};
+
+const STOCK_EVENT_PHRASES = {
+  received: "received", issued: "issued", transferred: "transferred",
+  returned: "returned to Botanique", consumed: "consumed", damaged: "damaged",
+  lost: "reported lost", adjustment_in: "adjusted up", adjustment_out: "adjusted down",
+};
+
 function activityDetail(entry, { assets, itemFor, siteName, personName }) {
   if (entry.kind === "equipment") {
     const asset = assets.find((row) => row.id === entry.assetId);
     if (!asset) return "";
     const where = asset.currentSiteId ? siteName(asset.currentSiteId) : BOTANIQUE_CUSTODY;
     const who = asset.custodianPersonId ? personName(asset.custodianPersonId) : "";
-    return [where, who].filter(Boolean).join(" · ");
+    return [asset.assetCode, where, who].filter(Boolean).join(" · ");
   }
   if (entry.kind === "catalogue") {
     const item = itemFor(entry.itemId);
-    return item ? [item.category.replace(/_/g, " "), trackingMethodLabel(item.trackingMethod)].filter(Boolean).join(" · ") : "";
+    return item ? [categoryLabel(item.category), trackingMethodLabel(item.trackingMethod)].filter(Boolean).join(" · ") : "";
   }
   const item = itemFor(entry.itemId);
   const from = entry.fromSiteId ? siteName(entry.fromSiteId) : "";
   const to = entry.toSiteId ? siteName(entry.toSiteId) : "";
   const where = from && to ? `${from} → ${to}` : to ? `→ ${to}` : from ? `from ${from}` : BOTANIQUE_CUSTODY;
-  return [where, item ? unitLabel(item.unitOfMeasure) : ""].filter(Boolean).join(" · ");
+  const amount = [showQuantity(entry.quantity), item ? unitLabel(item.unitOfMeasure).toLowerCase() : ""].filter(Boolean).join(" ");
+  return [amount, where].filter(Boolean).join(" · ");
 }
 
+// The authority reads subject-first — "Rotary Hammer Drill issued", "Cement
+// 50kg transferred", "Brush Cutter sent for repair" — rather than
+// "Issued — Rotary Hammer Drill (EQP-0015)". The thing comes first because the
+// thing is what the reader is scanning for; the verb and the detail follow.
+//
+// The asset code moves out of the title for the same reason: it made every
+// equipment line long enough to truncate in the rail, hiding the verb.
 function activityTitle(entry, { assets, itemFor }) {
   if (entry.kind === "equipment") {
     const asset = assets.find((row) => row.id === entry.assetId);
     const item = asset ? itemFor(asset.itemId) : null;
-    const label = EQUIPMENT_EVENT_LABELS[entry.eventType] || entry.eventType;
-    return `${label} — ${item?.itemName || "Equipment"}${asset ? ` (${asset.assetCode})` : ""}`;
+    return `${item?.itemName || "Equipment"} ${EQUIPMENT_EVENT_PHRASES[entry.eventType] || entry.eventType}`;
   }
   if (entry.kind === "catalogue") {
     const item = itemFor(entry.itemId);
-    return `${CATALOGUE_EVENT_LABELS[entry.eventType] || entry.eventType} — ${item?.itemName || "Item"}`;
+    return `${item?.itemName || "Item"} ${CATALOGUE_EVENT_PHRASES[entry.eventType] || entry.eventType}`;
   }
   const item = itemFor(entry.itemId);
-  return `${movementLabel(entry.movementType)} — ${item?.itemName || "Stock"} × ${showQuantity(entry.quantity)}`;
+  return `${item?.itemName || "Stock"} ${STOCK_EVENT_PHRASES[entry.movementType] || entry.movementType}`;
 }
 
 function AssetActionForm({ action, asset, sites, people, form, setForm, formError, saving, onCancel, onSubmit }) {

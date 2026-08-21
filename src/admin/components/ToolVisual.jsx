@@ -236,18 +236,27 @@ const SIZE_CLASSES = {
 /**
  * A catalogue item's thumbnail. `name` is the catalogue item name; the visual
  * is derived from it, never stored.
+ *
+ * The cut-out FLOATS in its cell. There is deliberately no border, no filled
+ * ground and no rounded card around it: a boxed thumbnail turns every row into
+ * a grid of framed tiles competing with the item name, where the authority has
+ * the product simply sitting beside its label. `framed` is kept for the one
+ * place that genuinely needs a contained figure — the asset detail sheet, where
+ * the visual is the subject of the panel rather than a row ornament.
  */
-export default function ToolVisual({ name, visual, size = "md", className = "" }) {
+export default function ToolVisual({ name, visual, size = "md", framed = false, className = "" }) {
   const type = visual || visualTypeForItem(name);
   const [imageFailed, setImageFailed] = useState(false);
   const source = AUTHORITY_IMAGES[type];
   const useImage = Boolean(source) && !imageFailed;
   const label = name ? `${name} thumbnail` : "Tool thumbnail";
+  const frame = framed ? "overflow-hidden rounded-lg border border-stone-200 bg-white" : "";
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-stone-200 bg-white ${SIZE_CLASSES[size] || SIZE_CLASSES.md} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center ${frame} ${SIZE_CLASSES[size] || SIZE_CLASSES.md} ${className}`}
       data-tool-visual={type}
+      data-visual-framed={framed ? "true" : "false"}
       data-visual-source={useImage ? "authority-image" : "illustration"}
     >
       {useImage ? (
@@ -259,10 +268,10 @@ export default function ToolVisual({ name, visual, size = "md", className = "" }
           // load them at all — which showed up as a register with no imagery.
           decoding="async"
           onError={() => setImageFailed(true)}
-          className="h-full w-full object-contain p-0.5"
+          className="h-full w-full object-contain"
         />
       ) : (
-        <svg viewBox="0 0 36 36" className="h-full w-full p-0.5" role="img" aria-label={label} focusable="false">
+        <svg viewBox="0 0 36 36" className="h-full w-full" role="img" aria-label={label} focusable="false">
           {DRAWINGS[type] || DRAWINGS.generic}
         </svg>
       )}
