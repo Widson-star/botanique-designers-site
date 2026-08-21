@@ -213,7 +213,8 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   const registerAsset = useCallback((values) => {
     if (isDemo) return Promise.resolve(demoBlocked());
     if (!values.itemId) return Promise.resolve({ ok: false, error: "Choose the equipment item." });
-    if (!(values.assetCode || "").trim()) return Promise.resolve({ ok: false, error: "An asset code is required." });
+    // No asset-code check: the code is a Botanique identifier the database
+    // allocates. There is nothing here for the operator to get wrong.
     return run(() => registerEquipmentAsset(accessToken, values), "This equipment could not be registered.");
   }, [accessToken, run, isDemo, demoBlocked]);
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EQUIPMENT_CONDITIONS, EQUIPMENT_STATUSES, EQUIPMENT_STATUS_CLASSES,
   EQUIPMENT_CONDITION_CLASSES, canManageInventory, canSeeInventory,
-  canUsePrincipalInventoryActions, equipmentActionsFor, positionLabel,
+  canUsePrincipalInventoryActions, categoryLabel, equipmentActionsFor, positionLabel, unitLabel,
 } from "./inventoryCapabilities";
 import { ROLES } from "../constants/roles";
 
@@ -113,5 +113,46 @@ describe("controlled vocabularies", () => {
     expect(positionLabel("")).toBe("Botanique custody");
     expect(positionLabel(null)).toBe("Botanique custody");
     expect(positionLabel("Karen Residence")).toBe("Karen Residence");
+  });
+});
+
+describe("user-facing taxonomy language", () => {
+  // Storage tokens must never reach the screen, and the taxonomy stays
+  // extensible — a category the code has never seen still reads correctly, so
+  // adding one needs no migration and no deployment.
+  it.each([
+    ["manual_tools", "Manual tools"],
+    ["power_tools", "Power tools"],
+    ["grounds_equipment", "Grounds equipment"],
+    ["irrigation", "Irrigation"],
+    ["site_consumables", "Site consumables"],
+    ["safety-ppe", "Safety ppe"],
+  ])("shows %s as %s", (token, expected) => {
+    expect(categoryLabel(token)).toBe(expected);
+  });
+
+  it("never leaks an underscore token", () => {
+    for (const token of ["manual_tools", "power_tools", "grounds_equipment"]) {
+      expect(categoryLabel(token)).not.toMatch(/_/);
+    }
+  });
+
+  // Sentence case, not title case: the authority reads "Power tools".
+  it("lifts only the first word", () => {
+    expect(categoryLabel("power tools")).toBe("Power tools");
+    expect(categoryLabel("power tools")).not.toBe("Power Tools");
+  });
+
+  // The authority's Unit column reads "Bags", "Pcs" — same sentence case as
+  // the category language, never the stored token.
+  it("reads units back as words", () => {
+    expect(unitLabel("cubic_metre")).toBe("Cubic metre");
+    expect(unitLabel("bags")).toBe("Bags");
+    expect(unitLabel("cubic_metre")).not.toMatch(/_/);
+  });
+
+  it("returns empty for nothing rather than inventing a label", () => {
+    expect(categoryLabel("")).toBe("");
+    expect(categoryLabel(null)).toBe("");
   });
 });

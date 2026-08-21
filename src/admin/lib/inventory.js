@@ -148,10 +148,13 @@ export async function reactivateInventoryItem(accessToken, itemId, expectedVersi
 // re-checks the caller's role in its own body.
 // ---------------------------------------------------------------------------
 
+// The asset code is deliberately NOT sent. register_equipment_asset() allocates
+// it from a sequence and returns it on the created row, so the browser has no
+// say in a Botanique asset's identity — and the argument it still accepts for
+// compatibility is inert server-side anyway.
 export async function registerEquipmentAsset(accessToken, values) {
   return read(await rpc(accessToken, "register_equipment_asset", {
     target_item_id: values.itemId,
-    target_asset_code: values.assetCode,
     target_ownership_type: values.ownershipType || "owned",
     target_condition: values.condition || "good",
     target_site_id: values.siteId || null,

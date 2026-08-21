@@ -140,8 +140,9 @@ describe("role boundary", () => {
     for (const role of ["owner", "manager"]) {
       const { unmount } = renderPage({ role });
       const register = screen.getByRole("region", { name: "Inventory register" });
-      // Equipment assets is the default tab, so its action shows first.
-      expect(within(register).getByRole("button", { name: "Register equipment" })).toBeInTheDocument();
+      // Equipment assets is the default tab, and the authority gives it NO
+      // header action — registration belongs to a catalogue row.
+      expect(within(register).queryByRole("button", { name: "Register equipment" })).not.toBeInTheDocument();
       fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
       expect(within(register).getByRole("button", { name: "Add item" })).toBeInTheDocument();
       unmount();
@@ -161,7 +162,7 @@ describe("equipment rows and lifecycle", () => {
   it("shows the approved columns and resolves Site and custodian", () => {
     renderPage({ items, assets, sites, people });
     const table = screen.getByRole("table");
-    for (const header of ["Asset / item", "Asset code", "Status", "Condition", "Current Site", "Custodian", "Expected return", "Action"]) {
+    for (const header of ["Asset / item", "Asset code", "Status", "Condition", "Current site", "Custodian", "Expected return", "Action"]) {
       expect(within(table).getByRole("columnheader", { name: header })).toBeInTheDocument();
     }
     expect(within(table).getByText("BD-LM-001")).toBeInTheDocument();
@@ -256,15 +257,27 @@ describe("supporting panels and register footer", () => {
     { itemId: "i2", itemName: "Screened Topsoil", category: "materials", unitOfMeasure: "cubic_metre", isActive: true, siteId: "", siteName: "", location: "", quantity: 4 },
   ];
 
-  it("shows the Unit alongside the Quantity in the Stock positions panel", () => {
+  // The authority's rail is a four-column table, and carries no thumbnails.
+  it("shows the Stock positions panel as the four authority columns", () => {
     renderPage({ items, positions, sites });
     const panel = screen.getByRole("heading", { name: "Stock positions", level: 2 }).closest("section");
-    expect(within(panel).getByText("Item · Site / location")).toBeInTheDocument();
-    expect(within(panel).getByText("Unit · Qty")).toBeInTheDocument();
-    expect(within(panel).getByText("bag")).toBeInTheDocument();
-    // Canonical tokens are read back as words, not invented abbreviations.
-    expect(within(panel).getByText("cubic metre")).toBeInTheDocument();
-    expect(within(panel).getByText("Botanique custody")).toBeInTheDocument();
+    const table = within(panel).getByRole("table");
+    for (const header of ["Item", "Site / location", "Unit", "Quantity"]) {
+      expect(within(table).getByRole("columnheader", { name: header })).toBeInTheDocument();
+    }
+    // Canonical tokens are read back as words, not invented abbreviations,
+    // and never as the stored token.
+    expect(within(table).getByText("Bag")).toBeInTheDocument();
+    expect(within(table).getByText("Cubic metre")).toBeInTheDocument();
+    expect(within(table).queryByText("cubic_metre")).not.toBeInTheDocument();
+    expect(within(table).getByText("Botanique custody")).toBeInTheDocument();
+    expect(panel.querySelector("[data-tool-visual]")).toBeNull();
+  });
+
+  it("reports the stock rail's own truthful count", () => {
+    renderPage({ items, positions, sites });
+    const panel = screen.getByRole("heading", { name: "Stock positions", level: 2 }).closest("section");
+    expect(within(panel).getByText("Showing 1 to 2 of 2 stock items")).toBeInTheDocument();
   });
 
   it("offers View all on Recent activity and switches to History", () => {
@@ -278,8 +291,34 @@ describe("supporting panels and register footer", () => {
   it("gives each activity row an icon and a canonical description", () => {
     const activity = [{ kind: "catalogue", id: "e1", itemId: "i1", eventType: "created", reason: "", occurredAt: "2026-08-20T08:00:00Z" }];
     const { container } = renderPage({ items, activity });
-    expect(container.querySelector('[data-activity-icon="catalogue"]')).toBeTruthy();
-    expect(screen.getAllByText(/materials · Quantity stock/).length).toBeGreaterThan(0);
+    expect(container.querySelector('[data-activity-kind="catalogue"]')).toBeTruthy();
+    // Category reaches the screen as language, never as its storage token.
+    expect(screen.getAllByText(/Materials · Quantity stock/).length).toBeGreaterThan(0);
+  });
+
+  // The authority keys the activity pictogram on WHAT HAPPENED, not on which
+  // table it came from: issuing and transferring the same asset must not draw
+  // the same glyph.
+  it("chooses the activity pictogram by event, not by kind", () => {
+    const cases = [
+      [{ kind: "stock", id: "m1", itemId: "i1", movementType: "issued", quantity: 2, occurredAt: "2026-08-20T08:00:00Z" }, "out"],
+      [{ kind: "stock", id: "m2", itemId: "i1", movementType: "transferred", quantity: 2, occurredAt: "2026-08-20T08:00:00Z" }, "cube"],
+      [{ kind: "stock", id: "m3", itemId: "i1", movementType: "consumed", quantity: 2, occurredAt: "2026-08-20T08:00:00Z" }, "in"],
+      [{ kind: "equipment", id: "e2", assetId: "a1", eventType: "sent_for_repair", occurredAt: "2026-08-20T08:00:00Z" }, "repair"],
+    ];
+    for (const [entry, glyph] of cases) {
+      const { container, unmount } = renderPage({ items, activity: [entry] });
+      expect(container.querySelector(`[data-activity-icon="${glyph}"]`)).toBeTruthy();
+      unmount();
+    }
+  });
+
+  // Date over time, right-aligned, as the authority sets it.
+  it("shows the activity moment as a date above a 24-hour time", () => {
+    const activity = [{ kind: "catalogue", id: "e1", itemId: "i1", eventType: "created", reason: "", occurredAt: "2026-08-20T13:42:00Z" }];
+    renderPage({ items, activity });
+    const panel = screen.getByRole("heading", { name: "Recent activity", level: 2 }).closest("section");
+    expect(within(panel).getByText("16:42")).toBeInTheDocument();
   });
 
   // Never fabricate pagination over an empty register.
@@ -299,10 +338,32 @@ describe("supporting panels and register footer", () => {
     }));
     renderPage({ items: assetItems, assets: many });
     const register = screen.getByRole("region", { name: "Inventory register" });
-    expect(within(register).getByText("Showing 1–10 of 12 assets")).toBeInTheDocument();
-    expect(within(register).getByRole("table").querySelectorAll("tbody tr")).toHaveLength(10);
-    fireEvent.click(within(register).getByRole("button", { name: "Next" }));
-    expect(within(register).getByText("Showing 11–12 of 12 assets")).toBeInTheDocument();
+    // Six rows to a desktop page, as the authority shows.
+    expect(within(register).getByText("Showing 1 to 6 of 12 assets")).toBeInTheDocument();
+    expect(within(register).getByRole("table").querySelectorAll("tbody tr")).toHaveLength(6);
+    fireEvent.click(within(register).getByRole("button", { name: "Next page" }));
+    expect(within(register).getByText("Showing 7 to 12 of 12 assets")).toBeInTheDocument();
+  });
+
+  // Numbered pagination, as the authority draws it — not "Previous 1 / 5 Next".
+  it("offers numbered pages and marks the current one", () => {
+    const assetItems = [{ id: "i3", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    const many = Array.from({ length: 27 }, (unused, index) => ({
+      id: `a${index}`, itemId: "i3", assetCode: `EQP-${String(index).padStart(4, "0")}`,
+      ownershipType: "owned", status: "available", condition: "good",
+      currentSiteId: "", custodianPersonId: "", expectedReturnDate: "", version: 1,
+    }));
+    renderPage({ items: assetItems, assets: many });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    expect(within(register).queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+    expect(within(register).getByRole("button", { name: "Page 1" })).toHaveAttribute("aria-current", "page");
+    // 27 assets over 6 per page is five pages: 1 2 3 … 5.
+    for (const label of ["Page 1", "Page 2", "Page 3", "Page 5"]) {
+      expect(within(register).getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    expect(within(register).queryByRole("button", { name: "Page 4" })).not.toBeInTheDocument();
+    fireEvent.click(within(register).getByRole("button", { name: "Page 3" }));
+    expect(within(register).getByText("Showing 13 to 18 of 27 assets")).toBeInTheDocument();
   });
 });
 
@@ -340,19 +401,31 @@ describe("authority header posture", () => {
     ];
     renderPage({ items });
     const register = screen.getByRole("region", { name: "Inventory register" });
-    expect(within(register).getByRole("button", { name: "Register equipment" })).toBeEnabled();
+    // Equipment assets carries no header action at all.
+    expect(within(register).queryByRole("button", { name: "Register equipment" })).not.toBeInTheDocument();
     fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
     expect(within(register).getByRole("button", { name: "Add item" })).toBeInTheDocument();
     fireEvent.click(within(register).getByRole("button", { name: "Stock positions" }));
     expect(within(register).getByRole("button", { name: "Record stock" })).toBeEnabled();
   });
 
-  // Never offer a primary control that can only dead-end.
-  it("disables Register equipment, with a reason, when no asset item exists", () => {
+  // The authority's Equipment assets header is title-and-tabs only.
+  it("gives the Equipment assets header no action of its own", () => {
+    const items = [{ id: "i1", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    renderPage({ items });
+    const heading = screen.getByRole("heading", { name: "Inventory register", level: 2 });
+    const headerBlock = heading.parentElement;
+    expect(within(headerBlock).queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  // An empty register still needs a way onward, but not a permanent control
+  // the authority does not have.
+  it("routes an empty Equipment assets register back to Catalogue", () => {
     renderPage();
     const register = screen.getByRole("region", { name: "Inventory register" });
-    expect(within(register).getByRole("button", { name: "Register equipment" })).toBeDisabled();
-    expect(within(register).getByText("Add an equipment catalogue item first.")).toBeInTheDocument();
+    expect(within(register).getByText("No equipment registered yet.")).toBeInTheDocument();
+    fireEvent.click(within(register).getByRole("button", { name: "Go to Catalogue" }));
+    expect(within(register).getByRole("button", { name: "Catalogue" })).toHaveAttribute("aria-current", "page");
   });
 
   it("keeps View all on both panels even while they are empty", () => {
@@ -385,18 +458,89 @@ describe("site selector", () => {
   // fixture Site remains in `sites` for historical resolution.
   it("offers only selectable Sites, not every Site that exists", () => {
     renderPage({ items, sites, selectableSites: [sites[0]] });
-    const register = screen.getByRole("region", { name: "Inventory register" });
-    fireEvent.click(within(register).getByRole("button", { name: "Register equipment" }));
+    openRegisterAsset();
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("option", { name: "Karen Residence" })).toBeInTheDocument();
     expect(within(dialog).queryByRole("option", { name: /Verification Fixture/ })).not.toBeInTheDocument();
   });
+});
 
-  it("uses a neutral asset-code example rather than a mower-specific one", () => {
-    renderPage({ items, sites, selectableSites: [sites[0]] });
+// Registration now originates from the catalogue row, so every test that needs
+// the form opens it the way an operator would.
+function openRegisterAsset() {
+  const register = screen.getByRole("region", { name: "Inventory register" });
+  fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+  fireEvent.click(within(register).getAllByRole("button", { name: "Register asset" })[0]);
+}
+
+describe("automatic asset codes", () => {
+  const items = [{ id: "i1", itemName: "Lawn Mower", category: "grounds_equipment", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  const sites = [{ id: "s1", siteName: "Karen Residence" }];
+
+  // The operator must never choose a Botanique asset code.
+  it("offers no asset-code input at all", () => {
+    renderPage({ items, sites, selectableSites: sites });
+    openRegisterAsset();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByLabelText(/Asset code/)).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(/BD-EQP-001|BD-LM-001|EQP-/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Assigned automatically when registered")).toBeInTheDocument();
+  });
+
+  // Opened from a catalogue row the item is settled, so it is shown as
+  // context rather than asked for a second time.
+  it("fixes the equipment item when opened from its catalogue row", () => {
+    renderPage({ items, sites, selectableSites: sites });
+    openRegisterAsset();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByLabelText("Equipment item")).not.toBeInTheDocument();
+    expect(within(dialog).getByText("Equipment item")).toBeInTheDocument();
+    expect(within(dialog).getAllByText("Lawn Mower").length).toBeGreaterThan(0);
+  });
+
+  // Botanique custody is not a Site and must not be presented as one.
+  it("calls the location field Current location", () => {
+    renderPage({ items, sites, selectableSites: sites });
+    openRegisterAsset();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByLabelText("Current location")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText(/Current Site/)).not.toBeInTheDocument();
+  });
+});
+
+describe("custom catalogue items", () => {
+  // The quick-add chips are shortcuts over a free-text form, not a closed list.
+  it("presents the chips as optional shortcuts and keeps the name free text", () => {
+    renderPage();
     const register = screen.getByRole("region", { name: "Inventory register" });
-    fireEvent.click(within(register).getByRole("button", { name: "Register equipment" }));
-    expect(screen.getByPlaceholderText("e.g. BD-EQP-001")).toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("e.g. BD-LM-001")).not.toBeInTheDocument();
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    fireEvent.click(within(register).getByRole("button", { name: "Add item" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("Common items — optional shortcuts")).toBeInTheDocument();
+    const name = within(dialog).getByLabelText("Item name");
+    expect(name.tagName).toBe("INPUT");
+    expect(name).not.toBeDisabled();
+    fireEvent.change(name, { target: { value: "Pressure Washer" } });
+    expect(name.value).toBe("Pressure Washer");
+  });
+
+  // An item with no approved cut-out gets the restrained neutral drawing, never
+  // a guessed product image.
+  it("gives an unknown custom item the generic visual", () => {
+    const items = [{ id: "i9", itemName: "Pressure Washer", category: "site_consumables", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    const { container } = renderPage({ items });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    expect(container.querySelector('[data-tool-visual="generic"]')).toBeTruthy();
+  });
+
+  // Storage tokens must never reach the screen.
+  it("shows a custom category as language, not as its stored token", () => {
+    const items = [{ id: "i9", itemName: "Pressure Washer", category: "site_consumables", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    renderPage({ items });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    expect(within(register).getByText(/Site consumables/)).toBeInTheDocument();
+    expect(within(register).queryByText(/site_consumables/)).not.toBeInTheDocument();
   });
 });
