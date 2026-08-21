@@ -207,19 +207,15 @@ const DRAWINGS = {
   ),
 };
 
-// The items visible in the approved authority, served locally.
+// The six items visible in the approved authority, served locally.
 //
-// GENERATOR IS DELIBERATELY ABSENT. The committed
-// public/admin/inventory-tools/authority-generator.jpg is truncated: it carries
-// no EOI marker (it ends a047ff64, not ffd9) and strict decoders reject it with
-// "premature end of data segment". Browsers do not reject it — they render the
-// partial scan, which is a flat grey rectangle, and because the decode does not
-// actually fail the onError fallback below never fires. So the only way the
-// Founder does not see a grey box labelled Generator is to not reference the
-// file. The generator DRAWING above is correct and stands in until a sound
-// image exists. The file is left untouched on disk; restoring the authority
-// image is re-adding the one line below, nothing more.
+// Each of these must be a COMPLETE JPEG. A truncated one is not caught by the
+// onError fallback below: a browser renders the partial scan — in practice a
+// flat grey rectangle — without ever treating it as an error, so the drawing
+// never gets its chance. Generator was exactly that for a while. The integrity
+// guard in ToolVisual.test.jsx is what keeps that from recurring silently.
 const AUTHORITY_IMAGES = {
+  generator: "/admin/inventory-tools/authority-generator.jpg",
   drill: "/admin/inventory-tools/authority-drill.jpg",
   wheelbarrow: "/admin/inventory-tools/authority-wheelbarrow.jpg",
   brush_cutter: "/admin/inventory-tools/authority-brush-cutter.jpg",

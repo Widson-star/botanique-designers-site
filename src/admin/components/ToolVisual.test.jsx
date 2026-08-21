@@ -5,6 +5,7 @@ import ToolVisual, { AUTHORITY_IMAGES } from "./ToolVisual";
 
 describe("authority equipment cut-outs", () => {
   it.each([
+    ["Generator", "/admin/inventory-tools/authority-generator.jpg"],
     ["Rotary Hammer Drill", "/admin/inventory-tools/authority-drill.jpg"],
     ["Wheelbarrow", "/admin/inventory-tools/authority-wheelbarrow.jpg"],
     ["Brush Cutter", "/admin/inventory-tools/authority-brush-cutter.jpg"],
@@ -31,40 +32,75 @@ describe("authority equipment cut-outs", () => {
     expect(container.querySelector('[data-visual-source="authority-image"]')).toBeTruthy();
   });
 
-  // The guard that would have caught the Generator defect at test time instead
-  // of on the Founder's screen. A browser renders a truncated JPEG's partial
-  // scan as flat grey WITHOUT firing onError, so the component's own fallback
-  // cannot save a malformed file — it must never be referenced in the first
-  // place. Every referenced file must therefore be a complete JPEG: SOI at the
-  // front, EOI at the very end.
-  it("references only complete, decodable image files", () => {
-    for (const [type, source] of Object.entries(AUTHORITY_IMAGES)) {
-      const bytes = readFileSync(`public${source}`);
-      expect(`${type}:${bytes[0].toString(16)}${bytes[1].toString(16)}`).toBe(`${type}:ffd8`);
-      const tail = `${bytes[bytes.length - 2].toString(16)}${bytes[bytes.length - 1].toString(16)}`;
-      expect(`${type} ends with EOI: ${tail}`).toBe(`${type} ends with EOI: ffd9`);
-    }
-  });
-});
-
-describe("the truncated Generator authority image", () => {
-  // Pinning the defect so this cannot be quietly re-introduced: if a sound
-  // replacement lands, this test fails and the mapping should be restored.
-  it("is still malformed on disk, which is why it is not referenced", () => {
-    const bytes = readFileSync("public/admin/inventory-tools/authority-generator.jpg");
-    const tail = `${bytes[bytes.length - 2].toString(16)}${bytes[bytes.length - 1].toString(16)}`;
-    expect(tail).not.toBe("ffd9");
-    expect(AUTHORITY_IMAGES.generator).toBeUndefined();
-  });
-
-  it("falls back to the correct generator drawing rather than a grey box", () => {
+  // Generator specifically: it spent a tranche falling back to its drawing
+  // because the committed binary was truncated. It is an authority image again.
+  it("renders Generator from the authority image, with no fallback", () => {
     const { container } = render(<ToolVisual name="Generator" />);
     const wrapper = container.querySelector('[data-tool-visual="generator"]');
-    expect(wrapper).toBeTruthy();
-    expect(wrapper.getAttribute("data-visual-source")).toBe("illustration");
-    expect(wrapper.querySelector("svg")).toBeTruthy();
-    expect(container.querySelector("img")).toBeNull();
+    expect(wrapper.getAttribute("data-visual-source")).toBe("authority-image");
+    expect(wrapper.querySelector("img").getAttribute("src")).toBe("/admin/inventory-tools/authority-generator.jpg");
+    expect(wrapper.querySelector("svg")).toBeNull();
   });
+
+  it("falls back for none of the six", () => {
+    for (const name of ["Generator", "Rotary Hammer Drill", "Wheelbarrow", "Brush Cutter", "Hose Reel", "Lawn Mower"]) {
+      const { container, unmount } = render(<ToolVisual name={name} />);
+      expect(`${name}: ${container.firstChild.getAttribute("data-visual-source")}`).toBe(`${name}: authority-image`);
+      unmount();
+    }
+  });
+
+  it("covers all six authority items and nothing else", () => {
+    expect(Object.keys(AUTHORITY_IMAGES).sort()).toEqual([
+      "brush_cutter", "drill", "generator", "hose", "mower", "wheelbarrow",
+    ]);
+  });
+
+  // The guard that caught the Generator defect at test time rather than on the
+  // Founder's screen, and the reason it has to inspect structure and not just
+  // the end markers: a browser renders a truncated JPEG's partial scan as flat
+  // grey WITHOUT firing onError, so the component's own fallback cannot save a
+  // malformed file — it must never be referenced in the first place.
+  //
+  // The specific corruption seen was a scan with no frame header: SOS arrived
+  // before any SOF, so there were no dimensions to decode against. Checking
+  // SOI/EOI alone would not have caught that, so this walks the marker
+  // segments and insists on a real frame.
+  it.each(Object.entries(AUTHORITY_IMAGES))(
+    "references %s as a structurally complete, decodable JPEG",
+    (type, source) => {
+      const bytes = readFileSync(`public${source}`);
+      expect(bytes[0] << 8 | bytes[1]).toBe(0xffd8);
+
+      let offset = 2;
+      let frame = null;
+      let sawScan = false;
+      while (offset < bytes.length - 1) {
+        if (bytes[offset] !== 0xff) break;
+        const marker = bytes[offset + 1];
+        if (marker === 0xd9) break;
+        const length = (bytes[offset + 2] << 8) | bytes[offset + 3];
+        // SOF0..SOF15, excluding DHT (c4), JPG (c8) and DAC (cc).
+        const isFrame = marker >= 0xc0 && marker <= 0xcf
+          && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+        if (isFrame) {
+          frame = { height: (bytes[offset + 5] << 8) | bytes[offset + 6], width: (bytes[offset + 7] << 8) | bytes[offset + 8] };
+        }
+        if (marker === 0xda) { sawScan = true; break; }   // entropy data follows
+        offset += 2 + length;
+      }
+
+      // A frame header, carrying real dimensions, BEFORE the scan.
+      expect(frame).not.toBeNull();
+      expect(frame.width).toBeGreaterThan(0);
+      expect(frame.height).toBeGreaterThan(0);
+      expect(sawScan).toBe(true);
+
+      // And the entropy data actually runs to completion.
+      const tail = (bytes[bytes.length - 2] << 8) | bytes[bytes.length - 1];
+      expect(`${type} ends with ${tail.toString(16)}`).toBe(`${type} ends with ffd9`);
+    },
+  );
 });
 
 describe("items without an authority cut-out", () => {
