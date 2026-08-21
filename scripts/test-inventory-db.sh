@@ -45,6 +45,10 @@ echo "Inventory / Tools & Equipment V1 — automatic asset codes:"
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_asset_code_test.sql" >/dev/null
 echo "  asset-code allocation assertions passed"
 
+echo "Inventory / Tools & Equipment V1 — BD-TE identity, atomic handover, expected return:"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_asset_identity_test.sql" >/dev/null
+echo "  identity and handover assertions passed"
+
 # =====================================================================
 # Negative-stock concurrency regression.
 # =====================================================================
@@ -315,8 +319,8 @@ assert_sql "G-both-assets-registered" \
   "select count(*)::text from public.equipment_assets where inventory_item_id='$code_item'" "2"
 assert_sql "G-two-distinct-codes" \
   "select count(distinct asset_code)::text from public.equipment_assets where inventory_item_id='$code_item'" "2"
-assert_sql "G-both-conform-to-EQP-format" \
-  "select count(*)::text from public.equipment_assets where inventory_item_id='$code_item' and asset_code ~ '^EQP-[0-9]{4,}\$'" "2"
+assert_sql "G-both-conform-to-BD-TE-format" \
+  "select count(*)::text from public.equipment_assets where inventory_item_id='$code_item' and asset_code ~ '^BD-TE-[0-9]{3,}\$'" "2"
 # Neither session's manually supplied code became an identity.
 assert_sql "G-no-manual-code-survived" \
   "select count(*)::text from public.equipment_assets where asset_code in ('MANUAL-OVERRIDE-A','MANUAL-OVERRIDE-B')" "0"

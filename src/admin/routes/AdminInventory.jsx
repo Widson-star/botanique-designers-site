@@ -11,7 +11,9 @@ import {
   positionLabel, statusLabel, trackingMethodLabel, unitLabel,
 } from "../utils/inventoryCapabilities";
 import { QUICK_ADD_ITEMS } from "../utils/toolVisuals";
-import { activityGlyphFor, paginationSlots } from "../utils/inventoryPresentation";
+import {
+  activityGlyphFor, assetCountsForItem, assetSummaryLine, paginationSlots, registerActionLabel,
+} from "../utils/inventoryPresentation";
 
 const TABS = [
   { id: "catalogue", label: "Catalogue" },
@@ -32,6 +34,17 @@ const showMoment = (value) => value
 const showTime = (value) => value
   ? new Intl.DateTimeFormat("en-KE", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value))
   : "";
+
+// Local calendar day as YYYY-MM-DD. Deliberately not toISOString(), which is
+// UTC and would offer yesterday to anyone east of Greenwich — Nairobi included.
+function todayKey() {
+  const now = new Date();
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("-");
+}
 
 const showQuantity = (value) => {
   const number = Number(value);
@@ -186,7 +199,7 @@ export default function AdminInventory() {
   const { role } = useAdminData();
   const {
     items, assets, positions, activity, selectableSites, people, summary, status, error,
-    addItem, registerAsset, assetAction, recordStock, siteName, personName, itemFor,
+    addItem, registerAsset, assetAction, issueAssets, recordStock, siteName, personName, itemFor,
   } = useInventory();
 
   const [tab, setTab] = useState("assets");
@@ -195,6 +208,7 @@ export default function AdminInventory() {
   const [form, setForm] = useState({});
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState("");
 
   const manage = canManageInventory(role);
   const principal = canUsePrincipalInventoryActions(role);
@@ -219,6 +233,19 @@ export default function AdminInventory() {
       custodianLabel: asset.custodianPersonId ? personName(asset.custodianPersonId) : "",
     };
   }), [assets, itemFor, siteName, personName]);
+
+  // Counts per catalogue item, derived once from the assets already loaded —
+  // no extra read, and no stored count that could drift from the register.
+  const countsByItem = useMemo(() => {
+    const grouped = new Map();
+    for (const asset of assets) {
+      if (!grouped.has(asset.itemId)) grouped.set(asset.itemId, []);
+      grouped.get(asset.itemId).push(asset);
+    }
+    return grouped;
+  }, [assets]);
+
+  const catalogueCounts = (item) => assetCountsForItem(countsByItem.get(item.id) || []);
 
   const pagedAssets = useMemo(
     () => assetRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
@@ -261,12 +288,47 @@ export default function AdminInventory() {
 
   function closeSheet() { setSheet(null); setFormError(""); }
 
-  async function submit(operation) {
+  // Which other assets may join a handover: available only, and never the one
+  // already being acted on.
+  function companionsFor(asset) {
+    return assetRows.filter((row) => row.status === "available" && row.id !== asset.id);
+  }
+
+  // Issuing goes through the canonical multi-asset path — an array of one when
+  // nothing else was picked — so a single handover and a group handover are the
+  // same operation and cannot drift apart.
+  function submitAssetAction(asset, action) {
+    if (action.id !== "issue") {
+      // Every other action is single-asset. alsoAssetIds is deliberately not
+      // read here AND cannot be populated there — the selector is issue-only —
+      // so the two halves agree rather than one silently discarding the other.
+      return assetAction(action.id, asset.id, asset.version, form);
+    }
+    const chosen = form.alsoAssetIds || [];
+    const members = [
+      { assetId: asset.id, version: asset.version },
+      ...assetRows
+        .filter((row) => chosen.includes(row.id))
+        .map((row) => ({ assetId: row.id, version: row.version })),
+    ];
+    return issueAssets(members, form);
+  }
+
+  async function submit(operation, onDone) {
     setFormError(""); setSaving(true);
     const result = await operation();
     setSaving(false);
     if (!result?.ok) return setFormError(result?.error || "That did not complete.");
     closeSheet();
+    if (onDone) onDone(result);
+  }
+
+  // The operator never chose the asset code, so the interface has to tell them
+  // what the database issued — otherwise a successful registration just closes
+  // and the new identity is something they have to go and look up.
+  function announceRegistration(result) {
+    const created = Array.isArray(result?.record) ? result.record[0] : result?.record;
+    if (created?.asset_code) setNotice(`Asset registered · ${created.asset_code}`);
   }
 
   return (
@@ -284,6 +346,13 @@ export default function AdminInventory() {
           <SummaryCard key={card.id} label={card.label} support={card.support} glyph={card.glyph} value={summary[card.id]} />
         ))}
       </div>
+
+      {notice && (
+        <p role="status" className="flex items-center justify-between gap-3 rounded-lg border border-[#cfe0d6] bg-[#eef3f0] px-4 py-2.5 text-sm font-medium text-botanique-green">
+          {notice}
+          <button type="button" onClick={() => setNotice("")} className="text-xs font-semibold underline underline-offset-2">Dismiss</button>
+        </p>
+      )}
 
       {status === "loading" && <p className="text-sm text-gray-600">Loading…</p>}
       {error && <p className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">{error}</p>}
@@ -430,6 +499,14 @@ export default function AdminInventory() {
                       {categoryLabel(item.category)} · {trackingMethodLabel(item.trackingMethod)}
                       {item.trackingMethod === "stock" ? ` · ${unitLabel(item.unitOfMeasure)}` : ""}
                     </p>
+                    {/* Asset-tracked items only. A stock item is a quantity,
+                        not a set of individually identified things, so it has
+                        no asset-instance counts and never gains asset codes. */}
+                    {item.trackingMethod === "asset" && (
+                      <p className="mt-0.5 text-xs font-medium text-botanique-charcoal" data-asset-summary={item.id}>
+                        {assetSummaryLine(catalogueCounts(item))}
+                      </p>
+                    )}
                   </div>
                   {!item.isActive && <Chip className="bg-stone-100 text-gray-600">Inactive</Chip>}
                   {manage && item.isActive && (
@@ -437,7 +514,7 @@ export default function AdminInventory() {
                       type="button"
                       onClick={() => openSheet(item.trackingMethod === "asset" ? "registerAsset" : "stock", { itemId: item.id })}
                       className="min-h-9 shrink-0 rounded-lg border border-stone-300 px-3 text-xs font-semibold"
-                    >{item.trackingMethod === "asset" ? "Register asset" : "Record stock"}</button>
+                    >{item.trackingMethod === "asset" ? registerActionLabel(catalogueCounts(item).registeredCount) : "Record stock"}</button>
                   )}
                 </li>
               ))}
@@ -664,7 +741,7 @@ export default function AdminInventory() {
                 </label>
               </div>
               {formError && <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{formError}</p>}
-              <button type="button" disabled={saving} onClick={() => submit(() => registerAsset(form))} className={`mt-4 ${primary}`}>{saving ? "Saving…" : "Register equipment"}</button>
+              <button type="button" disabled={saving} onClick={() => submit(() => registerAsset(form), announceRegistration)} className={`mt-4 ${primary}`}>{saving ? "Saving…" : "Register equipment"}</button>
             </>}
         </Sheet>
       )}
@@ -691,15 +768,16 @@ export default function AdminInventory() {
           {sheet.action
             ? <AssetActionForm
               action={sheet.action} asset={sheet.asset} sites={selectableSites} people={people}
+              companions={companionsFor(sheet.asset)}
               form={form} setForm={setForm} formError={formError} saving={saving}
               onCancel={() => { setSheet({ ...sheet, action: null }); setFormError(""); }}
-              onSubmit={() => submit(() => assetAction(sheet.action.id, sheet.asset.id, sheet.asset.version, form))}
+              onSubmit={() => submit(() => submitAssetAction(sheet.asset, sheet.action))}
             />
             : <div className="mt-4 flex flex-wrap gap-2">
               {equipmentActionsFor(sheet.asset.status, role).map((action) => (
                 <button
                   key={action.id} type="button"
-                  onClick={() => { setForm({ siteId: "", custodianPersonId: "", expectedReturnDate: "", condition: "", reason: "", note: "" }); setFormError(""); setSheet({ ...sheet, action }); }}
+                  onClick={() => { setForm({ siteId: "", custodianPersonId: "", expectedReturnDate: "", condition: "", reason: "", note: "", alsoAssetIds: [] }); setFormError(""); setSheet({ ...sheet, action }); }}
                   className={`inline-flex min-h-10 items-center rounded-lg px-3 text-xs font-semibold ${action.principal ? "border border-rose-200 text-rose-700" : "border border-stone-300 text-botanique-charcoal"}`}
                 >{action.label}</button>
               ))}
@@ -790,14 +868,73 @@ function activityTitle(entry, { assets, itemFor }) {
   return `${item?.itemName || "Stock"} ${STOCK_EVENT_PHRASES[entry.movementType] || entry.movementType}`;
 }
 
-function AssetActionForm({ action, asset, sites, people, form, setForm, formError, saving, onCancel, onSubmit }) {
+function AssetActionForm({
+  action, asset, sites, people, companions, form, setForm, formError, saving, onCancel, onSubmit,
+}) {
   const activePeople = people.filter((person) => person.isActive);
   const needsSite = action.id === "issue" || action.id === "transfer";
+
+  // MULTI-ASSET IS ORDINARY ISSUE ONLY — not needsSite, which is also true for
+  // transfer. Offering companions on a transfer let the operator tick several
+  // tools, save successfully, and believe the whole group had moved when only
+  // the original one did: a false success, which is worse than a refusal.
+  //
+  // This does not narrow reassignment. BD-TE-001 still moves Kefa/Kitisuru →
+  // Botanique custody → Lincoln/Alego → onward, one asset at a time, keeping
+  // its identity throughout. Only the bulk ISSUE workflow is multi-asset.
+  const allowsCompanions = action.id === "issue";
   const needsCondition = action.id === "condition" || action.id === "return_repair";
   const needsReason = action.id === "lost" || action.id === "retire";
+
+  // Several tools going to one person at one moment is ONE handover, so the
+  // shared context is asked for once and the whole group is saved together.
+  // Deliberately inside this sheet rather than as a permanent toolbar or a
+  // column of checkboxes on the register — the authority has neither.
+  //
+  // Only AVAILABLE assets can join: something already issued, under repair,
+  // lost or retired is not the Founder's to hand over, and offering it would
+  // invite a call the database refuses.
+  const alsoHandingOver = form.alsoAssetIds || [];
+  const toggleCompanion = (id) => setForm({
+    ...form,
+    alsoAssetIds: alsoHandingOver.includes(id)
+      ? alsoHandingOver.filter((value) => value !== id)
+      : [...alsoHandingOver, id],
+  });
+
   return (
     <div className="mt-4 border-t border-stone-200 pt-4">
       <p className="text-sm font-semibold">{action.label}</p>
+      {allowsCompanions && companions.length > 0 && (
+        <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+          <p className="text-xs font-semibold text-botanique-charcoal">Add another asset to this handover</p>
+          <p className="mt-0.5 text-[11px] text-gray-500">
+            Everything chosen here goes to the same Site and custodian, saved as one handover.
+          </p>
+          <ul className="mt-2 grid gap-1">
+            {companions.map((companion) => (
+              <li key={companion.id}>
+                <label className="flex items-center gap-2 text-xs text-botanique-charcoal">
+                  <input
+                    type="checkbox"
+                    checked={alsoHandingOver.includes(companion.id)}
+                    onChange={() => toggleCompanion(companion.id)}
+                    className="h-4 w-4 rounded border-stone-300"
+                  />
+                  <span className="min-w-0 truncate">
+                    {companion.itemName} · <span className="tabular-nums text-gray-600">{companion.assetCode}</span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          {alsoHandingOver.length > 0 && (
+            <p className="mt-2 text-[11px] font-medium text-botanique-green">
+              {alsoHandingOver.length + 1} assets in this handover
+            </p>
+          )}
+        </div>
+      )}
       <div className="mt-3 grid gap-3">
         {needsSite && (
           <label className="text-sm font-medium">{action.id === "issue" ? "Site this equipment is going to" : "Destination Site"}
@@ -815,8 +952,15 @@ function AssetActionForm({ action, asset, sites, people, form, setForm, formErro
                 {activePeople.map((person) => <option key={person.id} value={person.id}>{person.fullName}</option>)}
               </select>
             </label>
+            {/* An expected return date is a future obligation, so the picker
+                will not offer a past one and the database refuses it too. */}
             <label className="text-sm font-medium">Expected return (optional)
-              <input type="date" value={form.expectedReturnDate || ""} onChange={(event) => setForm({ ...form, expectedReturnDate: event.target.value })} className={field} />
+              <input
+                type="date" min={todayKey()}
+                value={form.expectedReturnDate || ""}
+                onChange={(event) => setForm({ ...form, expectedReturnDate: event.target.value })}
+                className={field}
+              />
             </label>
           </>
         )}

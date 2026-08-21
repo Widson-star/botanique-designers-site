@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { activityGlyphFor, paginationSlots } from "./inventoryPresentation";
+import {
+  activityGlyphFor, assetCountsForItem, assetSummaryLine, paginationSlots, registerActionLabel,
+} from "./inventoryPresentation";
 
 // Rendered shorthand, so each expectation reads like the footer itself.
 const shape = (page, pages) => paginationSlots(page, pages).map((slot) => (slot.gap ? "…" : String(slot.page + 1))).join(" ");
@@ -77,5 +79,51 @@ describe("activity pictogram semantics", () => {
   it("falls back to an authority form for an unrecognised event", () => {
     const glyph = activityGlyphFor({ kind: "equipment", eventType: "some_future_event" });
     expect(["out", "cube", "repair", "in"]).toContain(glyph);
+  });
+});
+
+describe("catalogue registered-asset summary", () => {
+  const asset = (status) => ({ status });
+
+  it("says 0 registered when nothing physical exists yet", () => {
+    const counts = assetCountsForItem([]);
+    expect(counts.registeredCount).toBe(0);
+    expect(assetSummaryLine(counts)).toBe("0 registered");
+    expect(registerActionLabel(counts.registeredCount)).toBe("Register first asset");
+  });
+
+  it("distinguishes registered from issued", () => {
+    const counts = assetCountsForItem([asset("issued")]);
+    expect(assetSummaryLine(counts)).toBe("1 registered · 1 issued");
+    expect(registerActionLabel(counts.registeredCount)).toBe("Add another asset");
+  });
+
+  it("breaks a mixed set down truthfully", () => {
+    const counts = assetCountsForItem([
+      asset("available"), asset("available"), asset("issued"), asset("issued"),
+    ]);
+    expect(counts.registeredCount).toBe(4);
+    expect(assetSummaryLine(counts)).toBe("4 registered · 2 available · 2 issued");
+  });
+
+  // A registered asset keeps its identity in every state, so every state is
+  // counted — but a zero-valued fragment is noise the reader has to subtract.
+  it("counts every status but prints none that are zero", () => {
+    const counts = assetCountsForItem([
+      asset("available"), asset("issued"), asset("under_repair"), asset("lost"), asset("retired"),
+    ]);
+    expect(counts).toMatchObject({
+      registeredCount: 5, availableCount: 1, issuedCount: 1,
+      underRepairCount: 1, lostCount: 1, retiredCount: 1,
+    });
+    expect(assetSummaryLine(counts))
+      .toBe("5 registered · 1 available · 1 issued · 1 under repair · 1 lost · 1 retired");
+    expect(assetSummaryLine(assetCountsForItem([asset("lost")]))).toBe("1 registered · 1 lost");
+    expect(assetSummaryLine(assetCountsForItem([asset("lost")]))).not.toMatch(/0 /);
+  });
+
+  // Retired and lost assets are still registered: the total never shrinks.
+  it("keeps a retired asset in the registered total", () => {
+    expect(assetCountsForItem([asset("retired")]).registeredCount).toBe(1);
   });
 });

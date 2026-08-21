@@ -4,9 +4,9 @@ import { canSeeInventory } from "../utils/inventoryCapabilities";
 import {
   createInventoryItem, deactivateInventoryItem, fetchEquipmentAssetEvents, fetchEquipmentAssets,
   fetchInventoryItemEvents, fetchInventoryItems, fetchInventoryPeople, fetchInventorySites,
-  fetchStockMovements, fetchStockPositions, issueEquipmentAsset, reactivateInventoryItem,
+  fetchStockMovements, fetchStockPositions, reactivateInventoryItem,
   recordStockAdjustment, recordStockReceipt, recordStockTransfer, recordStockUsage,
-  registerEquipmentAsset, reportEquipmentAssetLost, retireEquipmentAsset,
+  issueEquipmentAssets, registerEquipmentAsset, reportEquipmentAssetLost, retireEquipmentAsset,
   returnEquipmentAsset, returnEquipmentAssetFromRepair, sendEquipmentAssetForRepair,
   transferEquipmentAsset, updateEquipmentAssetCondition,
 } from "../lib/inventory";
@@ -220,15 +220,50 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
 
   const STALE_ASSET = "This equipment was changed elsewhere. Reload and try again.";
 
+  // An expected return date describes a future obligation, so a past one is not
+  // a fact anybody can act on. The database refuses it too — this exists to say
+  // so in the form rather than after a round trip.
+  const returnDateProblem = useCallback((value) => {
+    if (!value) return "";
+    const today = new Date();
+    const todayKey = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0"),
+    ].join("-");
+    return String(value) < todayKey
+      ? "An expected return date cannot be in the past."
+      : "";
+  }, []);
+
+  // Handing several tools to one person is ONE act, so it is one call. The
+  // database issues them in a single transaction: either the whole handover
+  // lands or none of it does, and there is never a half-completed group.
+  const issueAssets = useCallback((members, values) => {
+    if (isDemo) return Promise.resolve(demoBlocked());
+    if (!members || members.length === 0) {
+      return Promise.resolve({ ok: false, error: "Choose at least one asset to hand over." });
+    }
+    if (!values.siteId) {
+      return Promise.resolve({ ok: false, error: "Choose the Site this equipment is going to." });
+    }
+    const dateProblem = returnDateProblem(values.expectedReturnDate);
+    if (dateProblem) return Promise.resolve({ ok: false, error: dateProblem });
+    return run(() => issueEquipmentAssets(accessToken, members, values), STALE_ASSET);
+  }, [accessToken, run, isDemo, demoBlocked, returnDateProblem]);
+
   const assetAction = useCallback((kind, assetId, version, values) => {
     if (isDemo) return Promise.resolve(demoBlocked());
     switch (kind) {
       case "issue":
-        if (!values.siteId) return Promise.resolve({ ok: false, error: "Choose the Site this equipment is going to." });
-        return run(() => issueEquipmentAsset(accessToken, assetId, version, values), STALE_ASSET);
-      case "transfer":
+        // Deliberately the same canonical path as a multi-asset handover.
+        return issueAssets([{ assetId, version }], values);
+      case "transfer": {
         if (!values.siteId) return Promise.resolve({ ok: false, error: "Choose the destination Site." });
+        const staleDate = returnDateProblem(values.expectedReturnDate);
+        if (staleDate) return Promise.resolve({ ok: false, error: staleDate });
         return run(() => transferEquipmentAsset(accessToken, assetId, version, values), STALE_ASSET);
+      }
       case "return":
         return run(() => returnEquipmentAsset(accessToken, assetId, version, values), STALE_ASSET);
       case "condition":
@@ -248,7 +283,7 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
       default:
         return Promise.resolve({ ok: false, error: "Unknown equipment action." });
     }
-  }, [accessToken, run, isDemo, demoBlocked]);
+  }, [accessToken, run, isDemo, demoBlocked, issueAssets, returnDateProblem]);
 
   const recordStock = useCallback((kind, values) => {
     if (isDemo) return Promise.resolve(demoBlocked());
@@ -309,13 +344,13 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
   const value = useMemo(() => ({
     items, assets, positions, movements, assetEvents, itemEvents, activity,
     sites, selectableSites, people, summary, status, error, enabled, canMutate: !isDemo, refresh,
-    addItem, deactivateItem, reactivateItem, registerAsset, assetAction, recordStock,
+    addItem, deactivateItem, reactivateItem, registerAsset, assetAction, issueAssets, recordStock,
     siteName, personName, itemFor,
     assetsForItem: (itemId) => assets.filter((asset) => asset.itemId === itemId),
     eventsForAsset: (assetId) => assetEvents.filter((event) => event.assetId === assetId),
   }), [items, assets, positions, movements, assetEvents, itemEvents, activity, sites, selectableSites, people,
     summary, status, error, enabled, isDemo, refresh, addItem, deactivateItem, reactivateItem,
-    registerAsset, assetAction, recordStock, siteName, personName, itemFor]);
+    registerAsset, assetAction, issueAssets, recordStock, siteName, personName, itemFor]);
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }
