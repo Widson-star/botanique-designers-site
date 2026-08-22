@@ -31,6 +31,7 @@ import { useAlerts } from "./utils/useAlerts";
 import { useAdminData } from "./context/adminData";
 import { resolveActive, visibleDomains } from "./navigation";
 import { waLink } from "../utils/whatsapp";
+import HubGuide from "./components/HubGuide";
 
 // Opens the Botanique WhatsApp support thread with the Hub already named, so
 // whoever answers knows this is an Operations Hub question rather than a lead.
@@ -238,6 +239,8 @@ function NavTree({ role, collapsed, activeDomainId, openDomain, onToggleDomain, 
 // the Hub can never drift away from the number the rest of the product uses.
 function HelpCard() {
   return (
+    <>
+    <HubGuide />
     <a
       href={waLink(SUPPORT_MESSAGE)}
       target="_blank"
@@ -252,6 +255,7 @@ function HelpCard() {
         <span className="block text-[11px] text-gray-500">Open WhatsApp support</span>
       </span>
     </a>
+    </>
   );
 }
 

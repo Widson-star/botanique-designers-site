@@ -538,56 +538,137 @@ begin
 end;
 $$;
 
--- C5. The Manager CANNOT correct catalogue identity.
+-- ---------------------------------------------------------------------------
+-- C5-C9. FOUNDER DECISION, Authority 17: the Operations Manager has FULL
+-- CONTROL of Tools & Equipment. These five previously asserted the opposite —
+-- that each power was Principal-only — and that rule is superseded, not
+-- weakened: every reason requirement, lifecycle guard and version check below
+-- is still proved, and staff/viewer denial is proved separately.
+-- ---------------------------------------------------------------------------
+
+-- C5. The Manager CAN correct catalogue identity, with a reason.
 do $$
-declare item public.inventory_items;
+declare
+  item public.inventory_items;
+  corrected public.inventory_items;
+  refused boolean := false;
 begin
   select * into item from public.inventory_items where id = pg_temp.fx('drill_item');
-  perform public.correct_inventory_item_identity(item.id, item.version, 'Renamed Drill', 'power_tools', null, 'Trying it on');
-  raise exception 'ASSERTION FAILED: C5. only the Principal may correct catalogue identity';
-exception when insufficient_privilege then null;
+  corrected := public.correct_inventory_item_identity(
+    item.id, item.version, 'Renamed Drill', 'power_tools', null, 'Founder-approved rename'
+  );
+  perform pg_temp.assert_eq(corrected.item_name, 'Renamed Drill',
+    'C5. the Manager may correct catalogue identity');
+
+  -- The reason requirement is NOT relaxed by the wider authority.
+  begin
+    perform public.correct_inventory_item_identity(
+      corrected.id, corrected.version, 'Renamed Again', 'power_tools', null, '   '
+    );
+  exception when others then refused := true; end;
+  perform pg_temp.assert_true(refused, 'C5. a reason is still required to correct identity');
 end;
 $$;
 
--- C6. The Manager CANNOT deactivate a catalogue item.
+-- C6. The Manager reaches the deactivation lifecycle guard rather than an
+-- authority refusal: the drill still has an unresolved tool, so deactivation is
+-- refused for THAT reason — 22023, not 42501. This proves the widened authority
+-- did not also dissolve the guard behind it.
 do $$
-declare item public.inventory_items;
+declare
+  item public.inventory_items;
+  got text := '';
 begin
   select * into item from public.inventory_items where id = pg_temp.fx('drill_item');
-  perform public.deactivate_inventory_item(item.id, item.version, 'Trying it on');
-  raise exception 'ASSERTION FAILED: C6. only the Principal may deactivate a catalogue item';
-exception when insufficient_privilege then null;
+  begin
+    perform public.deactivate_inventory_item(item.id, item.version, 'Trying it on');
+  exception
+    when insufficient_privilege then got := 'authority';
+    when others then got := sqlstate;
+  end;
+  perform pg_temp.assert_eq(got, '22023',
+    'C6. the Manager passes authority and is stopped by the unresolved-tools guard');
 end;
 $$;
 
--- C7. The Manager CANNOT retire equipment.
+-- C7. The Manager CAN correct tool history, with a reason.
 do $$
-declare asset public.equipment_assets;
+declare
+  asset public.equipment_assets;
+  corrected public.equipment_assets;
+  refused boolean := false;
 begin
   select * into asset from public.equipment_assets where id = pg_temp.fx('drill_asset');
-  perform public.retire_equipment_asset(asset.id, asset.version, 'Trying it on');
-  raise exception 'ASSERTION FAILED: C7. only the Principal may retire equipment';
-exception when insufficient_privilege then null;
+  corrected := public.correct_equipment_asset(
+    asset.id, asset.version, 'available', 'fair', null, null, null, 'Founder-approved correction'
+  );
+  perform pg_temp.assert_eq(corrected.condition, 'fair',
+    'C7. the Manager may correct tool history');
+
+  begin
+    perform public.correct_equipment_asset(
+      corrected.id, corrected.version, 'available', 'good', null, null, null, ''
+    );
+  exception when others then refused := true; end;
+  perform pg_temp.assert_true(refused, 'C7. a reason is still required to correct a tool');
 end;
 $$;
 
--- C8. The Manager CANNOT correct equipment history.
+-- C8. The Manager CAN retire a tool, with a reason, and optimistic concurrency
+-- still applies.
 do $$
-declare asset public.equipment_assets;
+declare
+  asset public.equipment_assets;
+  retired public.equipment_assets;
+  stale boolean := false;
 begin
   select * into asset from public.equipment_assets where id = pg_temp.fx('drill_asset');
-  perform public.correct_equipment_asset(asset.id, asset.version, 'issued', 'good', null, null, null, 'Trying it on');
-  raise exception 'ASSERTION FAILED: C8. only the Principal may correct equipment';
-exception when insufficient_privilege then null;
+
+  begin
+    perform public.retire_equipment_asset(asset.id, asset.version + 5, 'stale attempt');
+  exception when others then stale := true; end;
+  perform pg_temp.assert_true(stale, 'C8. a stale version is still refused');
+
+  retired := public.retire_equipment_asset(asset.id, asset.version, 'written off');
+  perform pg_temp.assert_eq(retired.status, 'retired', 'C8. the Manager may retire a tool');
 end;
 $$;
 
--- C9. The Manager CANNOT record a stock-taking adjustment.
+-- C9. The Manager CAN record a stock-taking adjustment, in both directions,
+-- with a reason.
+--
+-- Deliberately netted back to where it started. Later assertions in this file
+-- read the same position, and a test that leaves the balance 5 lower is a test
+-- that breaks its neighbours rather than one that proves something.
 do $$
+declare
+  before_balance numeric;
+  refused boolean := false;
 begin
-  perform public.record_stock_adjustment(pg_temp.fx('cement_item'), 'adjustment_out', 5, pg_temp.fx('alpha_site'), 'Trying it on');
-  raise exception 'ASSERTION FAILED: C9. only the Principal may adjust stock';
-exception when insufficient_privilege then null;
+  before_balance := pg_temp.bal(pg_temp.fx('cement_item'), pg_temp.fx('alpha_site'));
+
+  perform public.record_stock_adjustment(
+    pg_temp.fx('cement_item'), 'adjustment_out', 5, pg_temp.fx('alpha_site'), 'stocktake shortfall'
+  );
+  perform pg_temp.assert_eq(
+    pg_temp.bal(pg_temp.fx('cement_item'), pg_temp.fx('alpha_site')),
+    before_balance - 5,
+    'C9. the Manager may record an adjustment out');
+
+  perform public.record_stock_adjustment(
+    pg_temp.fx('cement_item'), 'adjustment_in', 5, pg_temp.fx('alpha_site'), 'recount corrected'
+  );
+  perform pg_temp.assert_eq(
+    pg_temp.bal(pg_temp.fx('cement_item'), pg_temp.fx('alpha_site')),
+    before_balance,
+    'C9. the Manager may record an adjustment in, and the position is restored');
+
+  begin
+    perform public.record_stock_adjustment(
+      pg_temp.fx('cement_item'), 'adjustment_out', 1, pg_temp.fx('alpha_site'), null
+    );
+  exception when others then refused := true; end;
+  perform pg_temp.assert_true(refused, 'C9. a reason is still required for an adjustment');
 end;
 $$;
 

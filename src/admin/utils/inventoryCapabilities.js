@@ -20,9 +20,17 @@ export function canManageInventory(role) {
   return canSeeInventory(role);
 }
 
-// The three exceptional powers the database reserves for the Principal.
+// FOUNDER DECISION, Authority 17: "Principal and Operations Manager have full
+// control of the Tools & Equipment domain." Retirement, catalogue correction /
+// deactivation and stocktake adjustment are no longer Principal-only here.
+//
+// The old name is kept so every call site keeps working and the change is one
+// definition rather than a scatter of edits; what it MEANS is now "may use the
+// exceptional Tools & Equipment actions". Scoped to this domain only — Finance,
+// Approvals, Projects, People, Maintenance and Daily Site Record are untouched
+// and must not read anything into this.
 export function canUsePrincipalInventoryActions(role) {
-  return role === ROLES.OWNER;
+  return canManageInventory(role);
 }
 
 // ---------------------------------------------------------------------------
@@ -43,9 +51,21 @@ export const INVENTORY_SUMMARY_CARDS = [
 
 export const TRACKING_METHODS = ["asset", "stock"];
 
+// OPERATOR LANGUAGE, Authority 17. A tool is a tool: "physical asset" and
+// "individual equipment asset" are gone from anything a person reads. The
+// database keeps `asset` and `stock` as storage values — renaming those would
+// be a destructive schema change bought purely for presentation.
 export const TRACKING_METHOD_LABELS = {
-  asset: "Individual equipment asset",
-  stock: "Quantity stock",
+  asset: "Track each tool",
+  stock: "Track quantity only",
+};
+
+// The choice has to be explained BEFORE it is made: it is effectively
+// irreversible once an item has history, and the two options answer different
+// questions about the same shed.
+export const TRACKING_METHOD_EXPLAINERS = {
+  asset: "Each reusable tool gets its own permanent BD-TE ID and can be assigned, returned, transferred, repaired and condition-checked.",
+  stock: "Record how many units are at each location. Individual BD-TE IDs are not created.",
 };
 
 export const EQUIPMENT_STATUSES = ["available", "issued", "under_repair", "lost", "retired"];
@@ -201,7 +221,7 @@ export function equipmentActionsFor(status, role) {
   switch (status) {
     case "available":
       return [
-        { id: "issue", label: "Issue to Site" },
+        { id: "issue", label: "Assign / hand over" },
         { id: "condition", label: "Update condition" },
         { id: "repair", label: "Send for repair" },
         { id: "lost", label: "Report lost" },

@@ -26,10 +26,12 @@ create function pg_temp.fx(key text) returns uuid language sql stable as $$ sele
 
 insert into auth.users(id,email) values
  ('10000000-0000-0000-0000-000000000001','owner-hard@test.local'),
- ('10000000-0000-0000-0000-000000000002','manager-hard@test.local');
+ ('10000000-0000-0000-0000-000000000002','manager-hard@test.local'),
+ ('10000000-0000-0000-0000-000000000003','staff-hard@test.local');
 insert into public.profiles(id,email,full_name,role,is_active) values
  ('10000000-0000-0000-0000-000000000001','owner-hard@test.local','Hardening Principal','owner',true),
- ('10000000-0000-0000-0000-000000000002','manager-hard@test.local','Hardening Manager','manager',true);
+ ('10000000-0000-0000-0000-000000000002','manager-hard@test.local','Hardening Manager','manager',true),
+ ('10000000-0000-0000-0000-000000000003','staff-hard@test.local','Hardening Staff','staff',true);
 
 insert into public.projects(
  id,project_name,client_site_name,project_type,status,stage,archived,
@@ -85,7 +87,14 @@ do $$ begin
   raise exception 'ASSERTION FAILED: asset non-unit UOM accepted';
 exception when check_violation then null; end $$;
 
--- 2. A Manager cannot forge Principal authority with custom settings.
+-- 2. The controlled-change marker cannot MANUFACTURE authority.
+--
+-- Authority 17 gave the Operations Manager full control of Tools & Equipment,
+-- so a manager forging this marker is no longer a privilege escalation — they
+-- already hold the power the marker guards, exactly as the Principal always
+-- did. The boundary that still matters, and is asserted here, is that somebody
+-- with NO Inventory authority gains nothing from setting it, and that the
+-- reason requirement binds regardless of who is asking.
 select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',true);
 do $$
 declare i public.inventory_items; a public.equipment_assets;
@@ -95,20 +104,63 @@ begin
   a := public.register_equipment_asset(i.id,'HARD-GUC-001');
   perform pg_temp.fxset('guc_item',i.id);
 end $$;
+
+-- 2a. STAFF holds no Inventory authority. The marker changes nothing for them.
+--
+-- Asserted on the OUTCOME rather than on a particular exception: staff are
+-- filtered by RLS before the trigger is even reached, so the UPDATE matches
+-- zero rows and raises nothing at all. "Nothing changed" is the property that
+-- matters, and it holds whichever layer does the refusing.
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000003',true);
 select set_config('app.inventory_item_controlled_change','true',true);
-select set_config('app.inventory_item_change_reason','Manager forged marker',true);
+select set_config('app.inventory_item_change_reason','Staff forged marker',true);
+do $$
+begin
+  begin
+    update public.inventory_items set item_name='Forged Rename' where id=pg_temp.fx('guc_item');
+  exception when insufficient_privilege then null; end;
+  begin
+    update public.inventory_items set category='forged_category' where id=pg_temp.fx('guc_item');
+  exception when insufficient_privilege then null; end;
+  begin
+    update public.inventory_items set is_active=false where id=pg_temp.fx('guc_item');
+  exception when insufficient_privilege then null; end;
+end $$;
+
+-- Read the truth back as an authorised caller, since staff cannot see it.
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',true);
+do $$
+declare i public.inventory_items;
+begin
+  select * into i from public.inventory_items where id=pg_temp.fx('guc_item');
+  perform pg_temp.assert_eq(i.item_name,'GUC Guard Drill',
+    'staff cannot rename a catalogue item by forging the marker');
+  perform pg_temp.assert_eq(i.category,'power_tools',
+    'staff cannot recategorise a catalogue item by forging the marker');
+  perform pg_temp.assert_true(i.is_active,
+    'staff cannot deactivate a catalogue item by forging the marker');
+end $$;
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000003',true);
+
+-- 2b. The reason requirement still binds even for an authorised caller.
+select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',true);
+select set_config('app.inventory_item_change_reason','',true);
 do $$ begin
-  update public.inventory_items set item_name='Forged Rename' where id=pg_temp.fx('guc_item');
-  raise exception 'ASSERTION FAILED: forged name correction accepted';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  update public.inventory_items set category='forged_category' where id=pg_temp.fx('guc_item');
-  raise exception 'ASSERTION FAILED: forged category correction accepted';
-exception when insufficient_privilege then null; end $$;
-do $$ begin
-  update public.inventory_items set is_active=false where id=pg_temp.fx('guc_item');
-  raise exception 'ASSERTION FAILED: forged deactivation accepted';
-exception when insufficient_privilege then null; end $$;
+  update public.inventory_items set item_name='Reasonless Rename' where id=pg_temp.fx('guc_item');
+  raise exception 'ASSERTION FAILED: a controlled change without a reason was accepted';
+exception when others then null; end $$;
+
+-- 2c. And an authorised Manager genuinely may make the reasoned change, which
+-- is the Founder decision this tranche implements.
+select set_config('app.inventory_item_change_reason','Manager reasoned correction',true);
+do $$
+declare renamed text;
+begin
+  update public.inventory_items set item_name='Manager Renamed Drill' where id=pg_temp.fx('guc_item');
+  select item_name into renamed from public.inventory_items where id=pg_temp.fx('guc_item');
+  perform pg_temp.assert_eq(renamed,'Manager Renamed Drill',
+    'the Manager may make a reasoned catalogue correction');
+end $$;
 select set_config('app.inventory_item_controlled_change','false',true);
 select set_config('app.inventory_item_change_reason','',true);
 

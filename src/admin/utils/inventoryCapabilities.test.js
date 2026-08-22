@@ -21,23 +21,23 @@ describe("Inventory V1 role boundary", () => {
     expect(canManageInventory(ROLES.VIEWER)).toBe(false);
   });
 
-  // Retirement, catalogue correction/deactivation and stocktake adjustment are
-  // the database's Principal-only powers. The interface must not imply the
-  // Operations Manager has them.
-  it("reserves the exceptional actions for the Principal alone", () => {
+  // FOUNDER DECISION, Authority 17: Principal AND Operations Manager have full
+  // control of Tools & Equipment. Staff and viewer gain nothing.
+  it("gives both operational roles the exceptional actions too", () => {
     expect(canUsePrincipalInventoryActions(ROLES.OWNER)).toBe(true);
-    expect(canUsePrincipalInventoryActions(ROLES.MANAGER)).toBe(false);
+    expect(canUsePrincipalInventoryActions(ROLES.MANAGER)).toBe(true);
     expect(canUsePrincipalInventoryActions(ROLES.STAFF)).toBe(false);
     expect(canUsePrincipalInventoryActions(ROLES.VIEWER)).toBe(false);
   });
 });
 
 describe("equipment lifecycle actions", () => {
-  it("offers the Operations Manager every ordinary action but never Retire", () => {
-    for (const status of ["available", "issued", "under_repair"]) {
-      const ids = equipmentActionsFor(status, ROLES.MANAGER).map((action) => action.id);
-      expect(ids).not.toContain("retire");
-      expect(ids.length).toBeGreaterThan(0);
+  // Retire is now the Manager's too, wherever the database permits it.
+  it("offers the Operations Manager Retire wherever the Principal has it", () => {
+    for (const status of ["available", "under_repair", "lost"]) {
+      expect(equipmentActionsFor(status, ROLES.MANAGER).map((a) => a.id))
+        .toEqual(equipmentActionsFor(status, ROLES.OWNER).map((a) => a.id));
+      expect(equipmentActionsFor(status, ROLES.MANAGER).map((a) => a.id)).toContain("retire");
     }
   });
 
@@ -62,16 +62,16 @@ describe("equipment lifecycle actions", () => {
 
   it("matches each status to its valid transitions", () => {
     expect(equipmentActionsFor("available", ROLES.MANAGER).map((a) => a.id))
-      .toEqual(["issue", "condition", "repair", "lost"]);
+      .toEqual(["issue", "condition", "repair", "lost", "retire"]);
     expect(equipmentActionsFor("issued", ROLES.MANAGER).map((a) => a.id))
       .toEqual(["transfer", "return", "condition", "repair", "lost"]);
     expect(equipmentActionsFor("under_repair", ROLES.MANAGER).map((a) => a.id))
-      .toEqual(["return_repair", "condition", "lost"]);
+      .toEqual(["return_repair", "condition", "lost", "retire"]);
   });
 
   // A lost asset is an unresolved exception, not a movable one.
-  it("offers no ordinary movement on a lost asset", () => {
-    expect(equipmentActionsFor("lost", ROLES.MANAGER)).toEqual([]);
+  it("offers no ordinary movement on a lost tool, only retirement", () => {
+    expect(equipmentActionsFor("lost", ROLES.MANAGER).map((a) => a.id)).toEqual(["retire"]);
     expect(equipmentActionsFor("lost", ROLES.OWNER).map((a) => a.id)).toEqual(["retire"]);
   });
 

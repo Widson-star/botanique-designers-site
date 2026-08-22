@@ -49,6 +49,10 @@ echo "Inventory / Tools & Equipment V1 — BD-TE identity, atomic handover, expe
 "${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_asset_identity_test.sql" >/dev/null
 echo "  identity and handover assertions passed"
 
+echo "Inventory / Tools & Equipment — Authority 17 full control and batch registration:"
+"${psql_cmd[@]}" -f "$repo_dir/supabase/tests/inventory_full_control_and_batch_test.sql" >/dev/null
+echo "  full-control and batch assertions passed"
+
 # =====================================================================
 # Negative-stock concurrency regression.
 # =====================================================================

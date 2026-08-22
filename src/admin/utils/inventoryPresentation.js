@@ -65,7 +65,7 @@ export function activityGlyphFor(entry) {
 // replacement for it.
 const ASSET_STATUS_SUMMARY_ORDER = [
   ["availableCount", "available"],
-  ["issuedCount", "issued"],
+  ["issuedCount", "assigned"],
   ["underRepairCount", "under repair"],
   ["lostCount", "lost"],
   ["retiredCount", "retired"],
@@ -91,14 +91,49 @@ export function assetCountsForItem(assets) {
 // to subtract to find the fact. The registered total is always kept, including
 // when it is zero, because "0 registered" is the answer to the question the row
 // is being asked.
+// "1 tool · 1 assigned" · "6 tools · 4 assigned · 2 available".
+//
+// AUTHORITY 17 LANGUAGE. "1 registered · 1 available" was accurate and
+// database-shaped: it made the operator decode "registered" as a quantity, and
+// it called a rake an asset. The count is of TOOLS, and the word for a tool in
+// somebody's hands is "assigned", not "issued".
+//
+// Zero-valued fragments are dropped — a row reading "1 tool · 0 available · 1
+// assigned · 0 under repair" is noise the reader has to subtract. The total is
+// always kept, including zero, because "0 tools" is the answer to the question
+// the row is being asked.
 export function assetSummaryLine(counts) {
-  const parts = [`${counts.registeredCount} registered`];
-  if (counts.registeredCount > 0) {
+  const total = counts.registeredCount;
+  const parts = [`${total} ${total === 1 ? "tool" : "tools"}`];
+  if (total > 0) {
     for (const [key, label] of ASSET_STATUS_SUMMARY_ORDER) {
       if (counts[key] > 0) parts.push(`${counts[key]} ${label}`);
     }
   }
   return parts.join(" · ");
+}
+
+// Where a type's tools actually are, so "how many rakes are at Karen?" is
+// answered by reading rather than by counting rows.
+//
+// Derived from the individual tool rows every time. There is deliberately no
+// editable per-Site quantity for individually tracked tools: the tools ARE the
+// quantity, and a second stored number could only ever disagree with them.
+export function siteBreakdownForItem(assets, siteName) {
+  const places = new Map();
+  for (const asset of assets || []) {
+    if (asset.status === "retired") continue;
+    const key = asset.currentSiteId || "";
+    if (!places.has(key)) {
+      places.set(key, { siteId: key, siteName: key ? siteName(key) : "Botanique custody", total: 0, available: 0, assigned: 0, underRepair: 0 });
+    }
+    const place = places.get(key);
+    place.total += 1;
+    if (asset.status === "available") place.available += 1;
+    if (asset.status === "issued") place.assigned += 1;
+    if (asset.status === "under_repair") place.underRepair += 1;
+  }
+  return [...places.values()].sort((a, b) => b.total - a.total || a.siteName.localeCompare(b.siteName));
 }
 
 // The action always means "register another PHYSICAL INSTANCE of this type",
