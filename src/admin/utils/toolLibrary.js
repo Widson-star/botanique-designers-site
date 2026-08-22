@@ -16,13 +16,32 @@
 import library from "../../../public/admin/inventory-tools/professional-tool-library.json";
 
 export const TOOL_LIBRARY = library;
+
+// CELLS WHOSE ARTWORK DOES NOT MATCH THEIR LABEL.
+//
+// The committed sheet has no safety helmet: cell (3,4), which the JSON names
+// `safety_helmet`, holds a second pair of gloves. Verified by cropping the cell
+// directly out of the committed PNG.
+//
+// Neither design file may be changed here — the sprite and the JSON cell map
+// are both design-controlled. But Authority 17 is equally clear that a visual
+// must never masquerade as a different tool, and gloves labelled "Safety
+// helmet" is exactly that. So the KEY IS SUPPRESSED IN CODE: an item called
+// "safety helmet" gets the honest "visual not assigned" mark instead of a
+// picture of something else, and the entry is kept out of the picker.
+//
+// This is one line to delete once the cell carries a helmet.
+const CELLS_WITH_MISMATCHED_ARTWORK = new Set(["safety_helmet"]);
+
 export const TOOL_LIBRARY_KEYS = Object.keys(library.tools);
+export const USABLE_TOOL_LIBRARY_KEYS = TOOL_LIBRARY_KEYS
+  .filter((key) => !CELLS_WITH_MISMATCHED_ARTWORK.has(key));
 
 // Where a cell sits in the sheet, as CSS a caller can drop straight onto an
 // element. Expressed as a background so one HTTP request serves every tool and
 // the browser never has to decode thirty files.
 export function spriteStyle(key, renderedSize) {
-  const cell = library.tools[key];
+  const cell = CELLS_WITH_MISMATCHED_ARTWORK.has(key) ? null : library.tools[key];
   if (!cell) return null;
   const scale = renderedSize / library.cellSize;
   const rows = Math.ceil(TOOL_LIBRARY_KEYS.length / library.columns);
@@ -72,7 +91,7 @@ const MATCHERS = [
   ["lawn_mower", [/\blawn\s*mower\b/, /\bmower\b/, /\bmowing\s*machine\b/]],
   ["wheelbarrow_plastic", [/\bplastic\s*wheel\s*barrow\b/, /\bplastic\s*wheelbarrow\b/]],
   ["wheelbarrow", [/\bwheel\s*barrow\b/, /\bwheelbarrow\b/, /\bbarrow\b/]],
-  ["safety_helmet", [/\bhelmet\b/, /\bhard\s*hat\b/]],
+  // safety_helmet is deliberately absent — see CELLS_WITH_MISMATCHED_ARTWORK.
   ["gloves", [/\bglove/]],
   ["irrigation_fittings", [/\birrigation\b/, /\bsprinkler\b/, /\bdripper\b/, /\bfitting/, /\bemitter\b/, /\bconnector/]],
   ["hand_trowel", [/\bhand\s*trowel\b/, /\btrowel\b/]],
@@ -134,7 +153,7 @@ const CATEGORY_FOR_KEY = {
   safety_helmet: "safety_ppe", gloves: "safety_ppe",
 };
 
-export const TOOL_PICKER_ITEMS = TOOL_LIBRARY_KEYS.map((key) => {
+export const TOOL_PICKER_ITEMS = USABLE_TOOL_LIBRARY_KEYS.map((key) => {
   const quantityOnly = QUANTITY_ONLY_KEYS.has(key);
   return {
     key,

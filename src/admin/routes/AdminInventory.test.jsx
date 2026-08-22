@@ -858,6 +858,8 @@ describe("Authority 17 operator language and tool picker", () => {
     const dialog = openAddItem();
     const picker = dialog.querySelector("[data-tool-picker]");
     expect(picker.textContent).not.toMatch(/_/);
+    // 30 cells, minus the one whose artwork does not match its label.
+    expect(within(picker).getAllByRole("button")).toHaveLength(29);
     expect(within(dialog).getByRole("button", { name: "Manual tools" })).toBeInTheDocument();
   });
 });

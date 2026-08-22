@@ -1,4 +1,4 @@
-# Operations Hub — Working Authority (images 05–14, plus 16)
+# Operations Hub — Working Authority (images 05–14, plus 16 and 17)
 
 Ten Founder-frozen composition screens, preserved on 9 August 2026. They **supplement** the four
 approved screens one directory up (`../01`–`../04`); they do not replace, supersede or retire any
@@ -31,6 +31,7 @@ Founder instruction naming that image.
 | `13-finance-children-working-authority.png` | `febbadedb1f9008cdf000147fb1e0afc001566c30a992293df0b6440fb829e26` |
 | `14-approvals-project-summary-working-authority.png` | `5f8be3e11b6d42695ac00d2c20106be42d75737499f4079de8e7a6f25353c725` |
 | `16-tools-equipment-inventory-working-authority.png` | `551c4ed34b8d8b71d6cd0ae39efa874f4f90485e59cf92899460ec96ecdc0c1a` |
+| `17-tools-equipment-enhanced-working-authority.png` | `c72ced4c5f1e248de5c9370f2d60350607d91b2c06efb9931611e033584a70f8` |
 
 The transfer archive's own filename is **not** authoritative and must never be used to rename the
 product, the directory or any image. The individual filenames above are the authoritative names.
@@ -49,24 +50,53 @@ product, the directory or any image. The individual filenames above are the auth
 | `12` | Finance Overview: the five-area model, position summary, top expense categories, recent finance activity |
 | `13` | Finance children: Project Costs, Company Expenses, Staff Compensation, and Funding/Payments/Reconciliation — including the three-state approved → paid → reconciled truth model |
 | `14` | Approvals as one aggregated decision queue across request types, and the compact Project Summary |
-| `16` | **Tools & Equipment (standalone)** — the governing authority for that screen: KPI pictograms, Inventory register, Equipment assets tab, six-row density, product cut-outs, Stock positions rail, Recent activity rail, numbered pagination |
+| `16` | Tools & Equipment (standalone), **superseded by `17`** — retained as the previous approved authority and historical evidence |
+| `17` | **Tools & Equipment (enhanced) — CURRENT GOVERNING AUTHORITY**: professional tool picker and visual library, Track each tool / Track quantity only, batch registration, initial Site and custodian, Assign / hand over, per-Site tool counts, item imagery in recent activity, equal Principal + Operations Manager control, contextual support |
 
 ## Tools & Equipment authority hierarchy
 
-`16-tools-equipment-inventory-working-authority.png` (1448 × 1086, SHA-256
-`551c4ed34b8d8b71d6cd0ae39efa874f4f90485e59cf92899460ec96ecdc0c1a`) is the **governing standalone
-Tools & Equipment authority**, approved by the Founder on 20 August 2026 and committed here on
-21 August 2026. Implement Tools & Equipment from image `16`.
+**`17-tools-equipment-enhanced-working-authority.png` is the CURRENT governing
+Tools & Equipment visual and workflow authority** (1536 × 1024, SHA-256
+`c72ced4c5f1e248de5c9370f2d60350607d91b2c06efb9931611e033584a70f8`), approved by
+the Founder on 21 August 2026 and committed on 22 August 2026. Implement Tools &
+Equipment from image `17`.
 
-**For Tools & Equipment only, image `16` supersedes the Tools & Equipment portion of image `11`.**
+Its decision record, `17-tools-equipment-enhanced-authority.md`, remains
+**semantic authority alongside the board**: the board governs composition, the
+record governs the product decisions, and neither replaces the other.
 
-Image `11` is **not** deleted, **not** retired and **not** reduced in standing. It remains the
-frozen authority for **Maintenance**, which this tranche does not touch and does not change. Image
-`11` was a combined Maintenance + Tools & Equipment composition from 9 August 2026; image `16` is
-the later, standalone, Founder-approved Tools & Equipment screen. Where the two differ on Tools &
-Equipment, `16` wins. Where they concern Maintenance, `11` stands unchanged.
+The order, for Tools & Equipment only:
 
-### Settled semantic rules still override illustrative styling in `16`
+1. **`17` supersedes `16`.** Image `16` is not deleted and not retired — it is
+   preserved as the previous standalone approved authority and as historical
+   evidence of what was approved before the enhancement.
+2. **`17` and `16` together supersede only the Tools & Equipment PORTION of
+   image `11`.** Image `11` remains Maintenance authority wherever Maintenance
+   is concerned, and nothing in this hierarchy changes that.
+
+Images `11` and `16` must not be modified or deleted.
+
+Where `17` differs from `16` on Tools & Equipment, **17 wins**. Where `16` is
+not intentionally improved by `17`, it continues to inform the restrained shell,
+KPI strip, register, tabs, table density and right-rail posture.
+
+### The controlled professional tool library
+
+Image `17` introduces a searchable tool library, committed as two files:
+
+- `/public/admin/inventory-tools/professional-tool-library.png` — 768 × 640,
+  SHA-256 `fe2dd613ff6f190725517ac97fb6431143fc5511b334544aac9fb04159926f24`,
+  a 6 × 5 sheet of 128px cells;
+- `/public/admin/inventory-tools/professional-tool-library.json` — the cell map.
+
+The library is **design-controlled by ChatGPT/Founder authority, not Claude
+Code**. Claude may wire an approved visual key into the application. Claude must
+not redraw tools, invent SVGs, replace an approved visual with an approximation,
+or select a misleading fallback. An item with no approved visual takes the
+neutral `visual not assigned` treatment — a generic wrench must never masquerade
+as a panga.
+
+### Settled semantic rules still override illustrative styling in `16` and `17`
 
 Image `16` is composition authority, not data or semantic authority. The following settled product
 decisions **override what the image happens to show**, and are not to be re-litigated from it:
@@ -80,9 +110,9 @@ decisions **override what the image happens to show**, and are not to be re-liti
   sample asset rows, the stock quantities and the activity entries in `16` are sample content.
   Production counts stay truthful and nothing from the image is ever seeded.
 
-The binary itself is **authority evidence and is never edited** to remove its amber chip or its
-`Poor` sample — the preservation rule above applies to `16` exactly as it does to `05`–`14`. The
-implementation carries the overrides; the image records what was approved.
+The binaries are **authority evidence and are never edited** to remove an amber chip or a `Poor`
+sample — the preservation rule above applies to `16` and `17` exactly as it does to `05`–`14`. The
+implementation carries the overrides; the images record what was approved.
 
 ## Authority status — read this before implementing from them
 

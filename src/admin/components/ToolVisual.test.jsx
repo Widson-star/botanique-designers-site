@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import ToolVisual, { AUTHORITY_IMAGES } from "./ToolVisual";
-import { TOOL_LIBRARY, TOOL_LIBRARY_KEYS, toolKeyForName } from "../utils/toolLibrary";
+import { TOOL_LIBRARY, TOOL_LIBRARY_KEYS, USABLE_TOOL_LIBRARY_KEYS, toolKeyForName } from "../utils/toolLibrary";
 
 const libraryKeyOf = (container) =>
   container.firstChild.getAttribute("data-tool-library-key");
@@ -31,8 +31,8 @@ describe("the controlled professional tool library", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("resolves every tool the library declares", () => {
-    for (const key of TOOL_LIBRARY_KEYS) {
+  it("resolves every USABLE tool the library declares", () => {
+    for (const key of USABLE_TOOL_LIBRARY_KEYS) {
       const { container, unmount } = render(<ToolVisual visual={key} name={TOOL_LIBRARY.tools[key].label} />);
       expect(`${key}: ${sourceOf(container)}`).toBe(`${key}: tool-library`);
       unmount();
@@ -64,8 +64,7 @@ describe("the controlled professional tool library", () => {
       "Axe", "Mattock", "Pickaxe", "Wheelbarrow", "Lawn mower", "Brush cutter",
       "Chainsaw", "Generator", "Rotary hammer drill", "Drill", "Angle grinder",
       "Hose reel", "Water pump", "Pressure washer", "Ladder", "Hand fork",
-      "Hand trowel", "Hedge trimmer", "Leaf blower", "Safety helmet", "Gloves",
-      "Irrigation fittings",
+      "Hand trowel", "Hedge trimmer", "Leaf blower", "Gloves", "Irrigation fittings",
     ];
     for (const name of names) {
       const key = toolKeyForName(name);
@@ -140,32 +139,94 @@ describe("the earlier approved product cut-outs", () => {
 });
 
 // ---------------------------------------------------------------------------
-// THE COMMITTED SPRITE IS CURRENTLY UNUSABLE.
+// THE COMMITTED SPRITE MUST BE A REAL, DECODABLE SHEET.
 //
-// professional-tool-library.png is 29 bytes: the PNG signature plus a partial
-// IHDR declaring 768x640 RGBA, and then nothing — no IHDR CRC, no IDAT, no
-// IEND. The JSON map is complete and correct and every wiring above is
-// therefore correct too, but there are no pixels to crop.
+// It was briefly a 29-byte stub — signature plus a partial IHDR, no image data
+// at all — and every tool silently degraded to "visual not assigned". The
+// wiring was correct and the screen was still wrong, which is exactly the class
+// of failure a byte-level guard catches and a rendering test does not.
 //
-// Authority 17 forbids Claude regenerating or substituting the imagery, so this
-// pins the current state instead of hiding it. When ChatGPT commits the real
-// sheet this test FAILS, which is the point: it is the reminder to delete it.
+// This asserts the sheet is genuinely there and genuinely matches the JSON map,
+// so a truncated or mis-sized replacement fails here rather than on the
+// Founder's screen.
 // ---------------------------------------------------------------------------
 describe("committed sprite integrity", () => {
-  it("is still truncated, which is why no tool visual can render yet", () => {
-    const bytes = readFileSync(`public${TOOL_LIBRARY.sprite}`);
-    expect(bytes[0] << 8 | bytes[1]).toBe(0x8950);          // PNG signature
-    expect(bytes.length).toBeLessThan(64);                   // no image data
-    const tail = bytes.subarray(bytes.length - 8).toString("latin1");
-    expect(tail).not.toContain("IEND");
+  const sprite = () => readFileSync(`public${TOOL_LIBRARY.sprite}`);
+
+  it("is a structurally complete PNG", () => {
+    const bytes = sprite();
+    // Signature.
+    expect([...bytes.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    // First chunk is IHDR.
+    expect(bytes.subarray(12, 16).toString("latin1")).toBe("IHDR");
+    // It carries actual image data, and it ends properly. Scanned as text
+    // rather than via a Buffer global, which the lint env does not declare.
+    expect(bytes.toString("latin1")).toContain("IDAT");
+    expect(bytes.subarray(bytes.length - 8, bytes.length - 4).toString("latin1")).toBe("IEND");
   });
 
-  it("declares the dimensions the JSON map expects", () => {
-    const bytes = readFileSync(`public${TOOL_LIBRARY.sprite}`);
+  // The 29-byte stub had a valid signature and a valid IHDR. Only the absence
+  // of real bytes distinguished it.
+  it("is materially larger than the truncated placeholder ever was", () => {
+    expect(sprite().length).toBeGreaterThan(10_000);
+  });
+
+  it("is exactly the 768 x 640 sheet the JSON map describes", () => {
+    const bytes = sprite();
     const width = bytes.readUInt32BE(16);
     const height = bytes.readUInt32BE(20);
+    expect(width).toBe(768);
+    expect(height).toBe(640);
     const rows = Math.ceil(TOOL_LIBRARY_KEYS.length / TOOL_LIBRARY.columns);
     expect(width).toBe(TOOL_LIBRARY.columns * TOOL_LIBRARY.cellSize);
     expect(height).toBe(rows * TOOL_LIBRARY.cellSize);
+  });
+
+  // 30 tools in a 6-wide sheet is 5 rows, and every declared cell must fall
+  // inside it — a coordinate off the edge would crop empty space.
+  it("holds all thirty cells inside the 6 x 5 grid", () => {
+    expect(TOOL_LIBRARY_KEYS).toHaveLength(30);
+    expect(TOOL_LIBRARY.columns).toBe(6);
+    for (const key of TOOL_LIBRARY_KEYS) {
+      const cell = TOOL_LIBRARY.tools[key];
+      expect(`${key} col ${cell.col}`).toBe(`${key} col ${cell.col}`);
+      expect(cell.col).toBeGreaterThanOrEqual(0);
+      expect(cell.col).toBeLessThan(6);
+      expect(cell.row).toBeGreaterThanOrEqual(0);
+      expect(cell.row).toBeLessThan(5);
+    }
+    // And no two tools share a cell.
+    const cells = TOOL_LIBRARY_KEYS.map((key) => `${TOOL_LIBRARY.tools[key].col},${TOOL_LIBRARY.tools[key].row}`);
+    expect(new Set(cells).size).toBe(30);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// A CELL WHOSE ARTWORK DOES NOT MATCH ITS LABEL.
+//
+// The committed sheet has no safety helmet: cell (3,4), which the JSON names
+// `safety_helmet`, holds a second pair of gloves. Neither design file may be
+// changed here, so the key is suppressed in code and the item falls back to the
+// honest neutral mark rather than showing gloves under a helmet's name.
+//
+// When the cell is corrected, delete the suppression and this block.
+// ---------------------------------------------------------------------------
+describe("the mismatched safety_helmet cell", () => {
+  it("is still declared by the JSON but excluded from use", () => {
+    expect(TOOL_LIBRARY_KEYS).toContain("safety_helmet");
+    expect(USABLE_TOOL_LIBRARY_KEYS).not.toContain("safety_helmet");
+  });
+
+  it("shows the neutral mark rather than the gloves that sit in that cell", () => {
+    const { container } = render(<ToolVisual name="Safety helmet" />);
+    expect(container.firstChild.getAttribute("data-visual-source")).toBe("unassigned");
+    expect(toolKeyForName("Safety helmet")).toBeNull();
+    expect(toolKeyForName("hard hat")).toBeNull();
+  });
+
+  it("keeps the real gloves cell working", () => {
+    const { container } = render(<ToolVisual name="Gloves" />);
+    expect(container.firstChild.getAttribute("data-tool-library-key")).toBe("gloves");
   });
 });
