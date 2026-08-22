@@ -82,19 +82,19 @@ describe("activity pictogram semantics", () => {
   });
 });
 
-describe("catalogue registered-asset summary", () => {
+describe("catalogue tool-count summary", () => {
   const asset = (status) => ({ status });
 
-  it("says 0 registered when nothing physical exists yet", () => {
+  it("says 0 tools when nothing exists yet", () => {
     const counts = assetCountsForItem([]);
     expect(counts.registeredCount).toBe(0);
-    expect(assetSummaryLine(counts)).toBe("0 registered");
+    expect(assetSummaryLine(counts)).toBe("0 tools");
     expect(registerActionLabel(counts.registeredCount)).toBe("Register first asset");
   });
 
-  it("distinguishes registered from issued", () => {
+  it("distinguishes owned tools from assigned ones", () => {
     const counts = assetCountsForItem([asset("issued")]);
-    expect(assetSummaryLine(counts)).toBe("1 registered · 1 issued");
+    expect(assetSummaryLine(counts)).toBe("1 tool · 1 assigned");
     expect(registerActionLabel(counts.registeredCount)).toBe("Add another asset");
   });
 
@@ -103,7 +103,7 @@ describe("catalogue registered-asset summary", () => {
       asset("available"), asset("available"), asset("issued"), asset("issued"),
     ]);
     expect(counts.registeredCount).toBe(4);
-    expect(assetSummaryLine(counts)).toBe("4 registered · 2 available · 2 issued");
+    expect(assetSummaryLine(counts)).toBe("4 tools · 2 available · 2 assigned");
   });
 
   // A registered asset keeps its identity in every state, so every state is
@@ -117,8 +117,8 @@ describe("catalogue registered-asset summary", () => {
       underRepairCount: 1, lostCount: 1, retiredCount: 1,
     });
     expect(assetSummaryLine(counts))
-      .toBe("5 registered · 1 available · 1 issued · 1 under repair · 1 lost · 1 retired");
-    expect(assetSummaryLine(assetCountsForItem([asset("lost")]))).toBe("1 registered · 1 lost");
+      .toBe("5 tools · 1 available · 1 assigned · 1 under repair · 1 lost · 1 retired");
+    expect(assetSummaryLine(assetCountsForItem([asset("lost")]))).toBe("1 tool · 1 lost");
     expect(assetSummaryLine(assetCountsForItem([asset("lost")]))).not.toMatch(/0 /);
   });
 

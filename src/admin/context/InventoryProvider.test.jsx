@@ -231,7 +231,7 @@ describe("automatic asset codes", () => {
     await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     const result = await get().registerAsset({ itemId: "" });
     expect(result.ok).toBe(false);
-    expect(result.error).toBe("Choose the equipment item.");
+    expect(result.error).toBe("Choose the tool to register.");
   });
 });
 

@@ -6,13 +6,15 @@ import InventoryPictogram from "../components/InventoryPictogram";
 import {
   BOTANIQUE_CUSTODY, EQUIPMENT_CONDITIONS, INVENTORY_SUMMARY_CARDS,
   EQUIPMENT_CONDITION_CLASSES, EQUIPMENT_STATUS_CLASSES,
-  OWNERSHIP_TYPES, canManageInventory, canSeeInventory, canUsePrincipalInventoryActions,
+  OWNERSHIP_TYPES, TRACKING_METHODS, TRACKING_METHOD_EXPLAINERS,
+  canManageInventory, canSeeInventory, canUsePrincipalInventoryActions,
   categoryLabel, conditionLabel, equipmentActionsFor, ownershipLabel,
   positionLabel, statusLabel, trackingMethodLabel, unitLabel,
 } from "../utils/inventoryCapabilities";
-import { QUICK_ADD_ITEMS } from "../utils/toolVisuals";
+import { TOOL_PICKER_CATEGORIES, searchToolLibrary, toolKeyForName } from "../utils/toolLibrary";
 import {
-  activityGlyphFor, assetCountsForItem, assetSummaryLine, paginationSlots, registerActionLabel,
+  activityGlyphFor, assetCountsForItem, assetSummaryLine, paginationSlots,
+  registerActionLabel, siteBreakdownForItem,
 } from "../utils/inventoryPresentation";
 
 const TABS = [
@@ -108,7 +110,18 @@ const ACTIVITY_GLYPHS = {
   in: <><path d="M10 3.4v8.2" /><path d="M6.6 8.2 10 11.6l3.4-3.4" /><path d="M3.6 15.2h12.8" /></>,
 };
 
-function ActivityIcon({ entry }) {
+// Authority 17: the event text already carries the verb, so the picture should
+// identify the SUBJECT. "Panga added to catalogue" gets the panga, not a
+// generic cube. A system pictogram survives only where there is no item to
+// show — the row is genuinely about a movement rather than a thing.
+function ActivityIcon({ entry, itemName }) {
+  if (itemName && toolKeyForName(itemName)) {
+    return (
+      <span className="mt-0.5 shrink-0" data-activity-subject={itemName}>
+        <ToolVisual name={itemName} size="md" />
+      </span>
+    );
+  }
   const glyph = activityGlyphFor(entry);
   return (
     <span aria-hidden="true" data-activity-icon={glyph} data-activity-kind={entry.kind} className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eef3f0] text-botanique-green">
@@ -209,6 +222,8 @@ export default function AdminInventory() {
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerCategory, setPickerCategory] = useState("");
 
   const manage = canManageInventory(role);
   const principal = canUsePrincipalInventoryActions(role);
@@ -247,6 +262,10 @@ export default function AdminInventory() {
 
   const catalogueCounts = (item) => assetCountsForItem(countsByItem.get(item.id) || []);
 
+  const pickerResults = useMemo(() => searchToolLibrary(pickerQuery)
+    .filter((entry) => !pickerCategory || entry.category === pickerCategory),
+  [pickerQuery, pickerCategory]);
+
   const pagedAssets = useMemo(
     () => assetRows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
     [assetRows, page],
@@ -281,7 +300,7 @@ export default function AdminInventory() {
     setFormError("");
     setSheet({ kind, ...context });
     if (kind === "addItem") setForm({ itemName: "", category: "", trackingMethod: "asset", unitOfMeasure: "unit", notes: "" });
-    else if (kind === "registerAsset") setForm({ itemId: context.itemId || "", ownershipType: "owned", condition: "good", siteId: "", acquiredOn: "", notes: "" });
+    else if (kind === "registerAsset") setForm({ itemId: context.itemId || "", quantity: 1, ownershipType: "owned", condition: "good", siteId: "", custodianPersonId: "", acquiredOn: "", notes: "" });
     else if (kind === "stock") setForm({ itemId: context.itemId || "", mode: "receipt", movementType: "received", quantity: "", fromSiteId: "", toSiteId: "", siteId: "", personId: "", reason: "", note: "" });
     else setForm({ siteId: "", custodianPersonId: "", expectedReturnDate: "", condition: "", reason: "", note: "" });
   }
@@ -327,8 +346,14 @@ export default function AdminInventory() {
   // what the database issued — otherwise a successful registration just closes
   // and the new identity is something they have to go and look up.
   function announceRegistration(result) {
-    const created = Array.isArray(result?.record) ? result.record[0] : result?.record;
-    if (created?.asset_code) setNotice(`Asset registered · ${created.asset_code}`);
+    const rows = Array.isArray(result?.record) ? result.record : [result?.record].filter(Boolean);
+    const codes = rows.map((row) => row?.asset_code).filter(Boolean);
+    if (codes.length === 0) return;
+    // The operator never chose these IDs, so the interface has to say what the
+    // database issued — and for a batch, every one of them.
+    setNotice(codes.length === 1
+      ? `Tool registered · ${codes[0]}`
+      : `${codes.length} tools registered · ${codes.join(", ")}`);
   }
 
   return (
@@ -503,9 +528,22 @@ export default function AdminInventory() {
                         not a set of individually identified things, so it has
                         no asset-instance counts and never gains asset codes. */}
                     {item.trackingMethod === "asset" && (
-                      <p className="mt-0.5 text-xs font-medium text-botanique-charcoal" data-asset-summary={item.id}>
-                        {assetSummaryLine(catalogueCounts(item))}
-                      </p>
+                      <>
+                        <p className="mt-0.5 text-xs font-medium text-botanique-charcoal" data-asset-summary={item.id}>
+                          {assetSummaryLine(catalogueCounts(item))}
+                        </p>
+                        {/* Where they are, so "how many rakes at Karen?" is a
+                            reading task rather than a counting one. */}
+                        {catalogueCounts(item).registeredCount > 0 && (
+                          <p className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-gray-500" data-site-breakdown={item.id}>
+                            {siteBreakdownForItem(countsByItem.get(item.id) || [], siteName).map((place) => (
+                              <span key={place.siteId || "custody"}>
+                                {place.siteName} <span className="font-medium tabular-nums text-botanique-charcoal">{place.total}</span>
+                              </span>
+                            ))}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   {!item.isActive && <Chip className="bg-stone-100 text-gray-600">Inactive</Chip>}
@@ -544,7 +582,7 @@ export default function AdminInventory() {
                 const detail = activityDetail(entry, { assets, itemFor, siteName, personName });
                 return (
                   <li key={`${entry.kind}-${entry.id}`} className="flex gap-3 px-4 py-3">
-                    <ActivityIcon entry={entry} />
+                    <ActivityIcon entry={entry} itemName={activitySubjectName(entry, { assets, itemFor })} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
                       {detail && <p className="mt-0.5 text-xs text-gray-500">{detail}</p>}
@@ -614,7 +652,7 @@ export default function AdminInventory() {
                   const detail = activityDetail(entry, { assets, itemFor, siteName, personName });
                   return (
                     <li key={`recent-${entry.kind}-${entry.id}`} className="flex items-start gap-3 px-4 py-3">
-                      <ActivityIcon entry={entry} />
+                      <ActivityIcon entry={entry} itemName={activitySubjectName(entry, { assets, itemFor })} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-botanique-charcoal">{activityTitle(entry, { assets, itemFor })}</p>
                         {detail && <p className="truncate text-xs text-gray-500">{detail}</p>}
@@ -638,20 +676,54 @@ export default function AdminInventory() {
               form that accepts any name at all, and the wording has to say so
               — read as a closed list, they make the Founder think a new kind
               of tool needs a code change, which it does not. */}
-          <p className="text-sm font-medium">Common items — optional shortcuts</p>
-          <p className="mt-0.5 text-xs text-gray-500">These only prefill the form. You can add any tool, equipment or stock item by typing its name below. Nothing is created until you save.</p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {QUICK_ADD_ITEMS.map((choice) => (
+          {/* The professional library is a CONVENIENCE AND A PICTURE BOOK, not
+              a closed enum. Everything in it prefills the form; nothing in it
+              constrains what may be typed below. */}
+          <p className="text-sm font-medium">Choose a tool — or type any item below</p>
+          <p className="mt-0.5 text-xs text-gray-500">Picking one only prefills the form. Nothing is created until you save.</p>
+          <input
+            type="search" value={pickerQuery}
+            onChange={(event) => setPickerQuery(event.target.value)}
+            placeholder="Search tools…"
+            aria-label="Search tools"
+            className="mt-2 block w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
+          />
+          <div className="mt-2 flex flex-wrap gap-1">
+            <button
+              type="button" onClick={() => setPickerCategory("")}
+              aria-pressed={pickerCategory === ""}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${pickerCategory === "" ? "bg-botanique-green text-white" : "border border-stone-300 text-gray-600"}`}
+            >All</button>
+            {TOOL_PICKER_CATEGORIES.map((entry) => (
               <button
-                key={choice.name} type="button"
-                onClick={() => setForm({ itemName: choice.name, category: choice.category, trackingMethod: choice.trackingMethod, unitOfMeasure: choice.unitOfMeasure, notes: "" })}
-                className="inline-flex items-center gap-1.5 rounded-full border border-stone-300 px-2.5 py-1 text-xs font-medium text-botanique-charcoal"
-              >
-                <ToolVisual name={choice.name} size="xs" />
-                {choice.name}
-              </button>
+                key={entry} type="button" onClick={() => setPickerCategory(entry)}
+                aria-pressed={pickerCategory === entry}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${pickerCategory === entry ? "bg-botanique-green text-white" : "border border-stone-300 text-gray-600"}`}
+              >{categoryLabel(entry)}</button>
             ))}
           </div>
+          <ul data-tool-picker className="mt-2 grid max-h-56 grid-cols-2 gap-1.5 overflow-y-auto sm:grid-cols-3">
+            {pickerResults.map((choice) => (
+              <li key={choice.key}>
+                <button
+                  type="button"
+                  onClick={() => setForm({
+                    itemName: choice.name, category: choice.category,
+                    trackingMethod: choice.trackingMethod, unitOfMeasure: choice.unitOfMeasure, notes: "",
+                  })}
+                  className="flex w-full items-center gap-2 rounded-lg border border-stone-200 px-2 py-1.5 text-left text-xs font-medium text-botanique-charcoal hover:border-botanique-green"
+                >
+                  <ToolVisual visual={choice.key} name={choice.name} size="xs" />
+                  <span className="min-w-0 truncate">{choice.name}</span>
+                </button>
+              </li>
+            ))}
+            {pickerResults.length === 0 && (
+              <li className="col-span-full px-1 py-2 text-xs text-gray-500">
+                Nothing in the library matches that. You can still type the name below.
+              </li>
+            )}
+          </ul>
           <div className="mt-4 grid gap-3">
             <label className="text-sm font-medium">Item name
               <input
@@ -660,12 +732,34 @@ export default function AdminInventory() {
                 placeholder="Any tool, equipment or stock item"
               />
             </label>
-            <label className="text-sm font-medium">Tracking method
-              <select value={form.trackingMethod || "asset"} onChange={(event) => setForm({ ...form, trackingMethod: event.target.value, unitOfMeasure: event.target.value === "asset" ? "unit" : (form.unitOfMeasure || "") })} className={field}>
-                <option value="asset">Individual equipment asset</option>
-                <option value="stock">Quantity stock</option>
-              </select>
-            </label>
+            {/* The choice is effectively irreversible once the item has
+                history, so it is explained BEFORE it is made rather than hidden
+                behind two words in a dropdown. */}
+            <fieldset>
+              <legend className="text-sm font-medium">How should this be tracked?</legend>
+              <div className="mt-1.5 grid gap-2">
+                {TRACKING_METHODS.map((method) => (
+                  <label
+                    key={method}
+                    className={`flex cursor-pointer gap-2.5 rounded-lg border p-3 ${(form.trackingMethod || "asset") === method ? "border-botanique-green bg-[#eef3f0]" : "border-stone-300"}`}
+                  >
+                    <input
+                      type="radio" name="trackingMethod" value={method}
+                      checked={(form.trackingMethod || "asset") === method}
+                      onChange={() => setForm({
+                        ...form, trackingMethod: method,
+                        unitOfMeasure: method === "asset" ? "unit" : (form.unitOfMeasure || ""),
+                      })}
+                      className="mt-0.5 h-4 w-4"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-botanique-charcoal">{trackingMethodLabel(method)}</span>
+                      <span className="mt-0.5 block text-xs font-normal text-gray-600">{TRACKING_METHOD_EXPLAINERS[method]}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <label className="text-sm font-medium">Category
               <input value={form.category || ""} onChange={(event) => setForm({ ...form, category: event.target.value })} className={field} maxLength={80} placeholder="e.g. power tools" />
             </label>
@@ -684,7 +778,7 @@ export default function AdminInventory() {
       )}
 
       {sheet?.kind === "registerAsset" && (
-        <Sheet title="Register equipment" onClose={closeSheet}>
+        <Sheet title="Register tools" onClose={closeSheet}>
           {assetItems.length === 0
             ? <p className="text-sm text-gray-600">Add an equipment catalogue item first — equipment is registered against a catalogue item.</p>
             : <>
@@ -714,6 +808,37 @@ export default function AdminInventory() {
                   <p className="text-sm font-medium">Asset code</p>
                   <p className="mt-1 text-sm text-gray-500">Assigned automatically when registered</p>
                 </div>
+                {/* Authority 17: six rakes already owned is ONE thing the
+                    Founder knows, not six clicks. Bounded at 200 — a slipped
+                    keypress must not mint thousands of permanent identities. */}
+                <label className="text-sm font-medium">How many tools?
+                  <input
+                    type="number" min="1" max="200" step="1"
+                    value={form.quantity ?? 1}
+                    onChange={(event) => setForm({ ...form, quantity: event.target.value })}
+                    className={field}
+                  />
+                  <span className="mt-1 block text-xs font-normal text-gray-500">
+                    Each one gets its own permanent BD-TE ID.
+                  </span>
+                </label>
+                <label className="text-sm font-medium">Current custodian (optional)
+                  <select
+                    value={form.custodianPersonId || ""}
+                    onChange={(event) => setForm({ ...form, custodianPersonId: event.target.value })}
+                    className={field}
+                  >
+                    <option value="">Nobody yet</option>
+                    {people.filter((person) => person.isActive).map((person) => (
+                      <option key={person.id} value={person.id}>{person.fullName}</option>
+                    ))}
+                  </select>
+                  <span className="mt-1 block text-xs font-normal text-gray-500">
+                    {form.custodianPersonId
+                      ? "These tools will be recorded as assigned to this person from the start."
+                      : "Leave blank if the tools are simply held at that location."}
+                  </span>
+                </label>
                 <label className="text-sm font-medium">Condition
                   <select value={form.condition || "good"} onChange={(event) => setForm({ ...form, condition: event.target.value })} className={field}>
                     {EQUIPMENT_CONDITIONS.map((value) => <option key={value} value={value}>{conditionLabel(value)}</option>)}
@@ -741,7 +866,7 @@ export default function AdminInventory() {
                 </label>
               </div>
               {formError && <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{formError}</p>}
-              <button type="button" disabled={saving} onClick={() => submit(() => registerAsset(form), announceRegistration)} className={`mt-4 ${primary}`}>{saving ? "Saving…" : "Register equipment"}</button>
+              <button type="button" disabled={saving} onClick={() => submit(() => registerAsset(form), announceRegistration)} className={`mt-4 ${primary}`}>{saving ? "Saving…" : Number(form.quantity ?? 1) > 1 ? `Register ${Number(form.quantity)} tools` : "Register tool"}</button>
             </>}
         </Sheet>
       )}
@@ -777,7 +902,19 @@ export default function AdminInventory() {
               {equipmentActionsFor(sheet.asset.status, role).map((action) => (
                 <button
                   key={action.id} type="button"
-                  onClick={() => { setForm({ siteId: "", custodianPersonId: "", expectedReturnDate: "", condition: "", reason: "", note: "", alsoAssetIds: [] }); setFormError(""); setSheet({ ...sheet, action }); }}
+                  onClick={() => {
+                    // BD-TE-002 is already AT Kitusuru with no custodian. Assigning
+                    // it to Kefa must not require pretending the Site changed, so
+                    // the tool's current Site is prefilled and the operator only
+                    // has to add the person.
+                    setForm({
+                      siteId: action.id === "issue" ? (sheet.asset.currentSiteId || "") : "",
+                      custodianPersonId: "", expectedReturnDate: "", condition: "",
+                      reason: "", note: "", alsoAssetIds: [],
+                    });
+                    setFormError("");
+                    setSheet({ ...sheet, action });
+                  }}
                   className={`inline-flex min-h-10 items-center rounded-lg px-3 text-xs font-semibold ${action.principal ? "border border-rose-200 text-rose-700" : "border border-stone-300 text-botanique-charcoal"}`}
                 >{action.label}</button>
               ))}
@@ -854,6 +991,15 @@ function activityDetail(entry, { assets, itemFor, siteName, personName }) {
 //
 // The asset code moves out of the title for the same reason: it made every
 // equipment line long enough to truncate in the rail, hiding the verb.
+// The item an activity row is about, or "" when it is not about one.
+function activitySubjectName(entry, { assets, itemFor }) {
+  if (entry.kind === "equipment") {
+    const asset = assets.find((row) => row.id === entry.assetId);
+    return asset ? (itemFor(asset.itemId)?.itemName || "") : "";
+  }
+  return itemFor(entry.itemId)?.itemName || "";
+}
+
 function activityTitle(entry, { assets, itemFor }) {
   if (entry.kind === "equipment") {
     const asset = assets.find((row) => row.id === entry.assetId);
@@ -937,7 +1083,7 @@ function AssetActionForm({
       )}
       <div className="mt-3 grid gap-3">
         {needsSite && (
-          <label className="text-sm font-medium">{action.id === "issue" ? "Site this equipment is going to" : "Destination Site"}
+          <label className="text-sm font-medium">{action.id === "issue" ? "Site this tool is at" : "Destination Site"}
             <select value={form.siteId || ""} onChange={(event) => setForm({ ...form, siteId: event.target.value })} className={field}>
               <option value="">Choose a Site</option>
               {sites.map((site) => <option key={site.id} value={site.id}>{site.siteName}</option>)}
@@ -954,7 +1100,7 @@ function AssetActionForm({
             </label>
             {/* An expected return date is a future obligation, so the picker
                 will not offer a past one and the database refuses it too. */}
-            <label className="text-sm font-medium">Expected return (optional)
+            <label className="text-sm font-medium">Return expected by (optional)
               <input
                 type="date" min={todayKey()}
                 value={form.expectedReturnDate || ""}

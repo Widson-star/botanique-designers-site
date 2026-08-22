@@ -186,7 +186,7 @@ describe("equipment rows and lifecycle", () => {
 
   it("renders a real tool thumbnail rather than plain text", () => {
     const { container } = renderPage({ items, assets, sites, people });
-    expect(container.querySelector('[data-tool-visual="mower"]')).toBeTruthy();
+    expect(container.querySelector('[data-tool-library-key="lawn_mower"]')).toBeTruthy();
   });
 
   // The authority uses a compact ellipsis affordance, not a competing button.
@@ -205,7 +205,7 @@ describe("equipment rows and lifecycle", () => {
   });
 
   // BD-LM-002 is available, which is a status the RPC permits retiring from.
-  it("offers the Principal Retire on an available asset but never the Manager", () => {
+  it("offers Retire on an available tool to BOTH operational roles", () => {
     renderPage({ role: "owner", items, assets, sites, people });
     fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-LM-002" }));
     expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Retire" })).toBeInTheDocument();
@@ -216,8 +216,10 @@ describe("equipment rows and lifecycle", () => {
     fireEvent.click(within(tables[tables.length - 1]).getByRole("button", { name: "Actions for BD-LM-002" }));
     const dialogs = screen.getAllByRole("dialog");
     const managerDialog = dialogs[dialogs.length - 1];
-    expect(within(managerDialog).queryByRole("button", { name: "Retire" })).not.toBeInTheDocument();
-    expect(within(managerDialog).getByRole("button", { name: "Issue to Site" })).toBeInTheDocument();
+    // Authority 17: the Operations Manager has full control, so Retire is
+    // theirs too — the database agrees, and the UI must not disagree with it.
+    expect(within(managerDialog).getByRole("button", { name: "Retire" })).toBeInTheDocument();
+    expect(within(managerDialog).getByRole("button", { name: "Assign / hand over" })).toBeInTheDocument();
   });
 
   // BD-LM-001 is issued, and retire_equipment_asset() refuses that outright.
@@ -238,8 +240,8 @@ describe("quick-add catalogue", () => {
     const register = screen.getByRole("region", { name: "Inventory register" });
     fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
     fireEvent.click(within(register).getByRole("button", { name: "Add item" }));
-    fireEvent.click(screen.getByRole("button", { name: /Lawn Mower/ }));
-    expect(screen.getByDisplayValue("Lawn Mower")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Lawn mower/ }));
+    expect(screen.getByDisplayValue("Lawn mower")).toBeInTheDocument();
     // The choice prefilled the form; nothing was written.
     expect(addItem).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Save item" }));
@@ -294,7 +296,7 @@ describe("supporting panels and register footer", () => {
     const { container } = renderPage({ items, activity });
     expect(container.querySelector('[data-activity-kind="catalogue"]')).toBeTruthy();
     // Category reaches the screen as language, never as its storage token.
-    expect(screen.getAllByText(/Materials · Quantity stock/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Materials · Track quantity only/).length).toBeGreaterThan(0);
   });
 
   // The authority keys the activity pictogram on WHAT HAPPENED, not on which
@@ -514,13 +516,13 @@ describe("automatic asset codes", () => {
 
 describe("custom catalogue items", () => {
   // The quick-add chips are shortcuts over a free-text form, not a closed list.
-  it("presents the chips as optional shortcuts and keeps the name free text", () => {
+  it("presents a searchable library and keeps the name free text", () => {
     renderPage();
     const register = screen.getByRole("region", { name: "Inventory register" });
     fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
     fireEvent.click(within(register).getByRole("button", { name: "Add item" }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByText("Common items — optional shortcuts")).toBeInTheDocument();
+    expect(within(dialog).getByText("Choose a tool — or type any item below")).toBeInTheDocument();
     const name = within(dialog).getByLabelText("Item name");
     expect(name.tagName).toBe("INPUT");
     expect(name).not.toBeDisabled();
@@ -530,12 +532,14 @@ describe("custom catalogue items", () => {
 
   // An item with no approved cut-out gets the restrained neutral drawing, never
   // a guessed product image.
-  it("gives an unknown custom item the generic visual", () => {
-    const items = [{ id: "i9", itemName: "Pressure Washer", category: "site_consumables", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  it("gives an unknown custom item a neutral visual-not-assigned mark", () => {
+    const items = [{ id: "i9", itemName: "Site Office Kettle", category: "site_consumables", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
     const { container } = renderPage({ items });
     const register = screen.getByRole("region", { name: "Inventory register" });
     fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
-    expect(container.querySelector('[data-tool-visual="generic"]')).toBeTruthy();
+    // Authority 17: an unknown item gets a neutral mark, never another tool.
+    expect(container.querySelector('[data-visual-source="unassigned"]')).toBeTruthy();
+    expect(container.querySelector('[data-visual-source="tool-library"]')).toBeNull();
   });
 
   // Storage tokens must never reach the screen.
@@ -549,7 +553,7 @@ describe("custom catalogue items", () => {
   });
 });
 
-describe("catalogue makes registered assets clear", () => {
+describe("catalogue makes tool counts clear", () => {
   const items = [
     { id: "i1", itemName: "Secateurs", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 },
     { id: "i2", itemName: "Cement", category: "materials", trackingMethod: "stock", unitOfMeasure: "bag", isActive: true, version: 1 },
@@ -565,19 +569,19 @@ describe("catalogue makes registered assets clear", () => {
     return register;
   };
 
-  it("says 0 registered and offers Register first asset", () => {
+  it("says 0 tools and offers Register first asset", () => {
     renderPage({ items });
     const register = catalogue();
-    expect(within(register).getByText("0 registered")).toBeInTheDocument();
+    expect(within(register).getByText("0 tools")).toBeInTheDocument();
     expect(within(register).getByRole("button", { name: "Register first asset" })).toBeInTheDocument();
     expect(within(register).queryByRole("button", { name: "Add another asset" })).not.toBeInTheDocument();
   });
 
   // Registered is not issued: a tool in somebody's custody is still registered.
-  it("says 1 registered · 1 issued and offers Add another asset", () => {
+  it("says 1 tool · 1 assigned and offers Add another asset", () => {
     renderPage({ items, assets: [asset("001", "issued")] });
     const register = catalogue();
-    expect(within(register).getByText("1 registered · 1 issued")).toBeInTheDocument();
+    expect(within(register).getByText("1 tool · 1 assigned")).toBeInTheDocument();
     expect(within(register).getByRole("button", { name: "Add another asset" })).toBeInTheDocument();
     expect(within(register).queryByRole("button", { name: "Register first asset" })).not.toBeInTheDocument();
   });
@@ -587,7 +591,7 @@ describe("catalogue makes registered assets clear", () => {
       items,
       assets: [asset("001", "available"), asset("002", "available"), asset("003", "issued"), asset("004", "issued")],
     });
-    expect(within(catalogue()).getByText("4 registered · 2 available · 2 issued")).toBeInTheDocument();
+    expect(within(catalogue()).getByText("4 tools · 2 available · 2 assigned")).toBeInTheDocument();
   });
 
   // A stock item is a quantity, not a set of individually identified things.
@@ -620,7 +624,7 @@ describe("multi-asset handover", () => {
   const openIssue = () => {
     const table = screen.getByRole("table");
     fireEvent.click(within(table).getByRole("button", { name: "Actions for BD-TE-001" }));
-    fireEvent.click(screen.getByRole("button", { name: "Issue to Site" }));
+    fireEvent.click(screen.getByRole("button", { name: "Assign / hand over" }));
     return screen.getByRole("dialog");
   };
 
@@ -652,9 +656,9 @@ describe("multi-asset handover", () => {
     const dialog = openIssue();
 
     fireEvent.click(within(dialog).getAllByRole("checkbox")[0]);
-    fireEvent.change(within(dialog).getByLabelText(/Site this equipment is going to/), { target: { value: "s1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Site this tool is at/), { target: { value: "s1" } });
     fireEvent.change(within(dialog).getByLabelText(/Custodian/), { target: { value: "p1" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Issue to Site" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Assign / hand over" }));
 
     await waitFor(() => expect(issueAssets).toHaveBeenCalledTimes(1));
     const [members, values] = issueAssets.mock.calls[0];
@@ -677,8 +681,8 @@ describe("multi-asset handover", () => {
     const issueAssets = vi.fn(() => Promise.resolve({ ok: true }));
     renderPage({ items, assets, sites, selectableSites: sites, people, issueAssets });
     const dialog = openIssue();
-    fireEvent.change(within(dialog).getByLabelText(/Site this equipment is going to/), { target: { value: "s1" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Issue to Site" }));
+    fireEvent.change(within(dialog).getByLabelText(/Site this tool is at/), { target: { value: "s1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Assign / hand over" }));
     await waitFor(() => expect(issueAssets).toHaveBeenCalledTimes(1));
     expect(issueAssets.mock.calls[0][0]).toEqual([{ assetId: "a1", version: 2 }]);
   });
@@ -694,7 +698,7 @@ describe("multi-asset handover", () => {
   it("will not offer a past expected return date", () => {
     renderPage({ items, assets, sites, selectableSites: sites, people });
     const dialog = openIssue();
-    const picker = within(dialog).getByLabelText(/Expected return/);
+    const picker = within(dialog).getByLabelText(/Return expected by/);
     expect(picker.getAttribute("min")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(picker.getAttribute("min")).toBe(new Date().toLocaleDateString("en-CA"));
   });
@@ -724,7 +728,7 @@ describe("the companion selector is ordinary ISSUE only", () => {
   // A. Available asset, ordinary issue — the selector is offered.
   it("offers companions when issuing an available asset", () => {
     renderPage({ items, assets, sites, selectableSites: sites, people });
-    const dialog = openAction("BD-TE-002", "Issue to Site");
+    const dialog = openAction("BD-TE-002", "Assign / hand over");
     expect(within(dialog).getByText("Add another asset to this handover")).toBeInTheDocument();
     expect(within(dialog).getAllByRole("checkbox").length).toBeGreaterThan(0);
   });
@@ -786,5 +790,190 @@ describe("the companion selector is ordinary ISSUE only", () => {
     await waitFor(() => expect(assetAction).toHaveBeenCalledTimes(1));
     expect(assetAction.mock.calls[0][3]).toMatchObject({ siteId: "s2", custodianPersonId: "p2" });
     expect(within(dialog).queryByLabelText(/Asset code|Asset ID/)).not.toBeInTheDocument();
+  });
+});
+
+describe("Authority 17 operator language and tool picker", () => {
+  const openAddItem = () => {
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    fireEvent.click(within(register).getByRole("button", { name: "Add item" }));
+    return screen.getByRole("dialog");
+  };
+
+  it("offers Track each tool and Track quantity only, each explained", () => {
+    renderPage();
+    const dialog = openAddItem();
+    expect(within(dialog).getByRole("radio", { name: /Track each tool/ })).toBeInTheDocument();
+    expect(within(dialog).getByRole("radio", { name: /Track quantity only/ })).toBeInTheDocument();
+    expect(within(dialog).getByText(/own permanent BD-TE ID/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Individual BD-TE IDs are not created/)).toBeInTheDocument();
+  });
+
+  // The operator never reads "physical asset" or "individual equipment asset".
+  it("uses no database-shaped asset language anywhere on the page", () => {
+    const items = [
+      { id: "i1", itemName: "Rake", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 },
+      { id: "i2", itemName: "Cement", category: "materials", trackingMethod: "stock", unitOfMeasure: "bag", isActive: true, version: 1 },
+    ];
+    const { container } = renderPage({ items });
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    const words = container.textContent;
+    expect(words).not.toMatch(/physical asset/i);
+    expect(words).not.toMatch(/individual equipment asset/i);
+    expect(words).not.toMatch(/Quantity stock\b/);
+  });
+
+  it("searches the professional library and prefills from it", () => {
+    renderPage();
+    const dialog = openAddItem();
+    const search = within(dialog).getByLabelText("Search tools");
+
+    fireEvent.change(search, { target: { value: "panga" } });
+    const panga = within(dialog).getByRole("button", { name: /Panga/ });
+    expect(panga).toBeInTheDocument();
+    expect(within(dialog).queryByRole("button", { name: /^Chainsaw$/ })).not.toBeInTheDocument();
+
+    fireEvent.click(panga);
+    expect(within(dialog).getByLabelText("Item name")).toHaveValue("Panga");
+  });
+
+  // The library is a convenience, never a closed enum.
+  it("still accepts any custom item name the library has never heard of", () => {
+    renderPage();
+    const dialog = openAddItem();
+    const search = within(dialog).getByLabelText("Search tools");
+    fireEvent.change(search, { target: { value: "concrete mixer" } });
+    expect(within(dialog).getByText(/You can still type the name below/)).toBeInTheDocument();
+
+    const name = within(dialog).getByLabelText("Item name");
+    fireEvent.change(name, { target: { value: "Concrete Mixer 400L" } });
+    expect(name).toHaveValue("Concrete Mixer 400L");
+    expect(name).not.toBeDisabled();
+  });
+
+  it("filters the library by category without exposing storage tokens", () => {
+    renderPage();
+    const dialog = openAddItem();
+    const picker = dialog.querySelector("[data-tool-picker]");
+    expect(picker.textContent).not.toMatch(/_/);
+    expect(within(dialog).getByRole("button", { name: "Manual tools" })).toBeInTheDocument();
+  });
+});
+
+describe("Authority 17 batch registration", () => {
+  const items = [{ id: "i1", itemName: "Rake", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  const sites = [{ id: "s1", siteName: "Karen Residence HSE 19" }];
+  const people = [{ id: "p1", fullName: "Kefa Nyamari Ochenge", isActive: true }];
+
+  const openRegister = () => {
+    const register = screen.getByRole("region", { name: "Inventory register" });
+    fireEvent.click(within(register).getByRole("button", { name: "Catalogue" }));
+    fireEvent.click(within(register).getByRole("button", { name: "Register first asset" }));
+    return screen.getByRole("dialog");
+  };
+
+  it("asks how many tools, defaulting to one", () => {
+    renderPage({ items, sites, selectableSites: sites, people });
+    const dialog = openRegister();
+    const quantity = within(dialog).getByLabelText(/How many tools/);
+    expect(quantity).toHaveValue(1);
+    expect(quantity.getAttribute("max")).toBe("200");
+  });
+
+  it("captures the initial location and an optional custodian", () => {
+    renderPage({ items, sites, selectableSites: sites, people });
+    const dialog = openRegister();
+    expect(within(dialog).getByLabelText("Current location")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Current custodian/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("option", { name: "Botanique custody" })).toBeInTheDocument();
+  });
+
+  it("sends the whole batch and its starting context in one call", async () => {
+    const registerAsset = vi.fn(() => Promise.resolve({
+      ok: true,
+      record: [{ asset_code: "BD-TE-005" }, { asset_code: "BD-TE-006" }],
+    }));
+    renderPage({ items, sites, selectableSites: sites, people, extra: { registerAsset } });
+    const dialog = openRegister();
+    fireEvent.change(within(dialog).getByLabelText(/How many tools/), { target: { value: "6" } });
+    fireEvent.change(within(dialog).getByLabelText("Current location"), { target: { value: "s1" } });
+    fireEvent.change(within(dialog).getByLabelText(/Current custodian/), { target: { value: "p1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Register 6 tools" }));
+
+    await waitFor(() => expect(registerAsset).toHaveBeenCalledTimes(1));
+    expect(registerAsset.mock.calls[0][0]).toMatchObject({
+      itemId: "i1", quantity: "6", siteId: "s1", custodianPersonId: "p1",
+    });
+  });
+
+  // The operator never chose these IDs, so the confirmation has to name them.
+  it("confirms every identity the database issued", async () => {
+    const registerAsset = vi.fn(() => Promise.resolve({
+      ok: true,
+      record: [{ asset_code: "BD-TE-005" }, { asset_code: "BD-TE-006" }],
+    }));
+    renderPage({ items, sites, selectableSites: sites, people, extra: { registerAsset } });
+    const dialog = openRegister();
+    fireEvent.change(within(dialog).getByLabelText(/How many tools/), { target: { value: "2" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Register 2 tools" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("2 tools registered · BD-TE-005, BD-TE-006"));
+  });
+});
+
+describe("Authority 17 assign / hand over", () => {
+  const items = [{ id: "i1", itemName: "Jembe", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+  const sites = [{ id: "s1", siteName: "Kitusuru Residence House 0.8A" }, { id: "s2", siteName: "Karen Residence HSE 19" }];
+  const people = [{ id: "p1", fullName: "Kefa Nyamari Ochenge", isActive: true }];
+  // The real production case: already AT a Site, nobody holding it.
+  const assets = [{
+    id: "a1", itemId: "i1", assetCode: "BD-TE-002", ownershipType: "owned", status: "available",
+    condition: "good", currentSiteId: "s1", custodianPersonId: "", expectedReturnDate: "", version: 3,
+  }];
+
+  const openAssign = () => {
+    fireEvent.click(within(screen.getByRole("table")).getByRole("button", { name: "Actions for BD-TE-002" }));
+    fireEvent.click(screen.getByRole("button", { name: "Assign / hand over" }));
+    return screen.getByRole("dialog");
+  };
+
+  it("prefills the tool's current Site so custody can change without a fake move", () => {
+    renderPage({ items, assets, sites, selectableSites: sites, people });
+    const dialog = openAssign();
+    expect(within(dialog).getByLabelText(/Site this tool is at/)).toHaveValue("s1");
+  });
+
+  it("assigns a custodian at the SAME Site", async () => {
+    const issueAssets = vi.fn(() => Promise.resolve({ ok: true }));
+    renderPage({ items, assets, sites, selectableSites: sites, people, issueAssets });
+    const dialog = openAssign();
+    fireEvent.change(within(dialog).getByLabelText(/Custodian/), { target: { value: "p1" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Assign / hand over" }));
+
+    await waitFor(() => expect(issueAssets).toHaveBeenCalledTimes(1));
+    const [members, values] = issueAssets.mock.calls[0];
+    expect(members).toEqual([{ assetId: "a1", version: 3 }]);
+    expect(values.siteId).toBe("s1");
+    expect(values.custodianPersonId).toBe("p1");
+  });
+});
+
+describe("Authority 17 recent activity imagery", () => {
+  it("identifies the item with its approved visual", () => {
+    const items = [{ id: "i1", itemName: "Panga", category: "manual_tools", trackingMethod: "asset", unitOfMeasure: "unit", isActive: true, version: 1 }];
+    const activity = [{ kind: "catalogue", id: "e1", itemId: "i1", eventType: "created", occurredAt: "2026-08-22T08:00:00Z" }];
+    const { container } = renderPage({ items, activity });
+    const panel = screen.getByRole("heading", { name: "Recent activity", level: 2 }).closest("section");
+    expect(within(panel).getByText(/Panga added to the catalogue/)).toBeInTheDocument();
+    expect(container.querySelector('[data-activity-subject="Panga"]')).toBeTruthy();
+    expect(panel.querySelector('[data-tool-library-key="panga"]')).toBeTruthy();
+  });
+
+  // A movement with no identifiable item keeps a restrained system pictogram.
+  it("keeps a system pictogram where there is no item to show", () => {
+    const activity = [{ kind: "stock", id: "m1", itemId: "missing", movementType: "transferred", quantity: 5, occurredAt: "2026-08-22T08:00:00Z" }];
+    const { container } = renderPage({ activity });
+    expect(container.querySelector("[data-activity-icon]")).toBeTruthy();
   });
 });

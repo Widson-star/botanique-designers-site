@@ -6,7 +6,7 @@ import {
   fetchInventoryItemEvents, fetchInventoryItems, fetchInventoryPeople, fetchInventorySites,
   fetchStockMovements, fetchStockPositions, reactivateInventoryItem,
   recordStockAdjustment, recordStockReceipt, recordStockTransfer, recordStockUsage,
-  issueEquipmentAssets, registerEquipmentAsset, reportEquipmentAssetLost, retireEquipmentAsset,
+  issueEquipmentAssets, registerEquipmentAssets, reportEquipmentAssetLost, retireEquipmentAsset,
   returnEquipmentAsset, returnEquipmentAssetFromRepair, sendEquipmentAssetForRepair,
   transferEquipmentAsset, updateEquipmentAssetCondition,
 } from "../lib/inventory";
@@ -212,10 +212,25 @@ export default function InventoryProvider({ children, session, role, isDemo }) {
 
   const registerAsset = useCallback((values) => {
     if (isDemo) return Promise.resolve(demoBlocked());
-    if (!values.itemId) return Promise.resolve({ ok: false, error: "Choose the equipment item." });
-    // No asset-code check: the code is a Botanique identifier the database
+    if (!values.itemId) return Promise.resolve({ ok: false, error: "Choose the tool to register." });
+    // No asset-code check: the BD-TE ID is a Botanique identifier the database
     // allocates. There is nothing here for the operator to get wrong.
-    return run(() => registerEquipmentAsset(accessToken, values), "This equipment could not be registered.");
+    const quantity = Number(values.quantity ?? 1);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return Promise.resolve({ ok: false, error: "Register at least one tool." });
+    }
+    if (quantity > 200) {
+      return Promise.resolve({ ok: false, error: "Register at most 200 tools at a time." });
+    }
+    // A named custodian with no Site would mean "somebody has it, and it is
+    // also in Botanique custody". The database refuses it; say so here first.
+    if (values.custodianPersonId && !values.siteId) {
+      return Promise.resolve({ ok: false, error: "Choose the Site this tool is at when naming a custodian." });
+    }
+    return run(
+      () => registerEquipmentAssets(accessToken, { ...values, quantity }),
+      "These tools could not be registered.",
+    );
   }, [accessToken, run, isDemo, demoBlocked]);
 
   const STALE_ASSET = "This equipment was changed elsewhere. Reload and try again.";

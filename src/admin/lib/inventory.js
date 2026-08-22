@@ -148,16 +148,17 @@ export async function reactivateInventoryItem(accessToken, itemId, expectedVersi
 // re-checks the caller's role in its own body.
 // ---------------------------------------------------------------------------
 
-// The asset code is deliberately NOT sent. register_equipment_asset() allocates
-// it from a sequence and returns it on the created row, so the browser has no
-// say in a Botanique asset's identity — and the argument it still accepts for
-// compatibility is inert server-side anyway.
-export async function registerEquipmentAsset(accessToken, values) {
-  return read(await rpc(accessToken, "register_equipment_asset", {
+// Registering six rakes is ONE request. The BD-TE identities are allocated by
+// the database and returned on the created rows, so the browser has no say in
+// a tool's identity, and the whole batch either lands or none of it does.
+export async function registerEquipmentAssets(accessToken, values) {
+  return read(await rpc(accessToken, "register_equipment_assets", {
     target_item_id: values.itemId,
+    target_quantity: Number(values.quantity) || 1,
     target_ownership_type: values.ownershipType || "owned",
     target_condition: values.condition || "good",
     target_site_id: values.siteId || null,
+    target_custodian_person_id: values.custodianPersonId || null,
     target_acquired_on: values.acquiredOn || null,
     target_notes: values.notes || null,
   }));

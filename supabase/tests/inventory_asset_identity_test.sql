@@ -681,12 +681,21 @@ begin
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f1', true);
   tool := public.register_equipment_asset(item_a);
 
+  -- Authority 17: the Operations Manager now HAS full Tools & Equipment
+  -- control, so correction is theirs too — subject to the same reason
+  -- requirement and lifecycle guards.
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f2', true);
+  tool := public.correct_equipment_asset(
+    tool.id, tool.version, 'available', 'fair', null, null, null, 'manager correction'
+  );
+  perform pg_temp.assert_eq(tool.condition, 'fair',
+    '17. the Operations Manager may correct a tool');
+
   refused := false;
   begin
-    perform public.correct_equipment_asset(tool.id, tool.version, 'available', 'good', null, null, null, 'nope');
+    perform public.correct_equipment_asset(tool.id, tool.version, 'available', 'good', null, null, null, '  ');
   exception when others then refused := true; end;
-  perform pg_temp.assert_true(refused, '17. the Operations Manager cannot correct equipment');
+  perform pg_temp.assert_true(refused, '17. a reason is still required of the Manager');
 
   perform set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000093f3', true);
   refused := false;
